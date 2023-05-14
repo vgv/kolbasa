@@ -47,15 +47,15 @@ class ConnectionAwareDatabaseConsumer<V, M : Any>(
         CleanupHelper.cleanup(connection, queue)
 
         // read
-        val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, limit, consumerOptions, receiveOptions)
+        val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
         return connection.prepareStatement(query).use { preparedStatement ->
-            ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, preparedStatement, receiveOptions)
+            ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
             preparedStatement.executeQuery().use { resultSet ->
                 val approxBytesCounter = LongBox()
                 val result = ArrayList<Message<V, M>>(limit)
 
                 while (resultSet.next()) {
-                    result += ConsumerSchemaHelpers.read(queue, resultSet, approxBytesCounter)
+                    result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
                 }
 
                 queueStats.receiveInc(result.size.toLong(), approxBytesCounter.get())

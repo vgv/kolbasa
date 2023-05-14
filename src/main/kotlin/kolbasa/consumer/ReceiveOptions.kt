@@ -8,12 +8,17 @@ import java.time.Duration
 
 data class ReceiveOptions<M : Any> @JvmOverloads constructor(
     val visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET,
+    /**
+     * Do we need to read metadata
+     * By default, we don't want to read these fields from the DB, parse them and instantiate the meta-class M
+     */
+    val readMetadata: Boolean = false,
     val order: List<Order<M>>? = null,
     val filter: Condition<M>? = null,
 ) {
 
-    constructor(visibilityTimeout: Duration, order: Order<M>, filter: Condition<M>?) :
-        this(visibilityTimeout, listOf(order), filter)
+    constructor(visibilityTimeout: Duration, readMetadata: Boolean, order: Order<M>, filter: Condition<M>?) :
+        this(visibilityTimeout, readMetadata, listOf(order), filter)
 
     init {
         Checks.checkVisibilityTimeout(visibilityTimeout)

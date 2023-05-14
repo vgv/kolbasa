@@ -16,9 +16,9 @@ internal object ConsumerSchemaHelpers {
 
     fun <M : Any> generateSelectPreparedQuery(
         queue: Queue<*, M>,
-        limit: Int,
         consumerOptions: ConsumerOptions,
-        receiveOptions: ReceiveOptions<M>?
+        receiveOptions: ReceiveOptions<M>,
+        limit: Int
     ): String {
         // Columns
         val columns = mutableListOf(
@@ -29,8 +29,11 @@ internal object ConsumerSchemaHelpers {
             Const.DATA_COLUMN_NAME
         )
 
-        queue.metadataDescription?.fields?.forEach { metaField ->
-            columns += metaField.dbColumnName
+        // if we need metadata - we need to read these fields
+        if (receiveOptions.readMetadata) {
+            queue.metadataDescription?.fields?.forEach { metaField ->
+                columns += metaField.dbColumnName
+            }
         }
 
         // Clauses
@@ -38,13 +41,13 @@ internal object ConsumerSchemaHelpers {
             "(${Const.SCHEDULED_AT_COLUMN_NAME} is null or ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp())",
             "${Const.ATTEMPTS_COLUMN_NAME}>0"
         )
-        receiveOptions?.filter?.let { filter ->
+        receiveOptions.filter?.let { filter ->
             clauses += filter.toSqlClause(queue)
         }
 
         // OrderBy
         val orderBy = mutableListOf<String>()
-        receiveOptions?.order?.forEach { order ->
+        receiveOptions.order?.forEach { order ->
             orderBy += order.dbOrderClause
         }
         orderBy += "${Const.SCHEDULED_AT_COLUMN_NAME} asc nulls first"
@@ -76,8 +79,8 @@ internal object ConsumerSchemaHelpers {
     fun <M : Any> fillSelectPreparedQuery(
         queue: Queue<*, M>,
         consumerOptions: ConsumerOptions,
-        preparedStatement: PreparedStatement,
-        receiveOptions: ReceiveOptions<M>
+        receiveOptions: ReceiveOptions<M>,
+        preparedStatement: PreparedStatement
     ) {
         if (consumerOptions.consumer != null) {
             preparedStatement.setString(1, consumerOptions.consumer)
@@ -89,7 +92,12 @@ internal object ConsumerSchemaHelpers {
         receiveOptions.filter?.fillPreparedQuery(queue, preparedStatement, IntBox(2))
     }
 
-    fun <V, M : Any> read(queue: Queue<V, M>, resultSet: ResultSet, approxBytesCounter: LongBox): Message<V, M> {
+    fun <V, M : Any> read(
+        queue: Queue<V, M>,
+        receiveOptions: ReceiveOptions<M>,
+        resultSet: ResultSet,
+        approxBytesCounter: LongBox
+    ): Message<V, M> {
         var columnIndex = 1
 
         val id = resultSet.getLong(columnIndex++)
@@ -127,13 +135,17 @@ internal object ConsumerSchemaHelpers {
             }
         }
 
-        val meta = queue.metadataDescription?.let {
-            val metaValues = Array(queue.metadataDescription.fields.size) { index ->
-                val field = queue.metadataDescription.fields[index]
-                field.readResultSet(resultSet, columnIndex++)
-            }
+        val meta = if (receiveOptions.readMetadata) {
+            queue.metadataDescription?.let {
+                val metaValues = Array(queue.metadataDescription.fields.size) { index ->
+                    val field = queue.metadataDescription.fields[index]
+                    field.readResultSet(resultSet, columnIndex++)
+                }
 
-            queue.metadataDescription.createInstance(metaValues)
+                queue.metadataDescription.createInstance(metaValues)
+            }
+        } else {
+            null
         }
 
         return Message(id, createdAt, processingAt, attempts, data, meta)
