@@ -1,35 +1,36 @@
 plugins {
-	id("java")
-	id("org.jetbrains.kotlin.jvm")
+    id("java")
+    id("org.jetbrains.kotlin.jvm")
 }
 
 apply(plugin = "java")
 apply(plugin = "kotlin")
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	val kotlinVersion: String by project
-	val slf4jVersion: String by project
-	val logbackVersion: String by project
-	val postgresqlVersion: String by project
+    val kotlinVersion: String by project
+    val postgresqlVersion: String by project
+    val slf4jVersion: String by project
     val prometheusVersion: String by project
-	val testContainersVersion: String by project
-	val junitVersion: String by project
-	val mockkVersion: String by project
+    val junitVersion: String by project
+    val mockkVersion: String by project
+    val testContainersVersion: String by project
+    val logbackVersion: String by project
+    val hikariVersion: String by project
 
-	// Kotlin
-	implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-	implementation("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-	implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    // Kotlin
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 
-	// PostgreSQL
-	implementation("org.postgresql:postgresql:$postgresqlVersion")
+    // PostgreSQL
+    implementation("org.postgresql:postgresql:$postgresqlVersion")
 
-	// Logging
-	implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    // Logging
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
 
     // Metrics
     implementation("io.prometheus:simpleclient:$prometheusVersion")
@@ -37,25 +38,25 @@ dependencies {
     // ---------------------------------------------------------------------------------
 
     // Test
-	testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
 
-	testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("io.mockk:mockk:$mockkVersion")
 
-	testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
-	testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
-	testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
+    testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
+    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
 
-	testImplementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
-	testImplementation("org.jetbrains.kotlin:kotlin-test-common:$kotlinVersion")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-common:$kotlinVersion")
 
     testImplementation("ch.qos.logback:logback-core:$logbackVersion")
     testImplementation("ch.qos.logback:logback-classic:$logbackVersion")
-    testImplementation("com.zaxxer:HikariCP:5.0.1")
+    testImplementation("com.zaxxer:HikariCP:$hikariVersion")
 
 }
 
 tasks.withType<Test> {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
 
 // Kotlin settings

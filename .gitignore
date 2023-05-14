@@ -1,2 +1,5 @@
 # Gradle
 .gradle/
+
+# Build
+build/
