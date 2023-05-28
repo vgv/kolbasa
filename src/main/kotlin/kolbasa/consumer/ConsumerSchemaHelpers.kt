@@ -36,7 +36,7 @@ internal object ConsumerSchemaHelpers {
             }
         }
 
-        // Clauses
+        // 'where' clauses
         val clauses = mutableListOf(
             "(${Const.SCHEDULED_AT_COLUMN_NAME} is null or ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp())",
             "${Const.ATTEMPTS_COLUMN_NAME}>0"
@@ -45,11 +45,13 @@ internal object ConsumerSchemaHelpers {
             clauses += filter.toSqlClause(queue)
         }
 
-        // OrderBy
+        // 'order by' clauses
         val orderBy = mutableListOf<String>()
+        // custom ordering clauses first, if any
         receiveOptions.order?.forEach { order ->
             orderBy += order.dbOrderClause
         }
+        // after custom clauses – standard
         orderBy += "${Const.SCHEDULED_AT_COLUMN_NAME} asc nulls first"
         orderBy += "${Const.CREATED_AT_COLUMN_NAME} asc"
 
@@ -135,15 +137,20 @@ internal object ConsumerSchemaHelpers {
             }
         }
 
-        val meta = if (receiveOptions.readMetadata) {
-            queue.metadataDescription?.let {
-                val metaValues = Array(queue.metadataDescription.fields.size) { index ->
-                    val field = queue.metadataDescription.fields[index]
-                    field.readResultSet(resultSet, columnIndex++)
-                }
+        val meta = if (receiveOptions.readMetadata && queue.metadataDescription != null) {
+            var atLeastOneValueIsNotNull = false
 
-                queue.metadataDescription.createInstance(metaValues)
+            val metaValues = Array(queue.metadataDescription.fields.size) { index ->
+                val field = queue.metadataDescription.fields[index]
+                val fieldValue = field.readResultSet(resultSet, columnIndex++)
+                if (fieldValue != null) atLeastOneValueIsNotNull = true
+                return@Array fieldValue
             }
+
+            if (atLeastOneValueIsNotNull)
+                queue.metadataDescription.createInstance(metaValues)
+            else
+                null
         } else {
             null
         }
