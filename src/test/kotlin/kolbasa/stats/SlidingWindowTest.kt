@@ -2,15 +2,9 @@ package kolbasa.stats
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.fail
 
 
 class SlidingWindowTest {
-
-    @Test
-    fun failedTest() {
-        fail("Test failure")
-    }
 
     @Test
     fun testSlidingWindow() {
