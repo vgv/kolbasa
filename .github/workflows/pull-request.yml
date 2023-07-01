@@ -19,6 +19,7 @@ jobs:
               with:
                   java-version: '17'
                   distribution: 'corretto'
+                  cache: 'gradle'
 
             - name: Build
               run: ./gradlew test --info
