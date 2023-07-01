@@ -2,9 +2,15 @@ package kolbasa.stats
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 
 class SlidingWindowTest {
+
+    @Test
+    fun goodTest() {
+        // Just to check new PR workflow run
+    }
 
     @Test
     fun testSlidingWindow() {
