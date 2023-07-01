@@ -8,7 +8,7 @@ import kotlin.test.fail
 class SlidingWindowTest {
 
     @Test
-    fun goodTest8() {
+    fun goodTest9() {
         // Just to check new PR workflow run
     }
 
