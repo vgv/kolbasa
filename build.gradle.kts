@@ -1,10 +1,13 @@
-plugins {
-    id("java")
-    id("org.jetbrains.kotlin.jvm")
-}
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-apply(plugin = "java")
-apply(plugin = "kotlin")
+plugins {
+    java
+    kotlin("jvm")
+    signing
+    `maven-publish`
+    id("com.netflix.nebula.release")
+    id("io.github.gradle-nexus.publish-plugin")
+}
 
 repositories {
     mavenCentral()
@@ -55,17 +58,238 @@ dependencies {
 
 }
 
+// Kotlin settings
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "17"
+    kotlinOptions.apiVersion = "1.7"
+    kotlinOptions.languageVersion = "1.7"
+}
+
+// Unit tests settings
 tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-// Kotlin settings
-val compileKotlin: org.jetbrains.kotlin.gradle.tasks.KotlinCompile by tasks
-compileKotlin.kotlinOptions.jvmTarget = "17"
-compileKotlin.kotlinOptions.apiVersion = "1.7"
-compileKotlin.kotlinOptions.languageVersion = "1.7"
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
 
-val compileTestKotlin: org.jetbrains.kotlin.gradle.tasks.KotlinCompile by tasks
-compileTestKotlin.kotlinOptions.jvmTarget = "17"
-compileTestKotlin.kotlinOptions.apiVersion = "1.7"
-compileTestKotlin.kotlinOptions.languageVersion = "1.7"
+val settingsProvider = SettingsProvider()
+
+tasks {
+    // All checks were already made by workflow "On pull request" => no checks here
+    if (gradle.startParameter.taskNames.contains("final")) {
+        named("build").get().apply {
+            dependsOn.removeIf { it == "check" }
+        }
+    }
+
+    afterEvaluate {
+        // Publish artifacts to Maven Central before pushing new git tag to repo
+        named("release").get().apply {
+            dependsOn(named("publishToSonatype").get())
+        }
+
+        named("closeAndReleaseStagingRepository").get().apply {
+            dependsOn(named("final").get())
+        }
+    }
+}
+
+tasks.withType<Sign> {
+    doFirst {
+        settingsProvider.validateGPGSecrets()
+    }
+    dependsOn(tasks.getByName("build"))
+}
+
+tasks.withType<PublishToMavenRepository> {
+    doFirst {
+        settingsProvider.validateSonatypeCredentials()
+    }
+}
+
+tasks.register("printFinalReleaseNote") {
+    doLast {
+        printFinalReleaseNote(
+            groupId = "io.github.vgv",
+            artifactId = "kolbasa",
+            sanitizedVersion = project.sanitizeVersion()
+        )
+    }
+    dependsOn(tasks.getByName("final"))
+}
+
+tasks.register("printDevSnapshotReleaseNote") {
+    doLast {
+        printDevSnapshotReleaseNote(
+            groupId = "io.github.vgv",
+            artifactId = "kolbasa",
+            sanitizedVersion = project.sanitizeVersion()
+        )
+    }
+    dependsOn(tasks.getByName("devSnapshot"))
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            groupId = "io.github.vgv"
+            artifactId = "kolbasa"
+            version = project.sanitizeVersion()
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name.set("Kolbasa")
+                description.set("Kotlin library for PostgreSQL queues")
+                url.set("https://github.com/vgv/kolbasa")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("vgv")
+                        name.set("Vasily Vasilkov")
+                        email.set("chand0s@yandex.ru")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/vgv/kolbasa.git")
+                    developerConnection.set("scm:git:ssh://github.com:vgv/kolbasa.git")
+                    url.set("https://github.com/vgv/kolbasa")
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useInMemoryPgpKeys(settingsProvider.gpgSigningKey, settingsProvider.gpgSigningPassword)
+    sign(publishing.publications["mavenJava"])
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            useStaging.set(!project.isSnapshotVersion())
+            username.set(settingsProvider.sonatypeUsername)
+            password.set(settingsProvider.sonatypePassword)
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
+}
+
+// We want to change SNAPSHOT versions format from:
+// 		<major>.<minor>.<patch>-dev.#+<branchname>.<hash> (local branch)
+// 		<major>.<minor>.<patch>-dev.#+<hash> (github pull request)
+// to:
+// 		<major>.<minor>.<patch>-dev+<branchname>-SNAPSHOT
+fun Project.sanitizeVersion(): String {
+    val version = version.toString()
+    return if (project.isSnapshotVersion()) {
+        val githubHeadRef = settingsProvider.githubHeadRef
+        if (githubHeadRef != null) {
+            // github pull request
+            version
+                .replace(Regex("-dev\\.\\d+\\+[a-f0-9]+$"), "-dev+$githubHeadRef-SNAPSHOT")
+        } else {
+            // local branch
+            version
+                .replace(Regex("-dev\\.\\d+\\+"), "-dev+")
+                .replace(Regex("\\.[a-f0-9]+$"), "-SNAPSHOT")
+        }
+    } else {
+        version
+    }
+}
+
+fun Project.isSnapshotVersion() = version.toString().contains("-dev.")
+
+fun printFinalReleaseNote(groupId: String, artifactId: String, sanitizedVersion: String) {
+    println()
+    println("========================================================")
+    println()
+    println("New RELEASE artifact version were published:")
+    println("	groupId: $groupId")
+    println("	artifactId: $artifactId")
+    println("	version: $sanitizedVersion")
+    println()
+    println("Discover on Maven Central:")
+    println("	https://repo1.maven.org/maven2/${groupId.replace('.', '/')}/$artifactId/")
+    println()
+    println("Edit or delete artifacts on OSS Nexus Repository Manager:")
+    println("	https://oss.sonatype.org/#nexus-search;gav~$groupId~~~~")
+    println()
+    println("Control staging repositories on OSS Nexus Repository Manager:")
+    println("	https://oss.sonatype.org/#stagingRepositories")
+    println()
+    println("========================================================")
+    println()
+}
+
+fun printDevSnapshotReleaseNote(groupId: String, artifactId: String, sanitizedVersion: String) {
+    println()
+    println("========================================================")
+    println()
+    println("New developer SNAPSHOT artifact version were published:")
+    println("	groupId: $groupId")
+    println("	artifactId: $artifactId")
+    println("	version: $sanitizedVersion")
+    println()
+    println("Discover on Maven Central:")
+    println("	https://s01.oss.sonatype.org/content/repositories/snapshots/${groupId.replace('.', '/')}/$artifactId/")
+    println()
+    println("Edit or delete artifacts on OSS Nexus Repository Manager:")
+    println("	https://s01.oss.sonatype.org/#nexus-search;gav~$groupId~~~~")
+    println()
+    println("========================================================")
+    println()
+}
+
+class SettingsProvider {
+
+    val gpgSigningKey: String?
+        get() = System.getenv(GPG_SIGNING_KEY_PROPERTY)
+
+    val gpgSigningPassword: String?
+        get() = System.getenv(GPG_SIGNING_PASSWORD_PROPERTY)
+
+    val sonatypeUsername: String?
+        get() = System.getenv(SONATYPE_USERNAME_PROPERTY)
+
+    val sonatypePassword: String?
+        get() = System.getenv(SONATYPE_PASSWORD_PROPERTY)
+
+    val githubHeadRef: String?
+        get() = System.getenv(GITHUB_HEAD_REF_PROPERTY)
+
+    fun validateGPGSecrets() = require(
+        value = !gpgSigningKey.isNullOrBlank() && !gpgSigningPassword.isNullOrBlank(),
+        lazyMessage = { "Both $GPG_SIGNING_KEY_PROPERTY and $GPG_SIGNING_PASSWORD_PROPERTY environment variables must not be empty" }
+    )
+
+    fun validateSonatypeCredentials() = require(
+        value = !sonatypeUsername.isNullOrBlank() && !sonatypePassword.isNullOrBlank(),
+        lazyMessage = { "Both $SONATYPE_USERNAME_PROPERTY and $SONATYPE_PASSWORD_PROPERTY environment variables must not be empty" }
+    )
+
+    private companion object {
+        private const val GPG_SIGNING_KEY_PROPERTY = "GPG_SIGNING_KEY"
+        private const val GPG_SIGNING_PASSWORD_PROPERTY = "GPG_SIGNING_PASSWORD"
+        private const val SONATYPE_USERNAME_PROPERTY = "SONATYPE_USERNAME"
+        private const val SONATYPE_PASSWORD_PROPERTY = "SONATYPE_PASSWORD"
+        private const val GITHUB_HEAD_REF_PROPERTY = "GITHUB_HEAD_REF"
+    }
+}
