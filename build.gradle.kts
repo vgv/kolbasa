@@ -183,6 +183,7 @@ nexusPublishing {
     repositories {
         sonatype {
             useStaging.set(!project.isSnapshotVersion())
+            packageGroup.set("io.github.vgv")
             username.set(settingsProvider.sonatypeUsername)
             password.set(settingsProvider.sonatypePassword)
             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
