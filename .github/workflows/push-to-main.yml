@@ -32,3 +32,4 @@ jobs:
                   SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
                   SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
                   GITHUB_HEAD_REF: ${{ github.head_ref }}
+                  GRGIT_USER: ${{ secrets.GITHUB_TOKEN }}
