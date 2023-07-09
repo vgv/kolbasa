@@ -136,6 +136,7 @@ internal abstract class MetaField<M : Any>(
 
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class KotlinPropertyMetaField<M : Any>(
     val property: KProperty1<M, *>
 ) :
@@ -153,6 +154,7 @@ internal class KotlinPropertyMetaField<M : Any>(
 
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class JavaRecordPropertyMetaField<M : Any>(
     private val recordComponent: RecordComponent
 ) :
@@ -169,6 +171,7 @@ internal class JavaRecordPropertyMetaField<M : Any>(
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class JavaBeanMetaField<M : Any>(
     private val propertyDescriptor: PropertyDescriptor
 ) : MetaField<M>(
