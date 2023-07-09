@@ -24,7 +24,7 @@ internal object Const {
     const val CONSUMER_COLUMN_NAME = "consumer"
     const val PRODUCER_CONSUMER_VALUE_LENGTH = 256
 
-    const val ATTEMPTS_COLUMN_NAME = "attempts"
+    const val REMAINING_ATTEMPTS_COLUMN_NAME = "remaining_attempts"
 
     const val DATA_COLUMN_NAME = "data"
 

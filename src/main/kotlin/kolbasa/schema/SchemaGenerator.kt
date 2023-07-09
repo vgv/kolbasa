@@ -17,7 +17,7 @@ internal object SchemaGenerator {
         forScheduledAtColumn(queue, existingTable, mutableSchema)
 
         // attempts
-        forAttemptsColumn(queue, existingTable, mutableSchema)
+        forRemainingAttemptsColumn(queue, existingTable, mutableSchema)
 
         // metadata
         queue.metadataDescription?.fields?.forEach { metaField ->
@@ -40,7 +40,7 @@ internal object SchemaGenerator {
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
                 ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
                 ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
-                ${Const.ATTEMPTS_COLUMN_NAME} int not null,
+                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} int not null,
                 ${Const.DATA_COLUMN_NAME} ${queue.dataType.dbColumnType} not null
             )
             """.trimIndent()
@@ -97,15 +97,15 @@ internal object SchemaGenerator {
         }
     }
 
-    private fun forAttemptsColumn(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema) {
+    private fun forRemainingAttemptsColumn(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema) {
         val desiredAttempts = queue.options?.defaultAttempts ?: QueueOptions.DEFAULT_ATTEMPTS
         val currentDefaultClause = existingTable
-            ?.findColumn(Const.ATTEMPTS_COLUMN_NAME)
+            ?.findColumn(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
             ?.defaultExpression
 
         val alterStatement = """
                 alter table ${queue.dbTableName}
-                alter ${Const.ATTEMPTS_COLUMN_NAME}
+                alter ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
                 set default $desiredAttempts
             """.trimIndent()
 
