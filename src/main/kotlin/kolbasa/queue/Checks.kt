@@ -68,15 +68,6 @@ internal object Checks {
         }
     }
 
-    fun checkMetaFieldAnnotations(searchable: Searchable?, unique: Unique?) {
-//        // TODO: maxLength
-//
-//        val isSearchable = searchable != null
-//        val isUnique = unique != null
-//        check()
-
-    }
-
     fun checkMetaFieldName(fieldName: String) {
         check(fieldName.isNotEmpty()) {
             "Meta field name is empty"

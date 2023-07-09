@@ -24,7 +24,6 @@ internal abstract class MetaField<M : Any>(
 
     init {
         Checks.checkMetaFieldName(fieldName)
-        Checks.checkMetaFieldAnnotations(searchable, unique)
     }
 
     val dbColumnName = MetaHelpers.generateMetaColumnName(fieldName)
