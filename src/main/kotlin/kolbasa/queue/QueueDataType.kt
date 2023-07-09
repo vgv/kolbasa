@@ -30,7 +30,7 @@ sealed class QueueDataType<V> {
         override val dbColumnType = "int"
     }
 
-    data class Long<V> constructor(
+    data class Long<V>(
         val serializer: (V) -> kotlin.Long,
         val deserializer: (kotlin.Long) -> V
     ) : QueueDataType<V>() {
