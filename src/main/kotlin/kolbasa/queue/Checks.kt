@@ -68,7 +68,7 @@ internal object Checks {
         }
     }
 
-    fun checkMetaFieldAnnotations(maxLength: MaxLength?, searchable: Searchable?, unique: Unique?) {
+    fun checkMetaFieldAnnotations(searchable: Searchable?, unique: Unique?) {
 //        // TODO: maxLength
 //
 //        val isSearchable = searchable != null

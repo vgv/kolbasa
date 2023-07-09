@@ -1,9 +1,9 @@
 package kolbasa.queue.meta
 
 import kolbasa.queue.Checks
-import kolbasa.queue.MaxLength
 import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
+import kolbasa.schema.Const
 import java.beans.PropertyDescriptor
 import java.lang.reflect.RecordComponent
 import java.math.BigDecimal
@@ -18,19 +18,18 @@ import kotlin.reflect.full.findAnnotation
 internal abstract class MetaField<M : Any>(
     private val kotlinType: KClass<M>,
     val fieldName: String,
-    private val maxLength: MaxLength?,
     searchable: Searchable?,
     unique: Unique?
 ) {
 
     init {
         Checks.checkMetaFieldName(fieldName)
-        Checks.checkMetaFieldAnnotations(maxLength, searchable, unique)
+        Checks.checkMetaFieldAnnotations(searchable, unique)
     }
 
     val dbColumnName = MetaHelpers.generateMetaColumnName(fieldName)
     val dbColumnType = platformTypeToDbType()
-    private val sqlColumnType = platformTypeToSqlType()
+    private val sqlColumnType = platformTypeToJavaSqlType()
     val dbIndexType = defineIndexType(unique, searchable)
     private val enumValueOfFunction = MetaHelpers.findEnumValueOfFunction(kotlinType)
 
@@ -91,7 +90,7 @@ internal abstract class MetaField<M : Any>(
     private fun platformTypeToDbType(): String {
         return MetaHelpers.enumerateTypes(kotlinType,
             string = {
-                "varchar(${maxLength?.length ?: 256})"
+                "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})"
             },
             long = { "bigint" },
             int = { "int" },
@@ -100,14 +99,14 @@ internal abstract class MetaField<M : Any>(
             boolean = { "boolean" },
             double = { "double precision" },
             float = { "real" },
-            char = { "varchar(1)" },
+            char = { "varchar(${Const.META_FIELD_CHAR_TYPE_MAX_LENGTH})" },
             biginteger = { "numeric" },
             bigdecimal = { "numeric" },
-            enum = { "varchar(256)" }
+            enum = { "varchar(${Const.META_FIELD_ENUM_TYPE_MAX_LENGTH})" }
         )
     }
 
-    private fun platformTypeToSqlType(): Int {
+    private fun platformTypeToJavaSqlType(): Int {
         return MetaHelpers.enumerateTypes(kotlinType,
             string = { Types.VARCHAR },
             long = { Types.BIGINT },
@@ -144,7 +143,6 @@ internal class KotlinPropertyMetaField<M : Any>(
         property.returnType.classifier as KClass<M>,
         property.name,
         property.findAnnotation(),
-        property.findAnnotation(),
         property.findAnnotation()
     ) {
 
@@ -161,7 +159,6 @@ internal class JavaRecordPropertyMetaField<M : Any>(
     MetaField<M>(
         recordComponent.type.kotlin as KClass<M>,
         recordComponent.name,
-        recordComponent.getAnnotation(MaxLength::class.java),
         recordComponent.getAnnotation(Searchable::class.java),
         recordComponent.getAnnotation(Unique::class.java)
     ) {
@@ -177,7 +174,6 @@ internal class JavaBeanMetaField<M : Any>(
 ) : MetaField<M>(
     propertyDescriptor.propertyType.kotlin as KClass<M>,
     propertyDescriptor.name,
-    propertyDescriptor.propertyType.getAnnotation(MaxLength::class.java),
     propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
     propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
 ) {
