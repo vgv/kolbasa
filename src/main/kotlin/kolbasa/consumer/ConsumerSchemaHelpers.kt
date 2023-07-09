@@ -25,7 +25,7 @@ internal object ConsumerSchemaHelpers {
             Const.ID_COLUMN_NAME,
             Const.CREATED_AT_COLUMN_NAME,
             Const.PROCESSING_AT_COLUMN_NAME,
-            Const.ATTEMPTS_COLUMN_NAME,
+            Const.REMAINING_ATTEMPTS_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
 
@@ -39,7 +39,7 @@ internal object ConsumerSchemaHelpers {
         // 'where' clauses
         val clauses = mutableListOf(
             "(${Const.SCHEDULED_AT_COLUMN_NAME} is null or ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp())",
-            "${Const.ATTEMPTS_COLUMN_NAME}>0"
+            "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         receiveOptions.filter?.let { filter ->
             clauses += filter.toSqlClause(queue)
@@ -62,7 +62,7 @@ internal object ConsumerSchemaHelpers {
             set
                 ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
                 ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
-                ${Const.ATTEMPTS_COLUMN_NAME}=${Const.ATTEMPTS_COLUMN_NAME}-1,
+                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                 consumer=?
             where id in (
                 select id
@@ -177,7 +177,7 @@ internal object ConsumerSchemaHelpers {
                 select id
                 from ${queue.dbTableName}
                 where
-                    ${Const.ATTEMPTS_COLUMN_NAME} <= 0 and
+                    ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
                     ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
                 limit $limit
             )
