@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -67,7 +69,14 @@ tasks.withType<KotlinCompile> {
 
 // Unit tests settings
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        enableAssertions = true
+        testLogging {
+            exceptionFormat = TestExceptionFormat.FULL
+            events = setOf(TestLogEvent.PASSED, TestLogEvent.STARTED, TestLogEvent.FAILED, TestLogEvent.SKIPPED)
+            showStandardStreams = false
+        }
+    }
 }
 
 java {
