@@ -34,4 +34,3 @@ jobs:
                   GITHUB_HEAD_REF: ${{ github.head_ref }}
                   GRGIT_USER: 'x-access-token'
                   GRGIT_PASS: ${{ secrets.GITHUB_TOKEN }}
-                  USELESS_PARAM: 'useless-value'
