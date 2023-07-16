@@ -6,9 +6,10 @@ import kotlin.reflect.KProperty1
 
 data class Order<M> internal constructor(val metaPropertyName: String, val order: SortOrder) {
 
-    private val dbMetaColumnName = MetaHelpers.generateMetaColumnName(metaPropertyName)
-
-    internal val dbOrderClause = "$dbMetaColumnName ${order.sql}"
+    /**
+     * SQL 'order by' clause (column name + sort), like 'some_column asc'
+     */
+    internal val dbOrderClause = "${MetaHelpers.generateMetaColumnName(metaPropertyName)} ${order.sql}"
 
     companion object {
 
