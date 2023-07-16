@@ -1,8 +1,9 @@
 # Gradle
-.gradle/
+/.gradle/
 
 # Build
-build/
+/build/
+/out/
 
 # Local development
 /src/test/kotlin/local/
