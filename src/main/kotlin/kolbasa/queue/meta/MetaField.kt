@@ -139,10 +139,10 @@ internal class KotlinPropertyMetaField<M : Any>(
     val property: KProperty1<M, *>
 ) :
     MetaField<M>(
-        property.returnType.classifier as KClass<M>,
-        property.name,
-        property.findAnnotation(),
-        property.findAnnotation()
+        kotlinType = property.returnType.classifier as KClass<M>,
+        fieldName = property.name,
+        searchable = property.findAnnotation<Searchable>(),
+        unique = property.findAnnotation<Unique>()
     ) {
 
     override fun getValue(meta: M): Any? {
@@ -156,10 +156,10 @@ internal class JavaRecordPropertyMetaField<M : Any>(
     private val recordComponent: RecordComponent
 ) :
     MetaField<M>(
-        recordComponent.type.kotlin as KClass<M>,
-        recordComponent.name,
-        recordComponent.getAnnotation(Searchable::class.java),
-        recordComponent.getAnnotation(Unique::class.java)
+        kotlinType = recordComponent.type.kotlin as KClass<M>,
+        fieldName = recordComponent.name,
+        searchable = recordComponent.getAnnotation(Searchable::class.java),
+        unique = recordComponent.getAnnotation(Unique::class.java)
     ) {
 
     override fun getValue(meta: M): Any? {
@@ -171,10 +171,10 @@ internal class JavaRecordPropertyMetaField<M : Any>(
 internal class JavaBeanMetaField<M : Any>(
     private val propertyDescriptor: PropertyDescriptor
 ) : MetaField<M>(
-    propertyDescriptor.propertyType.kotlin as KClass<M>,
-    propertyDescriptor.name,
-    propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
-    propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
+    kotlinType = propertyDescriptor.propertyType.kotlin as KClass<M>,
+    fieldName = propertyDescriptor.name,
+    searchable = propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
+    unique = propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
 ) {
 
     override fun getValue(meta: M): Any? {
