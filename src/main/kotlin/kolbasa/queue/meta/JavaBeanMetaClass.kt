@@ -33,5 +33,5 @@ internal class JavaBeanMetaClass<M : Any>(javaClass: Class<M>) : MetaClass<M>() 
 
     override fun findMetaFieldByName(fieldName: String): MetaField<M>? = propertiesToFields[fieldName]
 
-    override fun createInstance(values: Array<Any?>): M? = javaBeanConstructor.newInstance(values)
+    override fun createInstance(values: Array<Any?>): M? = javaBeanConstructor.newInstance(*values)
 }

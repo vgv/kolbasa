@@ -19,7 +19,7 @@ internal object MetaHelpers {
         // convert Java field into column name, like someField -> some_field
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
         // add 'meta_' prefix
-        return Const.QUEUE_META_COLUMN_NAME_PREFIX + snakeCaseName
+        return Const.META_FIELD_NAME_PREFIX + snakeCaseName
     }
 
     fun findEnumValueOfFunction(kClass: KClass<*>): KFunction<*>? {
