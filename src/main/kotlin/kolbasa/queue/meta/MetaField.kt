@@ -137,13 +137,12 @@ internal abstract class MetaField<M : Any>(
 @Suppress("UNCHECKED_CAST")
 internal class KotlinPropertyMetaField<M : Any>(
     val property: KProperty1<M, *>
-) :
-    MetaField<M>(
-        kotlinType = property.returnType.classifier as KClass<M>,
-        fieldName = property.name,
-        searchable = property.findAnnotation<Searchable>(),
-        unique = property.findAnnotation<Unique>()
-    ) {
+) : MetaField<M>(
+    kotlinType = property.returnType.classifier as KClass<M>,
+    fieldName = property.name,
+    searchable = property.findAnnotation<Searchable>(),
+    unique = property.findAnnotation<Unique>()
+) {
 
     override fun getValue(meta: M): Any? {
         return property(meta)
@@ -154,13 +153,12 @@ internal class KotlinPropertyMetaField<M : Any>(
 @Suppress("UNCHECKED_CAST")
 internal class JavaRecordPropertyMetaField<M : Any>(
     private val recordComponent: RecordComponent
-) :
-    MetaField<M>(
-        kotlinType = recordComponent.type.kotlin as KClass<M>,
-        fieldName = recordComponent.name,
-        searchable = recordComponent.getAnnotation(Searchable::class.java),
-        unique = recordComponent.getAnnotation(Unique::class.java)
-    ) {
+) : MetaField<M>(
+    kotlinType = recordComponent.type.kotlin as KClass<M>,
+    fieldName = recordComponent.name,
+    searchable = recordComponent.getAnnotation(Searchable::class.java),
+    unique = recordComponent.getAnnotation(Unique::class.java)
+) {
 
     override fun getValue(meta: M): Any? {
         return recordComponent.accessor(meta)
