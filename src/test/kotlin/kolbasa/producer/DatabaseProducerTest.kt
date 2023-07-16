@@ -30,7 +30,7 @@ class DatabaseProducerTest : AbstractPostgresTest() {
     private val second = listOf(
         SendMessage("bugaga", TestMeta(6)),
         SendMessage("bugaga", TestMeta(7)),
-        SendMessage("bugaga", TestMeta(2)), // poison message
+        SendMessage("bugaga", TestMeta(2)), // POISON MESSAGE WITH NON UNIQUE META FIELD
         SendMessage("bugaga", TestMeta(9)),
         SendMessage("bugaga", TestMeta(10))
     )
