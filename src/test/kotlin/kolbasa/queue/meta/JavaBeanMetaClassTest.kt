@@ -65,4 +65,22 @@ internal class TestBean(
     var y: String,
     @Unique
     var z: Boolean
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TestBean
+
+        if (x != other.x) return false
+        if (y != other.y) return false
+        return z == other.z
+    }
+
+    override fun hashCode(): Int {
+        var result = x
+        result = 31 * result + y.hashCode()
+        result = 31 * result + z.hashCode()
+        return result
+    }
+}
