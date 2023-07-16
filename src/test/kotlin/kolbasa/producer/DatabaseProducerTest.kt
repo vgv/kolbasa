@@ -5,6 +5,7 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Unique
+import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -56,6 +57,28 @@ class DatabaseProducerTest : AbstractPostgresTest() {
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
+
+    @Test
+    fun testSendSimpleData_WithCustomProducerName() {
+        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+
+        val firstProducerName = "first_producer"
+        val secondProducerName = "second_producer"
+        val firstProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = firstProducerName))
+        val secondProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = secondProducerName))
+
+        val id1 = firstProducer.send("bugaga")
+        val id2 = secondProducer.send("bugaga")
+        assertEquals(1, id1)
+        assertEquals(2, id2)
+
+        // check database
+        assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+        // check first producer
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$firstProducerName'"))
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$secondProducerName'"))
+    }
+
 
     @Test
     fun testSendSimpleDataAsSendMessage() {
