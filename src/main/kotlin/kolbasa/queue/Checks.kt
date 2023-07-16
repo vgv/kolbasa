@@ -85,20 +85,20 @@ internal object Checks {
     }
 
     fun checkCleanupLimit(limit: Int) {
-        check(limit in 1 .. 100_000) {
-            "Cleanup limit must be in the [1..100000] range"
+        check(limit in Const.MIN_CLEANUP_ROWS..Const.MAX_CLEANUP_ROWS) {
+            "Cleanup limit must be in the [${Const.MIN_CLEANUP_ROWS}..${Const.MAX_CLEANUP_ROWS}] range"
         }
     }
 
     fun checkCleanupMaxIterations(maxIterations: Int) {
-        check(maxIterations in 1 .. 100) {
-            "Cleanup max iterations must be in the [1..100] range"
+        check(maxIterations in Const.MIN_CLEANUP_ITERATIONS..Const.MAX_CLEANUP_ITERATIONS) {
+            "Cleanup max iterations must be in the [${Const.MIN_CLEANUP_ITERATIONS}..${Const.MAX_CLEANUP_ITERATIONS}] range"
         }
     }
 
     fun checkCleanupProbabilityPercent(probabilityPercent: Int) {
-        check(probabilityPercent in 1..100) {
-            "Cleanup probability percent must be in the [1..100] range"
+        check(probabilityPercent in Const.MIN_CLEANUP_PROBABILITY_PERCENT..Const.MAX_CLEANUP_PROBABILITY_PERCENT) {
+            "Cleanup probability percent must be in the [${Const.MIN_CLEANUP_PROBABILITY_PERCENT}..${Const.MAX_CLEANUP_PROBABILITY_PERCENT}] range"
         }
     }
 

@@ -163,5 +163,46 @@ internal class ChecksTest {
         }
     }
 
+    @Test
+    fun testCheckCleanupLimit_LessThanMin() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupLimit(Const.MIN_CLEANUP_ROWS - 1)
+        }
+    }
+
+    @Test
+    fun testCheckCleanupLimit_MoreThanMax() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupLimit(Const.MAX_CLEANUP_ROWS + 1)
+        }
+    }
+
+    @Test
+    fun testCheckCleanupMaxIterations_LessThanMin() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupMaxIterations(Const.MIN_CLEANUP_ITERATIONS - 1)
+        }
+    }
+
+    @Test
+    fun testCheckCleanupMaxIterations_MoreThanMax() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupMaxIterations(Const.MAX_CLEANUP_ITERATIONS + 1)
+        }
+    }
+
+    @Test
+    fun testCheckCleanupProbabilityPercent_LessThanMin() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupProbabilityPercent(Const.MIN_CLEANUP_PROBABILITY_PERCENT - 1)
+        }
+    }
+
+    @Test
+    fun testCheckCleanupProbabilityPercent_MoreThanMax() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkCleanupProbabilityPercent(Const.MAX_CLEANUP_PROBABILITY_PERCENT + 1)
+        }
+    }
 
 }
