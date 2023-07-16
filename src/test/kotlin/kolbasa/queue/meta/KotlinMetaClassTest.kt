@@ -5,6 +5,8 @@ import kolbasa.queue.Unique
 import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 
 class KotlinMetaClassTest {
 
@@ -18,21 +20,21 @@ class KotlinMetaClassTest {
             assertEquals("x", field.fieldName)
             assertEquals(Const.META_FIELD_NAME_PREFIX + "x", field.dbColumnName)
             assertEquals("int", field.dbColumnType)
-            //assertEquals(MetaIndexType.NO_INDEX, field.dbIndexType)
+            assertEquals(MetaIndexType.NO_INDEX, field.dbIndexType)
         }
 
         metaClass.fields[1].let { field ->
             assertEquals("y", field.fieldName)
             assertEquals(Const.META_FIELD_NAME_PREFIX + "y", field.dbColumnName)
             assertEquals("varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})", field.dbColumnType)
-            //assertEquals(MetaIndexType.JUST_INDEX, field.dbIndexType)
+            assertEquals(MetaIndexType.JUST_INDEX, field.dbIndexType)
         }
 
         metaClass.fields[2].let { field ->
             assertEquals("z", field.fieldName)
             assertEquals(Const.META_FIELD_NAME_PREFIX + "z", field.dbColumnName)
             assertEquals("boolean", field.dbColumnType)
-            //assertEquals(MetaIndexType.UNIQUE_INDEX, field.dbIndexType)
+            assertEquals(MetaIndexType.UNIQUE_INDEX, field.dbIndexType)
         }
     }
 
@@ -40,9 +42,9 @@ class KotlinMetaClassTest {
     fun findMetaFieldByName() {
         val metaClass = KotlinMetaClass(TestData::class)
 
-        kotlin.test.assertSame(metaClass.fields[0], metaClass.findMetaFieldByName("x"))
-        kotlin.test.assertSame(metaClass.fields[1], metaClass.findMetaFieldByName("y"))
-        kotlin.test.assertSame(metaClass.fields[2], metaClass.findMetaFieldByName("z"))
+        assertSame(metaClass.fields[0], metaClass.findMetaFieldByName("x"))
+        assertSame(metaClass.fields[1], metaClass.findMetaFieldByName("y"))
+        assertSame(metaClass.fields[2], metaClass.findMetaFieldByName("z"))
     }
 
     @Test
@@ -52,12 +54,12 @@ class KotlinMetaClassTest {
         val expected = TestData(1, "one", true)
         val created = metaClass.createInstance(arrayOf(1, "one", true))
 
-        kotlin.test.assertNotSame(expected, created)
+        assertNotSame(expected, created)
         assertEquals(expected, created)
     }
 }
 
-data class TestData(
+internal data class TestData(
     val x: Int,
     @Searchable
     val y: String,
