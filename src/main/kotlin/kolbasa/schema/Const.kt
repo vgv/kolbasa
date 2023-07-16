@@ -48,4 +48,25 @@ internal object Const {
      * Do you really have an enum value longer than 1024 chars?
      */
     const val META_FIELD_ENUM_TYPE_MAX_LENGTH = 1024 // 1024 chars
+
+    /**
+     * How many rows to delete at each cleanup iteration
+     */
+    const val MIN_CLEANUP_ROWS = 100
+    const val DEFAULT_CLEANUP_ROWS = 1_000
+    const val MAX_CLEANUP_ROWS = 100_000
+
+    /**
+     * How many iterations at each cleanup
+     */
+    const val MIN_CLEANUP_ITERATIONS = 1
+    const val DEFAULT_CLEANUP_ITERATIONS = 10
+    const val MAX_CLEANUP_ITERATIONS = 100
+
+    /**
+     * Probability to trigger a cleanup
+     */
+    const val MIN_CLEANUP_PROBABILITY_PERCENT = 0
+    const val DEFAULT_CLEANUP_PROBABILITY_PERCENT = 20
+    const val MAX_CLEANUP_PROBABILITY_PERCENT = 100
 }
