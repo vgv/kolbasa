@@ -142,15 +142,15 @@ internal object DatabaseExtensions {
     fun Connection.readInt(sql: String): Int {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                if (!resultSet.next()) {
-                    throw IllegalArgumentException("No rows in the query '$sql'")
+                require(resultSet.next()) {
+                    "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getInt(1)
 
                 // Do we have more rows than one?
-                if (resultSet.next()) {
-                    throw IllegalArgumentException("More than one row in the query '$sql'")
+                require(!resultSet.next()) {
+                    "More than one row in the query '$sql'"
                 }
 
                 value
@@ -168,15 +168,15 @@ internal object DatabaseExtensions {
     fun Connection.readLong(sql: String): Long {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                if (!resultSet.next()) {
-                    throw IllegalArgumentException("No rows in the query '$sql'")
+                require(resultSet.next()) {
+                    "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getLong(1)
 
                 // Do we have more rows than one?
-                if (resultSet.next()) {
-                    throw IllegalArgumentException("More than one row in the query '$sql'")
+                require(!resultSet.next()) {
+                    "More than one row in the query '$sql'"
                 }
 
                 value
@@ -194,15 +194,15 @@ internal object DatabaseExtensions {
     fun Connection.readBoolean(sql: String): Boolean {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                if (!resultSet.next()) {
-                    throw IllegalArgumentException("No rows in the query '$sql'")
+                require(resultSet.next()) {
+                    "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getBoolean(1)
 
                 // Do we have more rows than one?
-                if (resultSet.next()) {
-                    throw IllegalArgumentException("More than one row in the query '$sql'")
+                require(!resultSet.next()) {
+                    "More than one row in the query '$sql'"
                 }
 
                 value
