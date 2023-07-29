@@ -2,7 +2,6 @@ package kolbasa.stats.task
 
 import kolbasa.Kolbasa
 import kolbasa.stats.GlobalStats
-import org.slf4j.LoggerFactory
 
 internal class UpdateRealtimeStatsTask : AbstractDumpStatsTask() {
 
