@@ -1,6 +1,6 @@
 package kolbasa.pg
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readBoolean
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.readIntList
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.*
 
-internal class DatabaseExtensionsTest : AbstractPostgresTest() {
+internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     override fun generateTestData(): List<String> {
         val statements = mutableListOf<String>()

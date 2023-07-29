@@ -1,13 +1,13 @@
 package kolbasa.pg
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
-class LockTest : AbstractPostgresTest() {
+class LockTest : AbstractPostgresqlTest() {
 
     @Test
     fun testTryRunExclusive() {

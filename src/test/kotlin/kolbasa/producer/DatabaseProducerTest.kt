@@ -1,6 +1,6 @@
 package kolbasa.producer
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -13,7 +13,7 @@ import kotlin.test.assertFails
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class DatabaseProducerTest : AbstractPostgresTest() {
+class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     private val queue = Queue(
         "local",
