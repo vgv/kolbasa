@@ -12,7 +12,4 @@ internal class UpdateAllStatsTask : AbstractDumpStatsTask() {
 
     override fun reschedulingInterval() = Kolbasa.statsConfig.allDumpInterval
 
-    private companion object {
-        private val log = LoggerFactory.getLogger(UpdateAllStatsTask::class.qualifiedName)
-    }
 }
