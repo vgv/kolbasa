@@ -2,7 +2,6 @@ package kolbasa.stats.task
 
 import kolbasa.Kolbasa
 import kolbasa.stats.GlobalStats
-import org.slf4j.LoggerFactory
 
 internal class UpdateAllStatsTask : AbstractDumpStatsTask() {
 
@@ -12,7 +11,4 @@ internal class UpdateAllStatsTask : AbstractDumpStatsTask() {
 
     override fun reschedulingInterval() = Kolbasa.statsConfig.allDumpInterval
 
-    private companion object {
-        private val log = LoggerFactory.getLogger(UpdateAllStatsTask::class.qualifiedName)
-    }
 }

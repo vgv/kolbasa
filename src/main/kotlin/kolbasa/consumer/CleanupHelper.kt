@@ -10,7 +10,12 @@ internal object CleanupHelper {
 
     fun cleanup(connection: Connection, queue: Queue<*, *>) {
         val cleanupConfig = Kolbasa.cleanupConfig
-        if (cleanupConfig.cleanupProbabilityPercent < Random.nextInt(0, 100)) {
+
+        if (!cleanupConfig.enabled) {
+            return
+        }
+
+        if (probability(cleanupConfig.cleanupProbabilityPercent)) {
             return
         }
 
@@ -19,6 +24,10 @@ internal object CleanupHelper {
         Lock.tryRunExclusive(connection, lockId) { _ ->
             rawCleanup(connection, queue, cleanupConfig.cleanupLimit, cleanupConfig.cleanupMaxIterations)
         }
+    }
+
+    fun probability(probabilityPercent: Int): Boolean {
+        return probabilityPercent > Random.nextInt(0, 100)
     }
 
     private fun rawCleanup(connection: Connection, queue: Queue<*, *>, limit: Int, maxIterations: Int) {

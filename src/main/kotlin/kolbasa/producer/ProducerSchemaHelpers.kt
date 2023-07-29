@@ -30,11 +30,11 @@ internal object ProducerSchemaHelpers {
         }
 
         // attempts
-        columns += Const.ATTEMPTS_COLUMN_NAME
+        columns += Const.REMAINING_ATTEMPTS_COLUMN_NAME
         data.forEachIndexed { index, item ->
-            val attempts = QueueHelpers.calculateAttempts(queue.options, item.sendOptions)
+            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.sendOptions)
 
-            values[index] += "$attempts"
+            values[index] += "$remainingAttempts"
         }
 
         // meta fields

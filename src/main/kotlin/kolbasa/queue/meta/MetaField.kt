@@ -1,9 +1,9 @@
 package kolbasa.queue.meta
 
 import kolbasa.queue.Checks
-import kolbasa.queue.MaxLength
 import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
+import kolbasa.schema.Const
 import java.beans.PropertyDescriptor
 import java.lang.reflect.RecordComponent
 import java.math.BigDecimal
@@ -18,19 +18,17 @@ import kotlin.reflect.full.findAnnotation
 internal abstract class MetaField<M : Any>(
     private val kotlinType: KClass<M>,
     val fieldName: String,
-    private val maxLength: MaxLength?,
     searchable: Searchable?,
     unique: Unique?
 ) {
 
     init {
         Checks.checkMetaFieldName(fieldName)
-        Checks.checkMetaFieldAnnotations(maxLength, searchable, unique)
     }
 
     val dbColumnName = MetaHelpers.generateMetaColumnName(fieldName)
     val dbColumnType = platformTypeToDbType()
-    private val sqlColumnType = platformTypeToSqlType()
+    private val sqlColumnType = platformTypeToJavaSqlType()
     val dbIndexType = defineIndexType(unique, searchable)
     private val enumValueOfFunction = MetaHelpers.findEnumValueOfFunction(kotlinType)
 
@@ -91,7 +89,7 @@ internal abstract class MetaField<M : Any>(
     private fun platformTypeToDbType(): String {
         return MetaHelpers.enumerateTypes(kotlinType,
             string = {
-                "varchar(${maxLength?.length ?: 256})"
+                "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})"
             },
             long = { "bigint" },
             int = { "int" },
@@ -100,14 +98,14 @@ internal abstract class MetaField<M : Any>(
             boolean = { "boolean" },
             double = { "double precision" },
             float = { "real" },
-            char = { "varchar(1)" },
+            char = { "varchar(${Const.META_FIELD_CHAR_TYPE_MAX_LENGTH})" },
             biginteger = { "numeric" },
             bigdecimal = { "numeric" },
-            enum = { "varchar(256)" }
+            enum = { "varchar(${Const.META_FIELD_ENUM_TYPE_MAX_LENGTH})" }
         )
     }
 
-    private fun platformTypeToSqlType(): Int {
+    private fun platformTypeToJavaSqlType(): Int {
         return MetaHelpers.enumerateTypes(kotlinType,
             string = { Types.VARCHAR },
             long = { Types.BIGINT },
@@ -136,16 +134,15 @@ internal abstract class MetaField<M : Any>(
 
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class KotlinPropertyMetaField<M : Any>(
     val property: KProperty1<M, *>
-) :
-    MetaField<M>(
-        property.returnType.classifier as KClass<M>,
-        property.name,
-        property.findAnnotation(),
-        property.findAnnotation(),
-        property.findAnnotation()
-    ) {
+) : MetaField<M>(
+    kotlinType = property.returnType.classifier as KClass<M>,
+    fieldName = property.name,
+    searchable = property.findAnnotation<Searchable>(),
+    unique = property.findAnnotation<Unique>()
+) {
 
     override fun getValue(meta: M): Any? {
         return property(meta)
@@ -153,30 +150,29 @@ internal class KotlinPropertyMetaField<M : Any>(
 
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class JavaRecordPropertyMetaField<M : Any>(
     private val recordComponent: RecordComponent
-) :
-    MetaField<M>(
-        recordComponent.type.kotlin as KClass<M>,
-        recordComponent.name,
-        recordComponent.getAnnotation(MaxLength::class.java),
-        recordComponent.getAnnotation(Searchable::class.java),
-        recordComponent.getAnnotation(Unique::class.java)
-    ) {
+) : MetaField<M>(
+    kotlinType = recordComponent.type.kotlin as KClass<M>,
+    fieldName = recordComponent.name,
+    searchable = recordComponent.getAnnotation(Searchable::class.java),
+    unique = recordComponent.getAnnotation(Unique::class.java)
+) {
 
     override fun getValue(meta: M): Any? {
         return recordComponent.accessor(meta)
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 internal class JavaBeanMetaField<M : Any>(
     private val propertyDescriptor: PropertyDescriptor
 ) : MetaField<M>(
-    propertyDescriptor.propertyType.kotlin as KClass<M>,
-    propertyDescriptor.name,
-    propertyDescriptor.propertyType.getAnnotation(MaxLength::class.java),
-    propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
-    propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
+    kotlinType = propertyDescriptor.propertyType.kotlin as KClass<M>,
+    fieldName = propertyDescriptor.name,
+    searchable = propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
+    unique = propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
 ) {
 
     override fun getValue(meta: M): Any? {

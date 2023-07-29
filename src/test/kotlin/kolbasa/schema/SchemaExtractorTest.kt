@@ -1,10 +1,10 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import org.junit.jupiter.api.Test
 import kotlin.test.*
 
-internal class SchemaExtractorTest : AbstractPostgresTest() {
+internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     private val testTableName = "test_table"
 

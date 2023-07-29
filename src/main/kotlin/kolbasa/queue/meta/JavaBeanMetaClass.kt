@@ -11,7 +11,7 @@ internal class JavaBeanMetaClass<M : Any>(javaClass: Class<M>) : MetaClass<M>() 
     private val propertiesToFields: Map<String, MetaField<M>>
 
     init {
-        javaBeanConstructor = MetaHelpers.findAppropriateConstructor(javaClass)
+        javaBeanConstructor = MetaHelpers.findJavaBeanDefaultConstructor(javaClass)
 
 
         val tempFields = mutableListOf<JavaBeanMetaField<M>>()
@@ -33,5 +33,5 @@ internal class JavaBeanMetaClass<M : Any>(javaClass: Class<M>) : MetaClass<M>() 
 
     override fun findMetaFieldByName(fieldName: String): MetaField<M>? = propertiesToFields[fieldName]
 
-    override fun createInstance(values: Array<Any?>): M? = javaBeanConstructor.newInstance(values)
+    override fun createInstance(values: Array<Any?>): M? = javaBeanConstructor.newInstance(*values)
 }

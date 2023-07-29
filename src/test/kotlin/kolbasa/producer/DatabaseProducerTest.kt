@@ -1,10 +1,11 @@
 package kolbasa.producer
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Unique
+import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -12,7 +13,7 @@ import kotlin.test.assertFails
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class DatabaseProducerTest : AbstractPostgresTest() {
+class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     private val queue = Queue(
         "local",
@@ -30,7 +31,7 @@ class DatabaseProducerTest : AbstractPostgresTest() {
     private val second = listOf(
         SendMessage("bugaga", TestMeta(6)),
         SendMessage("bugaga", TestMeta(7)),
-        SendMessage("bugaga", TestMeta(2)), // poison message
+        SendMessage("bugaga", TestMeta(2)), // POISON MESSAGE WITH NON UNIQUE META FIELD
         SendMessage("bugaga", TestMeta(9)),
         SendMessage("bugaga", TestMeta(10))
     )
@@ -56,6 +57,28 @@ class DatabaseProducerTest : AbstractPostgresTest() {
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
+
+    @Test
+    fun testSendSimpleData_WithCustomProducerName() {
+        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+
+        val firstProducerName = "first_producer"
+        val secondProducerName = "second_producer"
+        val firstProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = firstProducerName))
+        val secondProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = secondProducerName))
+
+        val id1 = firstProducer.send("bugaga")
+        val id2 = secondProducer.send("bugaga")
+        assertEquals(1, id1)
+        assertEquals(2, id2)
+
+        // check database
+        assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+        // check first producer
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$firstProducerName'"))
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$secondProducerName'"))
+    }
+
 
     @Test
     fun testSendSimpleDataAsSendMessage() {

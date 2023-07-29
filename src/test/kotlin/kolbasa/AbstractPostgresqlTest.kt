@@ -4,11 +4,13 @@ import com.zaxxer.hikari.HikariDataSource
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Tag
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import javax.sql.DataSource
 
-abstract class AbstractPostgresTest {
+@Tag("unit-db")
+abstract class AbstractPostgresqlTest {
 
     @Container
     protected val pgContainer = PostgreSQLContainer(CURRENT_IMAGE)
@@ -52,7 +54,8 @@ abstract class AbstractPostgresTest {
             "postgres:12.15-alpine",
             "postgres:13.11-alpine",
             "postgres:14.8-alpine",
-            "postgres:15.3-alpine"
+            "postgres:15.3-alpine",
+            "postgres:16beta2-alpine"
         )
 
         val CURRENT_IMAGE = POSTGRES_IMAGES.random()
