@@ -5,9 +5,8 @@ import kolbasa.stats.task.DeleteOutdatedMeasuresTask
 import kolbasa.stats.task.DeleteOutdatedQueuesTask
 import kolbasa.stats.task.UpdateAllStatsTask
 import kolbasa.stats.task.UpdateRealtimeStatsTask
-import kolbasa.task.CleanupConfig
-import kolbasa.task.DefaultExecutor
-import kolbasa.task.StatsConfig
+import kolbasa.utils.DefaultExecutor
+import kolbasa.stats.StatsConfig
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 

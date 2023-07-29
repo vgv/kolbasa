@@ -1,5 +1,6 @@
-package kolbasa.task
+package kolbasa.stats
 
+import kolbasa.stats.StatsConfig
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*

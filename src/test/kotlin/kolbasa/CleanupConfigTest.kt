@@ -1,5 +1,6 @@
-package kolbasa.task
+package kolbasa
 
+import kolbasa.CleanupConfig
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import org.junit.jupiter.api.Test
