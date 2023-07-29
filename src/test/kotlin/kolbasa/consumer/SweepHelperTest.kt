@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CleanupHelperTest {
+class SweepHelperTest {
 
     @Test
     fun testProbabilityCornerCases() {
@@ -15,12 +15,12 @@ class CleanupHelperTest {
 
         // Always false, if probability=0
         (1..iterations).forEach { _ ->
-            assertFalse(CleanupHelper.probability(0))
+            assertFalse(SweepHelper.probability(0))
         }
 
         // Always false, if probability=100
         (1..iterations).forEach { _ ->
-            assertTrue(CleanupHelper.probability(100))
+            assertTrue(SweepHelper.probability(100))
         }
     }
 
@@ -32,7 +32,7 @@ class CleanupHelperTest {
         var yes = 0
         var no = 0
         (1..iterations).forEach { _ ->
-            if (CleanupHelper.probability(probability)) {
+            if (SweepHelper.probability(probability)) {
                 yes++
             } else {
                 no++

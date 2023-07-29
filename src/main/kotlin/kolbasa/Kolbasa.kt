@@ -22,7 +22,7 @@ object Kolbasa {
 
     @JvmStatic
     @Volatile
-    var cleanupConfig: CleanupConfig = CleanupConfig()
+    var sweepConfig: SweepConfig = SweepConfig()
 
     private val knownQueues = ConcurrentHashMap<String, Queue<*, *>>()
 
