@@ -84,21 +84,21 @@ internal object Checks {
         }
     }
 
-    fun checkCleanupLimit(limit: Int) {
-        check(limit in Const.MIN_CLEANUP_ROWS..Const.MAX_CLEANUP_ROWS) {
-            "Cleanup limit must be in the [${Const.MIN_CLEANUP_ROWS}..${Const.MAX_CLEANUP_ROWS}] range"
+    fun checkSweepMaxRows(rows: Int) {
+        check(rows in Const.MIN_SWEEP_ROWS..Const.MAX_SWEEP_ROWS) {
+            "Sweep max rows must be in the [${Const.MIN_SWEEP_ROWS}..${Const.MAX_SWEEP_ROWS}] range"
         }
     }
 
-    fun checkCleanupMaxIterations(maxIterations: Int) {
-        check(maxIterations in Const.MIN_CLEANUP_ITERATIONS..Const.MAX_CLEANUP_ITERATIONS) {
-            "Cleanup max iterations must be in the [${Const.MIN_CLEANUP_ITERATIONS}..${Const.MAX_CLEANUP_ITERATIONS}] range"
+    fun checkSweepMaxIterations(maxIterations: Int) {
+        check(maxIterations in Const.MIN_SWEEP_ITERATIONS..Const.MAX_SWEEP_ITERATIONS) {
+            "Sweep max iterations must be in the [${Const.MIN_SWEEP_ITERATIONS}..${Const.MAX_SWEEP_ITERATIONS}] range"
         }
     }
 
     fun checkCleanupProbabilityPercent(probabilityPercent: Int) {
-        check(probabilityPercent in Const.MIN_CLEANUP_PROBABILITY_PERCENT..Const.MAX_CLEANUP_PROBABILITY_PERCENT) {
-            "Cleanup probability percent must be in the [${Const.MIN_CLEANUP_PROBABILITY_PERCENT}..${Const.MAX_CLEANUP_PROBABILITY_PERCENT}] range"
+        check(probabilityPercent in Const.MIN_SWEEP_PROBABILITY_PERCENT..Const.MAX_SWEEP_PROBABILITY_PERCENT) {
+            "Cleanup probability percent must be in the [${Const.MIN_SWEEP_PROBABILITY_PERCENT}..${Const.MAX_SWEEP_PROBABILITY_PERCENT}] range"
         }
     }
 

@@ -164,44 +164,44 @@ internal class ChecksTest {
     }
 
     @Test
-    fun testCheckCleanupLimit_LessThanMin() {
+    fun testCheckSweepMaxRows_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupLimit(Const.MIN_CLEANUP_ROWS - 1)
+            Checks.checkSweepMaxRows(Const.MIN_SWEEP_ROWS - 1)
         }
     }
 
     @Test
-    fun testCheckCleanupLimit_MoreThanMax() {
+    fun testCheckSweepMaxRows_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupLimit(Const.MAX_CLEANUP_ROWS + 1)
+            Checks.checkSweepMaxRows(Const.MAX_SWEEP_ROWS + 1)
         }
     }
 
     @Test
-    fun testCheckCleanupMaxIterations_LessThanMin() {
+    fun testCheckSweepMaxIterations_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupMaxIterations(Const.MIN_CLEANUP_ITERATIONS - 1)
+            Checks.checkSweepMaxIterations(Const.MIN_SWEEP_ITERATIONS - 1)
         }
     }
 
     @Test
-    fun testCheckCleanupMaxIterations_MoreThanMax() {
+    fun testCheckSweepMaxIterations_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupMaxIterations(Const.MAX_CLEANUP_ITERATIONS + 1)
+            Checks.checkSweepMaxIterations(Const.MAX_SWEEP_ITERATIONS + 1)
         }
     }
 
     @Test
     fun testCheckCleanupProbabilityPercent_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupProbabilityPercent(Const.MIN_CLEANUP_PROBABILITY_PERCENT - 1)
+            Checks.checkCleanupProbabilityPercent(Const.MIN_SWEEP_PROBABILITY_PERCENT - 1)
         }
     }
 
     @Test
     fun testCheckCleanupProbabilityPercent_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupProbabilityPercent(Const.MAX_CLEANUP_PROBABILITY_PERCENT + 1)
+            Checks.checkCleanupProbabilityPercent(Const.MAX_SWEEP_PROBABILITY_PERCENT + 1)
         }
     }
 

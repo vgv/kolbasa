@@ -1,19 +1,18 @@
 package kolbasa
 
-import kolbasa.CleanupConfig
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class CleanupConfigTest {
+class SweepConfigTest {
 
     @Test
-    fun getDefaultCleanupLockIdGenerator() {
-        val cleanupConfig = CleanupConfig()
+    fun getDefaultSweepLockIdGenerator() {
+        val sweepConfig = SweepConfig()
         val testQueue = Queue<String, Unit>("test_queue", PredefinedDataTypes.String)
 
-        assertEquals(724226541, cleanupConfig.cleanupLockIdGenerator(testQueue))
+        assertEquals(1424981157, sweepConfig.lockIdGenerator(testQueue))
     }
 
 }
