@@ -52,6 +52,8 @@ internal object DatabaseExtensions {
         }
     }
 
+    // -------------------------------------------------------------------------------------------
+
     fun <T> DataSource.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
         return useConnection { connection: Connection ->
             connection.usePreparedStatement(query, block)
@@ -86,6 +88,8 @@ internal object DatabaseExtensions {
         return result
     }
 
+    // -------------------------------------------------------------------------------------------
+
     fun DataSource.readIntList(query: String): List<Int> {
         return useConnection { connection ->
             connection.readIntList(query)
@@ -105,6 +109,8 @@ internal object DatabaseExtensions {
 
         return result
     }
+
+    // -------------------------------------------------------------------------------------------
 
     fun DataSource.readLongList(query: String): List<Long> {
         return useConnection { connection ->
@@ -136,11 +142,44 @@ internal object DatabaseExtensions {
     fun Connection.readInt(sql: String): Int {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                if (resultSet.next()) {
-                    resultSet.getInt(1)
-                } else {
+                if (!resultSet.next()) {
                     throw IllegalArgumentException("No rows in query '$sql'")
                 }
+
+                val value = resultSet.getInt(1)
+
+                // Do we have more rows than one?
+                if (resultSet.next()) {
+                    throw IllegalArgumentException("More than one rows in query '$sql'")
+                }
+
+                value
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+    fun DataSource.readLong(sql: String): Long {
+        return useConnection { connection ->
+            connection.readLong(sql)
+        }
+    }
+
+    fun Connection.readLong(sql: String): Long {
+        return useStatement { statement ->
+            statement.executeQuery(sql).use { resultSet ->
+                if (!resultSet.next()) {
+                    throw IllegalArgumentException("No rows in query '$sql'")
+                }
+
+                val value = resultSet.getLong(1)
+
+                // Do we have more rows than one?
+                if (resultSet.next()) {
+                    throw IllegalArgumentException("More than one rows in query '$sql'")
+                }
+
+                value
             }
         }
     }
@@ -155,11 +194,18 @@ internal object DatabaseExtensions {
     fun Connection.readBoolean(sql: String): Boolean {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                if (resultSet.next()) {
-                    resultSet.getBoolean(1)
-                } else {
+                if (!resultSet.next()) {
                     throw IllegalArgumentException("No rows in query '$sql'")
                 }
+
+                val value = resultSet.getBoolean(1)
+
+                // Do we have more rows than one?
+                if (resultSet.next()) {
+                    throw IllegalArgumentException("More than one rows in query '$sql'")
+                }
+
+                value
             }
         }
     }
