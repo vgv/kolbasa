@@ -1,13 +1,13 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresTest
+import kolbasa.AbstractPostgresqlTest
 import kolbasa.queue.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class SchemaGeneratorTest: AbstractPostgresTest() {
+class SchemaGeneratorTest: AbstractPostgresqlTest() {
 
     private val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = TestMeta::class.java)
 
