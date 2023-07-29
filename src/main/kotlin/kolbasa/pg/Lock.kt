@@ -15,8 +15,8 @@ internal object Lock {
         // We try to acquire JVM lock before PG lock
         // It's just an optimization for cases, when we want to acquire the same lock within one JVM
         // It is just much faster to try to acquire JVM lock before PG
-        return jvmTryRunExclusive(lockId) {
-            pgTryRunExclusive(dataSource, lockId, block)
+        return Support.jvmTryRunExclusive(lockId) {
+            Support.pgTryRunExclusive(dataSource, lockId, block)
         }
     }
 
@@ -24,57 +24,61 @@ internal object Lock {
         // We try to acquire JVM lock before PG lock
         // It's just an optimization for cases, when we want to acquire the same lock within one JVM
         // It is just much faster to try to acquire JVM lock before PG
-        return jvmTryRunExclusive(lockId) {
-            pgTryRunExclusive(connection, lockId, block)
+        return Support.jvmTryRunExclusive(lockId) {
+            Support.pgTryRunExclusive(connection, lockId, block)
         }
     }
 
-    private fun <R> jvmTryRunExclusive(lockId: Long, block: () -> R): R? {
-        val lock = jvmLocks.computeIfAbsent(lockId) { _ ->
-            ReentrantLock()
-        }
+    object Support {
 
-        return if (lock.tryLock()) {
-            try {
-                block()
-            } finally {
-                lock.unlock()
+        fun <R> jvmTryRunExclusive(lockId: Long, block: () -> R): R? {
+            val lock = jvmLocks.computeIfAbsent(lockId) { _ ->
+                ReentrantLock()
             }
-        } else {
-            null
-        }
-    }
 
-    private fun <R> pgTryRunExclusive(dataSource: DataSource, lockId: Long, block: (Connection) -> R): R? {
-        return dataSource.useConnection { connection ->
-            pgTryRunExclusive(connection, lockId, block)
-        }
-    }
-
-    private fun <R> pgTryRunExclusive(connection: Connection, lockId: Long, block: (Connection) -> R): R? {
-        return if (pgTryLock(connection, lockId)) {
-            try {
-                block(connection)
-            } finally {
-                pgUnlock(connection, lockId)
+            return if (lock.tryLock()) {
+                try {
+                    block()
+                } finally {
+                    lock.unlock()
+                }
+            } else {
+                null
             }
-        } else {
-            null
         }
-    }
 
-    private fun pgTryLock(connection: Connection, lockId: Long): Boolean {
-        val query = "select * from pg_try_advisory_lock($lockId)"
-        return connection.readBoolean(query)
-    }
-
-    private fun pgUnlock(connection: Connection, lockId: Long) {
-        val query = "select * from pg_advisory_unlock($lockId)"
-        connection.useStatement { statement ->
-            statement.execute(query)
+        fun <R> pgTryRunExclusive(dataSource: DataSource, lockId: Long, block: (Connection) -> R): R? {
+            return dataSource.useConnection { connection ->
+                pgTryRunExclusive(connection, lockId, block)
+            }
         }
+
+        fun <R> pgTryRunExclusive(connection: Connection, lockId: Long, block: (Connection) -> R): R? {
+            return if (pgTryLock(connection, lockId)) {
+                try {
+                    block(connection)
+                } finally {
+                    pgUnlock(connection, lockId)
+                }
+            } else {
+                null
+            }
+        }
+
+        private fun pgTryLock(connection: Connection, lockId: Long): Boolean {
+            val query = "select * from pg_try_advisory_lock($lockId)"
+            return connection.readBoolean(query)
+        }
+
+        private fun pgUnlock(connection: Connection, lockId: Long) {
+            val query = "select * from pg_advisory_unlock($lockId)"
+            connection.useStatement { statement ->
+                statement.execute(query)
+            }
+        }
+
+        private val jvmLocks = ConcurrentHashMap<Long, Lock>()
     }
 
-    private val jvmLocks = ConcurrentHashMap<Long, Lock>()
 
 }
