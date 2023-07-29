@@ -1,4 +1,4 @@
-package kolbasa.task
+package kolbasa
 
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue
@@ -28,7 +28,7 @@ data class CleanupConfig(
      * By default, we use simple lock id generator based on queue name. However, if your code actively uses
      * PG advisory locks, you may need to override this generator and make it more aligned with your code.
      */
-    val cleanupLockIdGenerator: (queue: Queue<*, *>) -> Long = ::defaultLockIdGenerator
+    val cleanupLockIdGenerator: (queue: Queue<*, *>) -> Long = Companion::defaultLockIdGenerator
 ) {
 
     init {

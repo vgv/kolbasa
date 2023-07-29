@@ -1,8 +1,7 @@
-package kolbasa.task
+package kolbasa.utils
 
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 
 internal val DefaultExecutor = Executors.newScheduledThreadPool(1, DefaultDaemonFactory)
