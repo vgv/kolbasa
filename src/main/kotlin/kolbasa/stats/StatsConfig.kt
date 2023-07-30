@@ -1,4 +1,4 @@
-package kolbasa.task
+package kolbasa.stats
 
 import java.time.Duration
 import javax.sql.DataSource

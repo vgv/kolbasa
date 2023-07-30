@@ -50,23 +50,28 @@ internal object Const {
     const val META_FIELD_ENUM_TYPE_MAX_LENGTH = 1024 // 1024 chars
 
     /**
-     * How many rows to delete at each cleanup iteration
+     * How many rows to delete at each iteration during sweep
      */
-    const val MIN_CLEANUP_ROWS = 100
-    const val DEFAULT_CLEANUP_ROWS = 1_000
-    const val MAX_CLEANUP_ROWS = 100_000
+    const val MIN_SWEEP_ROWS = 100
+    const val DEFAULT_SWEEP_ROWS = 1_000
+    const val MAX_SWEEP_ROWS = 100_000
 
     /**
-     * How many iterations at each cleanup
+     * How many iterations at each sweep
      */
-    const val MIN_CLEANUP_ITERATIONS = 1
-    const val DEFAULT_CLEANUP_ITERATIONS = 10
-    const val MAX_CLEANUP_ITERATIONS = 100
+    const val MIN_SWEEP_ITERATIONS = 1
+    const val DEFAULT_SWEEP_ITERATIONS = 10
+    const val MAX_SWEEP_ITERATIONS = 100
 
     /**
-     * Probability to trigger a cleanup
+     * How often we want to trigger a sweep?
+     * Every fifth consume? Every tenth? Every hundredth?
+     *
+     * Default value is 5, so, it means that every fifth consume will trigger a sweep.
+     * If you want to trigger a sweep at every consume, you have to use period = 1 (EVERYTIME_SWEEP_PERIOD)
      */
-    const val MIN_CLEANUP_PROBABILITY_PERCENT = 0
-    const val DEFAULT_CLEANUP_PROBABILITY_PERCENT = 20
-    const val MAX_CLEANUP_PROBABILITY_PERCENT = 100
+    const val EVERYTIME_SWEEP_PERIOD = 1
+    const val MIN_SWEEP_PERIOD = EVERYTIME_SWEEP_PERIOD
+    const val DEFAULT_SWEEP_PERIOD = 5
+    const val MAX_SWEEP_PERIOD = 1_000_000_000
 }
