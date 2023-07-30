@@ -64,9 +64,14 @@ internal object Const {
     const val MAX_SWEEP_ITERATIONS = 100
 
     /**
-     * Probability to trigger a cleanup
+     * How often we want to trigger a sweep?
+     * Every fifth consume? Every tenth? Every hundredth?
+     *
+     * Default value is 5, so, it means that every fifth consume will trigger a sweep.
+     * If you want to trigger a sweep at every consume, you have to use period = 1 (EVERYTIME_SWEEP_PERIOD)
      */
-    const val MIN_SWEEP_PROBABILITY_PERCENT = 0
-    const val DEFAULT_SWEEP_PROBABILITY_PERCENT = 20
-    const val MAX_SWEEP_PROBABILITY_PERCENT = 100
+    const val EVERYTIME_SWEEP_PERIOD = 1
+    const val MIN_SWEEP_PERIOD = EVERYTIME_SWEEP_PERIOD
+    const val DEFAULT_SWEEP_PERIOD = 5
+    const val MAX_SWEEP_PERIOD = 1_000_000_000
 }

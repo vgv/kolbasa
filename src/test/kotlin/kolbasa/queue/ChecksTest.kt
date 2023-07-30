@@ -192,16 +192,16 @@ internal class ChecksTest {
     }
 
     @Test
-    fun testCheckCleanupProbabilityPercent_LessThanMin() {
+    fun testCheckSweepPeriod_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupProbabilityPercent(Const.MIN_SWEEP_PROBABILITY_PERCENT - 1)
+            Checks.checkSweepPeriod(Const.MIN_SWEEP_PERIOD - 1)
         }
     }
 
     @Test
-    fun testCheckCleanupProbabilityPercent_MoreThanMax() {
+    fun testCheckSweepPeriod_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkCleanupProbabilityPercent(Const.MAX_SWEEP_PROBABILITY_PERCENT + 1)
+            Checks.checkSweepPeriod(Const.MAX_SWEEP_PERIOD + 1)
         }
     }
 
