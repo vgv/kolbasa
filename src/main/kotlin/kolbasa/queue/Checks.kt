@@ -96,9 +96,9 @@ internal object Checks {
         }
     }
 
-    fun checkCleanupProbabilityPercent(probabilityPercent: Int) {
-        check(probabilityPercent in Const.MIN_SWEEP_PROBABILITY_PERCENT..Const.MAX_SWEEP_PROBABILITY_PERCENT) {
-            "Cleanup probability percent must be in the [${Const.MIN_SWEEP_PROBABILITY_PERCENT}..${Const.MAX_SWEEP_PROBABILITY_PERCENT}] range"
+    fun checkSweepPeriod(period: Int) {
+        check(period in Const.MIN_SWEEP_PERIOD..Const.MAX_SWEEP_PERIOD) {
+            "Sweep period must be in the [${Const.MIN_SWEEP_PERIOD}..${Const.MAX_SWEEP_PERIOD}] range"
         }
     }
 

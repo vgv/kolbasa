@@ -1,5 +1,6 @@
 package kolbasa.consumer
 
+import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -10,48 +11,30 @@ import kotlin.test.assertTrue
 class SweepHelperTest {
 
     @Test
-    fun testProbabilityCornerCases() {
+    fun testCheckPeriod_IfAlwaysOn() {
         val iterations = 1_000_000
 
         // Always false, if probability=0
         (1..iterations).forEach { _ ->
-            assertFalse(SweepHelper.probability(0))
-        }
-
-        // Always false, if probability=100
-        (1..iterations).forEach { _ ->
-            assertTrue(SweepHelper.probability(100))
+            assertTrue(SweepHelper.checkPeriod(Const.EVERYTIME_SWEEP_PERIOD))
         }
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [1, 5, 20, 50, 75, 95, 99])
-    fun testProbability(probability: Int) {
-        val iterations = 1_000_000
-
-        var yes = 0
-        var no = 0
-        (1..iterations).forEach { _ ->
-            if (SweepHelper.probability(probability)) {
-                yes++
-            } else {
-                no++
-            }
+    @ValueSource(ints = [3, 5, 13, 25, 143, 567, 34523])
+    fun testCheckPeriod(period: Int) {
+        // Restart iterations, find next period
+        while (!SweepHelper.checkPeriod(period)) {
         }
 
-        // Just quick check
-        assertEquals(iterations, yes + no)
+        // Test
+        (1..10).forEach { _ ->
+            var iterations = 0
+            while (!SweepHelper.checkPeriod(period)) iterations++
 
-        val onePercent = iterations / 100
-
-        // Test positive
-        val yesIterations = iterations * probability / 100
-        assertTrue(yes in (yesIterations - onePercent)..(yesIterations + onePercent), "yes: $yes, yesIterations: $yesIterations, onePercent: $onePercent")
-
-        // Test negative
-        val noIterations = iterations * (100 - probability) / 100
-        assertTrue(no in (noIterations - onePercent)..(noIterations + onePercent), "no: $no, noIterations: $noIterations, onePercent: $onePercent")
+            // Test that "false"
+            assertEquals(period, iterations + 1)
+        }
     }
-
 
 }
