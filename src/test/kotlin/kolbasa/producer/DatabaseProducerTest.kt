@@ -7,6 +7,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.Unique
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -44,9 +45,13 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     )
     private val items = first + second + third
 
+    @BeforeEach
+    fun before() {
+        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+    }
+
     @Test
     fun testSendSimpleData() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(dataSource, queue)
 
         val id1 = producer.send("bugaga")
@@ -60,8 +65,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendSimpleData_WithCustomProducerName() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
-
         val firstProducerName = "first_producer"
         val secondProducerName = "second_producer"
         val firstProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = firstProducerName))
@@ -82,7 +85,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendSimpleDataAsSendMessage() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(dataSource, queue)
 
         val id1 = producer.send(SendMessage("bugaga", TestMeta(1)))
@@ -96,7 +98,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendSimpleDataAsSendMessage_IfError() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(dataSource, queue)
 
         producer.send(SendMessage("bugaga", TestMeta(1)))
@@ -111,7 +112,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendProhibited() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(
             dataSource,
             queue,
@@ -135,7 +135,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendUntilFirstFailure() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(
             dataSource,
             queue,
@@ -167,7 +166,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendAsManyAsPossible() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
         val producer = DatabaseProducer(
             dataSource,
             queue,
