@@ -2,6 +2,7 @@ package kolbasa.consumer
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.MessageResult
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.queue.PredefinedDataTypes
@@ -13,7 +14,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlin.test.*
 
@@ -63,7 +67,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testReceive_TestConcurrent() {
+    fun testReceive_TestSimpleConcurrent() {
         val data1 = "bugaga-1"
         val data2 = "bugaga-2"
 
@@ -89,6 +93,46 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data2, message2.data)
         assertNotSame(data2, message2.data)
         assertTrue(message2.createdAt < message2.processingAt)
+    }
+
+    @Test
+    fun testReceive_TestComplexConcurrent() {
+        val items = 5000
+        val threads = 10
+        val data = (1..items * threads).map {
+            SendMessage<String, TestMeta>("data_$it")
+        }
+
+        val producer = DatabaseProducer(dataSource, queue)
+        val sendResult = producer.send(data)
+
+        val consumer = DatabaseConsumer(dataSource, queue)
+        val latch = CountDownLatch(1)
+
+        val receivedIds = ConcurrentSkipListSet<Long>()
+
+        val launchedThreads = (1..threads).map { _ ->
+            thread {
+                // All threads have to start at the same time
+                latch.await()
+                val messages = consumer.receive(items)
+
+                // Check we read exactly 'items' messages
+                assertEquals(items, messages.size)
+                messages.forEach { message ->
+                    // Check each thread read unique messages
+                    assertTrue(receivedIds.add(message.id))
+                }
+            }
+        }
+
+        // Start all threads at the same time to imitate concurrency
+        latch.countDown()
+        launchedThreads.forEach(Thread::join)
+
+        // Check we read all messages from the queue
+        val sentIds = sendResult.onlySuccessful().map { it.id }.toSet()
+        assertEquals(sentIds, receivedIds)
     }
 
 
@@ -122,6 +166,85 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertTrue(message.createdAt < message.processingAt, "message=$message")
     }
 
+    @Test
+    fun testReceive_VisibitilyTimeout() {
+        val data = "bugaga"
+
+        val producer = DatabaseProducer(dataSource, queue)
+        val id = producer.send(data)
+
+        val consumer = DatabaseConsumer(dataSource, queue)
+
+        val delay = Duration.of(3000 + Random.nextLong(0, 2000), ChronoUnit.MILLIS)
+        val receiveOptions = ReceiveOptions<TestMeta>(visibilityTimeout = delay)
+
+        // Read a message first time
+        val firstMessage = consumer.receive(receiveOptions)
+        val firstReceiveTimestamp = System.nanoTime()
+
+        // Check it
+        assertNotNull(firstMessage)
+        assertEquals(id, firstMessage.id)
+        assertEquals(data, firstMessage.data)
+        assertNotSame(data, firstMessage.data)
+        assertTrue(firstMessage.createdAt < firstMessage.processingAt, "message=$firstMessage")
+        assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, firstMessage.remainingAttempts)
+
+        // Try to read this message again
+        var secondMessage: Message<String, TestMeta>?
+        var secondReceiveTimestamp: Long
+        do {
+            secondMessage = consumer.receive(receiveOptions)
+            secondReceiveTimestamp = System.nanoTime()
+            TimeUnit.MILLISECONDS.sleep(50)
+        } while (secondMessage == null);
+
+        // Check that second message has the same ID and DATA, but not the same object
+        assertNotSame(firstMessage, secondMessage)
+        assertEquals(id, secondMessage.id)
+        assertEquals(data, secondMessage.data)
+        assertNotSame(data, secondMessage.data)
+        assertTrue(secondMessage.createdAt < secondMessage.processingAt, "message=$secondMessage")
+        assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 2, secondMessage.remainingAttempts)
+
+        // The second message was read later, so, this condition has to be true
+        assertTrue(firstMessage.processingAt < secondMessage.processingAt, "First: $firstMessage, second: $secondMessage")
+
+        // Check that interval between message became available is not less than visibilityTimeout delay
+        assertTrue((secondReceiveTimestamp - firstReceiveTimestamp) > delay.toNanos(), "First: $firstReceiveTimestamp, second: $secondReceiveTimestamp, delay=$delay")
+    }
+
+    @Test
+    fun testReceive_ReadMetadata() {
+        val data = "bugaga"
+
+        val producer = DatabaseProducer(dataSource, queue)
+        val id1 = producer.send(SendMessage(data, TestMeta(1)))
+        val id2 = producer.send(SendMessage(data, TestMeta(2)))
+
+        val consumer = DatabaseConsumer(dataSource, queue)
+
+        // Read first message without metadata and check it
+        val withoutMetadata = consumer.receive(ReceiveOptions(readMetadata = false))
+        assertNotNull(withoutMetadata)
+        assertNull(withoutMetadata.meta)
+        assertEquals(id1, withoutMetadata.id)
+        assertEquals(data, withoutMetadata.data)
+        assertNotSame(data, withoutMetadata.data)
+        assertTrue(withoutMetadata.createdAt < withoutMetadata.processingAt, "message=$withoutMetadata")
+
+        // Read second message with metadata and check it
+        val withMetadata = consumer.receive(ReceiveOptions(readMetadata = true))
+        assertNotNull(withMetadata)
+        assertNotNull(withMetadata.meta) {
+            assertEquals(2, it.field)
+        }
+        assertEquals(id2, withMetadata.id)
+        assertEquals(data, withMetadata.data)
+        assertNotSame(data, withMetadata.data)
+        assertTrue(withMetadata.createdAt < withMetadata.processingAt, "message=$withMetadata")
+    }
+
 }
 
-internal data class TestMeta(@Unique val field: Int)
+internal data class TestMeta(val field: Int)
