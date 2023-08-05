@@ -19,10 +19,20 @@ data class SendResult<V, M : Any>(
     val messages: List<MessageResult<V, M>>
 ) {
 
+    fun onlySuccessful(): List<MessageResult.Success<V, M>> {
+        return messages.filterIsInstance<MessageResult.Success<V, M>>()
+    }
+
+    fun onlyFailed(): List<MessageResult.Error<V, M>> {
+        return messages.filterIsInstance<MessageResult.Error<V, M>>()
+    }
+
+    /**
+     * Convenient function to collect all failed messages to send them again
+     */
     fun gatherFailedMessages(): List<SendMessage<V, M>> {
-        return messages
-            .filterIsInstance<MessageResult.Error<V, M>>()
-            .flatMapTo(ArrayList(failedMessages)) { it.messages }
+        val collector = ArrayList<SendMessage<V, M>>(failedMessages)
+        return onlyFailed().flatMapTo(collector) { it.messages }
     }
 
 }
