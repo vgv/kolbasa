@@ -20,7 +20,7 @@ internal object ConsumerSchemaHelpers {
         receiveOptions: ReceiveOptions<M>,
         limit: Int
     ): String {
-        // Columns
+        // Columns to read from database
         val columns = mutableListOf(
             Const.ID_COLUMN_NAME,
             Const.CREATED_AT_COLUMN_NAME,
@@ -58,14 +58,9 @@ internal object ConsumerSchemaHelpers {
         val visibilityTimeout = QueueHelpers.calculateVisibilityTimeout(queue.options, consumerOptions, receiveOptions)
 
         return """
-            update ${queue.dbTableName}
-            set
-                ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
-                ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
-                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
-                consumer=?
-            where id in (
-                select id
+            with
+            id_to_update as (
+                select ${Const.ID_COLUMN_NAME},${Const.SCHEDULED_AT_COLUMN_NAME}
                 from ${queue.dbTableName}
                 where
                     ${clauses.joinToString(separator = " and ")}
@@ -73,8 +68,20 @@ internal object ConsumerSchemaHelpers {
                     ${orderBy.joinToString(separator = ",")}
                 limit $limit
                 for update skip locked
+            ),
+            updated as (
+                update ${queue.dbTableName}
+                set
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
+                    ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
+                    ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
+                    ${Const.CONSUMER_COLUMN_NAME}=?
+                where ${Const.ID_COLUMN_NAME} in (select ${Const.ID_COLUMN_NAME} from id_to_update)
+                returning ${columns.joinToString(separator = ",")}
             )
-            returning ${columns.joinToString(separator = ",")};
+            select updated.* from updated
+                inner join id_to_update on (updated.${Const.ID_COLUMN_NAME}=id_to_update.${Const.ID_COLUMN_NAME})
+            order by ${orderBy.joinToString(separator = ",")}
         """.trimIndent()
     }
 
@@ -84,14 +91,17 @@ internal object ConsumerSchemaHelpers {
         receiveOptions: ReceiveOptions<M>,
         preparedStatement: PreparedStatement
     ) {
-        if (consumerOptions.consumer != null) {
-            preparedStatement.setString(1, consumerOptions.consumer)
-        } else {
-            preparedStatement.setNull(1, Types.VARCHAR)
-        }
+        val columnIndex = IntBox(1)
 
-        // fill filter clauses
-        receiveOptions.filter?.fillPreparedQuery(queue, preparedStatement, IntBox(2))
+        // fill filter clauses, if any
+        receiveOptions.filter?.fillPreparedQuery(queue, preparedStatement, columnIndex)
+
+        // consumer name, if any
+        if (consumerOptions.consumer != null) {
+            preparedStatement.setString(columnIndex.getAndIncrement(), consumerOptions.consumer)
+        } else {
+            preparedStatement.setNull(columnIndex.getAndIncrement(), Types.VARCHAR)
+        }
     }
 
     fun <V, M : Any> read(

@@ -1,14 +1,16 @@
 package kolbasa.consumer
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.consumer.filter.Filter.and
+import kolbasa.consumer.filter.Filter.greaterEq
+import kolbasa.consumer.filter.Filter.lessEq
+import kolbasa.consumer.order.Order
 import kolbasa.producer.DatabaseProducer
-import kolbasa.producer.MessageResult
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
-import kolbasa.queue.Unique
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -197,7 +199,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             secondMessage = consumer.receive(receiveOptions)
             secondReceiveTimestamp = System.nanoTime()
             TimeUnit.MILLISECONDS.sleep(50)
-        } while (secondMessage == null);
+        } while (secondMessage == null)
 
         // Check that second message has the same ID and DATA, but not the same object
         assertNotSame(firstMessage, secondMessage)
@@ -243,6 +245,78 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data, withMetadata.data)
         assertNotSame(data, withMetadata.data)
         assertTrue(withMetadata.createdAt < withMetadata.processingAt, "message=$withMetadata")
+    }
+
+    @Test
+    fun testReceive_Order() {
+        val items = 100
+        val data = (1..items).map { index ->
+            SendMessage("bugaga_$index", TestMeta(index))
+        }
+
+        val producer = DatabaseProducer(dataSource, queue)
+        producer.send(data)
+
+        val consumer = DatabaseConsumer(dataSource, queue)
+        // messages were sent with natural ordering, TestMeta.field is 1,2,3,4...
+        // Try to read them in reverse order
+        val messages = consumer.receive(
+            limit = items,
+            receiveOptions = ReceiveOptions(
+                readMetadata = true,
+                order = listOf(Order.desc(TestMeta::field)))
+        )
+
+        // Check reverse ordering
+        var reverseIndex = items
+        messages.forEach { message ->
+            assertNotNull(message)
+            assertNotNull(message.meta) {
+                assertEquals(reverseIndex, it.field)
+            }
+            assertEquals("bugaga_$reverseIndex", message.data)
+            assertTrue(message.createdAt < message.processingAt, "message=$message")
+
+            reverseIndex--
+        }
+    }
+
+    @Test
+    fun testReceive_Filter() {
+        val items = 100
+        val data = (1..items).map { index ->
+            SendMessage("bugaga_$index", TestMeta(index))
+        }
+
+        val producer = DatabaseProducer(dataSource, queue)
+        producer.send(data)
+
+        val consumer = DatabaseConsumer(dataSource, queue)
+        // messages have TestMeta.field from 1 till 100
+        // Try to read only messages from 10 till 15
+        val start = 10
+        val end = 15
+        val messages = consumer.receive(
+            limit = items,
+            receiveOptions = ReceiveOptions(
+                readMetadata = true,
+                filter = (TestMeta::field greaterEq start) and (TestMeta::field lessEq end),
+                order = listOf(Order.desc(TestMeta::field))) // add order just to simplify testing
+        )
+
+        // Check filtering
+        var index = end
+        assertEquals(end - start + 1, messages.size)
+        messages.forEach { message ->
+            assertNotNull(message)
+            assertNotNull(message.meta) {
+                assertEquals(index, it.field)
+            }
+            assertEquals("bugaga_$index", message.data)
+            assertTrue(message.createdAt < message.processingAt, "message=$message")
+
+            index--
+        }
     }
 
 }
