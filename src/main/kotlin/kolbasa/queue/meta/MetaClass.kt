@@ -1,15 +1,15 @@
 package kolbasa.queue.meta
 
-internal abstract class MetaClass<M : Any> {
+internal abstract class MetaClass<Meta : Any> {
 
-    abstract val fields: List<MetaField<M>>
+    abstract val fields: List<MetaField<Meta>>
 
-    abstract fun findMetaFieldByName(fieldName: String): MetaField<M>?
+    abstract fun findMetaFieldByName(fieldName: String): MetaField<Meta>?
 
-    abstract fun createInstance(values: Array<Any?>): M?
+    abstract fun createInstance(values: Array<Any?>): Meta?
 
     companion object {
-        fun <M : Any> of(metadata: Class<M>): MetaClass<M> {
+        fun <Meta : Any> of(metadata: Class<Meta>): MetaClass<Meta> {
             return if (metadata.kotlin.isData) {
                 KotlinMetaClass(metadata.kotlin)
             } else if (metadata.isRecord) {

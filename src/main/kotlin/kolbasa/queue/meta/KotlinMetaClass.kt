@@ -6,12 +6,12 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.valueParameters
 
-internal class KotlinMetaClass<M : Any>(kotlinClass: KClass<M>) : MetaClass<M>() {
+internal class KotlinMetaClass<Meta : Any>(kotlinClass: KClass<Meta>) : MetaClass<Meta>() {
 
-    override val fields: List<KotlinPropertyMetaField<M>>
+    override val fields: List<KotlinPropertyMetaField<Meta>>
 
-    private val primaryConstructor: KFunction<M>
-    private val propertiesToFields: Map<String, KotlinPropertyMetaField<M>>
+    private val primaryConstructor: KFunction<Meta>
+    private val propertiesToFields: Map<String, KotlinPropertyMetaField<Meta>>
 
     init {
         check(kotlinClass.isData) {
@@ -24,8 +24,8 @@ internal class KotlinMetaClass<M : Any>(kotlinClass: KClass<M>) : MetaClass<M>()
         }
 
         // Find data class properties
-        val tempFields = mutableListOf<KotlinPropertyMetaField<M>>()
-        val tempPropertiesToFields = mutableMapOf<String, KotlinPropertyMetaField<M>>()
+        val tempFields = mutableListOf<KotlinPropertyMetaField<Meta>>()
+        val tempPropertiesToFields = mutableMapOf<String, KotlinPropertyMetaField<Meta>>()
 
         primaryConstructor.valueParameters.map { parameter ->
             val property = requireNotNull(kotlinClass.declaredMemberProperties.find { it.name == parameter.name }) {
@@ -41,7 +41,7 @@ internal class KotlinMetaClass<M : Any>(kotlinClass: KClass<M>) : MetaClass<M>()
         propertiesToFields = tempPropertiesToFields.toMap()
     }
 
-    override fun findMetaFieldByName(fieldName: String): MetaField<M>? = propertiesToFields[fieldName]
+    override fun findMetaFieldByName(fieldName: String): MetaField<Meta>? = propertiesToFields[fieldName]
 
-    override fun createInstance(values: Array<Any?>): M = primaryConstructor.call(*values)
+    override fun createInstance(values: Array<Any?>): Meta = primaryConstructor.call(*values)
 }
