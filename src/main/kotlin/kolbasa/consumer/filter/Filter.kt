@@ -58,10 +58,12 @@ object Filter {
     infix fun <M : Any, T : Comparable<T>> KProperty1<M, T?>.greaterEq(value: T): Condition<M> {
         return GreaterThanOrEqCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> KFunction1<M, T?>.greaterEq(value: T): Condition<M> {
         return GreaterThanOrEqCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> JavaField<M, T?>.greaterEq(value: T): Condition<M> {
         return GreaterThanOrEqCondition(this.name, value)
@@ -72,10 +74,12 @@ object Filter {
     infix fun <M : Any, T : Comparable<T>> KProperty1<M, T?>.less(value: T): Condition<M> {
         return LessThanCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> KFunction1<M, T?>.less(value: T): Condition<M> {
         return LessThanCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> JavaField<M, T?>.less(value: T): Condition<M> {
         return LessThanCondition(this.name, value)
@@ -86,10 +90,12 @@ object Filter {
     infix fun <M : Any, T : Comparable<T>> KProperty1<M, T?>.lessEq(value: T): Condition<M> {
         return LessThanOrEqCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> KFunction1<M, T?>.lessEq(value: T): Condition<M> {
         return LessThanOrEqCondition(this.name, value)
     }
+
     @JvmStatic
     infix fun <M : Any, T : Comparable<T>> JavaField<M, T?>.lessEq(value: T): Condition<M> {
         return LessThanOrEqCondition(this.name, value)
@@ -112,10 +118,12 @@ object Filter {
     fun <M : Any, T : Comparable<T>> isNull(property: KProperty1<M, T?>): Condition<M> {
         return IsNullCondition(property.name)
     }
+
     @JvmStatic
     fun <M : Any, T : Comparable<T>> isNull(property: KFunction1<M, T?>): Condition<M> {
         return IsNullCondition(property.name)
     }
+
     @JvmStatic
     fun <M : Any, T : Comparable<T>> isNull(property: JavaField<M, T?>): Condition<M> {
         return IsNullCondition(property.name)
@@ -126,10 +134,12 @@ object Filter {
     fun <M : Any, T : Comparable<T>> isNotNull(property: KProperty1<M, T?>): Condition<M> {
         return IsNotNullCondition(property.name)
     }
+
     @JvmStatic
     fun <M : Any, T : Comparable<T>> isNotNull(property: KFunction1<M, T?>): Condition<M> {
         return IsNotNullCondition(property.name)
     }
+
     @JvmStatic
     fun <M : Any, T : Comparable<T>> isNotNull(property: JavaField<M, T?>): Condition<M> {
         return IsNotNullCondition(property.name)
@@ -140,6 +150,23 @@ object Filter {
     fun <M : Any> not(condition: Condition<M>): Condition<M> {
         return NotCondition(condition)
     }
+
+    // -------------------------------------------------------------------------------------------
+    @JvmStatic
+    fun <M : Any> nativeSql(sqlPattern: String, vararg properties: KProperty1<M, *>): Condition<M> {
+        return NativeSqlCondition(sqlPattern, properties.map { it.name })
+    }
+
+    @JvmStatic
+    fun <M : Any> nativeSql(sqlPattern: String, vararg properties: KFunction1<M, *>): Condition<M> {
+        return NativeSqlCondition(sqlPattern, properties.map { it.name })
+    }
+
+    @JvmStatic
+    fun <M : Any> nativeSql(sqlPattern: String, vararg properties: JavaField<M, *>): Condition<M> {
+        return NativeSqlCondition(sqlPattern, properties.map { it.name })
+    }
+
 
 }
 
