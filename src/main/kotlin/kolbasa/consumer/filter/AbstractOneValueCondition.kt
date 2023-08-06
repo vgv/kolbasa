@@ -5,16 +5,16 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
-internal abstract class AbstractOneValueCondition<M : Any, T>(
+internal abstract class AbstractOneValueCondition<Meta : Any, T>(
     private val fieldName: String,
     private val value: T
-) : Condition<M>() {
+) : Condition<Meta>() {
 
-    private lateinit var field: MetaField<M>
+    private lateinit var field: MetaField<Meta>
 
     abstract val operator: String
 
-    override fun toSqlClause(queue: Queue<*, M>): String {
+    override fun toSqlClause(queue: Queue<*, Meta>): String {
         field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
             "Field $fieldName not found in metadata class ${queue.metadata}"
         }
@@ -23,7 +23,7 @@ internal abstract class AbstractOneValueCondition<M : Any, T>(
         return "${field.dbColumnName}${operator}?"
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, M>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.getAndIncrement(), value)
     }
 

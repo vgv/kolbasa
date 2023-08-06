@@ -15,8 +15,8 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
 
-internal abstract class MetaField<M : Any>(
-    private val kotlinType: KClass<M>,
+internal abstract class MetaField<Meta : Any>(
+    private val kotlinType: KClass<Meta>,
     val fieldName: String,
     searchable: Searchable?,
     unique: Unique?
@@ -32,9 +32,9 @@ internal abstract class MetaField<M : Any>(
     val dbIndexType = defineIndexType(unique, searchable)
     private val enumValueOfFunction = MetaHelpers.findEnumValueOfFunction(kotlinType)
 
-    abstract fun getValue(meta: M): Any?
+    abstract fun getValue(meta: Meta): Any?
 
-    fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, meta: M?) {
+    fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, meta: Meta?) {
         val propertyValue = meta?.let { getValue(meta) }
         fillPreparedStatementForValue(ps, columnIndex, propertyValue)
     }
@@ -135,47 +135,47 @@ internal abstract class MetaField<M : Any>(
 }
 
 @Suppress("UNCHECKED_CAST")
-internal class KotlinPropertyMetaField<M : Any>(
-    val property: KProperty1<M, *>
-) : MetaField<M>(
-    kotlinType = property.returnType.classifier as KClass<M>,
+internal class KotlinPropertyMetaField<Meta : Any>(
+    val property: KProperty1<Meta, *>
+) : MetaField<Meta>(
+    kotlinType = property.returnType.classifier as KClass<Meta>,
     fieldName = property.name,
     searchable = property.findAnnotation<Searchable>(),
     unique = property.findAnnotation<Unique>()
 ) {
 
-    override fun getValue(meta: M): Any? {
+    override fun getValue(meta: Meta): Any? {
         return property(meta)
     }
 
 }
 
 @Suppress("UNCHECKED_CAST")
-internal class JavaRecordPropertyMetaField<M : Any>(
+internal class JavaRecordPropertyMetaField<Meta : Any>(
     private val recordComponent: RecordComponent
-) : MetaField<M>(
-    kotlinType = recordComponent.type.kotlin as KClass<M>,
+) : MetaField<Meta>(
+    kotlinType = recordComponent.type.kotlin as KClass<Meta>,
     fieldName = recordComponent.name,
     searchable = recordComponent.getAnnotation(Searchable::class.java),
     unique = recordComponent.getAnnotation(Unique::class.java)
 ) {
 
-    override fun getValue(meta: M): Any? {
+    override fun getValue(meta: Meta): Any? {
         return recordComponent.accessor(meta)
     }
 }
 
 @Suppress("UNCHECKED_CAST")
-internal class JavaBeanMetaField<M : Any>(
+internal class JavaBeanMetaField<Meta : Any>(
     private val propertyDescriptor: PropertyDescriptor
-) : MetaField<M>(
-    kotlinType = propertyDescriptor.propertyType.kotlin as KClass<M>,
+) : MetaField<Meta>(
+    kotlinType = propertyDescriptor.propertyType.kotlin as KClass<Meta>,
     fieldName = propertyDescriptor.name,
     searchable = propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
     unique = propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
 ) {
 
-    override fun getValue(meta: M): Any? {
+    override fun getValue(meta: Meta): Any? {
         return propertyDescriptor.readMethod(meta)
     }
 }

@@ -1,6 +1,6 @@
 package kolbasa.consumer
 
-data class Message<V, M>(
+data class Message<V, Meta>(
     /**
      * Unique message identifier
      */
@@ -24,5 +24,5 @@ data class Message<V, M>(
     /**
      * Metadata, if any
      */
-    val meta: M?
+    val meta: Meta?
 )

@@ -14,10 +14,10 @@ import java.sql.Types
 
 internal object ConsumerSchemaHelpers {
 
-    fun <M : Any> generateSelectPreparedQuery(
-        queue: Queue<*, M>,
+    fun <Meta : Any> generateSelectPreparedQuery(
+        queue: Queue<*, Meta>,
         consumerOptions: ConsumerOptions,
-        receiveOptions: ReceiveOptions<M>,
+        receiveOptions: ReceiveOptions<Meta>,
         limit: Int
     ): String {
         // Columns to read from database
@@ -85,10 +85,10 @@ internal object ConsumerSchemaHelpers {
         """.trimIndent()
     }
 
-    fun <M : Any> fillSelectPreparedQuery(
-        queue: Queue<*, M>,
+    fun <Meta : Any> fillSelectPreparedQuery(
+        queue: Queue<*, Meta>,
         consumerOptions: ConsumerOptions,
-        receiveOptions: ReceiveOptions<M>,
+        receiveOptions: ReceiveOptions<Meta>,
         preparedStatement: PreparedStatement
     ) {
         val columnIndex = IntBox(1)
@@ -104,12 +104,12 @@ internal object ConsumerSchemaHelpers {
         }
     }
 
-    fun <V, M : Any> read(
-        queue: Queue<V, M>,
-        receiveOptions: ReceiveOptions<M>,
+    fun <V, Meta : Any> read(
+        queue: Queue<V, Meta>,
+        receiveOptions: ReceiveOptions<Meta>,
         resultSet: ResultSet,
         approxBytesCounter: LongBox
-    ): Message<V, M> {
+    ): Message<V, Meta> {
         var columnIndex = 1
 
         val id = resultSet.getLong(columnIndex++)

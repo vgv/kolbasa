@@ -3,11 +3,11 @@ package kolbasa.queue
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
 
-data class Queue<V, M : Any> @JvmOverloads constructor(
+data class Queue<V, Meta : Any> @JvmOverloads constructor(
     val name: String,
     val dataType: QueueDataType<V>,
     val options: QueueOptions? = null,
-    val metadata: Class<M>? = null
+    val metadata: Class<Meta>? = null
 ) {
 
     init {
@@ -16,7 +16,7 @@ data class Queue<V, M : Any> @JvmOverloads constructor(
 
     internal val dbTableName = Const.QUEUE_TABLE_NAME_PREFIX + name
 
-    internal val metadataDescription: MetaClass<M>? = metadata?.let { MetaClass.of(metadata) }
+    internal val metadataDescription: MetaClass<Meta>? = metadata?.let { MetaClass.of(metadata) }
 
 }
 
