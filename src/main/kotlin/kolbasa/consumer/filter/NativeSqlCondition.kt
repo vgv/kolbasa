@@ -5,12 +5,12 @@ import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 import java.text.MessageFormat
 
-internal class NativeSqlCondition<M : Any>(
+internal class NativeSqlCondition<Meta : Any>(
     private val sqlPattern: String,
     private val fieldNames: List<String>
-) : Condition<M>() {
+) : Condition<Meta>() {
 
-    override fun toSqlClause(queue: Queue<*, M>): String {
+    override fun toSqlClause(queue: Queue<*, Meta>): String {
         val names = Array(fieldNames.size) {
             val fieldName = fieldNames[it]
             val field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
@@ -23,7 +23,7 @@ internal class NativeSqlCondition<M : Any>(
         return MessageFormat.format(sqlPattern, *names)
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, M>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         // NOP
     }
 }

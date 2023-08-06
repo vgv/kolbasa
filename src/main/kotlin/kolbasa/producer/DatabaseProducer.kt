@@ -4,11 +4,11 @@ import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
-class DatabaseProducer<V, M : Any>(
+class DatabaseProducer<V, Meta : Any>(
     private val dataSource: DataSource,
-    queue: Queue<V, M>,
+    queue: Queue<V, Meta>,
     producerOptions: ProducerOptions = ProducerOptions()
-) : Producer<V, M> {
+) : Producer<V, Meta> {
 
     private val peer = ConnectionAwareDatabaseProducer(queue, producerOptions)
 
@@ -16,11 +16,11 @@ class DatabaseProducer<V, M : Any>(
         return dataSource.useConnection { peer.send(it, data) }
     }
 
-    override fun send(data: SendMessage<V, M>): Long {
+    override fun send(data: SendMessage<V, Meta>): Long {
         return dataSource.useConnection { peer.send(it, data) }
     }
 
-    override fun send(data: List<SendMessage<V, M>>): SendResult<V, M> {
+    override fun send(data: List<SendMessage<V, Meta>>): SendResult<V, Meta> {
         return dataSource.useConnection { peer.send(it, data) }
     }
 

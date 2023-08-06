@@ -9,10 +9,10 @@ import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
 import java.sql.Connection
 
-class ConnectionAwareDatabaseProducer<V, M : Any>(
-    private val queue: Queue<V, M>,
+class ConnectionAwareDatabaseProducer<V, Meta : Any>(
+    private val queue: Queue<V, Meta>,
     private val producerOptions: ProducerOptions = ProducerOptions()
-) : ConnectionAwareProducer<V, M> {
+) : ConnectionAwareProducer<V, Meta> {
 
     private val queueStats: QueueStats
 
@@ -25,7 +25,7 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
         return send(connection, SendMessage(data))
     }
 
-    override fun send(connection: Connection, data: SendMessage<V, M>): Long {
+    override fun send(connection: Connection, data: SendMessage<V, Meta>): Long {
         val result = send(connection, listOf(data))
 
         return when (val message = result.messages.first()) {
@@ -34,7 +34,7 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
         }
     }
 
-    override fun send(connection: Connection, data: List<SendMessage<V, M>>): SendResult<V, M> {
+    override fun send(connection: Connection, data: List<SendMessage<V, Meta>>): SendResult<V, Meta> {
         return when (producerOptions.partialInsert) {
             PartialInsert.PROHIBITED -> sendProhibited(connection, data)
             PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, data)
@@ -42,8 +42,8 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
         }
     }
 
-    private fun sendProhibited(connection: Connection, data: List<SendMessage<V, M>>): SendResult<V, M> {
-        val result = ArrayList<MessageResult<V, M>>(data.size)
+    private fun sendProhibited(connection: Connection, data: List<SendMessage<V, Meta>>): SendResult<V, Meta> {
+        val result = ArrayList<MessageResult<V, Meta>>(data.size)
 
         data.asSequence().chunked(producerOptions.batchSize).forEach { chunk ->
             try {
@@ -58,9 +58,9 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
         return SendResult(failedMessages = 0, result)
     }
 
-    private fun sendUntilFirstFailure(connection: Connection, data: List<SendMessage<V, M>>): SendResult<V, M> {
-        val results = ArrayList<MessageResult<V, M>>(data.size)
-        val failResults = mutableListOf<SendMessage<V, M>>()
+    private fun sendUntilFirstFailure(connection: Connection, data: List<SendMessage<V, Meta>>): SendResult<V, Meta> {
+        val results = ArrayList<MessageResult<V, Meta>>(data.size)
+        val failResults = mutableListOf<SendMessage<V, Meta>>()
         lateinit var exception: Throwable
 
         data.asSequence().chunked(producerOptions.batchSize).forEach { chunk ->
@@ -84,8 +84,8 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
         return SendResult(failedMessages = failResults.size, results)
     }
 
-    private fun sendAsMuchAsPossible(connection: Connection, data: List<SendMessage<V, M>>): SendResult<V, M> {
-        val result = ArrayList<MessageResult<V, M>>(data.size)
+    private fun sendAsMuchAsPossible(connection: Connection, data: List<SendMessage<V, Meta>>): SendResult<V, Meta> {
+        val result = ArrayList<MessageResult<V, Meta>>(data.size)
         var failedMessages = 0
 
         data.asSequence().chunked(producerOptions.batchSize).forEach { chunk ->
@@ -102,8 +102,8 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
 
     private fun executeChunkInSavepoint(
         connection: Connection,
-        chunk: List<SendMessage<V, M>>
-    ): Result<List<MessageResult<V, M>>> {
+        chunk: List<SendMessage<V, Meta>>
+    ): Result<List<MessageResult<V, Meta>>> {
         return connection.useSavepoint { _ ->
             executeChunk(connection, chunk)
         }
@@ -111,10 +111,10 @@ class ConnectionAwareDatabaseProducer<V, M : Any>(
 
     private fun executeChunk(
         connection: Connection,
-        chunk: List<SendMessage<V, M>>
-    ): List<MessageResult<V, M>> {
+        chunk: List<SendMessage<V, Meta>>
+    ): List<MessageResult<V, Meta>> {
         val approxStatsBytes = LongBox()
-        val result = ArrayList<MessageResult<V, M>>(chunk.size)
+        val result = ArrayList<MessageResult<V, Meta>>(chunk.size)
 
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
         connection.usePreparedStatement(query) { preparedStatement ->

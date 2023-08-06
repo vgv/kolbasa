@@ -2,12 +2,12 @@ package kolbasa.queue.meta
 
 import java.lang.reflect.Constructor
 
-internal class JavaRecordMetaClass<M : Any>(recordClass: Class<M>) : MetaClass<M>() {
+internal class JavaRecordMetaClass<Meta : Any>(recordClass: Class<Meta>) : MetaClass<Meta>() {
 
-    override val fields: List<JavaRecordPropertyMetaField<M>>
+    override val fields: List<JavaRecordPropertyMetaField<Meta>>
 
-    private val recordConstructor: Constructor<M>
-    private val propertiesToFields: Map<String, JavaRecordPropertyMetaField<M>>
+    private val recordConstructor: Constructor<Meta>
+    private val propertiesToFields: Map<String, JavaRecordPropertyMetaField<Meta>>
 
     init {
         check(recordClass.isRecord) {
@@ -16,11 +16,11 @@ internal class JavaRecordMetaClass<M : Any>(recordClass: Class<M>) : MetaClass<M
 
         recordConstructor = MetaHelpers.findCanonicalRecordConstructor(recordClass)
 
-        val tempFields = mutableListOf<JavaRecordPropertyMetaField<M>>()
-        val tempPropertiesToFields = mutableMapOf<String, JavaRecordPropertyMetaField<M>>()
+        val tempFields = mutableListOf<JavaRecordPropertyMetaField<Meta>>()
+        val tempPropertiesToFields = mutableMapOf<String, JavaRecordPropertyMetaField<Meta>>()
 
         recordClass.recordComponents.forEach { recordComponent ->
-            val field = JavaRecordPropertyMetaField<M>(recordComponent)
+            val field = JavaRecordPropertyMetaField<Meta>(recordComponent)
 
             tempFields += field
             tempPropertiesToFields[field.fieldName] = field
@@ -30,7 +30,7 @@ internal class JavaRecordMetaClass<M : Any>(recordClass: Class<M>) : MetaClass<M
         propertiesToFields = tempPropertiesToFields.toMap()
     }
 
-    override fun findMetaFieldByName(fieldName: String): MetaField<M>? = propertiesToFields[fieldName]
+    override fun findMetaFieldByName(fieldName: String): MetaField<Meta>? = propertiesToFields[fieldName]
 
-    override fun createInstance(values: Array<Any?>): M? = recordConstructor.newInstance(*values)
+    override fun createInstance(values: Array<Any?>): Meta? = recordConstructor.newInstance(*values)
 }

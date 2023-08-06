@@ -74,10 +74,10 @@ internal object ProducerSchemaHelpers {
         """.trimIndent()
     }
 
-    fun <V, M : Any> fillInsertPreparedQuery(
-        queue: Queue<V, M>,
+    fun <V, Meta : Any> fillInsertPreparedQuery(
+        queue: Queue<V, Meta>,
         producerOptions: ProducerOptions,
-        data: List<SendMessage<V, M>>,
+        data: List<SendMessage<V, Meta>>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: LongBox
     ) {
