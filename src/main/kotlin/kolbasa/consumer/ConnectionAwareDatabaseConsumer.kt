@@ -9,10 +9,10 @@ import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
 import java.sql.Connection
 
-class ConnectionAwareDatabaseConsumer<V, Meta : Any>(
-    private val queue: Queue<V, Meta>,
+class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
+    private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions()
-) : ConnectionAwareConsumer<V, Meta> {
+) : ConnectionAwareConsumer<Data, Meta> {
 
     private val queueStats: QueueStats
 
@@ -21,28 +21,28 @@ class ConnectionAwareDatabaseConsumer<V, Meta : Any>(
         queueStats = GlobalStats.getStatsForQueue(queue)
     }
 
-    override fun receive(connection: Connection): Message<V, Meta>? {
+    override fun receive(connection: Connection): Message<Data, Meta>? {
         return receive(connection, ReceiveOptions())
     }
 
-    override fun receive(connection: Connection, filter: () -> Condition<Meta>): Message<V, Meta>? {
+    override fun receive(connection: Connection, filter: () -> Condition<Meta>): Message<Data, Meta>? {
         return receive(connection, ReceiveOptions(filter = filter()))
     }
 
-    override fun receive(connection: Connection, receiveOptions: ReceiveOptions<Meta>): Message<V, Meta>? {
+    override fun receive(connection: Connection, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
         val result = receive(connection, limit = 1, receiveOptions)
         return result.firstOrNull()
     }
 
-    override fun receive(connection: Connection, limit: Int): List<Message<V, Meta>> {
+    override fun receive(connection: Connection, limit: Int): List<Message<Data, Meta>> {
         return receive(connection, limit, ReceiveOptions())
     }
 
-    override fun receive(connection: Connection, limit: Int, filter: () -> Condition<Meta>): List<Message<V, Meta>> {
+    override fun receive(connection: Connection, limit: Int, filter: () -> Condition<Meta>): List<Message<Data, Meta>> {
         return receive(connection, limit, ReceiveOptions(filter = filter()))
     }
 
-    override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<V, Meta>> {
+    override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         // delete expired messages before next read
         SweepHelper.sweep(connection, queue)
 
@@ -52,7 +52,7 @@ class ConnectionAwareDatabaseConsumer<V, Meta : Any>(
             ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
             preparedStatement.executeQuery().use { resultSet ->
                 val approxBytesCounter = LongBox()
-                val result = ArrayList<Message<V, Meta>>(limit)
+                val result = ArrayList<Message<Data, Meta>>(limit)
 
                 while (resultSet.next()) {
                     result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
@@ -82,11 +82,11 @@ class ConnectionAwareDatabaseConsumer<V, Meta : Any>(
         }
     }
 
-    override fun delete(connection: Connection, message: Message<V, Meta>): Int {
+    override fun delete(connection: Connection, message: Message<Data, Meta>): Int {
         return delete(connection, message.id)
     }
 
-    override fun delete(connection: Connection, messages: Collection<Message<V, Meta>>): Int {
-        return delete(connection, messages.map(Message<V, Meta>::id))
+    override fun delete(connection: Connection, messages: Collection<Message<Data, Meta>>): Int {
+        return delete(connection, messages.map(Message<Data, Meta>::id))
     }
 }

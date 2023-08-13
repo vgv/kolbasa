@@ -104,12 +104,12 @@ internal object ConsumerSchemaHelpers {
         }
     }
 
-    fun <V, Meta : Any> read(
-        queue: Queue<V, Meta>,
+    fun <Data, Meta : Any> read(
+        queue: Queue<Data, Meta>,
         receiveOptions: ReceiveOptions<Meta>,
         resultSet: ResultSet,
         approxBytesCounter: LongBox
-    ): Message<V, Meta> {
+    ): Message<Data, Meta> {
         var columnIndex = 1
 
         val id = resultSet.getLong(columnIndex++)
