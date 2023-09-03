@@ -2,42 +2,42 @@ package kolbasa.producer
 
 import java.sql.Connection
 
-interface Producer<V, Meta : Any> {
-    fun send(data: V): Long
-    fun send(data: SendMessage<V, Meta>): Long
-    fun send(data: List<SendMessage<V, Meta>>): SendResult<V, Meta>
+interface Producer<Data, Meta : Any> {
+    fun send(data: Data): Long
+    fun send(data: SendMessage<Data, Meta>): Long
+    fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
 }
 
-interface ConnectionAwareProducer<V, Meta : Any> {
-    fun send(connection: Connection, data: V): Long
-    fun send(connection: Connection, data: SendMessage<V, Meta>): Long
-    fun send(connection: Connection, data: List<SendMessage<V, Meta>>): SendResult<V, Meta>
+interface ConnectionAwareProducer<Data, Meta : Any> {
+    fun send(connection: Connection, data: Data): Long
+    fun send(connection: Connection, data: SendMessage<Data, Meta>): Long
+    fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
 }
 
-data class SendResult<V, Meta : Any>(
+data class SendResult<Data, Meta : Any>(
     val failedMessages: Int,
-    val messages: List<MessageResult<V, Meta>>
+    val messages: List<MessageResult<Data, Meta>>
 ) {
 
-    fun onlySuccessful(): List<MessageResult.Success<V, Meta>> {
-        return messages.filterIsInstance<MessageResult.Success<V, Meta>>()
+    fun onlySuccessful(): List<MessageResult.Success<Data, Meta>> {
+        return messages.filterIsInstance<MessageResult.Success<Data, Meta>>()
     }
 
-    fun onlyFailed(): List<MessageResult.Error<V, Meta>> {
-        return messages.filterIsInstance<MessageResult.Error<V, Meta>>()
+    fun onlyFailed(): List<MessageResult.Error<Data, Meta>> {
+        return messages.filterIsInstance<MessageResult.Error<Data, Meta>>()
     }
 
     /**
      * Convenient function to collect all failed messages to send them again
      */
-    fun gatherFailedMessages(): List<SendMessage<V, Meta>> {
-        val collector = ArrayList<SendMessage<V, Meta>>(failedMessages)
+    fun gatherFailedMessages(): List<SendMessage<Data, Meta>> {
+        val collector = ArrayList<SendMessage<Data, Meta>>(failedMessages)
         return onlyFailed().flatMapTo(collector) { it.messages }
     }
 
 }
 
-sealed class MessageResult<V, Meta : Any> {
-    data class Success<V, Meta : Any>(val id: Long, val message: SendMessage<V, Meta>) : MessageResult<V, Meta>()
-    data class Error<V, Meta : Any>(val error: Throwable, val messages: List<SendMessage<V, Meta>>) : MessageResult<V, Meta>()
+sealed class MessageResult<Data, Meta : Any> {
+    data class Success<Data, Meta : Any>(val id: Long, val message: SendMessage<Data, Meta>) : MessageResult<Data, Meta>()
+    data class Error<Data, Meta : Any>(val error: Throwable, val messages: List<SendMessage<Data, Meta>>) : MessageResult<Data, Meta>()
 }

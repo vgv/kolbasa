@@ -1,39 +1,39 @@
 package kolbasa.queue
 
-sealed class QueueDataType<V> {
+sealed class QueueDataType<Data> {
 
-    data class Json<V>(
-        val serializer: (V) -> String,
-        val deserializer: (String) -> V
-    ) : QueueDataType<V>() {
+    data class Json<Data>(
+        val serializer: (Data) -> String,
+        val deserializer: (String) -> Data
+    ) : QueueDataType<Data>() {
         override val dbColumnType = "jsonb"
     }
 
-    data class Binary<V>(
-        val serializer: (V) -> ByteArray,
-        val deserializer: (ByteArray) -> V
-    ) : QueueDataType<V>() {
+    data class Binary<Data>(
+        val serializer: (Data) -> ByteArray,
+        val deserializer: (ByteArray) -> Data
+    ) : QueueDataType<Data>() {
         override val dbColumnType = "bytea"
     }
 
-    data class Text<V>(
-        val serializer: (V) -> String,
-        val deserializer: (String) -> V
-    ) : QueueDataType<V>() {
+    data class Text<Data>(
+        val serializer: (Data) -> String,
+        val deserializer: (String) -> Data
+    ) : QueueDataType<Data>() {
         override val dbColumnType = "text"
     }
 
-    data class Int<V>(
-        val serializer: (V) -> kotlin.Int,
-        val deserializer: (kotlin.Int) -> V
-    ) : QueueDataType<V>() {
+    data class Int<Data>(
+        val serializer: (Data) -> kotlin.Int,
+        val deserializer: (kotlin.Int) -> Data
+    ) : QueueDataType<Data>() {
         override val dbColumnType = "int"
     }
 
-    data class Long<V>(
-        val serializer: (V) -> kotlin.Long,
-        val deserializer: (kotlin.Long) -> V
-    ) : QueueDataType<V>() {
+    data class Long<Data>(
+        val serializer: (Data) -> kotlin.Long,
+        val deserializer: (kotlin.Long) -> Data
+    ) : QueueDataType<Data>() {
         override val dbColumnType = "bigint"
     }
 

@@ -3,9 +3,9 @@ package kolbasa.queue
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
 
-data class Queue<V, Meta : Any> @JvmOverloads constructor(
+data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     val name: String,
-    val dataType: QueueDataType<V>,
+    val dataType: QueueDataType<Data>,
     val options: QueueOptions? = null,
     val metadata: Class<Meta>? = null
 ) {
