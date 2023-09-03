@@ -16,25 +16,60 @@ abstract class AbstractPostgresqlTest {
     protected val pgContainer = PostgreSQLContainer(CURRENT_IMAGE)
 
     protected lateinit var dataSource: DataSource;
+    protected lateinit var dataSourceFirstSchema: DataSource;
+    protected lateinit var dataSourceSecondSchema: DataSource;
 
     @BeforeEach
     fun init() {
         // Start PG container
         pgContainer.start()
 
-        // Init simple dataSource
+        // Init dataSource, public schema
         dataSource = HikariDataSource().apply {
             jdbcUrl = pgContainer.jdbcUrl
             username = pgContainer.username
             password = pgContainer.password
         }
 
-        // Insert test data, if any
-        // execute all statements
+        // Init dataSource, first schema
+        dataSourceFirstSchema = HikariDataSource().apply {
+            jdbcUrl = pgContainer.jdbcUrl
+            username = pgContainer.username
+            password = pgContainer.password
+            schema = FIRST_SCHEMA_NAME
+        }
+
+        // Init dataSource, second schema
+        dataSourceSecondSchema = HikariDataSource().apply {
+            jdbcUrl = pgContainer.jdbcUrl
+            username = pgContainer.username
+            password = pgContainer.password
+            schema = SECOND_SCHEMA_NAME
+        }
+
+        // Create all schemas
+        dataSource.useStatement { statement ->
+            statement.execute("create schema $FIRST_SCHEMA_NAME")
+            statement.execute("create schema $SECOND_SCHEMA_NAME")
+        }
+
+        // Insert test data for all schemas, if any
         dataSource.connection.use { connection ->
-            connection.autoCommit = true // separate transaction for each statement
+            connection.autoCommit = true // execute all statements in a separate transaction for each statement
             connection.useStatement { statement ->
                 generateTestData().forEach(statement::execute)
+            }
+        }
+        dataSourceFirstSchema.connection.use { connection ->
+            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+            connection.useStatement { statement ->
+                generateTestDataFirstSchema().forEach(statement::execute)
+            }
+        }
+        dataSourceSecondSchema.connection.use { connection ->
+            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+            connection.useStatement { statement ->
+                generateTestDataSecondSchema().forEach(statement::execute)
             }
         }
     }
@@ -48,7 +83,20 @@ abstract class AbstractPostgresqlTest {
         return emptyList()
     }
 
-    private companion object {
+    protected open fun generateTestDataFirstSchema(): List<String> {
+        return emptyList()
+    }
+
+    protected open fun generateTestDataSecondSchema(): List<String> {
+        return emptyList()
+    }
+
+    companion object {
+        const val FIRST_SCHEMA_NAME = "first"
+        const val SECOND_SCHEMA_NAME = "second"
+
+        // All PG images to run tests
+        // Choose random image at every run
         private val POSTGRES_IMAGES = setOf(
             "postgres:11.20-alpine",
             "postgres:12.15-alpine",
@@ -58,7 +106,7 @@ abstract class AbstractPostgresqlTest {
             "postgres:16rc1-alpine"
         )
 
-        val CURRENT_IMAGE = POSTGRES_IMAGES.random()
+        private val CURRENT_IMAGE = POSTGRES_IMAGES.random()
 
         init {
             println("PostgreSQL docker image: $CURRENT_IMAGE")
