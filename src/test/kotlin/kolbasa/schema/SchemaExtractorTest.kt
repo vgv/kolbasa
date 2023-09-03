@@ -29,11 +29,18 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         return testTable
     }
 
+    // Generate the same tables/indexes in every schema
+    override fun generateTestDataFirstSchema() = generateTestData()
+
+    // Generate the same tables/indexes in every schema
+    override fun generateTestDataSecondSchema() = generateTestData()
+
     @Test
     fun testExtractRawSchema() {
+        // here we have to find objects (tables, indexes etc.) only from 'public' schema
         val tables = SchemaExtractor.extractRawSchema(dataSource, "${testTableName}%")
 
-        assertEquals(1, tables.size)
+        assertEquals(1, tables.size, "Tables: ${tables.keys}")
 
         val testTable = assertNotNull(tables[testTableName])
 
@@ -75,14 +82,14 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         }
 
         // Check indexes
-        assertEquals(4, testTable.indexes.size)
+        assertEquals(4, testTable.indexes.size, "Indexes: ${testTable.indexes}")
 
         // scheduled_at index
         assertNotNull(testTable.findIndex("${testTableName}_scheduled_at")).let { scheduledAtIndex ->
             assertFalse(scheduledAtIndex.unique)
             assertEquals("(scheduled_at IS NOT NULL)", scheduledAtIndex.filterCondition)
             assertFalse(scheduledAtIndex.invalid)
-            assertEquals(1, scheduledAtIndex.columns.size)
+            assertEquals(1, scheduledAtIndex.columns.size, "Columns: ${scheduledAtIndex.columns}")
             val scheduledAtColumn = assertNotNull(scheduledAtIndex.columns.find { it.name == "scheduled_at" })
             assertTrue(scheduledAtColumn.asc)
         }
@@ -92,7 +99,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             assertFalse(compositeIndex.unique)
             assertNull(compositeIndex.filterCondition)
             assertFalse(compositeIndex.invalid)
-            assertEquals(2, compositeIndex.columns.size)
+            assertEquals(2, compositeIndex.columns.size, "Columns: ${compositeIndex.columns}")
             val intColumn = assertNotNull(compositeIndex.columns.find { it.name == "meta_int_value" })
             assertTrue(intColumn.asc)
             val longColumn = assertNotNull(compositeIndex.columns.find { it.name == "meta_long_value" })
@@ -100,12 +107,12 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         }
 
         // _meta_int_unq index
-        assertNotNull(testTable.findIndex("${testTableName}_meta_int_unq")).let { compositeIndex ->
-            assertTrue(compositeIndex.unique)
-            assertNull(compositeIndex.filterCondition)
-            assertFalse(compositeIndex.invalid)
-            assertEquals(1, compositeIndex.columns.size)
-            val intColumn = assertNotNull(compositeIndex.columns.find { it.name == "meta_int_value" })
+        assertNotNull(testTable.findIndex("${testTableName}_meta_int_unq")).let { metaFieldIndex ->
+            assertTrue(metaFieldIndex.unique)
+            assertNull(metaFieldIndex.filterCondition)
+            assertFalse(metaFieldIndex.invalid)
+            assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
+            val intColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_int_value" })
             assertTrue(intColumn.asc)
         }
     }
