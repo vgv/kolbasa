@@ -2,6 +2,7 @@ package kolbasa.schema
 
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useConnection
+import java.sql.Connection
 import java.sql.DatabaseMetaData
 import javax.sql.DataSource
 
@@ -11,13 +12,13 @@ internal object SchemaExtractor {
         return dataSource.useConnection { connection ->
             val databaseMetaData = connection.metaData
 
-            val tablesResultSet = databaseMetaData.getTables(null, null, tableNamePattern, arrayOf("TABLE"))
+            val tablesResultSet = databaseMetaData.getTables(null, connection.schema, tableNamePattern, arrayOf("TABLE"))
             val tables = mutableMapOf<String, Table>()
             while (tablesResultSet.next()) {
                 val tableName = tablesResultSet.getString("TABLE_NAME")
 
-                val columns = getAllColumns(tableName, databaseMetaData)
-                val indexes = getAllIndexes(tableName, databaseMetaData)
+                val columns = getAllColumns(connection.schema, tableName, databaseMetaData)
+                val indexes = getAllIndexes(connection.schema, tableName, databaseMetaData)
 
                 tables[tableName] = Table(tableName, columns, indexes)
             }
@@ -26,8 +27,8 @@ internal object SchemaExtractor {
         }
     }
 
-    private fun getAllColumns(tableName: String, databaseMetaData: DatabaseMetaData): Set<Column> {
-        val columnsResultSet = databaseMetaData.getColumns(null, null, tableName, null)
+    private fun getAllColumns(schemaName: String, tableName: String, databaseMetaData: DatabaseMetaData): Set<Column> {
+        val columnsResultSet = databaseMetaData.getColumns(null, schemaName, tableName, null)
         val result = mutableSetOf<Column>()
 
         while (columnsResultSet.next()) {
@@ -42,8 +43,8 @@ internal object SchemaExtractor {
         return result
     }
 
-    private fun getAllIndexes(tableName: String, databaseMetaData: DatabaseMetaData): Set<Index> {
-        val indexesResultSet = databaseMetaData.getIndexInfo(null, null, tableName, false, false)
+    private fun getAllIndexes(schemaName: String, tableName: String, databaseMetaData: DatabaseMetaData): Set<Index> {
+        val indexesResultSet = databaseMetaData.getIndexInfo(null, schemaName, tableName, false, false)
         val result = mutableMapOf<String, Index>()
 
         while (indexesResultSet.next()) {
@@ -51,9 +52,7 @@ internal object SchemaExtractor {
             val column = indexesResultSet.getString("COLUMN_NAME")
             val unique = !indexesResultSet.getBoolean("NON_UNIQUE")
             val filterCondition = indexesResultSet.getString("FILTER_CONDITION")
-            val invalid = databaseMetaData
-                .connection
-                .readInt("SELECT count(*) FROM pg_class, pg_index WHERE pg_index.indisvalid = false AND pg_index.indexrelid = pg_class.oid and pg_class.relname='$indexName'") > 0
+            val invalid = isIndexInvalid(databaseMetaData.connection, schemaName, indexName)
             val asc = indexesResultSet.getString("ASC_OR_DESC") == "A"
 
             result.compute(indexName) { _, existingDefinition ->
@@ -69,5 +68,18 @@ internal object SchemaExtractor {
         return result.values.toSet()
     }
 
+    private fun isIndexInvalid(connection: Connection, schemaName: String, indexName: String): Boolean {
+        val query = """
+            select count(*) from pg_namespace
+            inner join pg_class on (pg_namespace.oid = pg_class.relnamespace)
+            inner join pg_index on (pg_class.oid = pg_index.indexrelid)
+            where
+                pg_namespace.nspname = '$schemaName' and
+                pg_class.relname='$indexName' and
+                pg_index.indisvalid = false
+        """.trimIndent()
+
+        return connection.readInt(query) > 0
+    }
 
 }
