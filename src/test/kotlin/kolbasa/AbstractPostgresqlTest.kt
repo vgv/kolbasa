@@ -15,9 +15,9 @@ abstract class AbstractPostgresqlTest {
     @Container
     protected val pgContainer = PostgreSQLContainer(CURRENT_IMAGE)
 
-    protected lateinit var dataSource: DataSource;
-    protected lateinit var dataSourceFirstSchema: DataSource;
-    protected lateinit var dataSourceSecondSchema: DataSource;
+    protected lateinit var dataSource: DataSource
+    protected lateinit var dataSourceFirstSchema: DataSource
+    protected lateinit var dataSourceSecondSchema: DataSource
 
     @BeforeEach
     fun init() {
