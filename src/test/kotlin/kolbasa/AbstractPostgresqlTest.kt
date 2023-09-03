@@ -98,11 +98,11 @@ abstract class AbstractPostgresqlTest {
         // All PG images to run tests
         // Choose random image at every run
         private val POSTGRES_IMAGES = setOf(
-            "postgres:11.20-alpine",
-            "postgres:12.15-alpine",
-            "postgres:13.11-alpine",
-            "postgres:14.8-alpine",
-            "postgres:15.3-alpine",
+            "postgres:11.21-alpine",
+            "postgres:12.16-alpine",
+            "postgres:13.12-alpine",
+            "postgres:14.9-alpine",
+            "postgres:15.4-alpine",
             "postgres:16rc1-alpine"
         )
 
