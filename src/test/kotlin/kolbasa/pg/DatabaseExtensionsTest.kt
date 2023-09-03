@@ -6,6 +6,7 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.readIntList
 import kolbasa.pg.DatabaseExtensions.readLong
 import kolbasa.pg.DatabaseExtensions.readLongList
+import kolbasa.pg.DatabaseExtensions.readString
 import kolbasa.pg.DatabaseExtensions.readStringList
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.pg.DatabaseExtensions.useSavepoint
@@ -171,7 +172,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadInt_MoreThanOneRow() {
         assertFailsWith<IllegalArgumentException> {
-            // No rows with str_value == 'z'
+            // More than one row
             dataSource.readInt("select int_value from full_table")
         }
     }
@@ -194,7 +195,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadLong_MoreThanOneRow() {
         assertFailsWith<IllegalArgumentException> {
-            // No rows with str_value == 'z'
+            // More than one row
             dataSource.readLong("select long_value from full_table")
         }
     }
@@ -218,8 +219,32 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadBoolean_MoreThanOneRow() {
         assertFailsWith<IllegalArgumentException> {
-            // No rows with str_value == 'z'
+            // More than one row
             dataSource.readBoolean("select boolean_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadString() {
+        val value = dataSource.readString("select str_value from full_table where int_value=1")
+        assertEquals("a", value)
+    }
+
+    @Test
+    fun testReadString_NoRows() {
+        assertFailsWith<IllegalArgumentException> {
+            // No rows with int_value=123
+            dataSource.readString("select str_value from full_table where int_value=123")
+        }
+    }
+
+    @Test
+    fun testReadString_MoreThanOneRow() {
+        assertFailsWith<IllegalArgumentException> {
+            // More than one row
+            dataSource.readString("select str_value from full_table")
         }
     }
 
