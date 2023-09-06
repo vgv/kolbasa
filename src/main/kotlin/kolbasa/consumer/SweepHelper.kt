@@ -7,29 +7,43 @@ import kolbasa.schema.Const
 import java.sql.Connection
 import java.util.concurrent.atomic.AtomicLong
 
-internal object SweepHelper {
+object SweepHelper {
 
-    fun sweep(connection: Connection, queue: Queue<*, *>) {
+    fun needSweep(): Boolean {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Sweep is disabled at all, stop all other checks
         if (!sweepConfig.enabled) {
-            return
+            return false
         }
 
         // Check
         if (!checkPeriod(sweepConfig.period)) {
-            return
+            return false
         }
+
+        return true
+    }
+
+    /**
+     * Run sweep for particular queue
+     *
+     * @return how many rows were removed or Int.MIN_VALUE if sweep didn't run due to concurrent sweep for the queue
+     * at the same time by another consumer
+     */
+    fun sweep(connection: Connection, queue: Queue<*, *>): Int {
+        val sweepConfig = Kolbasa.sweepConfig
 
         val lockId = sweepConfig.lockIdGenerator(queue)
 
-        Lock.tryRunExclusive(connection, lockId) { _ ->
+        val removedRows = Lock.tryRunExclusive(connection, lockId) { _ ->
             rawSweep(connection, queue, sweepConfig.maxRows, sweepConfig.maxIterations)
         }
+
+        return removedRows ?: Int.MIN_VALUE
     }
 
-    fun checkPeriod(period: Int): Boolean {
+    internal fun checkPeriod(period: Int): Boolean {
         // If we have to launch sweep at every consume, there is no reason to do any calculations
         if (period == Const.EVERYTIME_SWEEP_PERIOD) {
             return true
@@ -38,14 +52,21 @@ internal object SweepHelper {
         return (iterationsCounter.incrementAndGet() % period) == 0L
     }
 
-    private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int) {
-        (1..maxIterations).forEach { _ ->
+    /**
+     * Just run sweep without any checks and locks
+     */
+    private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int): Int {
+        var totalRows = 0
+        var iteration = 0
+
+        do {
+            // loop while we have rows to delete or iteration < maxIterations
             val removedRows = ConsumerSchemaHelpers.deleteExpiredMessages(connection, queue, maxRows)
-            if (removedRows == 0) {
-                // if there are no rows to delete, stop the loop right now
-                return
-            }
-        }
+            totalRows += removedRows
+            iteration++
+        } while (iteration < maxIterations && removedRows > 0)
+
+        return totalRows
     }
 
     private val iterationsCounter = AtomicLong(0)
