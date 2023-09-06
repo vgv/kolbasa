@@ -27,7 +27,7 @@ internal object SchemaExtractor {
         }
     }
 
-    private fun getAllColumns(schemaName: String, tableName: String, databaseMetaData: DatabaseMetaData): Set<Column> {
+    private fun getAllColumns(schemaName: String?, tableName: String, databaseMetaData: DatabaseMetaData): Set<Column> {
         val columnsResultSet = databaseMetaData.getColumns(null, schemaName, tableName, null)
         val result = mutableSetOf<Column>()
 
@@ -43,7 +43,7 @@ internal object SchemaExtractor {
         return result
     }
 
-    private fun getAllIndexes(schemaName: String, tableName: String, databaseMetaData: DatabaseMetaData): Set<Index> {
+    private fun getAllIndexes(schemaName: String?, tableName: String, databaseMetaData: DatabaseMetaData): Set<Index> {
         val indexesResultSet = databaseMetaData.getIndexInfo(null, schemaName, tableName, false, false)
         val result = mutableMapOf<String, Index>()
 
@@ -68,13 +68,13 @@ internal object SchemaExtractor {
         return result.values.toSet()
     }
 
-    private fun isIndexInvalid(connection: Connection, schemaName: String, indexName: String): Boolean {
+    private fun isIndexInvalid(connection: Connection, schemaName: String?, indexName: String): Boolean {
         val query = """
             select count(*) from pg_namespace
             inner join pg_class on (pg_namespace.oid = pg_class.relnamespace)
             inner join pg_index on (pg_class.oid = pg_index.indexrelid)
             where
-                pg_namespace.nspname = '$schemaName' and
+                pg_namespace.nspname = '${schemaName ?: "public"}' and
                 pg_class.relname='$indexName' and
                 pg_index.indisvalid = false
         """.trimIndent()
