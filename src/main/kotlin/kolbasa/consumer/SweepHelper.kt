@@ -5,11 +5,12 @@ import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import java.sql.Connection
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 object SweepHelper {
 
-    fun needSweep(): Boolean {
+    fun needSweep(queue: Queue<*, *>): Boolean {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Sweep is disabled at all, stop all other checks
@@ -18,7 +19,7 @@ object SweepHelper {
         }
 
         // Check
-        if (!checkPeriod(sweepConfig.period)) {
+        if (!checkPeriod(queue, sweepConfig.period)) {
             return false
         }
 
@@ -26,7 +27,7 @@ object SweepHelper {
     }
 
     /**
-     * Run sweep for particular queue
+     * Run sweep for a particular queue
      *
      * @return how many expired messages were removed or Int.MIN_VALUE if sweep didn't run due to
      * concurrent sweep for the queue at the same time by another consumer
@@ -43,13 +44,17 @@ object SweepHelper {
         return removedRows ?: Int.MIN_VALUE
     }
 
-    internal fun checkPeriod(period: Int): Boolean {
+    internal fun checkPeriod(queue: Queue<*, *>, period: Int): Boolean {
         // If we have to launch sweep at every consume, there is no reason to do any calculations
         if (period == Const.EVERYTIME_SWEEP_PERIOD) {
             return true
         }
 
-        return (iterationsCounter.incrementAndGet() % period) == 0L
+        val counter = iterationsCounter.computeIfAbsent(queue.name) { _ ->
+            AtomicInteger(0)
+        }
+
+        return (counter.incrementAndGet() % period) == 0
     }
 
     /**
@@ -69,6 +74,7 @@ object SweepHelper {
         return totalRows
     }
 
-    private val iterationsCounter = AtomicLong(0)
+    // Queue name => Sweep period counter
+    private val iterationsCounter = ConcurrentHashMap<String, AtomicInteger>()
 
 }
