@@ -28,8 +28,8 @@ object SweepHelper {
     /**
      * Run sweep for particular queue
      *
-     * @return how many rows were removed or Int.MIN_VALUE if sweep didn't run due to concurrent sweep for the queue
-     * at the same time by another consumer
+     * @return how many expired messages were removed or Int.MIN_VALUE if sweep didn't run due to
+     * concurrent sweep for the queue at the same time by another consumer
      */
     fun sweep(connection: Connection, queue: Queue<*, *>): Int {
         val sweepConfig = Kolbasa.sweepConfig
