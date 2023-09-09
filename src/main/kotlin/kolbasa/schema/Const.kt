@@ -60,7 +60,7 @@ internal object Const {
      * How many iterations at each sweep
      */
     const val MIN_SWEEP_ITERATIONS = 1
-    const val DEFAULT_SWEEP_ITERATIONS = 10
+    const val DEFAULT_SWEEP_ITERATIONS = 5
     const val MAX_SWEEP_ITERATIONS = 100
 
     /**

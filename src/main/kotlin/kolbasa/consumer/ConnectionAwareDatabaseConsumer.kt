@@ -44,7 +44,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         // delete expired messages before next read
-        if (SweepHelper.needSweep()) {
+        if (SweepHelper.needSweep(queue)) {
             SweepHelper.sweep(connection, queue)
         }
 
