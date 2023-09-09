@@ -44,7 +44,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         // delete expired messages before next read
-        SweepHelper.sweep(connection, queue)
+        if (SweepHelper.needSweep(queue)) {
+            SweepHelper.sweep(connection, queue, limit)
+        }
 
         // read
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)

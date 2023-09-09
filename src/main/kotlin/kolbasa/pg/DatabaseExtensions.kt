@@ -210,4 +210,30 @@ internal object DatabaseExtensions {
         }
     }
 
+    // -------------------------------------------------------------------------------------------
+    fun DataSource.readString(sql: String): String {
+        return useConnection { connection ->
+            connection.readString(sql)
+        }
+    }
+
+    fun Connection.readString(sql: String): String {
+        return useStatement { statement ->
+            statement.executeQuery(sql).use { resultSet ->
+                require(resultSet.next()) {
+                    "No rows in the query '$sql'"
+                }
+
+                val value = resultSet.getString(1)
+
+                // Do we have more rows than one?
+                require(!resultSet.next()) {
+                    "More than one row in the query '$sql'"
+                }
+
+                value
+            }
+        }
+    }
+
 }
