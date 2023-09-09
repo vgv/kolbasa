@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
+import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
@@ -71,9 +72,14 @@ object SweepHelper {
         var totalRows = 0
         var iteration = 0
 
+        // loop while we have rows to delete or iteration < maxIterations
         do {
-            // loop while we have rows to delete or iteration < maxIterations
-            val removedRows = ConsumerSchemaHelpers.deleteExpiredMessages(connection, queue, maxRows)
+            val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
+
+            val removedRows = connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
+            }
+
             totalRows += removedRows
             iteration++
         } while (iteration < maxIterations && removedRows == maxRows)
