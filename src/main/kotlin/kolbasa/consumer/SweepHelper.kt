@@ -7,6 +7,7 @@ import kolbasa.schema.Const
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.max
 
 object SweepHelper {
 
@@ -29,16 +30,22 @@ object SweepHelper {
     /**
      * Run sweep for a particular queue
      *
+     * A total of SweepConfig.maxIterations will be made. Every iteration will try to remove the
+     * maximum value from SweepConfig.maxRows or limit, whichever is greater.
+     *
      * @return how many expired messages were removed or Int.MIN_VALUE if sweep didn't run due to
      * concurrent sweep for the queue at the same time by another consumer
      */
-    fun sweep(connection: Connection, queue: Queue<*, *>): Int {
+    fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         val lockId = sweepConfig.lockIdGenerator(queue)
 
+        // Delete max rows den
+        val rowsToSweep = max(limit, sweepConfig.maxRows)
+
         val removedRows = Lock.tryRunExclusive(connection, lockId) { _ ->
-            rawSweep(connection, queue, sweepConfig.maxRows, sweepConfig.maxIterations)
+            rawSweep(connection, queue, rowsToSweep, sweepConfig.maxIterations)
         }
 
         return removedRows ?: Int.MIN_VALUE
@@ -69,7 +76,7 @@ object SweepHelper {
             val removedRows = ConsumerSchemaHelpers.deleteExpiredMessages(connection, queue, maxRows)
             totalRows += removedRows
             iteration++
-        } while (iteration < maxIterations && removedRows > 0)
+        } while (iteration < maxIterations && removedRows == maxRows)
 
         return totalRows
     }
