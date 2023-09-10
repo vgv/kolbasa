@@ -166,12 +166,10 @@ internal object ConsumerSchemaHelpers {
         return Message(id, createdAt, processingAt, attempts, data, meta)
     }
 
-    fun generateDeleteQuery(queue: Queue<*, *>, id: Long): String {
-        return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME}=$id"
-    }
-
     fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Long>): String {
-        check(ids.isNotEmpty())
+        check(ids.isNotEmpty()) {
+            "ID list must not be empty"
+        }
 
         val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")")
         return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME} in $idsList"

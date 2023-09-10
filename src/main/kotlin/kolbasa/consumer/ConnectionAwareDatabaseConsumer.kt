@@ -1,12 +1,15 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
+import kolbasa.SqlDumpHelper
+import kolbasa.StatementKind
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.GlobalStats
 import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
@@ -67,10 +70,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     }
 
     override fun delete(connection: Connection, messageId: Long): Int {
-        val query = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageId)
-        return connection.useStatement { statement ->
-            statement.executeUpdate(query)
-        }
+        return delete(connection, listOf(messageId))
     }
 
     override fun delete(connection: Connection, messageIds: List<Long>): Int {
@@ -78,10 +78,17 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
             return 0
         }
 
-        val query = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        return connection.useStatement { statement ->
-            statement.executeUpdate(query)
+        val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
+        val execution = TimeHelper.measure {
+            connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
+            }
         }
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution)
+
+        return execution.affectedRows
     }
 
     override fun delete(connection: Connection, message: Message<Data, Meta>): Int {
