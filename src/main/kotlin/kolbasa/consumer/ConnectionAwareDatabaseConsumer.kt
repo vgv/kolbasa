@@ -1,15 +1,15 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
-import kolbasa.SqlDumpHelper
-import kolbasa.StatementKind
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.GlobalStats
 import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
-import kolbasa.utils.TimeHelper
+import kolbasa.stats.sql.TimeHelper
 import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(

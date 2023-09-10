@@ -1,4 +1,4 @@
-package kolbasa
+package kolbasa.stats.sql
 
 import kolbasa.queue.Queue
 import java.io.Writer

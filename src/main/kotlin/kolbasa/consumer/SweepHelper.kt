@@ -1,13 +1,13 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
-import kolbasa.SqlDumpHelper
-import kolbasa.StatementKind
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
-import kolbasa.utils.TimeHelper
+import kolbasa.stats.sql.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
