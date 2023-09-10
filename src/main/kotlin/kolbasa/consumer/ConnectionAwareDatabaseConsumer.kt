@@ -9,8 +9,9 @@ import kolbasa.queue.Queue
 import kolbasa.stats.GlobalStats
 import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
-import kolbasa.stats.sql.TimeHelper
 import java.sql.Connection
+import java.time.Duration
+import java.time.LocalDateTime
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
@@ -52,8 +53,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
+        val startExecution = LocalDateTime.now()
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
-        return connection.prepareStatement(query).use { preparedStatement ->
+        val result = connection.prepareStatement(query).use { preparedStatement ->
             ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
             preparedStatement.executeQuery().use { resultSet ->
                 val approxBytesCounter = LongBox()
@@ -67,6 +69,12 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
                 result
             }
         }
+        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, startExecution, executionDuration, result.size)
+
+        return result
     }
 
     override fun delete(connection: Connection, messageId: Long): Int {
@@ -78,17 +86,18 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
             return 0
         }
 
+        val startExecution = LocalDateTime.now()
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        val execution = TimeHelper.measure {
-            connection.useStatement { statement ->
-                statement.executeUpdate(deleteQuery)
-            }
+        val removedRows = connection.useStatement { statement ->
+            statement.executeUpdate(deleteQuery)
         }
+        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
+
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, startExecution, executionDuration, removedRows)
 
-        return execution.affectedRows
+        return removedRows
     }
 
     override fun delete(connection: Connection, message: Message<Data, Meta>): Int {

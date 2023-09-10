@@ -2,6 +2,8 @@ package kolbasa.stats.sql
 
 import kolbasa.Kolbasa
 import kolbasa.queue.Queue
+import java.time.Duration
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 internal object SqlDumpHelper {
@@ -10,7 +12,9 @@ internal object SqlDumpHelper {
         queue: Queue<*, *>,
         kind: StatementKind,
         query: String,
-        execution: TimeHelper.Execution
+        startExecution: LocalDateTime,
+        executionDuration: Duration,
+        affectedRows: Int
     ) {
         val config = Kolbasa.sqlDumpConfig
 
@@ -27,9 +31,9 @@ internal object SqlDumpHelper {
         // Sql dumps are enabled and we need to dump these types of queries
         val text = buildString {
             appendLine("---------------------------------------------")
-            append("Date: ").append(execution.startTime.format(dateTimeFormatter)).appendLine()
-            append("Duration: ").append(execution.duration.toMillis()).append("ms").appendLine()
-            append("Rows: ").append(execution.affectedRows).appendLine()
+            append("Date: ").append(startExecution.format(dateTimeFormatter)).appendLine()
+            append("Duration: ").append(executionDuration.toMillis()).append("ms").appendLine()
+            append("Rows: ").append(affectedRows).appendLine()
             appendLine(query)
         }
 

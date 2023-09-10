@@ -6,8 +6,12 @@ import kolbasa.queue.Queue
 import kolbasa.stats.GlobalStats
 import kolbasa.Kolbasa
 import kolbasa.stats.QueueStats
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
 import java.sql.Connection
+import java.time.Duration
+import java.time.LocalDateTime
 
 class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
@@ -116,6 +120,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         val approxStatsBytes = LongBox()
         val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
 
+        val startExecution = LocalDateTime.now()
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
         connection.usePreparedStatement(query) { preparedStatement ->
             ProducerSchemaHelpers.fillInsertPreparedQuery(
@@ -135,9 +140,13 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
                 }
             }
         }
+        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
 
         // stats
         queueStats.sendInc(calls = chunk.size.toLong(), bytes = approxStatsBytes.get())
+
+        // SQL dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, startExecution, executionDuration, result.size)
 
         return result
     }
