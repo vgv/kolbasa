@@ -1,4 +1,4 @@
-package kolbasa.utils
+package kolbasa.stats.sql
 
 import java.time.Duration
 import java.time.LocalDateTime
