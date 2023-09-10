@@ -24,6 +24,10 @@ object Kolbasa {
     @Volatile
     var sweepConfig: SweepConfig = SweepConfig()
 
+    @JvmStatic
+    @Volatile
+    var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
+
     private val knownQueues = ConcurrentHashMap<String, Queue<*, *>>()
 
     fun registerQueue(queue: Queue<*, *>) {
