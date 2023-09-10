@@ -7,8 +7,9 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
-import kolbasa.stats.sql.TimeHelper
 import java.sql.Connection
+import java.time.Duration
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
@@ -79,18 +80,18 @@ object SweepHelper {
         do {
             val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
 
-            val execution = TimeHelper.measure {
-                connection.useStatement { statement ->
-                    statement.executeUpdate(deleteQuery)
-                }
+            val startExecution = LocalDateTime.now()
+            val removedRows = connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
             }
+            val executionDuration = Duration.between(startExecution, LocalDateTime.now())
 
-            totalRows += execution.affectedRows
+            totalRows += removedRows
             iteration++
 
             // SQL Dump
-            SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery,execution)
-        } while (iteration < maxIterations && execution.affectedRows == maxRows)
+            SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, startExecution, executionDuration, removedRows)
+        } while (iteration < maxIterations && removedRows == maxRows)
 
         return totalRows
     }
