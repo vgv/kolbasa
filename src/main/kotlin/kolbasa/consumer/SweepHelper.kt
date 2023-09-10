@@ -1,10 +1,13 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
+import kolbasa.SqlDumpHelper
+import kolbasa.StatementKind
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -76,13 +79,18 @@ object SweepHelper {
         do {
             val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
 
-            val removedRows = connection.useStatement { statement ->
-                statement.executeUpdate(deleteQuery)
+            val execution = TimeHelper.measure {
+                connection.useStatement { statement ->
+                    statement.executeUpdate(deleteQuery)
+                }
             }
 
-            totalRows += removedRows
+            totalRows += execution.affectedRows
             iteration++
-        } while (iteration < maxIterations && removedRows == maxRows)
+
+            // SQL Dump
+            SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery,execution)
+        } while (iteration < maxIterations && execution.affectedRows == maxRows)
 
         return totalRows
     }
