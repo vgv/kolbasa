@@ -1,10 +1,15 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
+import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import java.sql.Connection
+import java.time.Duration
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
@@ -71,11 +76,21 @@ object SweepHelper {
         var totalRows = 0
         var iteration = 0
 
+        // loop while we have rows to delete or iteration < maxIterations
         do {
-            // loop while we have rows to delete or iteration < maxIterations
-            val removedRows = ConsumerSchemaHelpers.deleteExpiredMessages(connection, queue, maxRows)
+            val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
+
+            val startExecution = LocalDateTime.now()
+            val removedRows = connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
+            }
+            val executionDuration = Duration.between(startExecution, LocalDateTime.now())
+
             totalRows += removedRows
             iteration++
+
+            // SQL Dump
+            SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, startExecution, executionDuration, removedRows)
         } while (iteration < maxIterations && removedRows == maxRows)
 
         return totalRows

@@ -1,6 +1,8 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
@@ -8,6 +10,8 @@ import kolbasa.stats.GlobalStats
 import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
 import java.sql.Connection
+import java.time.Duration
+import java.time.LocalDateTime
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
@@ -49,8 +53,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
+        val startExecution = LocalDateTime.now()
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
-        return connection.prepareStatement(query).use { preparedStatement ->
+        val result = connection.prepareStatement(query).use { preparedStatement ->
             ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
             preparedStatement.executeQuery().use { resultSet ->
                 val approxBytesCounter = LongBox()
@@ -64,13 +69,16 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
                 result
             }
         }
+        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, startExecution, executionDuration, result.size)
+
+        return result
     }
 
     override fun delete(connection: Connection, messageId: Long): Int {
-        val query = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageId)
-        return connection.useStatement { statement ->
-            statement.executeUpdate(query)
-        }
+        return delete(connection, listOf(messageId))
     }
 
     override fun delete(connection: Connection, messageIds: List<Long>): Int {
@@ -78,10 +86,18 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
             return 0
         }
 
-        val query = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        return connection.useStatement { statement ->
-            statement.executeUpdate(query)
+        val startExecution = LocalDateTime.now()
+        val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
+        val removedRows = connection.useStatement { statement ->
+            statement.executeUpdate(deleteQuery)
         }
+        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
+
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, startExecution, executionDuration, removedRows)
+
+        return removedRows
     }
 
     override fun delete(connection: Connection, message: Message<Data, Meta>): Int {

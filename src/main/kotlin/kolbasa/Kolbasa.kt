@@ -7,6 +7,7 @@ import kolbasa.stats.task.UpdateAllStatsTask
 import kolbasa.stats.task.UpdateRealtimeStatsTask
 import kolbasa.utils.DefaultExecutor
 import kolbasa.stats.StatsConfig
+import kolbasa.stats.sql.SqlDumpConfig
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 
@@ -23,6 +24,10 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var sweepConfig: SweepConfig = SweepConfig()
+
+    @JvmStatic
+    @Volatile
+    var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
 
     private val knownQueues = ConcurrentHashMap<String, Queue<*, *>>()
 

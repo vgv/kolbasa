@@ -1,13 +1,11 @@
 package kolbasa.consumer
 
-import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.IntBox
 import kolbasa.utils.LongBox
-import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
@@ -168,19 +166,17 @@ internal object ConsumerSchemaHelpers {
         return Message(id, createdAt, processingAt, attempts, data, meta)
     }
 
-    fun generateDeleteQuery(queue: Queue<*, *>, id: Long): String {
-        return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME}=$id"
-    }
-
     fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Long>): String {
-        check(ids.isNotEmpty())
+        check(ids.isNotEmpty()) {
+            "ID list must not be empty"
+        }
 
         val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")")
         return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME} in $idsList"
     }
 
-    fun deleteExpiredMessages(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
-        val sql = """
+    fun generateDeleteExpiredMessagesQuery(queue: Queue<*, *>, limit: Int): String {
+        return """
             delete from
                 ${queue.dbTableName}
             where id in (
@@ -191,12 +187,7 @@ internal object ConsumerSchemaHelpers {
                     ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
                 limit $limit
             )
-    """.trimIndent()
-
-        return connection.useStatement { statement ->
-            statement.executeUpdate(sql)
-        }
+        """.trimIndent()
     }
-
 
 }
