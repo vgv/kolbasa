@@ -1,11 +1,8 @@
 package kolbasa.consumer
 
-import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
-import kolbasa.stats.GlobalStats
-import kolbasa.stats.QueueStats
 import kolbasa.stats.prometheus.PrometheusConsumer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -17,13 +14,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions()
 ) : ConnectionAwareConsumer<Data, Meta> {
-
-    private val queueStats: QueueStats
-
-    init {
-        Kolbasa.registerQueue(queue)
-        queueStats = GlobalStats.getStatsForQueue(queue)
-    }
 
     override fun receive(connection: Connection): Message<Data, Meta>? {
         return receive(connection, ReceiveOptions())
