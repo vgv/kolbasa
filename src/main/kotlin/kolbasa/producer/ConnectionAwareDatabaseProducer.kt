@@ -146,7 +146,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         queueStats.sendInc(calls = chunk.size.toLong(), bytes = approxStatsBytes.get())
 
         // SQL dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, startExecution, executionDuration, result.size)
+        //SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, startExecution, executionDuration, result.size)
 
         return result
     }
