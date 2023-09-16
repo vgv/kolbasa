@@ -1,13 +1,10 @@
 package kolbasa.consumer
 
-import kolbasa.Kolbasa
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
-import kolbasa.stats.GlobalStats
-import kolbasa.stats.QueueStats
 import kolbasa.utils.LongBox
 import java.sql.Connection
 import java.time.Duration
@@ -17,13 +14,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions()
 ) : ConnectionAwareConsumer<Data, Meta> {
-
-    private val queueStats: QueueStats
-
-    init {
-        Kolbasa.registerQueue(queue)
-        queueStats = GlobalStats.getStatsForQueue(queue)
-    }
 
     override fun receive(connection: Connection): Message<Data, Meta>? {
         return receive(connection, ReceiveOptions())
@@ -65,7 +55,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
                     result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
                 }
 
-                queueStats.receiveInc(result.size.toLong(), approxBytesCounter.get())
                 result
             }
         }

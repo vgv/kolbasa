@@ -18,7 +18,6 @@ repositories {
 dependencies {
     val kotlinVersion: String by project
     val postgresqlVersion: String by project
-    val slf4jVersion: String by project
     val prometheusVersion: String by project
     val junitVersion: String by project
     val mockkVersion: String by project
@@ -33,9 +32,6 @@ dependencies {
 
     // PostgreSQL
     implementation("org.postgresql:postgresql:$postgresqlVersion")
-
-    // Logging
-    implementation("org.slf4j:slf4j-api:$slf4jVersion")
 
     // Metrics
     implementation("io.prometheus:simpleclient:$prometheusVersion")
