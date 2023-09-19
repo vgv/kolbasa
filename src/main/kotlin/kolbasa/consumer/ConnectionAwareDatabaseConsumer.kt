@@ -6,7 +6,7 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.GlobalStats
 import kolbasa.stats.QueueStats
-import kolbasa.stats.prometheus.Consumer
+import kolbasa.stats.prometheus.PrometheusConsumer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
@@ -74,10 +74,10 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution)
 
         // Prometheus
-        Consumer.consumerReceiveCounter.labels(queue.name).inc()
-        Consumer.consumerReceiveBytesCounter.labels(queue.name).inc(approxBytesCounter.get().toDouble())
-        Consumer.consumerReceiveRowsCounter.labels(queue.name).inc(execution.result.toDouble())
-        Consumer.consumerReceiveDuration.labels(queue.name).observe(execution.durationSeconds())
+        PrometheusConsumer.consumerReceiveCounter.labels(queue.name).inc()
+        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).inc(approxBytesCounter.get().toDouble())
+        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).inc(execution.result.toDouble())
+        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observe(execution.durationSeconds())
 
         return result
     }
@@ -102,9 +102,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution)
 
         // Prometheus
-        Consumer.consumerDeleteCounter.labels(queue.name).inc()
-        Consumer.consumerDeleteRowsCounter.labels(queue.name).inc(execution.result.toDouble())
-        Consumer.consumerDeleteDuration.labels(queue.name).observe(execution.durationSeconds())
+        PrometheusConsumer.consumerDeleteCounter.labels(queue.name).inc()
+        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).inc(execution.result.toDouble())
+        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observe(execution.durationSeconds())
 
         return execution.result // affected rows
     }
