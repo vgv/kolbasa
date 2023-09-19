@@ -3,9 +3,6 @@ package kolbasa.producer
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
-import kolbasa.stats.GlobalStats
-import kolbasa.Kolbasa
-import kolbasa.stats.QueueStats
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
@@ -17,13 +14,6 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val producerOptions: ProducerOptions = ProducerOptions()
 ) : ConnectionAwareProducer<Data, Meta> {
-
-    private val queueStats: QueueStats
-
-    init {
-        Kolbasa.registerQueue(queue)
-        queueStats = GlobalStats.getStatsForQueue(queue)
-    }
 
     override fun send(connection: Connection, data: Data): Long {
         return send(connection, SendMessage(data))
@@ -141,9 +131,6 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
             }
         }
         val executionDuration = Duration.between(startExecution, LocalDateTime.now())
-
-        // stats
-        queueStats.sendInc(calls = chunk.size.toLong(), bytes = approxStatsBytes.get())
 
         // SQL dump
         //SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, startExecution, executionDuration, result.size)
