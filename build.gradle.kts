@@ -57,7 +57,7 @@ dependencies {
     testImplementation("ch.qos.logback:logback-core:$logbackVersion")
     testImplementation("ch.qos.logback:logback-classic:$logbackVersion")
     testImplementation("com.zaxxer:HikariCP:$hikariVersion")
-
+    testImplementation("io.prometheus:simpleclient_httpserver:$prometheusVersion")
 }
 
 // Kotlin settings
