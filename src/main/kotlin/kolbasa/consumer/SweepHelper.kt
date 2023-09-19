@@ -7,7 +7,7 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.Sweep
+import kolbasa.stats.prometheus.PrometheusSweep
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
@@ -84,9 +84,9 @@ object SweepHelper {
         } while (iteration < maxIterations && removedRows == maxRows)
 
         // Prometheus
-        Sweep.sweepCounter.labels(queue.name).inc()
-        Sweep.sweepIterationsCounter.labels(queue.name).inc(iteration.toDouble())
-        Sweep.sweepRowsRemovedCounter.labels(queue.name).inc(totalRows.toDouble())
+        PrometheusSweep.sweepCounter.labels(queue.name).inc()
+        PrometheusSweep.sweepIterationsCounter.labels(queue.name).inc(iteration.toDouble())
+        PrometheusSweep.sweepRowsRemovedCounter.labels(queue.name).inc(totalRows.toDouble())
 
         return totalRows
     }
@@ -104,7 +104,7 @@ object SweepHelper {
         SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution)
 
         // Prometheus
-        Sweep.sweepDuration.labels(queue.name).observe(execution.durationSeconds())
+        PrometheusSweep.sweepDuration.labels(queue.name).observe(execution.durationSeconds())
 
         return execution.result // affected rows
     }

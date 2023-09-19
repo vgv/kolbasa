@@ -3,7 +3,7 @@ package kolbasa.stats.prometheus
 import io.prometheus.client.Counter
 import io.prometheus.client.Histogram
 
-internal object Sweep {
+internal object PrometheusSweep {
 
     val sweepCounter = Counter.Builder()
         .namespace("kolbasa")
