@@ -15,7 +15,8 @@ internal object SqlDumpHelper {
         queue: Queue<*, *>,
         kind: StatementKind,
         query: String,
-        execution: Execution
+        execution: Execution,
+        affectedRows: Int
     ) {
         val config = Kolbasa.sqlDumpConfig
 
@@ -34,7 +35,7 @@ internal object SqlDumpHelper {
             appendLine("---------------------------------------------")
             append("Date: ").append(formatStartTime(execution)).appendLine()
             append("Duration: ").append(durationMillis(execution)).append("ms").appendLine()
-            append("Rows: ").append(execution.affectedRows).appendLine()
+            append("Rows: ").append(affectedRows).appendLine()
             appendLine(query)
         }
 
