@@ -29,7 +29,7 @@ internal object SqlDumpHelper {
             return
         }
 
-        // Sql dumps are enabled and we need to dump these types of queries
+        // Sql dumps are enabled, and we need to dump these types of queries
         val text = buildString {
             appendLine("---------------------------------------------")
             append("Date: ").append(formatStartTime(execution)).appendLine()
