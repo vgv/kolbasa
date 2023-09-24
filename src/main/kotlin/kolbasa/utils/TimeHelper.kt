@@ -1,40 +1,33 @@
 package kolbasa.utils
 
-import kolbasa.producer.MessageResult
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
-
-data class Execution<T>(
+data class Execution(
     val startTimeEpochMillis: Long,
     val durationNanos: Long,
-    val result: T
-) {
+    val affectedRows: Int
+)
 
-    fun durationMillis() = TimeUnit.NANOSECONDS.toMillis(durationNanos)
-
-    fun durationSeconds(): Double = durationNanos / 1_000_000_000.0
-
-    fun startTime(): LocalDateTime {
-        val instant = Instant.ofEpochMilli(startTimeEpochMillis)
-        val zone = ZoneId.systemDefault()
-        return LocalDateTime.ofInstant(instant, zone)
-    }
-}
+data class ExecutionNanos<T>(val durationNanos: Long, val result: T)
 
 internal object TimeHelper {
 
-    fun <T> measure(block: () -> T): Execution<T> {
-        val startTime = System.currentTimeMillis()
+    fun <T> measureNanos(block: () -> T): ExecutionNanos<T> {
         val executionStartNanos = System.nanoTime()
         val result = block()
+        val executionEndNanos = System.nanoTime()
+
+        return ExecutionNanos(durationNanos = executionEndNanos - executionStartNanos, result = result)
+    }
+
+    fun measure(block: () -> Int): Execution {
+        val startTime = System.currentTimeMillis()
+        val executionStartNanos = System.nanoTime()
+        val affectedRows = block()
         val executionEndNanos = System.nanoTime()
 
         return Execution(
             startTimeEpochMillis = startTime,
             durationNanos = executionEndNanos - executionStartNanos,
-            result = result
+            affectedRows = affectedRows
         )
     }
 

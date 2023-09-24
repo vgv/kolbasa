@@ -3,12 +3,15 @@ package kolbasa.producer
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
+import kolbasa.stats.prometheus.Extensions.incInt
+import kolbasa.stats.prometheus.Extensions.incLong
+import kolbasa.stats.prometheus.Extensions.observeNanos
+import kolbasa.stats.prometheus.PrometheusProducer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
-import java.time.Duration
-import java.time.LocalDateTime
 
 class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
@@ -29,11 +32,23 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        return when (producerOptions.partialInsert) {
-            PartialInsert.PROHIBITED -> sendProhibited(connection, data)
-            PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, data)
-            PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, data)
+        val (durationNanos, result) = TimeHelper.measureNanos {
+            when (producerOptions.partialInsert) {
+                PartialInsert.PROHIBITED -> sendProhibited(connection, data)
+                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, data)
+                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, data)
+            }
         }
+
+        // Prometheus
+        PrometheusProducer.producerSendCounter
+            .labels(queue.name, producerOptions.partialInsert.name).inc()
+        PrometheusProducer.producerSendRowsCounter
+            .labels(queue.name, producerOptions.partialInsert.name).incInt(data.size)
+        PrometheusProducer.producerSendDuration
+            .labels(queue.name, producerOptions.partialInsert.name).observeNanos(durationNanos)
+
+        return result
     }
 
     private fun sendProhibited(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
@@ -109,31 +124,37 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     ): List<MessageResult<Data, Meta>> {
         val approxStatsBytes = LongBox()
         val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
-
-        val startExecution = LocalDateTime.now()
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
-        connection.usePreparedStatement(query) { preparedStatement ->
-            ProducerSchemaHelpers.fillInsertPreparedQuery(
-                queue,
-                producerOptions,
-                chunk,
-                preparedStatement,
-                approxStatsBytes
-            )
 
-            preparedStatement.executeQuery().use { resultSet ->
-                var currentIndex = 0
-                while (resultSet.next()) {
-                    val message = chunk[currentIndex++]
-                    val id = resultSet.getLong(1)
-                    result += MessageResult.Success(id, message)
+        val execution = TimeHelper.measure {
+            connection.usePreparedStatement(query) { preparedStatement ->
+                ProducerSchemaHelpers.fillInsertPreparedQuery(
+                    queue,
+                    producerOptions,
+                    chunk,
+                    preparedStatement,
+                    approxStatsBytes
+                )
+
+                preparedStatement.executeQuery().use { resultSet ->
+                    var currentIndex = 0
+                    while (resultSet.next()) {
+                        val message = chunk[currentIndex++]
+                        val id = resultSet.getLong(1)
+                        result += MessageResult.Success(id, message)
+                    }
                 }
             }
+
+            result.size
         }
-        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
 
         // SQL dump
-        //SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, startExecution, executionDuration, result.size)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution)
+
+        // Prometheus
+        PrometheusProducer.producerSendBytesCounter
+            .labels(queue.name, producerOptions.partialInsert.name).incLong(approxStatsBytes.get())
 
         return result
     }

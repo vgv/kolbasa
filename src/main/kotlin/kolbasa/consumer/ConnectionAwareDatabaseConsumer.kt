@@ -3,6 +3,9 @@ package kolbasa.consumer
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
+import kolbasa.stats.prometheus.Extensions.incInt
+import kolbasa.stats.prometheus.Extensions.incLong
+import kolbasa.stats.prometheus.Extensions.observeNanos
 import kolbasa.stats.prometheus.PrometheusConsumer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -65,9 +68,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
 
         // Prometheus
         PrometheusConsumer.consumerReceiveCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).inc(approxBytesCounter.get().toDouble())
-        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).inc(execution.result.toDouble())
-        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observe(execution.durationSeconds())
+        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).incLong(approxBytesCounter.get())
+        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).incInt(execution.affectedRows)
+        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observeNanos(execution.durationNanos)
 
         return result
     }
@@ -93,10 +96,10 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
 
         // Prometheus
         PrometheusConsumer.consumerDeleteCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).inc(execution.result.toDouble())
-        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observe(execution.durationSeconds())
+        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).incInt(execution.affectedRows)
+        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observeNanos(execution.durationNanos)
 
-        return execution.result // affected rows
+        return execution.affectedRows
     }
 
     override fun delete(connection: Connection, message: Message<Data, Meta>): Int {
