@@ -96,19 +96,19 @@ object SweepHelper {
     private fun rawSweepOneIteration(connection: Connection, queue: Queue<*, *>, maxRows: Int): Int {
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
 
-        val execution = TimeHelper.measure {
+        val (execution, removedRows) = TimeHelper.measure {
             connection.useStatement { statement ->
                 statement.executeUpdate(deleteQuery)
             }
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
 
         // Prometheus
         PrometheusSweep.sweepDuration.labels(queue.name).observeNanos(execution.durationNanos)
 
-        return execution.affectedRows
+        return removedRows
     }
 
     // Queue name => Sweep period counter

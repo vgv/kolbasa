@@ -1,34 +1,18 @@
 package kolbasa.utils
 
-data class Execution(
-    val startTimeEpochMillis: Long,
-    val durationNanos: Long,
-    val affectedRows: Int
-)
-
-data class ExecutionNanos<T>(val durationNanos: Long, val result: T)
+data class Execution(val startTimeEpochMillis: Long, val durationNanos: Long)
+data class MeasureResult<T>(val execution: Execution, val result: T)
 
 internal object TimeHelper {
 
-    fun <T> measureNanos(block: () -> T): ExecutionNanos<T> {
+    fun <T> measure(block: () -> T): MeasureResult<T> {
+        val startTime = System.currentTimeMillis()
+
         val executionStartNanos = System.nanoTime()
         val result = block()
-        val executionEndNanos = System.nanoTime()
+        val execution = Execution(startTime, System.nanoTime() - executionStartNanos)
 
-        return ExecutionNanos(durationNanos = executionEndNanos - executionStartNanos, result = result)
-    }
-
-    fun measure(block: () -> Int): Execution {
-        val startTime = System.currentTimeMillis()
-        val executionStartNanos = System.nanoTime()
-        val affectedRows = block()
-        val executionEndNanos = System.nanoTime()
-
-        return Execution(
-            startTimeEpochMillis = startTime,
-            durationNanos = executionEndNanos - executionStartNanos,
-            affectedRows = affectedRows
-        )
+        return MeasureResult(execution, result)
     }
 
 }

@@ -32,7 +32,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        val (durationNanos, result) = TimeHelper.measureNanos {
+        val (execution, result) = TimeHelper.measure {
             when (producerOptions.partialInsert) {
                 PartialInsert.PROHIBITED -> sendProhibited(connection, data)
                 PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, data)
@@ -46,7 +46,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         PrometheusProducer.producerSendRowsCounter
             .labels(queue.name, producerOptions.partialInsert.name).incInt(data.size)
         PrometheusProducer.producerSendDuration
-            .labels(queue.name, producerOptions.partialInsert.name).observeNanos(durationNanos)
+            .labels(queue.name, producerOptions.partialInsert.name).observeNanos(execution.durationNanos)
 
         return result
     }
@@ -123,10 +123,9 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         chunk: List<SendMessage<Data, Meta>>
     ): List<MessageResult<Data, Meta>> {
         val approxStatsBytes = LongBox()
-        val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
 
-        val execution = TimeHelper.measure {
+        val (execution, result) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->
                 ProducerSchemaHelpers.fillInsertPreparedQuery(
                     queue,
@@ -136,6 +135,8 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
                     approxStatsBytes
                 )
 
+                val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
+
                 preparedStatement.executeQuery().use { resultSet ->
                     var currentIndex = 0
                     while (resultSet.next()) {
@@ -144,13 +145,13 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
                         result += MessageResult.Success(id, message)
                     }
                 }
-            }
 
-            result.size
+                result
+            }
         }
 
         // SQL dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution, result.size)
 
         // Prometheus
         PrometheusProducer.producerSendBytesCounter
