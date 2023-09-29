@@ -86,9 +86,9 @@ object SweepHelper {
         } while (iteration < maxIterations && removedRows == maxRows)
 
         // Prometheus
-        PrometheusSweep.sweepCounter.labels(queue.name).inc()
-        PrometheusSweep.sweepIterationsCounter.labels(queue.name).incInt(iteration)
-        PrometheusSweep.sweepRowsRemovedCounter.labels(queue.name).incInt(totalRows)
+        PrometheusSweep.sweepCounter.labelValues(queue.name).inc()
+        PrometheusSweep.sweepIterationsCounter.labelValues(queue.name).incInt(iteration)
+        PrometheusSweep.sweepRowsRemovedCounter.labelValues(queue.name).incInt(totalRows)
 
         return totalRows
     }
@@ -106,7 +106,7 @@ object SweepHelper {
         SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
 
         // Prometheus
-        PrometheusSweep.sweepDuration.labels(queue.name).observeNanos(execution.durationNanos)
+        PrometheusSweep.sweepDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
 
         return removedRows
     }
