@@ -2,9 +2,12 @@ package kolbasa.stats.sql
 
 import kolbasa.Kolbasa
 import kolbasa.queue.Queue
-import java.time.Duration
+import kolbasa.utils.Execution
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 
 internal object SqlDumpHelper {
 
@@ -12,8 +15,7 @@ internal object SqlDumpHelper {
         queue: Queue<*, *>,
         kind: StatementKind,
         query: String,
-        startExecution: LocalDateTime,
-        executionDuration: Duration,
+        execution: Execution,
         affectedRows: Int
     ) {
         val config = Kolbasa.sqlDumpConfig
@@ -28,11 +30,11 @@ internal object SqlDumpHelper {
             return
         }
 
-        // Sql dumps are enabled and we need to dump these types of queries
+        // Sql dumps are enabled, and we need to dump these types of queries
         val text = buildString {
             appendLine("---------------------------------------------")
-            append("Date: ").append(startExecution.format(dateTimeFormatter)).appendLine()
-            append("Duration: ").append(executionDuration.toMillis()).append("ms").appendLine()
+            append("Date: ").append(formatStartTime(execution)).appendLine()
+            append("Duration: ").append(durationMillis(execution)).append("ms").appendLine()
             append("Rows: ").append(affectedRows).appendLine()
             appendLine(query)
         }
@@ -41,6 +43,15 @@ internal object SqlDumpHelper {
             write(text)
             flush()
         }
+    }
+
+    private fun durationMillis(execution: Execution): Long = TimeUnit.NANOSECONDS.toMillis(execution.durationNanos)
+
+    private fun formatStartTime(execution: Execution): String {
+        val instant = Instant.ofEpochMilli(execution.startTimeEpochMillis)
+        val zone = ZoneId.systemDefault()
+        val dateTime = LocalDateTime.ofInstant(instant, zone)
+        return dateTime.format(dateTimeFormatter)
     }
 
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")

@@ -7,9 +7,11 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
+import kolbasa.stats.prometheus.Extensions.incInt
+import kolbasa.stats.prometheus.Extensions.observeNanos
+import kolbasa.stats.prometheus.PrometheusSweep
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
-import java.time.Duration
-import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
@@ -78,22 +80,35 @@ object SweepHelper {
 
         // loop while we have rows to delete or iteration < maxIterations
         do {
-            val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
-
-            val startExecution = LocalDateTime.now()
-            val removedRows = connection.useStatement { statement ->
-                statement.executeUpdate(deleteQuery)
-            }
-            val executionDuration = Duration.between(startExecution, LocalDateTime.now())
-
+            val removedRows = rawSweepOneIteration(connection, queue, maxRows)
             totalRows += removedRows
             iteration++
-
-            // SQL Dump
-            SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, startExecution, executionDuration, removedRows)
         } while (iteration < maxIterations && removedRows == maxRows)
 
+        // Prometheus
+        PrometheusSweep.sweepCounter.labels(queue.name).inc()
+        PrometheusSweep.sweepIterationsCounter.labels(queue.name).incInt(iteration)
+        PrometheusSweep.sweepRowsRemovedCounter.labels(queue.name).incInt(totalRows)
+
         return totalRows
+    }
+
+    private fun rawSweepOneIteration(connection: Connection, queue: Queue<*, *>, maxRows: Int): Int {
+        val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
+
+        val (execution, removedRows) = TimeHelper.measure {
+            connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
+            }
+        }
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
+
+        // Prometheus
+        PrometheusSweep.sweepDuration.labels(queue.name).observeNanos(execution.durationNanos)
+
+        return removedRows
     }
 
     // Queue name => Sweep period counter

@@ -118,6 +118,8 @@ internal object ConsumerSchemaHelpers {
         val data = when (queue.dataType) {
             is QueueDataType.Json -> {
                 val data = resultSet.getString(columnIndex++)
+                // I know that str.length != bytes.size, but it's ok for now
+                // I don't want to convert string to bytes just for metrics because it's not cheap
                 approxBytesCounter.inc(data.length)
                 queue.dataType.deserializer(data)
             }
@@ -130,6 +132,8 @@ internal object ConsumerSchemaHelpers {
 
             is QueueDataType.Text -> {
                 val data = resultSet.getString(columnIndex++)
+                // I know that str.length != bytes.size, but it's ok for now
+                // I don't want to convert string to bytes just for metrics because it's not cheap
                 approxBytesCounter.inc(data.length)
                 queue.dataType.deserializer(data)
             }

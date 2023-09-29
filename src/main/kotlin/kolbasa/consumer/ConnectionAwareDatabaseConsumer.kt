@@ -1,14 +1,17 @@
 package kolbasa.consumer
 
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
+import kolbasa.stats.prometheus.Extensions.incInt
+import kolbasa.stats.prometheus.Extensions.incLong
+import kolbasa.stats.prometheus.Extensions.observeNanos
+import kolbasa.stats.prometheus.PrometheusConsumer
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
-import java.time.Duration
-import java.time.LocalDateTime
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
@@ -43,25 +46,32 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
-        val startExecution = LocalDateTime.now()
+        val approxBytesCounter = LongBox()
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
-        val result = connection.prepareStatement(query).use { preparedStatement ->
-            ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
-            preparedStatement.executeQuery().use { resultSet ->
-                val approxBytesCounter = LongBox()
-                val result = ArrayList<Message<Data, Meta>>(limit)
 
-                while (resultSet.next()) {
-                    result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+        val (execution, result) = TimeHelper.measure {
+            connection.prepareStatement(query).use { preparedStatement ->
+                ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
+                preparedStatement.executeQuery().use { resultSet ->
+                    val result = ArrayList<Message<Data, Meta>>(limit)
+
+                    while (resultSet.next()) {
+                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                    }
+
+                    result
                 }
-
-                result
             }
         }
-        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, startExecution, executionDuration, result.size)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
+
+        // Prometheus
+        PrometheusConsumer.consumerReceiveCounter.labels(queue.name).inc()
+        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).incLong(approxBytesCounter.get())
+        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).incInt(result.size)
+        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observeNanos(execution.durationNanos)
 
         return result
     }
@@ -75,16 +85,20 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
             return 0
         }
 
-        val startExecution = LocalDateTime.now()
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        val removedRows = connection.useStatement { statement ->
-            statement.executeUpdate(deleteQuery)
+        val (execution, removedRows) = TimeHelper.measure {
+            connection.useStatement { statement ->
+                statement.executeUpdate(deleteQuery)
+            }
         }
-        val executionDuration = Duration.between(startExecution, LocalDateTime.now())
-
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, startExecution, executionDuration, removedRows)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
+
+        // Prometheus
+        PrometheusConsumer.consumerDeleteCounter.labels(queue.name).inc()
+        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).incInt(removedRows)
+        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observeNanos(execution.durationNanos)
 
         return removedRows
     }
