@@ -68,10 +68,10 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
-        PrometheusConsumer.consumerReceiveCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).incLong(approxBytesCounter.get())
-        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).incInt(result.size)
-        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observeNanos(execution.durationNanos)
+        PrometheusConsumer.consumerReceiveCounter.labelValues(queue.name).inc()
+        PrometheusConsumer.consumerReceiveBytesCounter.labelValues(queue.name).incLong(approxBytesCounter.get())
+        PrometheusConsumer.consumerReceiveRowsCounter.labelValues(queue.name).incInt(result.size)
+        PrometheusConsumer.consumerReceiveDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
 
         return result
     }
@@ -96,9 +96,9 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
 
         // Prometheus
-        PrometheusConsumer.consumerDeleteCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).incInt(removedRows)
-        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observeNanos(execution.durationNanos)
+        PrometheusConsumer.consumerDeleteCounter.labelValues(queue.name).inc()
+        PrometheusConsumer.consumerDeleteRowsCounter.labelValues(queue.name).incInt(removedRows)
+        PrometheusConsumer.consumerDeleteDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
 
         return removedRows
     }

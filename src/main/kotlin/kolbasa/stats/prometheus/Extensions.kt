@@ -1,18 +1,19 @@
 package kolbasa.stats.prometheus
 
-import io.prometheus.client.Counter
-import io.prometheus.client.Histogram
+import io.prometheus.metrics.core.datapoints.CounterDataPoint
+import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 
 internal object Extensions {
 
-    fun Counter.Child.incInt(n: Int) {
+    fun CounterDataPoint.incInt(n: Int) {
         this.inc(n.toDouble())
     }
 
-    fun Counter.Child.incLong(n: Long) {
+    fun CounterDataPoint.incLong(n: Long) {
         this.inc(n.toDouble())
     }
-    fun Histogram.Child.observeNanos(nanos: Long) {
+
+    fun DistributionDataPoint.observeNanos(nanos: Long) {
         this.observe(nanos / NANOS_IN_SECOND)
     }
 

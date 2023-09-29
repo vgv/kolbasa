@@ -42,10 +42,10 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         // Prometheus
         val partialInsertName = producerOptions.partialInsert.name
-        PrometheusProducer.producerSendCounter.labels(queue.name, partialInsertName).inc()
-        PrometheusProducer.producerSendRowsCounter.labels(queue.name, partialInsertName).incInt(data.size)
-        PrometheusProducer.producerSendFailedRowsCounter.labels(queue.name, partialInsertName).incInt(result.failedMessages)
-        PrometheusProducer.producerSendDuration.labels(queue.name, partialInsertName).observeNanos(execution.durationNanos)
+        PrometheusProducer.producerSendCounter.labelValues(queue.name, partialInsertName).inc()
+        PrometheusProducer.producerSendRowsCounter.labelValues(queue.name, partialInsertName).incInt(data.size)
+        PrometheusProducer.producerSendFailedRowsCounter.labelValues(queue.name, partialInsertName).incInt(result.failedMessages)
+        PrometheusProducer.producerSendDuration.labelValues(queue.name, partialInsertName).observeNanos(execution.durationNanos)
 
         return result
     }
@@ -154,7 +154,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         // Prometheus
         PrometheusProducer.producerSendBytesCounter
-            .labels(queue.name, producerOptions.partialInsert.name).incLong(approxStatsBytes.get())
+            .labelValues(queue.name, producerOptions.partialInsert.name).incLong(approxStatsBytes.get())
 
         return result
     }
