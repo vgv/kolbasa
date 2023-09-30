@@ -3,10 +3,6 @@ package kolbasa.consumer
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
-import kolbasa.stats.prometheus.Extensions.incInt
-import kolbasa.stats.prometheus.Extensions.incLong
-import kolbasa.stats.prometheus.Extensions.observeNanos
-import kolbasa.stats.prometheus.PrometheusConsumer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
@@ -68,10 +64,11 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
-        PrometheusConsumer.consumerReceiveCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerReceiveBytesCounter.labels(queue.name).incLong(approxBytesCounter.get())
-        PrometheusConsumer.consumerReceiveRowsCounter.labels(queue.name).incInt(result.size)
-        PrometheusConsumer.consumerReceiveDuration.labels(queue.name).observeNanos(execution.durationNanos)
+        queue.queueMetrics.consumerReceiveMetrics(
+            receivedRows = result.size,
+            executionNanos = execution.durationNanos,
+            approxBytes = approxBytesCounter.get()
+        )
 
         return result
     }
@@ -96,9 +93,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
 
         // Prometheus
-        PrometheusConsumer.consumerDeleteCounter.labels(queue.name).inc()
-        PrometheusConsumer.consumerDeleteRowsCounter.labels(queue.name).incInt(removedRows)
-        PrometheusConsumer.consumerDeleteDuration.labels(queue.name).observeNanos(execution.durationNanos)
+        queue.queueMetrics.consumerDeleteMetrics(removedRows, execution.durationNanos)
 
         return removedRows
     }

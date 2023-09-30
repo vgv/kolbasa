@@ -3,10 +3,6 @@ package kolbasa.producer
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
-import kolbasa.stats.prometheus.Extensions.incInt
-import kolbasa.stats.prometheus.Extensions.incLong
-import kolbasa.stats.prometheus.Extensions.observeNanos
-import kolbasa.stats.prometheus.PrometheusProducer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
@@ -32,30 +28,37 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+        val approxStatsBytes = LongBox()
         val (execution, result) = TimeHelper.measure {
             when (producerOptions.partialInsert) {
-                PartialInsert.PROHIBITED -> sendProhibited(connection, data)
-                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, data)
-                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, data)
+                PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, data)
+                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, approxStatsBytes, data)
+                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, approxStatsBytes, data)
             }
         }
 
         // Prometheus
-        val partialInsertName = producerOptions.partialInsert.name
-        PrometheusProducer.producerSendCounter.labels(queue.name, partialInsertName).inc()
-        PrometheusProducer.producerSendRowsCounter.labels(queue.name, partialInsertName).incInt(data.size)
-        PrometheusProducer.producerSendFailedRowsCounter.labels(queue.name, partialInsertName).incInt(result.failedMessages)
-        PrometheusProducer.producerSendDuration.labels(queue.name, partialInsertName).observeNanos(execution.durationNanos)
+        queue.queueMetrics.producerSendMetrics(
+            producerOptions.partialInsert,
+            allMessages = data.size,
+            failedMessages = result.failedMessages,
+            executionNanos = execution.durationNanos,
+            approxBytes = approxStatsBytes.get()
+        )
 
         return result
     }
 
-    private fun sendProhibited(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+    private fun sendProhibited(
+        connection: Connection,
+        approxStatsBytes: LongBox,
+        data: List<SendMessage<Data, Meta>>
+    ): SendResult<Data, Meta> {
         val result = ArrayList<MessageResult<Data, Meta>>(data.size)
 
         data.asSequence().chunked(producerOptions.batchSize).forEach { chunk ->
             try {
-                result += executeChunk(connection, chunk)
+                result += executeChunk(connection, approxStatsBytes, chunk)
             } catch (e: Exception) {
                 // just stop all sequence execution and return the result
                 return SendResult(data.size, listOf(MessageResult.Error(e, data)))
@@ -66,7 +69,11 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         return SendResult(failedMessages = 0, result)
     }
 
-    private fun sendUntilFirstFailure(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+    private fun sendUntilFirstFailure(
+        connection: Connection,
+        approxStatsBytes: LongBox,
+        data: List<SendMessage<Data, Meta>>
+    ): SendResult<Data, Meta> {
         val results = ArrayList<MessageResult<Data, Meta>>(data.size)
         val failResults = mutableListOf<SendMessage<Data, Meta>>()
         lateinit var exception: Throwable
@@ -76,7 +83,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
                 // If we have at least one failed message – let's fail others
                 failResults += chunk
             } else {
-                executeChunkInSavepoint(connection, chunk)
+                executeChunkInSavepoint(connection, approxStatsBytes, chunk)
                     .onSuccess { results += it }
                     .onFailure { ex ->
                         exception = ex
@@ -92,12 +99,16 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         return SendResult(failedMessages = failResults.size, results)
     }
 
-    private fun sendAsMuchAsPossible(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+    private fun sendAsMuchAsPossible(
+        connection: Connection,
+        approxStatsBytes: LongBox,
+        data: List<SendMessage<Data, Meta>>
+    ): SendResult<Data, Meta> {
         val result = ArrayList<MessageResult<Data, Meta>>(data.size)
         var failedMessages = 0
 
         data.asSequence().chunked(producerOptions.batchSize).forEach { chunk ->
-            executeChunkInSavepoint(connection, chunk)
+            executeChunkInSavepoint(connection, approxStatsBytes, chunk)
                 .onSuccess { result += it }
                 .onFailure { ex ->
                     failedMessages += chunk.size
@@ -110,18 +121,19 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun executeChunkInSavepoint(
         connection: Connection,
+        approxStatsBytes: LongBox,
         chunk: List<SendMessage<Data, Meta>>
     ): Result<List<MessageResult<Data, Meta>>> {
         return connection.useSavepoint { _ ->
-            executeChunk(connection, chunk)
+            executeChunk(connection, approxStatsBytes, chunk)
         }
     }
 
     private fun executeChunk(
         connection: Connection,
+        approxStatsBytes: LongBox,
         chunk: List<SendMessage<Data, Meta>>
     ): List<MessageResult<Data, Meta>> {
-        val approxStatsBytes = LongBox()
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
 
         val (execution, result) = TimeHelper.measure {
@@ -151,10 +163,6 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         // SQL dump
         SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution, result.size)
-
-        // Prometheus
-        PrometheusProducer.producerSendBytesCounter
-            .labels(queue.name, producerOptions.partialInsert.name).incLong(approxStatsBytes.get())
 
         return result
     }

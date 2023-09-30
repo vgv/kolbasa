@@ -34,7 +34,7 @@ dependencies {
     implementation("org.postgresql:postgresql:$postgresqlVersion")
 
     // Metrics
-    implementation("io.prometheus:simpleclient:$prometheusVersion")
+    implementation("io.prometheus:prometheus-metrics-core:$prometheusVersion")
 
     // ---------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ dependencies {
     testImplementation("ch.qos.logback:logback-core:$logbackVersion")
     testImplementation("ch.qos.logback:logback-classic:$logbackVersion")
     testImplementation("com.zaxxer:HikariCP:$hikariVersion")
-    testImplementation("io.prometheus:simpleclient_httpserver:$prometheusVersion")
+    testImplementation("io.prometheus:prometheus-metrics-exporter-httpserver:$prometheusVersion")
 }
 
 // Kotlin settings
