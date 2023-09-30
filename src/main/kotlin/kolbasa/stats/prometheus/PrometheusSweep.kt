@@ -2,32 +2,33 @@ package kolbasa.stats.prometheus
 
 import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Histogram
+import kolbasa.Kolbasa
 
 internal object PrometheusSweep {
 
-    val sweepCounter = Counter.builder()
+    val sweepCounter: Counter = Counter.builder()
         .name("kolbasa_sweep")
-        .help("Amount of sweeps")
+        .help("Number of sweeps")
         .labelNames("queue")
-        .register()
+        .register(Kolbasa.prometheusConfig.registry)
 
-    val sweepIterationsCounter = Counter.builder()
+    val sweepIterationsCounter: Counter = Counter.builder()
         .name("kolbasa_sweep_iterations")
-        .help("Sweep iterations (every sweep can have multiple iterations)")
+        .help("Number of sweep iterations (every sweep can have multiple iterations)")
         .labelNames("queue")
-        .register()
+        .register(Kolbasa.prometheusConfig.registry)
 
-    val sweepRowsRemovedCounter = Counter.builder()
-        .name("kolbasa_sweep_removed_rows")
-        .help("Amount of rows removed by sweep")
+    val sweepOneIterationRowsRemovedCounter: Counter = Counter.builder()
+        .name("kolbasa_sweep_iteration_removed_rows")
+        .help("Number of rows removed by one sweep iteration")
         .labelNames("queue")
-        .register()
+        .register(Kolbasa.prometheusConfig.registry)
 
-    val sweepDuration = Histogram.builder()
-        .name("kolbasa_sweep_duration_seconds")
-        .help("Sweep duration")
+    val sweepOneIterationDuration: Histogram = Histogram.builder()
+        .name("kolbasa_sweep_iteration_duration_seconds")
+        .help("One sweep iteration duration")
         .labelNames("queue")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
-        .register()
+        .register(Kolbasa.prometheusConfig.registry)
 }

@@ -9,7 +9,6 @@ import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.Extensions.incInt
 import kolbasa.stats.prometheus.Extensions.observeNanos
-import kolbasa.stats.prometheus.PrometheusSweep
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
@@ -86,9 +85,10 @@ object SweepHelper {
         } while (iteration < maxIterations && removedRows == maxRows)
 
         // Prometheus
-        PrometheusSweep.sweepCounter.labelValues(queue.name).inc()
-        PrometheusSweep.sweepIterationsCounter.labelValues(queue.name).incInt(iteration)
-        PrometheusSweep.sweepRowsRemovedCounter.labelValues(queue.name).incInt(totalRows)
+        if (Kolbasa.prometheusConfig.enabled) {
+            queue.queueMetrics.sweepCounter.inc()
+            queue.queueMetrics.sweepIterationsCounter.incInt(iteration)
+        }
 
         return totalRows
     }
@@ -106,7 +106,10 @@ object SweepHelper {
         SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
 
         // Prometheus
-        PrometheusSweep.sweepDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
+        if (Kolbasa.prometheusConfig.enabled) {
+            queue.queueMetrics.sweepOneIterationRowsRemovedCounter.incInt(removedRows)
+            queue.queueMetrics.sweepOneIterationDuration.observeNanos(execution.durationNanos)
+        }
 
         return removedRows
     }
