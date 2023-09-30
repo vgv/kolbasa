@@ -2,6 +2,9 @@ package kolbasa.stats.prometheus
 
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
+import io.prometheus.metrics.core.metrics.Counter
+import io.prometheus.metrics.core.metrics.Histogram
+import kolbasa.Kolbasa
 import kolbasa.producer.PartialInsert
 import kolbasa.stats.prometheus.Extensions.incInt
 import kolbasa.stats.prometheus.Extensions.incLong
@@ -100,4 +103,118 @@ internal class QueueMetrics(queueName: String) {
     val sweepOneIterationDuration: DistributionDataPoint =
         PrometheusSweep.sweepOneIterationDuration.labelValues(queueName)
 
+    private object PrometheusProducer {
+
+        val producerSendCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send")
+            .help("Amount of producer send() calls")
+            .labelNames("queue", "partial_insert_type")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val producerSendRowsCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send_rows")
+            .help("Amount of all (successful and failed) rows sent by producer send() calls")
+            .labelNames("queue", "partial_insert_type")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val producerSendFailedRowsCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send_rows_failed")
+            .help("Amount of failed rows sent by producer send() calls")
+            .labelNames("queue", "partial_insert_type")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val producerSendDuration: Histogram = Histogram.builder()
+            .name("kolbasa_producer_send_duration_seconds")
+            .help("Producer send() calls duration")
+            .labelNames("queue", "partial_insert_type")
+            .classicOnly()
+            .classicUpperBounds(*Const.histogramBuckets())
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val producerSendBytesCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send_bytes")
+            .help("Amount of bytes sent by producer send() calls")
+            .labelNames("queue", "partial_insert_type")
+            .register(Kolbasa.prometheusConfig.registry)
+    }
+
+    private object PrometheusConsumer {
+
+        // Receive
+        val consumerReceiveCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_receive")
+            .help("Amount of consumer receive() calls")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val consumerReceiveBytesCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_receive_bytes")
+            .help("Amount of bytes read by consumer receive() calls")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val consumerReceiveRowsCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_receive_rows")
+            .help("Amount of rows received by consumer receive() calls")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val consumerReceiveDuration: Histogram = Histogram.builder()
+            .name("kolbasa_consumer_receive_duration_seconds")
+            .help("Consumer receive() calls duration")
+            .labelNames("queue")
+            .classicOnly()
+            .classicUpperBounds(*Const.histogramBuckets())
+            .register(Kolbasa.prometheusConfig.registry)
+
+        // Delete
+        val consumerDeleteCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_delete")
+            .help("Amount of consumer delete() calls")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val consumerDeleteRowsCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_delete_rows")
+            .help("Amount of rows removed by consumer delete() calls")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val consumerDeleteDuration: Histogram = Histogram.builder()
+            .name("kolbasa_consumer_delete_duration_seconds")
+            .help("Consumer delete() calls duration")
+            .labelNames("queue")
+            .classicOnly()
+            .classicUpperBounds(*Const.histogramBuckets())
+            .register(Kolbasa.prometheusConfig.registry)
+    }
+
+    private object PrometheusSweep {
+
+        val sweepCounter: Counter = Counter.builder()
+            .name("kolbasa_sweep")
+            .help("Number of sweeps")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val sweepIterationsCounter: Counter = Counter.builder()
+            .name("kolbasa_sweep_iterations")
+            .help("Number of sweep iterations (every sweep can have multiple iterations)")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val sweepOneIterationRowsRemovedCounter: Counter = Counter.builder()
+            .name("kolbasa_sweep_iteration_removed_rows")
+            .help("Number of rows removed by one sweep iteration")
+            .labelNames("queue")
+            .register(Kolbasa.prometheusConfig.registry)
+
+        val sweepOneIterationDuration: Histogram = Histogram.builder()
+            .name("kolbasa_sweep_iteration_duration_seconds")
+            .help("One sweep iteration duration")
+            .labelNames("queue")
+            .classicOnly()
+            .classicUpperBounds(*Const.histogramBuckets())
+            .register(Kolbasa.prometheusConfig.registry)
+    }
 }
