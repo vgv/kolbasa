@@ -83,6 +83,7 @@ internal class QueueMetrics(queueName: String) {
 
 
     // ------------------------------------------------------------------------------
+    // Consumer
     fun consumerReceiveMetrics(receivedRows: Int, executionNanos: Long, approxBytes: Long) {
         if (!Kolbasa.prometheusConfig.enabled) {
             return
@@ -104,7 +105,6 @@ internal class QueueMetrics(queueName: String) {
         consumerDeleteDuration.observeNanos(executionNanos)
     }
 
-    // Consumer
     private val consumerReceiveCounter: CounterDataPoint =
         PrometheusConsumer.consumerReceiveCounter.labelValues(queueName)
     private val consumerReceiveBytesCounter: CounterDataPoint =
@@ -122,17 +122,27 @@ internal class QueueMetrics(queueName: String) {
 
     // ------------------------------------------------------------------------------
     // Sweep
-    val sweepCounter: CounterDataPoint =
+    fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long) {
+        if (!Kolbasa.prometheusConfig.enabled) {
+            return
+        }
+
+        sweepCounter.inc()
+        sweepIterationsCounter.incInt(iterations)
+        sweepRowsRemovedCounter.incInt(removedRows)
+        sweepDuration.observeNanos(executionNanos)
+    }
+
+    private val sweepCounter: CounterDataPoint =
         PrometheusSweep.sweepCounter.labelValues(queueName)
-    val sweepIterationsCounter: CounterDataPoint =
+    private val sweepIterationsCounter: CounterDataPoint =
         PrometheusSweep.sweepIterationsCounter.labelValues(queueName)
-    val sweepOneIterationRowsRemovedCounter: CounterDataPoint =
-        PrometheusSweep.sweepOneIterationRowsRemovedCounter.labelValues(queueName)
-    val sweepOneIterationDuration: DistributionDataPoint =
-        PrometheusSweep.sweepOneIterationDuration.labelValues(queueName)
+    private val sweepRowsRemovedCounter: CounterDataPoint =
+        PrometheusSweep.sweepRowsRemovedCounter.labelValues(queueName)
+    private val sweepDuration: DistributionDataPoint =
+        PrometheusSweep.sweepDuration.labelValues(queueName)
 
     private object PrometheusProducer {
-
         val producerSendCounter: Counter = Counter.builder()
             .name("kolbasa_producer_send")
             .help("Amount of producer send() calls")
@@ -167,7 +177,6 @@ internal class QueueMetrics(queueName: String) {
     }
 
     private object PrometheusConsumer {
-
         // Receive
         val consumerReceiveCounter: Counter = Counter.builder()
             .name("kolbasa_consumer_receive")
@@ -218,7 +227,6 @@ internal class QueueMetrics(queueName: String) {
     }
 
     private object PrometheusSweep {
-
         val sweepCounter: Counter = Counter.builder()
             .name("kolbasa_sweep")
             .help("Number of sweeps")
@@ -231,15 +239,15 @@ internal class QueueMetrics(queueName: String) {
             .labelNames("queue")
             .register(Kolbasa.prometheusConfig.registry)
 
-        val sweepOneIterationRowsRemovedCounter: Counter = Counter.builder()
-            .name("kolbasa_sweep_iteration_removed_rows")
-            .help("Number of rows removed by one sweep iteration")
+        val sweepRowsRemovedCounter: Counter = Counter.builder()
+            .name("kolbasa_sweep_removed_rows")
+            .help("Number of rows removed by sweep")
             .labelNames("queue")
             .register(Kolbasa.prometheusConfig.registry)
 
-        val sweepOneIterationDuration: Histogram = Histogram.builder()
-            .name("kolbasa_sweep_iteration_duration_seconds")
-            .help("One sweep iteration duration")
+        val sweepDuration: Histogram = Histogram.builder()
+            .name("kolbasa_sweep_duration_seconds")
+            .help("Sweep duration")
             .labelNames("queue")
             .classicOnly()
             .classicUpperBounds(*Const.histogramBuckets())
