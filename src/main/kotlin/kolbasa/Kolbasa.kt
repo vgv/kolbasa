@@ -1,5 +1,6 @@
 package kolbasa
 
+import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
 
 object Kolbasa {
@@ -11,5 +12,9 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
+
+    @JvmStatic
+    @Volatile
+    var prometheusConfig: PrometheusConfig = PrometheusConfig()
 
 }

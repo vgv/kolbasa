@@ -1,12 +1,12 @@
 package kolbasa.consumer
 
+import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.prometheus.Extensions.incInt
 import kolbasa.stats.prometheus.Extensions.incLong
 import kolbasa.stats.prometheus.Extensions.observeNanos
-import kolbasa.stats.prometheus.PrometheusConsumer
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.LongBox
@@ -68,10 +68,12 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
-        PrometheusConsumer.consumerReceiveCounter.labelValues(queue.name).inc()
-        PrometheusConsumer.consumerReceiveBytesCounter.labelValues(queue.name).incLong(approxBytesCounter.get())
-        PrometheusConsumer.consumerReceiveRowsCounter.labelValues(queue.name).incInt(result.size)
-        PrometheusConsumer.consumerReceiveDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
+        if (Kolbasa.prometheusConfig.enabled) {
+            queue.queueMetrics.consumerReceiveCounter.inc()
+            queue.queueMetrics.consumerReceiveBytesCounter.incLong(approxBytesCounter.get())
+            queue.queueMetrics.consumerReceiveRowsCounter.incInt(result.size)
+            queue.queueMetrics.consumerReceiveDuration.observeNanos(execution.durationNanos)
+        }
 
         return result
     }
@@ -96,9 +98,11 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
 
         // Prometheus
-        PrometheusConsumer.consumerDeleteCounter.labelValues(queue.name).inc()
-        PrometheusConsumer.consumerDeleteRowsCounter.labelValues(queue.name).incInt(removedRows)
-        PrometheusConsumer.consumerDeleteDuration.labelValues(queue.name).observeNanos(execution.durationNanos)
+        if (Kolbasa.prometheusConfig.enabled) {
+            queue.queueMetrics.consumerDeleteCounter.inc()
+            queue.queueMetrics.consumerDeleteRowsCounter.incInt(removedRows)
+            queue.queueMetrics.consumerDeleteDuration.observeNanos(execution.durationNanos)
+        }
 
         return removedRows
     }

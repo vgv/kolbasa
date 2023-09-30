@@ -2,6 +2,7 @@ package kolbasa.queue
 
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
+import kolbasa.stats.prometheus.QueueMetrics
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     val name: String,
@@ -18,5 +19,6 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
 
     internal val metadataDescription: MetaClass<Meta>? = metadata?.let { MetaClass.of(metadata) }
 
+    internal val queueMetrics by lazy { QueueMetrics(name) }
 }
 
