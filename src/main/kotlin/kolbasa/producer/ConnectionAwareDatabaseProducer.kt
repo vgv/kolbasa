@@ -1,6 +1,5 @@
 package kolbasa.producer
 
-import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
@@ -39,15 +38,13 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
         }
 
         // Prometheus
-        if (Kolbasa.prometheusConfig.enabled) {
-            queue.queueMetrics.producerSendMetrics(
-                producerOptions.partialInsert,
-                rows = data.size,
-                failedMessages = result.failedMessages,
-                executionNanos = execution.durationNanos,
-                approxBytes = approxStatsBytes.get()
-            )
-        }
+        queue.queueMetrics.producerSendMetrics(
+            producerOptions.partialInsert,
+            allMessages = data.size,
+            failedMessages = result.failedMessages,
+            executionNanos = execution.durationNanos,
+            approxBytes = approxStatsBytes.get()
+        )
 
         return result
     }

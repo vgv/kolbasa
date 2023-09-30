@@ -12,87 +12,115 @@ import kolbasa.stats.prometheus.Extensions.observeNanos
 
 internal class QueueMetrics(queueName: String) {
 
-    fun producerSendMetrics(partialInsert: PartialInsert, rows: Int, failedMessages: Int, executionNanos: Long, approxBytes: Long) {
+    // ------------------------------------------------------------------------------
+    // Producer
+    fun producerSendMetrics(partialInsert: PartialInsert, allMessages: Int, failedMessages: Int, executionNanos: Long, approxBytes: Long) {
+        if (!Kolbasa.prometheusConfig.enabled) {
+            return
+        }
+
         when (partialInsert) {
             PartialInsert.PROHIBITED -> {
-                producerSendCounter_Prohibited.inc()
-                producerSendRowsCounter_Prohibited.incInt(rows)
-                producerSendFailedRowsCounter_Prohibited.incInt(failedMessages)
-                producerSendDuration_Prohibited.observeNanos(executionNanos)
-                producerSendBytesCounter_Prohibited.incLong(approxBytes)
+                producerSendCounterProhibited.inc()
+                producerSendRowsCounterProhibited.incInt(allMessages)
+                producerSendFailedRowsCounterProhibited.incInt(failedMessages)
+                producerSendDurationProhibited.observeNanos(executionNanos)
+                producerSendBytesCounterProhibited.incLong(approxBytes)
             }
 
             PartialInsert.UNTIL_FIRST_FAILURE -> {
-                producerSendCounter_UntilFirstFailure.inc()
-                producerSendRowsCounter_UntilFirstFailure.incInt(rows)
-                producerSendFailedRowsCounter_UntilFirstFailure.incInt(failedMessages)
-                producerSendDuration_UntilFirstFailure.observeNanos(executionNanos)
-                producerSendBytesCounter_UntilFirstFailure.incLong(approxBytes)
+                producerSendCounterUntilFirstFailure.inc()
+                producerSendRowsCounterUntilFirstFailure.incInt(allMessages)
+                producerSendFailedRowsCounterUntilFirstFailure.incInt(failedMessages)
+                producerSendDurationUntilFirstFailure.observeNanos(executionNanos)
+                producerSendBytesCounterUntilFirstFailure.incLong(approxBytes)
             }
 
             PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
-                producerSendCounter_InsertAsManyAsPossible.inc()
-                producerSendRowsCounter_InsertAsManyAsPossible.incInt(rows)
-                producerSendFailedRowsCounter_InsertAsManyAsPossible.incInt(failedMessages)
-                producerSendDuration_InsertAsManyAsPossible.observeNanos(executionNanos)
-                producerSendBytesCounter_InsertAsManyAsPossible.incLong(approxBytes)
+                producerSendCounterInsertAsManyAsPossible.inc()
+                producerSendRowsCounterInsertAsManyAsPossible.incInt(allMessages)
+                producerSendFailedRowsCounterInsertAsManyAsPossible.incInt(failedMessages)
+                producerSendDurationInsertAsManyAsPossible.observeNanos(executionNanos)
+                producerSendBytesCounterInsertAsManyAsPossible.incLong(approxBytes)
             }
         }
     }
 
-    // Producer
-    private val producerSendCounter_Prohibited: CounterDataPoint =
+    private val producerSendCounterProhibited: CounterDataPoint =
         PrometheusProducer.producerSendCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
-    private val producerSendCounter_UntilFirstFailure: CounterDataPoint =
+    private val producerSendCounterUntilFirstFailure: CounterDataPoint =
         PrometheusProducer.producerSendCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
-    private val producerSendCounter_InsertAsManyAsPossible: CounterDataPoint =
+    private val producerSendCounterInsertAsManyAsPossible: CounterDataPoint =
         PrometheusProducer.producerSendCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
 
-    private val producerSendRowsCounter_Prohibited: CounterDataPoint =
+    private val producerSendRowsCounterProhibited: CounterDataPoint =
         PrometheusProducer.producerSendRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
-    private val producerSendRowsCounter_UntilFirstFailure: CounterDataPoint =
+    private val producerSendRowsCounterUntilFirstFailure: CounterDataPoint =
         PrometheusProducer.producerSendRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
-    private val producerSendRowsCounter_InsertAsManyAsPossible: CounterDataPoint =
+    private val producerSendRowsCounterInsertAsManyAsPossible: CounterDataPoint =
         PrometheusProducer.producerSendRowsCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
 
-    private val producerSendFailedRowsCounter_Prohibited: CounterDataPoint =
+    private val producerSendFailedRowsCounterProhibited: CounterDataPoint =
         PrometheusProducer.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
-    private val producerSendFailedRowsCounter_UntilFirstFailure: CounterDataPoint =
+    private val producerSendFailedRowsCounterUntilFirstFailure: CounterDataPoint =
         PrometheusProducer.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
-    private val producerSendFailedRowsCounter_InsertAsManyAsPossible: CounterDataPoint =
+    private val producerSendFailedRowsCounterInsertAsManyAsPossible: CounterDataPoint =
         PrometheusProducer.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
 
-    private val producerSendDuration_Prohibited: DistributionDataPoint =
+    private val producerSendDurationProhibited: DistributionDataPoint =
         PrometheusProducer.producerSendDuration.labelValues(queueName, PartialInsert.PROHIBITED.name)
-    private val producerSendDuration_UntilFirstFailure: DistributionDataPoint =
+    private val producerSendDurationUntilFirstFailure: DistributionDataPoint =
         PrometheusProducer.producerSendDuration.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
-    private val producerSendDuration_InsertAsManyAsPossible: DistributionDataPoint =
+    private val producerSendDurationInsertAsManyAsPossible: DistributionDataPoint =
         PrometheusProducer.producerSendDuration.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
 
-    private val producerSendBytesCounter_Prohibited: CounterDataPoint =
+    private val producerSendBytesCounterProhibited: CounterDataPoint =
         PrometheusProducer.producerSendBytesCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
-    private val producerSendBytesCounter_UntilFirstFailure: CounterDataPoint =
+    private val producerSendBytesCounterUntilFirstFailure: CounterDataPoint =
         PrometheusProducer.producerSendBytesCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
-    private val producerSendBytesCounter_InsertAsManyAsPossible: CounterDataPoint =
+    private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint =
         PrometheusProducer.producerSendBytesCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
 
 
+    // ------------------------------------------------------------------------------
+    fun consumerReceiveMetrics(receivedRows: Int, executionNanos: Long, approxBytes: Long) {
+        if (!Kolbasa.prometheusConfig.enabled) {
+            return
+        }
+
+        consumerReceiveCounter.inc()
+        consumerReceiveBytesCounter.incLong(approxBytes)
+        consumerReceiveRowsCounter.incInt(receivedRows)
+        consumerReceiveDuration.observeNanos(executionNanos)
+    }
+
+    fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long) {
+        if (!Kolbasa.prometheusConfig.enabled) {
+            return
+        }
+
+        consumerDeleteCounter.inc()
+        consumerDeleteRowsCounter.incInt(removedRows)
+        consumerDeleteDuration.observeNanos(executionNanos)
+    }
+
     // Consumer
-    val consumerReceiveCounter: CounterDataPoint =
+    private val consumerReceiveCounter: CounterDataPoint =
         PrometheusConsumer.consumerReceiveCounter.labelValues(queueName)
-    val consumerReceiveBytesCounter: CounterDataPoint =
+    private val consumerReceiveBytesCounter: CounterDataPoint =
         PrometheusConsumer.consumerReceiveBytesCounter.labelValues(queueName)
-    val consumerReceiveRowsCounter: CounterDataPoint =
+    private val consumerReceiveRowsCounter: CounterDataPoint =
         PrometheusConsumer.consumerReceiveRowsCounter.labelValues(queueName)
-    val consumerReceiveDuration: DistributionDataPoint =
+    private val consumerReceiveDuration: DistributionDataPoint =
         PrometheusConsumer.consumerReceiveDuration.labelValues(queueName)
-    val consumerDeleteCounter: CounterDataPoint =
+    private val consumerDeleteCounter: CounterDataPoint =
         PrometheusConsumer.consumerDeleteCounter.labelValues(queueName)
-    val consumerDeleteRowsCounter: CounterDataPoint =
+    private val consumerDeleteRowsCounter: CounterDataPoint =
         PrometheusConsumer.consumerDeleteRowsCounter.labelValues(queueName)
-    val consumerDeleteDuration: DistributionDataPoint =
+    private val consumerDeleteDuration: DistributionDataPoint =
         PrometheusConsumer.consumerDeleteDuration.labelValues(queueName)
 
+    // ------------------------------------------------------------------------------
     // Sweep
     val sweepCounter: CounterDataPoint =
         PrometheusSweep.sweepCounter.labelValues(queueName)
