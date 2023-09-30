@@ -95,7 +95,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         // Prometheus
         queue.queueMetrics.consumerDeleteMetrics(removedRows, execution.durationNanos)
 
-
         return removedRows
     }
 

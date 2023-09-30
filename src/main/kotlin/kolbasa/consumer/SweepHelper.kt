@@ -7,8 +7,6 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.Extensions.incInt
-import kolbasa.stats.prometheus.Extensions.observeNanos
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
@@ -75,20 +73,19 @@ object SweepHelper {
      */
     private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int): Int {
         var totalRows = 0
-        var iteration = 0
+        var iterations = 0
 
         // loop while we have rows to delete or iteration < maxIterations
-        do {
-            val removedRows = rawSweepOneIteration(connection, queue, maxRows)
-            totalRows += removedRows
-            iteration++
-        } while (iteration < maxIterations && removedRows == maxRows)
+        val (execution, _) = TimeHelper.measure {
+            do {
+                val removedRows = rawSweepOneIteration(connection, queue, maxRows)
+                totalRows += removedRows
+                iterations++
+            } while (iterations < maxIterations && removedRows == maxRows)
+        }
 
         // Prometheus
-        if (Kolbasa.prometheusConfig.enabled) {
-            queue.queueMetrics.sweepCounter.inc()
-            queue.queueMetrics.sweepIterationsCounter.incInt(iteration)
-        }
+        queue.queueMetrics.sweepMetrics(iterations, totalRows, execution.durationNanos)
 
         return totalRows
     }
@@ -104,12 +101,6 @@ object SweepHelper {
 
         // SQL Dump
         SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
-
-        // Prometheus
-        if (Kolbasa.prometheusConfig.enabled) {
-            queue.queueMetrics.sweepOneIterationRowsRemovedCounter.incInt(removedRows)
-            queue.queueMetrics.sweepOneIterationDuration.observeNanos(execution.durationNanos)
-        }
 
         return removedRows
     }
