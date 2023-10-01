@@ -103,7 +103,7 @@ abstract class AbstractPostgresqlTest {
             "postgres:13.12-alpine",
             "postgres:14.9-alpine",
             "postgres:15.4-alpine",
-            "postgres:16rc1-alpine"
+            "postgres:16.0-alpine"
         )
 
         private val CURRENT_IMAGE = POSTGRES_IMAGES.random()
