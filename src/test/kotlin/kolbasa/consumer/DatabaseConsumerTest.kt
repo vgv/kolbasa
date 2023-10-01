@@ -14,6 +14,8 @@ import kolbasa.queue.QueueOptions
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentSkipListSet
@@ -252,8 +254,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertTrue(withMetadata.createdAt < withMetadata.processingAt, "message=$withMetadata")
     }
 
-    @Test
-    fun testReceive_Order() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun testReceive_Order(readMetadata: Boolean) {
         val items = 100
         val data = (1..items).map { index ->
             SendMessage("bugaga_$index", TestMeta(index))
@@ -268,7 +271,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val messages = consumer.receive(
             limit = items,
             receiveOptions = ReceiveOptions(
-                readMetadata = true,
+                readMetadata = readMetadata,
                 order = listOf(Order.desc(TestMeta::field)))
         )
 
@@ -276,18 +279,23 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         var reverseIndex = items
         messages.forEach { message ->
             assertNotNull(message)
-            assertNotNull(message.meta) {
-                assertEquals(reverseIndex, it.field)
-            }
             assertEquals("bugaga_$reverseIndex", message.data)
             assertTrue(message.createdAt < message.processingAt, "message=$message")
+            if (readMetadata) {
+                assertNotNull(message.meta) {
+                    assertEquals(reverseIndex, it.field)
+                }
+            } else {
+                assertNull(message.meta)
+            }
 
             reverseIndex--
         }
     }
 
-    @Test
-    fun testReceive_Filter() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun testReceive_Filter(readMetadata: Boolean) {
         val items = 100
         val data = (1..items).map { index ->
             SendMessage("bugaga_$index", TestMeta(index))
@@ -304,7 +312,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val messages = consumer.receive(
             limit = items,
             receiveOptions = ReceiveOptions(
-                readMetadata = true,
+                readMetadata = readMetadata,
                 filter = (TestMeta::field greaterEq start) and (TestMeta::field lessEq end),
                 order = listOf(Order.desc(TestMeta::field))) // add order just to simplify testing
         )
@@ -314,11 +322,15 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(end - start + 1, messages.size)
         messages.forEach { message ->
             assertNotNull(message)
-            assertNotNull(message.meta) {
-                assertEquals(index, it.field)
-            }
             assertEquals("bugaga_$index", message.data)
             assertTrue(message.createdAt < message.processingAt, "message=$message")
+            if (readMetadata) {
+                assertNotNull(message.meta) {
+                    assertEquals(index, it.field)
+                }
+            } else {
+                assertNull(message.meta)
+            }
 
             index--
         }
