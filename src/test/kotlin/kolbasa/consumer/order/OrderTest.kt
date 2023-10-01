@@ -41,6 +41,7 @@ class OrderTest {
 
     private fun checkOrder(order: Order<TestMeta>, sortOrder: SortOrder) {
         assertEquals(propertyName, order.metaPropertyName)
+        assertEquals(metaColumnName, order.dbColumnName)
         assertEquals(sortOrder, order.order)
         assertEquals("$metaColumnName ${sortOrder.sql}", order.dbOrderClause)
     }
