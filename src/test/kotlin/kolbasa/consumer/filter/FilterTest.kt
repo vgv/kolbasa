@@ -10,6 +10,7 @@ import kolbasa.consumer.filter.Filter.lessEq
 import kolbasa.consumer.filter.Filter.neq
 import kolbasa.consumer.filter.Filter.or
 import kolbasa.consumer.filter.Filter.isNull
+import kolbasa.consumer.filter.Filter.nativeSql
 import kolbasa.consumer.filter.Filter.not
 import org.junit.jupiter.api.Test
 import kotlin.test.assertIs
@@ -69,6 +70,11 @@ internal class FilterTest {
     @Test
     fun testNot() {
         assertIs<NotCondition<*>>(not(TestMeta::strValue eq "123"))
+    }
+
+    @Test
+    fun testNativeSql() {
+        assertIs<NativeSqlCondition<*>>(nativeSql("{0} like '%asd%'", TestMeta::strValue))
     }
 }
 
