@@ -36,7 +36,7 @@ internal object ConsumerSchemaHelpers {
 
         // 'where' clauses
         val clauses = mutableListOf(
-            "(${Const.SCHEDULED_AT_COLUMN_NAME} is null or ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp())",
+            "${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         receiveOptions.filter?.let { filter ->
@@ -50,8 +50,8 @@ internal object ConsumerSchemaHelpers {
             orderBy += order.dbOrderClause
         }
         // after custom clauses – standard
-        orderBy += "${Const.SCHEDULED_AT_COLUMN_NAME} asc nulls first"
-        orderBy += "${Const.CREATED_AT_COLUMN_NAME} asc"
+        orderBy += Const.SCHEDULED_AT_COLUMN_NAME
+        orderBy += Const.CREATED_AT_COLUMN_NAME
 
         val visibilityTimeout = QueueHelpers.calculateVisibilityTimeout(queue.options, consumerOptions, receiveOptions)
 

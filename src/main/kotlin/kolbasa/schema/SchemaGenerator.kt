@@ -36,7 +36,7 @@ internal object SchemaGenerator {
             create table if not exists ${queue.dbTableName}(
                 ${Const.ID_COLUMN_NAME} bigint generated always as identity (cycle) primary key,
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
-                ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp,
+                ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
                 ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
                 ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
@@ -87,7 +87,6 @@ internal object SchemaGenerator {
         val indexStatement = """
                 create index concurrently if not exists $indexName
                 on ${queue.dbTableName}(${Const.SCHEDULED_AT_COLUMN_NAME})
-                where ${Const.SCHEDULED_AT_COLUMN_NAME} is not null
             """.trimIndent()
 
         val hasIndex = existingTable?.findIndex(indexName) != null
