@@ -101,10 +101,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNull(message2.meta)
     }
 
-    @Test
-    fun testReceive_TestComplexConcurrent() {
+    @ParameterizedTest
+    @ValueSource(ints = [3, 10, 50])
+    fun testReceive_TestComplexConcurrent(threads: Int) {
         val items = 5000
-        val threads = 10
         val data = (1..items * threads).map {
             SendMessage<String, TestMeta>("data_$it")
         }
