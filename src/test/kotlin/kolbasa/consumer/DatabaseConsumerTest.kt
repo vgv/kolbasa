@@ -88,6 +88,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data1, message1.data)
         assertNotSame(data1, message1.data)
         assertTrue(message1.createdAt < message1.processingAt)
+        assertNull(message1.meta)
 
         // Check second message
         assertNotNull(message2)
@@ -95,6 +96,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data2, message2.data)
         assertNotSame(data2, message2.data)
         assertTrue(message2.createdAt < message2.processingAt)
+        assertNull(message2.meta)
     }
 
     @Test
@@ -166,6 +168,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data, message.data)
         assertNotSame(data, message.data)
         assertTrue(message.createdAt < message.processingAt, "message=$message")
+        assertNull(message.meta)
     }
 
     @Test
@@ -191,6 +194,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNotSame(data, firstMessage.data)
         assertTrue(firstMessage.createdAt < firstMessage.processingAt, "message=$firstMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, firstMessage.remainingAttempts)
+        assertNull(firstMessage.meta)
 
         // Try to read this message again
         var secondMessage: Message<String, TestMeta>?
@@ -208,6 +212,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNotSame(data, secondMessage.data)
         assertTrue(secondMessage.createdAt < secondMessage.processingAt, "message=$secondMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 2, secondMessage.remainingAttempts)
+        assertNull(secondMessage.meta)
 
         // The second message was read later, so, this condition has to be true
         assertTrue(firstMessage.processingAt < secondMessage.processingAt, "First: $firstMessage, second: $secondMessage")
