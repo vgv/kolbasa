@@ -19,51 +19,61 @@ internal object ConsumerSchemaHelpers {
         limit: Int
     ): String {
         // Columns to read from database
-        val columns = mutableListOf(
+        val dataColumns = mutableListOf(
             Const.ID_COLUMN_NAME,
             Const.CREATED_AT_COLUMN_NAME,
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
-
         // if we need metadata - we need to read these fields
         if (receiveOptions.readMetadata) {
             queue.metadataDescription?.fields?.forEach { metaField ->
-                columns += metaField.dbColumnName
+                dataColumns += metaField.dbColumnName
             }
         }
 
+        // ----------------------------------------------------------
+
         // 'where' clauses
-        val clauses = mutableListOf(
+        val whereClauses = mutableListOf(
             "${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         receiveOptions.filter?.let { filter ->
-            clauses += filter.toSqlClause(queue)
+            whereClauses += filter.toSqlClause(queue)
         }
 
+        // ----------------------------------------------------------
+        val sortColumns = mutableListOf(
+            Const.ID_COLUMN_NAME,
+            Const.SCHEDULED_AT_COLUMN_NAME
+        )
+
         // 'order by' clauses
-        val orderBy = mutableListOf<String>()
+        val orderByClauses = mutableListOf<String>()
         // custom ordering clauses first, if any
         receiveOptions.order?.forEach { order ->
-            orderBy += order.dbOrderClause
+            orderByClauses += order.dbOrderClause
+            sortColumns += order.dbColumnName
         }
         // after custom clauses – standard
-        orderBy += Const.SCHEDULED_AT_COLUMN_NAME
-        orderBy += Const.CREATED_AT_COLUMN_NAME
+        orderByClauses += Const.SCHEDULED_AT_COLUMN_NAME
+        orderByClauses += Const.CREATED_AT_COLUMN_NAME
+
+        // ----------------------------------------------------------
 
         val visibilityTimeout = QueueHelpers.calculateVisibilityTimeout(queue.options, consumerOptions, receiveOptions)
 
         return """
             with
             id_to_update as (
-                select ${Const.ID_COLUMN_NAME},${Const.SCHEDULED_AT_COLUMN_NAME}
+                select ${sortColumns.joinToString(separator = ",")}
                 from ${queue.dbTableName}
                 where
-                    ${clauses.joinToString(separator = " and ")}
+                    ${whereClauses.joinToString(separator = " and ")}
                 order by
-                    ${orderBy.joinToString(separator = ",")}
+                    ${orderByClauses.joinToString(separator = ",")}
                 limit $limit
                 for update skip locked
             ),
@@ -75,11 +85,11 @@ internal object ConsumerSchemaHelpers {
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 where ${Const.ID_COLUMN_NAME} in (select ${Const.ID_COLUMN_NAME} from id_to_update)
-                returning ${columns.joinToString(separator = ",")}
+                returning ${dataColumns.joinToString(separator = ",")}
             )
             select updated.* from updated
                 inner join id_to_update on (updated.${Const.ID_COLUMN_NAME}=id_to_update.${Const.ID_COLUMN_NAME})
-            order by ${orderBy.joinToString(separator = ",")}
+            order by ${orderByClauses.joinToString(separator = ",")}
         """.trimIndent()
     }
 
