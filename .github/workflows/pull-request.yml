@@ -1,6 +1,9 @@
 name: On pull request
 
-on: [ pull_request ]
+on:
+    pull_request:
+        paths-ignore:
+            - README.md
 
 concurrency: on-pull-request
 
