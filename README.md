@@ -88,5 +88,4 @@ val receiveOptions = ReceiveOptions(
 )
 // Try to read 100 messages with userId=1 and `priority desc` sorting from the queue
 val messages = consumer.receive(100, receiveOptions)
-
 ```
