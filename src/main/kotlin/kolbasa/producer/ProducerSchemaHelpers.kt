@@ -25,7 +25,7 @@ internal object ProducerSchemaHelpers {
             values[index] += if (delay != null) {
                 "clock_timestamp() + interval '${delay.toMillis()} millisecond'"
             } else {
-                "null"
+                "clock_timestamp()"
             }
         }
 

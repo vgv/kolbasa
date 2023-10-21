@@ -14,6 +14,8 @@ import kolbasa.queue.QueueOptions
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentSkipListSet
@@ -88,6 +90,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data1, message1.data)
         assertNotSame(data1, message1.data)
         assertTrue(message1.createdAt < message1.processingAt)
+        assertNull(message1.meta)
 
         // Check second message
         assertNotNull(message2)
@@ -95,12 +98,13 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data2, message2.data)
         assertNotSame(data2, message2.data)
         assertTrue(message2.createdAt < message2.processingAt)
+        assertNull(message2.meta)
     }
 
-    @Test
-    fun testReceive_TestComplexConcurrent() {
+    @ParameterizedTest
+    @ValueSource(ints = [3, 10, 50])
+    fun testReceive_TestComplexConcurrent(threads: Int) {
         val items = 5000
-        val threads = 10
         val data = (1..items * threads).map {
             SendMessage<String, TestMeta>("data_$it")
         }
@@ -166,6 +170,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data, message.data)
         assertNotSame(data, message.data)
         assertTrue(message.createdAt < message.processingAt, "message=$message")
+        assertNull(message.meta)
     }
 
     @Test
@@ -191,6 +196,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNotSame(data, firstMessage.data)
         assertTrue(firstMessage.createdAt < firstMessage.processingAt, "message=$firstMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, firstMessage.remainingAttempts)
+        assertNull(firstMessage.meta)
 
         // Try to read this message again
         var secondMessage: Message<String, TestMeta>?
@@ -208,6 +214,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNotSame(data, secondMessage.data)
         assertTrue(secondMessage.createdAt < secondMessage.processingAt, "message=$secondMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 2, secondMessage.remainingAttempts)
+        assertNull(secondMessage.meta)
 
         // The second message was read later, so, this condition has to be true
         assertTrue(firstMessage.processingAt < secondMessage.processingAt, "First: $firstMessage, second: $secondMessage")
@@ -247,8 +254,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertTrue(withMetadata.createdAt < withMetadata.processingAt, "message=$withMetadata")
     }
 
-    @Test
-    fun testReceive_Order() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun testReceive_Order(readMetadata: Boolean) {
         val items = 100
         val data = (1..items).map { index ->
             SendMessage("bugaga_$index", TestMeta(index))
@@ -263,7 +271,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val messages = consumer.receive(
             limit = items,
             receiveOptions = ReceiveOptions(
-                readMetadata = true,
+                readMetadata = readMetadata,
                 order = listOf(Order.desc(TestMeta::field)))
         )
 
@@ -271,18 +279,23 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         var reverseIndex = items
         messages.forEach { message ->
             assertNotNull(message)
-            assertNotNull(message.meta) {
-                assertEquals(reverseIndex, it.field)
-            }
             assertEquals("bugaga_$reverseIndex", message.data)
             assertTrue(message.createdAt < message.processingAt, "message=$message")
+            if (readMetadata) {
+                assertNotNull(message.meta) {
+                    assertEquals(reverseIndex, it.field)
+                }
+            } else {
+                assertNull(message.meta)
+            }
 
             reverseIndex--
         }
     }
 
-    @Test
-    fun testReceive_Filter() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun testReceive_Filter(readMetadata: Boolean) {
         val items = 100
         val data = (1..items).map { index ->
             SendMessage("bugaga_$index", TestMeta(index))
@@ -299,7 +312,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val messages = consumer.receive(
             limit = items,
             receiveOptions = ReceiveOptions(
-                readMetadata = true,
+                readMetadata = readMetadata,
                 filter = (TestMeta::field greaterEq start) and (TestMeta::field lessEq end),
                 order = listOf(Order.desc(TestMeta::field))) // add order just to simplify testing
         )
@@ -309,11 +322,15 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(end - start + 1, messages.size)
         messages.forEach { message ->
             assertNotNull(message)
-            assertNotNull(message.meta) {
-                assertEquals(index, it.field)
-            }
             assertEquals("bugaga_$index", message.data)
             assertTrue(message.createdAt < message.processingAt, "message=$message")
+            if (readMetadata) {
+                assertNotNull(message.meta) {
+                    assertEquals(index, it.field)
+                }
+            } else {
+                assertNull(message.meta)
+            }
 
             index--
         }
