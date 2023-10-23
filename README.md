@@ -6,14 +6,14 @@ Kolbasa is a small, efficient and capable Kotlin library to add Postgresql-based
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-compile "io.github.vgv:kolbasa:0.10.0"
+compile "io.github.vgv:kolbasa:0.12.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.10.0</version>
+    <version>0.12.0</version>
 </dependency>
 ```
 
