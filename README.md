@@ -1,6 +1,20 @@
 # kolbasa
 
-Kolbasa is a small, efficient and capable Kotlin library to add Postgresql-based queues to your project. 
+Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based queues to your project. 
+
+## Features
+
+* PostgreSQL as a persistent storage
+* Message deduplication
+* Message send delay (initial delay before message will be visible to consumers)
+* Message visibility timeout (delay before consumed but not deleted message will be visible to another consumers)
+* Configurable amount of receive attempts
+* Ability to receive messages filtered by one or more meta-fields (like `user_id=42 and event_type=PAGE_VIEW`)
+* Ability to receive messages sorted by one or more meta-fields (like `custom_priority desc, created asc`)
+* Supports working in "external" transaction context (send/receive messages from a queue will follow "external" transaction commit/rollback)
+* Batch send/receive to improve performance
+* Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
+* Share load between different PostgreSQL servers
 
 
 ## How to add Kolbasa into your project
