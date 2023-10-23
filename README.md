@@ -3,7 +3,6 @@
 Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based queues to your project. 
 
 ## Features
-
 * PostgreSQL as a persistent storage
 * Message deduplication
 * Message send delay (initial delay before message will be visible to consumers)
@@ -16,11 +15,16 @@ Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based
 * Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
 * Share load between different PostgreSQL servers
 
+## Concepts
+Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Scala etc.).
+
+Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, ensure ACID and allow filtering and sorting. Kolbasa doesn't require any special PostgreSQL plugins or specific compile/runtime settings. It works on plain PostgreSQL version 9 and above.
+
 
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-compile "io.github.vgv:kolbasa:0.12.0"
+implementation "io.github.vgv:kolbasa:0.12.0"
 ```
 ### Maven
 ```xml
