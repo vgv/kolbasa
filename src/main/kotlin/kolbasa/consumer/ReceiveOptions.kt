@@ -28,7 +28,13 @@ data class ReceiveOptions<Meta : Any> @JvmOverloads constructor(
      * You don't need to read metadata if the only thing you need is to filter (or sort) messages by metadata fields.
      */
     val readMetadata: Boolean = false,
+    /**
+     * If you want to receive messages in a specific order, you can specify it here.
+     */
     val order: List<Order<Meta>>? = null,
+    /**
+     * If you want to receive messages filtered by meta fields values, you can specify it here.
+     */
     val filter: Condition<Meta>? = null,
 ) {
 
