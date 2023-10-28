@@ -4,7 +4,7 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.consumer.filter.Filter.and
 import kolbasa.consumer.filter.Filter.greaterEq
 import kolbasa.consumer.filter.Filter.lessEq
-import kolbasa.consumer.order.Order
+import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
@@ -272,7 +272,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
-                order = listOf(Order.desc(TestMeta::field)))
+                order = listOf(TestMeta::field.desc()))
         )
 
         // Check reverse ordering
@@ -314,7 +314,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
                 filter = (TestMeta::field greaterEq start) and (TestMeta::field lessEq end),
-                order = listOf(Order.desc(TestMeta::field))) // add order just to simplify testing
+                order = listOf(TestMeta::field.desc())) // add order just to simplify testing
         )
 
         // Check filtering

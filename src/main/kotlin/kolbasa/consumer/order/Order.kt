@@ -14,68 +14,68 @@ data class Order<Meta> internal constructor(val metaPropertyName: String, val or
 
     companion object {
 
-        fun <Meta> asc(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC)
+        fun <Meta> KProperty1<Meta, *>.asc(): Order<Meta> {
+            return Order(name, SortOrder.ASC)
         }
 
         @JvmStatic
-        fun <Meta> asc(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC)
+        fun <Meta> JavaField<Meta, *>.asc(): Order<Meta> {
+            return Order(name, SortOrder.ASC)
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> desc(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC)
+        fun <Meta> KProperty1<Meta, *>.desc(): Order<Meta> {
+            return Order(name, SortOrder.DESC)
         }
 
         @JvmStatic
-        fun <Meta> desc(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC)
+        fun <Meta> JavaField<Meta, *>.desc(): Order<Meta> {
+            return Order(name, SortOrder.DESC)
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> ascNullsFirst(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC_NULLS_FIRST)
+        fun <Meta> KProperty1<Meta, *>.ascNullsFirst(): Order<Meta> {
+            return Order(name, SortOrder.ASC_NULLS_FIRST)
         }
 
         @JvmStatic
-        fun <Meta> ascNullsFirst(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC_NULLS_FIRST)
+        fun <Meta> JavaField<Meta, *>.ascNullsFirst(): Order<Meta> {
+            return Order(name, SortOrder.ASC_NULLS_FIRST)
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> descNullsFirst(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC_NULLS_FIRST)
+        fun <Meta> KProperty1<Meta, *>.descNullsFirst(): Order<Meta> {
+            return Order(name, SortOrder.DESC_NULLS_FIRST)
         }
 
         @JvmStatic
-        fun <Meta> descNullsFirst(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC_NULLS_FIRST)
+        fun <Meta> JavaField<Meta, *>.descNullsFirst(): Order<Meta> {
+            return Order(name, SortOrder.DESC_NULLS_FIRST)
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> ascNullsLast(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC_NULLS_LAST)
+        fun <Meta> KProperty1<Meta, *>.ascNullsLast(): Order<Meta> {
+            return Order(name, SortOrder.ASC_NULLS_LAST)
         }
 
         @JvmStatic
-        fun <Meta> ascNullsLast(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC_NULLS_LAST)
+        fun <Meta> JavaField<Meta, *>.ascNullsLast(): Order<Meta> {
+            return Order(name, SortOrder.ASC_NULLS_LAST)
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> descNullsLast(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC_NULLS_LAST)
+        fun <Meta> KProperty1<Meta, *>.descNullsLast(): Order<Meta> {
+            return Order(name, SortOrder.DESC_NULLS_LAST)
         }
 
         @JvmStatic
-        fun <Meta> descNullsLast(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC_NULLS_LAST)
+        fun <Meta> JavaField<Meta, *>.descNullsLast(): Order<Meta> {
+            return Order(name, SortOrder.DESC_NULLS_LAST)
         }
     }
 }
