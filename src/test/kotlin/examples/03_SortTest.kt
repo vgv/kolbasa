@@ -5,7 +5,7 @@ import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.lessEq
 import kolbasa.consumer.filter.Filter.or
-import kolbasa.consumer.order.Order
+import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
@@ -43,7 +43,7 @@ fun main() {
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue and sort them by priority desc
     val receiveOptions = ReceiveOptions(
         readMetadata = true,
-        order = listOf(Order.desc(Metadata::priority)),
+        order = Metadata::priority.desc(),
         filter = (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
     )
     val messages = consumer.receive(limit = 100, receiveOptions)
