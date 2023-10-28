@@ -192,16 +192,73 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
+    /**
+     * If you need to use some SQL function/expression which doesn't have a corresponding method in this
+     * class, you can use this method to create a condition with a custom SQL pattern.
+     *
+     * Usage
+     * ```
+     * nativeSql("sin({0}) > 0.7 and {1}*{1}>1000", MyMeta::field1, MyMeta::field2)
+     * ```
+     *
+     * This expression will be converted into this SQL expression:
+     * ```
+     * sin(meta_field1) > 0.7 and meta_field2 * meta_field2>1000
+     * ```
+     *
+     * Pattern format rules are the same as in [java.text.MessageFormat].
+     *
+     * Use it with caution, because it's not type-safe.
+     * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
+     */
     @JvmStatic
     fun <Meta : Any> nativeSql(sqlPattern: String, vararg properties: KProperty1<Meta, *>): Condition<Meta> {
         return NativeSqlCondition(sqlPattern, properties.map { it.name })
     }
 
+    /**
+     * If you need to use some SQL function/expression which doesn't have a corresponding method in this
+     * class, you can use this method to create a condition with a custom SQL pattern.
+     *
+     * Usage
+     * ```
+     * nativeSql("sin({0}) > 0.7 and {1}*{1}>1000", MyMeta::field1, MyMeta::field2)
+     * ```
+     *
+     * This expression will be converted into this SQL expression:
+     * ```
+     * sin(meta_field1) > 0.7 and meta_field2 * meta_field2>1000
+     * ```
+     *
+     * Pattern format rules are the same as in [java.text.MessageFormat].
+     *
+     * Use it with caution, because it's not type-safe.
+     * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
+     */
     @JvmStatic
     fun <Meta : Any> nativeSql(sqlPattern: String, vararg properties: KFunction1<Meta, *>): Condition<Meta> {
         return NativeSqlCondition(sqlPattern, properties.map { it.name })
     }
 
+    /**
+     * If you need to use some SQL function/expression which doesn't have a corresponding method in this
+     * class, you can use this method to create a condition with a custom SQL pattern.
+     *
+     * Usage
+     * ```
+     * nativeSql("sin({0}) > 0.7 and {1}*{1}>1000", MyMeta::field1, MyMeta::field2)
+     * ```
+     *
+     * This expression will be converted into this SQL expression:
+     * ```
+     * sin(meta_field1) > 0.7 and meta_field2 * meta_field2>1000
+     * ```
+     *
+     * Pattern format rules are the same as in [java.text.MessageFormat].
+     *
+     * Use it with caution, because it's not type-safe.
+     * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
+     */
     @JvmStatic
     fun <Meta : Any> nativeSql(sqlPattern: String, vararg properties: JavaField<Meta, *>): Condition<Meta> {
         return NativeSqlCondition(sqlPattern, properties.map { it.name })
