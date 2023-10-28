@@ -105,8 +105,8 @@ consumer.delete(messages)
 Second, let's add sorting here
 ```kotlin
 val receiveOptions = ReceiveOptions(
-    order = listOf(Order.desc(Metadata::priority)),  // order by priority desc
-    filter = (Metadata::userId eq 1)                 // ... and filter by userId
+    order = Metadata::priority.desc(), // order by priority desc
+    filter = Metadata::userId eq 1 // ... and filter by userId
 )
 // Try to read 100 messages with userId=1 and `priority desc` sorting from the queue
 val messages = consumer.receive(100, receiveOptions)
