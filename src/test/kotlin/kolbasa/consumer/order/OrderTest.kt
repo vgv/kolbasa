@@ -1,6 +1,13 @@
 package kolbasa.consumer.order
 
 import kolbasa.consumer.JavaField
+import kolbasa.consumer.order.Order.Companion.asc
+import kolbasa.consumer.order.Order.Companion.ascNullsFirst
+import kolbasa.consumer.order.Order.Companion.ascNullsLast
+import kolbasa.consumer.order.Order.Companion.desc
+import kolbasa.consumer.order.Order.Companion.descNullsFirst
+import kolbasa.consumer.order.Order.Companion.descNullsLast
+import kolbasa.consumer.order.Order.Companion.then
 import kolbasa.queue.meta.MetaHelpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -13,39 +20,59 @@ class OrderTest {
     private val metaColumnName = MetaHelpers.generateMetaColumnName(propertyName)
 
     @Test
-    fun testOrderFactoryMethods() {
-        // ASC
-        checkOrder(Order.asc(property), SortOrder.ASC)
-        checkOrder(Order.asc(javaField), SortOrder.ASC)
+    fun testThenInfixMethod() {
+        val first = TestMeta::stringValue.ascNullsFirst()
+        val second = TestMeta::intValue.desc()
 
-        // DESC
-        checkOrder(Order.desc(property), SortOrder.DESC)
-        checkOrder(Order.desc(javaField), SortOrder.DESC)
+        val order = first then second
 
-        // ASC_NULLS_FIRST
-        checkOrder(Order.ascNullsFirst(property), SortOrder.ASC_NULLS_FIRST)
-        checkOrder(Order.ascNullsFirst(javaField), SortOrder.ASC_NULLS_FIRST)
-
-        // DESC_NULLS_FIRST
-        checkOrder(Order.descNullsFirst(property), SortOrder.DESC_NULLS_FIRST)
-        checkOrder(Order.descNullsFirst(javaField), SortOrder.DESC_NULLS_FIRST)
-
-        // ASC_NULLS_LAST
-        checkOrder(Order.ascNullsLast(property), SortOrder.ASC_NULLS_LAST)
-        checkOrder(Order.ascNullsLast(javaField), SortOrder.ASC_NULLS_LAST)
-
-        // DESC_NULLS_LAST
-        checkOrder(Order.descNullsLast(property), SortOrder.DESC_NULLS_LAST)
-        checkOrder(Order.descNullsLast(javaField), SortOrder.DESC_NULLS_LAST)
+        assertEquals(2, order.size)
+        assertEquals(first[0], order[0])
+        assertEquals(second[0], order[1])
     }
 
-    private fun checkOrder(order: Order<TestMeta>, sortOrder: SortOrder) {
-        assertEquals(propertyName, order.metaPropertyName)
-        assertEquals(metaColumnName, order.dbColumnName)
-        assertEquals(sortOrder, order.order)
-        assertEquals("$metaColumnName ${sortOrder.sql}", order.dbOrderClause)
+    @Test
+    fun testOrderFactoryMethods() {
+        // ASC
+        checkOrder(property.asc(), SortOrder.ASC)
+        checkOrder(javaField.asc(), SortOrder.ASC)
+
+        // DESC
+        checkOrder(property.desc(), SortOrder.DESC)
+        checkOrder(javaField.desc(), SortOrder.DESC)
+
+        // ASC_NULLS_FIRST
+        checkOrder(property.ascNullsFirst(), SortOrder.ASC_NULLS_FIRST)
+        checkOrder(javaField.ascNullsFirst(), SortOrder.ASC_NULLS_FIRST)
+
+        // DESC_NULLS_FIRST
+        checkOrder(property.descNullsFirst(), SortOrder.DESC_NULLS_FIRST)
+        checkOrder(javaField.descNullsFirst(), SortOrder.DESC_NULLS_FIRST)
+
+        // ASC_NULLS_LAST
+        checkOrder(property.ascNullsLast(), SortOrder.ASC_NULLS_LAST)
+        checkOrder(javaField.ascNullsLast(), SortOrder.ASC_NULLS_LAST)
+
+        // DESC_NULLS_LAST
+        checkOrder(property.descNullsLast(), SortOrder.DESC_NULLS_LAST)
+        checkOrder(javaField.descNullsLast(), SortOrder.DESC_NULLS_LAST)
+    }
+
+    private fun checkOrder(order: List<Order<TestMeta>>, sortOrder: SortOrder) {
+        // Every list produced by factory methods (asc, desc etc.) should contain exactly one element
+        assertEquals(1, order.size)
+
+        // Let's make sure that sole element has correct values
+        val base = order.first()
+        assertEquals(propertyName, base.metaPropertyName)
+        assertEquals(metaColumnName, base.dbColumnName)
+        assertEquals(sortOrder, base.order)
+        assertEquals("$metaColumnName ${sortOrder.sql}", base.dbOrderClause)
     }
 
 }
 
-private data class TestMeta(val stringValue: String)
+private data class TestMeta(
+    val stringValue: String,
+    val intValue: Int
+)
