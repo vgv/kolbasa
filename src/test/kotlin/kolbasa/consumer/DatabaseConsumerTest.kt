@@ -1,9 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.consumer.filter.Filter.and
-import kolbasa.consumer.filter.Filter.greaterEq
-import kolbasa.consumer.filter.Filter.lessEq
+import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.DatabaseProducer
 import kolbasa.producer.SendMessage
@@ -162,7 +160,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         } while (message == null)
 
         // Check delay
-        assertTrue((receiveTimestamp - sendTimestamp) > delay.toNanos(), "Receive: $receiveTimestamp, send: $sendTimestamp, delay=$delay")
+        assertTrue(
+            (receiveTimestamp - sendTimestamp) > delay.toNanos(),
+            "Receive: $receiveTimestamp, send: $sendTimestamp, delay=$delay"
+        )
 
         // Check message
         assertNotNull(message)
@@ -217,10 +218,16 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNull(secondMessage.meta)
 
         // The second message was read later, so, this condition has to be true
-        assertTrue(firstMessage.processingAt < secondMessage.processingAt, "First: $firstMessage, second: $secondMessage")
+        assertTrue(
+            firstMessage.processingAt < secondMessage.processingAt,
+            "First: $firstMessage, second: $secondMessage"
+        )
 
         // Check that interval between message became available is not less than visibilityTimeout delay
-        assertTrue((secondReceiveTimestamp - firstReceiveTimestamp) > delay.toNanos(), "First: $firstReceiveTimestamp, second: $secondReceiveTimestamp, delay=$delay")
+        assertTrue(
+            (secondReceiveTimestamp - firstReceiveTimestamp) > delay.toNanos(),
+            "First: $firstReceiveTimestamp, second: $secondReceiveTimestamp, delay=$delay"
+        )
     }
 
     @Test
@@ -272,7 +279,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
-                order = listOf(TestMeta::field.desc()))
+                order = TestMeta::field.desc()
+            )
         )
 
         // Check reverse ordering
@@ -313,8 +321,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
-                filter = (TestMeta::field greaterEq start) and (TestMeta::field lessEq end),
-                order = listOf(TestMeta::field.desc())) // add order just to simplify testing
+                filter = TestMeta::field between Pair(start, end),
+                order = TestMeta::field.desc() // add order just to simplify testing
+            )
         )
 
         // Check filtering
