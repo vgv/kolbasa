@@ -37,10 +37,9 @@ fun main() {
 
     // Create consumer
     val consumer = DatabaseConsumer(dataSource, queue)
-    // Try to read 100 messages with userId=1 from the queue
+    // Try to read 100 messages with (userId<=10 or userId=78) from the queue
     val messages = consumer.receive(100) {
         // Type-safe DSL to filter messages
-        // Select messages with (userId<=10 or userId=78)
         (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
     }
     messages.forEach {
