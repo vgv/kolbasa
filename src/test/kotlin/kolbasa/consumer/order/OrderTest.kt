@@ -1,6 +1,12 @@
 package kolbasa.consumer.order
 
 import kolbasa.consumer.JavaField
+import kolbasa.consumer.order.Order.Companion.asc
+import kolbasa.consumer.order.Order.Companion.ascNullsFirst
+import kolbasa.consumer.order.Order.Companion.ascNullsLast
+import kolbasa.consumer.order.Order.Companion.desc
+import kolbasa.consumer.order.Order.Companion.descNullsFirst
+import kolbasa.consumer.order.Order.Companion.descNullsLast
 import kolbasa.queue.meta.MetaHelpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -15,28 +21,28 @@ class OrderTest {
     @Test
     fun testOrderFactoryMethods() {
         // ASC
-        checkOrder(Order.asc(property), SortOrder.ASC)
-        checkOrder(Order.asc(javaField), SortOrder.ASC)
+        checkOrder(property.asc(), SortOrder.ASC)
+        checkOrder(javaField.asc(), SortOrder.ASC)
 
         // DESC
-        checkOrder(Order.desc(property), SortOrder.DESC)
-        checkOrder(Order.desc(javaField), SortOrder.DESC)
+        checkOrder(property.desc(), SortOrder.DESC)
+        checkOrder(javaField.desc(), SortOrder.DESC)
 
         // ASC_NULLS_FIRST
-        checkOrder(Order.ascNullsFirst(property), SortOrder.ASC_NULLS_FIRST)
-        checkOrder(Order.ascNullsFirst(javaField), SortOrder.ASC_NULLS_FIRST)
+        checkOrder(property.ascNullsFirst(), SortOrder.ASC_NULLS_FIRST)
+        checkOrder(javaField.ascNullsFirst(), SortOrder.ASC_NULLS_FIRST)
 
         // DESC_NULLS_FIRST
-        checkOrder(Order.descNullsFirst(property), SortOrder.DESC_NULLS_FIRST)
-        checkOrder(Order.descNullsFirst(javaField), SortOrder.DESC_NULLS_FIRST)
+        checkOrder(property.descNullsFirst(), SortOrder.DESC_NULLS_FIRST)
+        checkOrder(javaField.descNullsFirst(), SortOrder.DESC_NULLS_FIRST)
 
         // ASC_NULLS_LAST
-        checkOrder(Order.ascNullsLast(property), SortOrder.ASC_NULLS_LAST)
-        checkOrder(Order.ascNullsLast(javaField), SortOrder.ASC_NULLS_LAST)
+        checkOrder(property.ascNullsLast(), SortOrder.ASC_NULLS_LAST)
+        checkOrder(javaField.ascNullsLast(), SortOrder.ASC_NULLS_LAST)
 
         // DESC_NULLS_LAST
-        checkOrder(Order.descNullsLast(property), SortOrder.DESC_NULLS_LAST)
-        checkOrder(Order.descNullsLast(javaField), SortOrder.DESC_NULLS_LAST)
+        checkOrder(property.descNullsLast(), SortOrder.DESC_NULLS_LAST)
+        checkOrder(javaField.descNullsLast(), SortOrder.DESC_NULLS_LAST)
     }
 
     private fun checkOrder(order: Order<TestMeta>, sortOrder: SortOrder) {
