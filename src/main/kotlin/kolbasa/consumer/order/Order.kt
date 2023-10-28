@@ -14,68 +14,85 @@ data class Order<Meta> internal constructor(val metaPropertyName: String, val or
 
     companion object {
 
-        fun <Meta> asc(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC)
-        }
-
-        @JvmStatic
-        fun <Meta> asc(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC)
-        }
-
-        // -------------------------------------------------------------------------------------------
-
-        fun <Meta> desc(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC)
-        }
-
-        @JvmStatic
-        fun <Meta> desc(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC)
+        /**
+         * Helper DSL method to concatenate several [orders][Order] instead of direct
+         * list manipulation.
+         *
+         * Example:
+         * ```
+         * ReceiveOptions(
+         *    order = Meta::userId.asc() then Meta::saleId.ascNullsFirst() then Meta::priority.desc()
+         * )
+         * ```
+         */
+        infix fun <Meta> List<Order<Meta>>.then(next: List<Order<Meta>>): List<Order<Meta>> {
+            return this + next
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> ascNullsFirst(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC_NULLS_FIRST)
+        fun <Meta> KProperty1<Meta, *>.asc(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC))
         }
 
         @JvmStatic
-        fun <Meta> ascNullsFirst(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC_NULLS_FIRST)
+        fun <Meta> JavaField<Meta, *>.asc(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC))
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> descNullsFirst(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC_NULLS_FIRST)
+        fun <Meta> KProperty1<Meta, *>.desc(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC))
         }
 
         @JvmStatic
-        fun <Meta> descNullsFirst(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC_NULLS_FIRST)
+        fun <Meta> JavaField<Meta, *>.desc(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC))
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> ascNullsLast(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.ASC_NULLS_LAST)
+        fun <Meta> KProperty1<Meta, *>.ascNullsFirst(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC_NULLS_FIRST))
         }
 
         @JvmStatic
-        fun <Meta> ascNullsLast(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.ASC_NULLS_LAST)
+        fun <Meta> JavaField<Meta, *>.ascNullsFirst(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC_NULLS_FIRST))
         }
 
         // -------------------------------------------------------------------------------------------
 
-        fun <Meta> descNullsLast(property: KProperty1<Meta, *>): Order<Meta> {
-            return Order(property.name, SortOrder.DESC_NULLS_LAST)
+        fun <Meta> KProperty1<Meta, *>.descNullsFirst(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC_NULLS_FIRST))
         }
 
         @JvmStatic
-        fun <Meta> descNullsLast(field: JavaField<Meta, *>): Order<Meta> {
-            return Order(field.name, SortOrder.DESC_NULLS_LAST)
+        fun <Meta> JavaField<Meta, *>.descNullsFirst(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC_NULLS_FIRST))
+        }
+
+        // -------------------------------------------------------------------------------------------
+
+        fun <Meta> KProperty1<Meta, *>.ascNullsLast(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC_NULLS_LAST))
+        }
+
+        @JvmStatic
+        fun <Meta> JavaField<Meta, *>.ascNullsLast(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.ASC_NULLS_LAST))
+        }
+
+        // -------------------------------------------------------------------------------------------
+
+        fun <Meta> KProperty1<Meta, *>.descNullsLast(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC_NULLS_LAST))
+        }
+
+        @JvmStatic
+        fun <Meta> JavaField<Meta, *>.descNullsLast(): List<Order<Meta>> {
+            return listOf(Order(name, SortOrder.DESC_NULLS_LAST))
         }
     }
 }
