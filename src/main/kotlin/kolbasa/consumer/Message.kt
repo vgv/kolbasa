@@ -22,7 +22,9 @@ data class Message<Data, Meta>(
      */
     val data: Data,
     /**
-     * Metadata, if any
+     * Metadata, if
+     * 1) There is metadata attached to the message
+     * 2) [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] set to true
      */
     val meta: Meta?
 )
