@@ -102,6 +102,46 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
+    /**
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * ```
+     * field between Pair(10, 20)
+     * ```
+     * means (field >= 10 and field <= 20)
+     */
+    @JvmStatic
+    infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.between(value: Pair<T, T>): Condition<Meta> {
+        return BetweenCondition(this.name, value)
+    }
+
+    /**
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * ```
+     * field between Pair(10, 20)
+     * ```
+     * means (field >= 10 and field <= 20)
+     */
+    @JvmStatic
+    infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.between(value: Pair<T, T>): Condition<Meta> {
+        return BetweenCondition(this.name, value)
+    }
+
+    /**
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * ```
+     * field between Pair(10, 20)
+     * ```
+     * means (field >= 10 and field <= 20)
+     */
+    @JvmStatic
+    infix fun <Meta : Any, T : Comparable<T>> JavaField<Meta, T?>.between(value: Pair<T, T>): Condition<Meta> {
+        return BetweenCondition(this.name, value)
+    }
+
+    // -------------------------------------------------------------------------------------------
     @JvmStatic
     infix fun <Meta : Any> Condition<Meta>.and(condition: Condition<Meta>): Condition<Meta> {
         return AndCondition(this, condition)
