@@ -64,7 +64,7 @@ internal class FilterTest {
     }
 
     @Test
-    fun tesIisNull() {
+    fun testIsNull() {
         assertIs<IsNullCondition<*>>(isNull(TestMeta::strValue))
     }
 
