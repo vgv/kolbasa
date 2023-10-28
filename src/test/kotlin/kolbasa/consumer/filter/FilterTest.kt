@@ -1,6 +1,7 @@
 package kolbasa.consumer.filter
 
 import kolbasa.consumer.filter.Filter.and
+import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greater
 import kolbasa.consumer.filter.Filter.greaterEq
@@ -45,6 +46,11 @@ internal class FilterTest {
     @Test
     fun testLessEq() {
         assertIs<LessThanOrEqCondition<*, *>>(TestMeta::strValue lessEq "local")
+    }
+
+    @Test
+    fun testBetween() {
+        assertIs<BetweenCondition<*, *>>(TestMeta::strValue between Pair("a", "b"))
     }
 
     @Test
