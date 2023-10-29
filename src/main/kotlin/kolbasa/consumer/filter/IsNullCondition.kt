@@ -1,20 +1,26 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.queue.meta.MetaField
 import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
 internal class IsNullCondition<Meta : Any>(private val fieldName: String) : Condition<Meta>() {
 
-    override fun toSqlClause(queue: Queue<*, Meta>): String {
-        val field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-            "Field $fieldName not found in metadata class ${queue.metadata}"
+    private lateinit var field: MetaField<Meta>
+
+    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
+        if (!::field.isInitialized) {
+            field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
+                "Field $fieldName not found in metadata class ${queue.metadata}"
+            }
         }
 
         return "${field.dbColumnName} is null"
+
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         // NOP
     }
 

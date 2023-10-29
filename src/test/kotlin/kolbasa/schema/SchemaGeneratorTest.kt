@@ -9,6 +9,17 @@ import kotlin.test.assertTrue
 
 class SchemaGeneratorTest: AbstractPostgresqlTest() {
 
+    data class TestMeta(
+        @Searchable
+        val first: Int,
+
+        @Searchable
+        @Unique
+        val second: Long,
+
+        val third: String
+    )
+
     private val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = TestMeta::class.java)
 
     @Test
@@ -33,15 +44,3 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
     }
 
 }
-
-private data class TestMeta(
-    @Searchable
-    val first: Int,
-
-    @Searchable
-    @Unique
-    val second: Long,
-
-    val third: String
-)
-

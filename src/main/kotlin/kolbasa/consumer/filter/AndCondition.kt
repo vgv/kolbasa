@@ -24,15 +24,16 @@ internal class AndCondition<Meta : Any>(first: Condition<Meta>, second: Conditio
         }
     }
 
-    override fun toSqlClause(queue: Queue<*, Meta>): String {
+    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
         return conditions.joinToString(separator = " and ") {
             "(" + it.toSqlClause(queue) + ")"
         }
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         conditions.forEach { expression ->
             expression.fillPreparedQuery(queue, preparedStatement, columnIndex)
         }
     }
+
 }
