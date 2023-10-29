@@ -2,13 +2,12 @@ package kolbasa.consumer.filter
 
 import io.mockk.confirmVerified
 import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.verifySequence
 import kolbasa.queue.Queue
 import kolbasa.utils.IntBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import java.util.concurrent.atomic.AtomicInteger
 
 internal class NotConditionTest {
 
@@ -28,10 +27,15 @@ internal class NotConditionTest {
         val column = mockk<IntBox>()
 
         // make a call
-        NotCondition(testCondition).fillPreparedQuery(queue, preparedStatement, column)
+        val notCondition = NotCondition(testCondition)
+        notCondition.toSqlClause(queue)
+        notCondition.fillPreparedQuery(queue, preparedStatement, column)
 
         // check
-        verify { testCondition.fillPreparedQuery(queue, preparedStatement, column) }
+        verifySequence {
+            testCondition.toSqlClause(queue)
+            testCondition.fillPreparedQuery(queue, preparedStatement, column)
+        }
         confirmVerified(testCondition)
     }
 }

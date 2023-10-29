@@ -14,16 +14,18 @@ internal abstract class AbstractOneValueCondition<Meta : Any, T>(
 
     abstract val operator: String
 
-    override fun toSqlClause(queue: Queue<*, Meta>): String {
-        field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-            "Field $fieldName not found in metadata class ${queue.metadata}"
+    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
+        if (!::field.isInitialized) {
+            field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
+                "Field $fieldName not found in metadata class ${queue.metadata}"
+            }
         }
 
         // Field Operator Parameter, like field=?, field>? etc.
         return "${field.dbColumnName}${operator}?"
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.getAndIncrement(), value)
     }
 

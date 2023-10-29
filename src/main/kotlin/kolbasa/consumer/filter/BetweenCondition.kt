@@ -12,16 +12,19 @@ internal class BetweenCondition<Meta : Any, T>(
 
     private lateinit var field: MetaField<Meta>
 
-    override fun toSqlClause(queue: Queue<*, Meta>): String {
-        field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-            "Field $fieldName not found in metadata class ${queue.metadata}"
+    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
+        if (!::field.isInitialized) {
+            field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
+                "Field $fieldName not found in metadata class ${queue.metadata}"
+            }
         }
 
         return "${field.dbColumnName} between ? and ?"
     }
 
-    override fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.getAndIncrement(), value.first)
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.getAndIncrement(), value.second)
     }
+
 }
