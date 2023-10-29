@@ -9,6 +9,7 @@ import kolbasa.producer.SendOptions
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
+import kolbasa.queue.Searchable
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -347,4 +348,4 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
 }
 
-internal data class TestMeta(val field: Int)
+internal data class TestMeta(@Searchable val field: Int)

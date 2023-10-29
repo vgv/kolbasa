@@ -2,6 +2,7 @@ package kolbasa.queue.meta
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KVisibility
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.valueParameters
@@ -16,6 +17,10 @@ internal class KotlinMetaClass<Meta : Any>(kotlinClass: KClass<Meta>) : MetaClas
     init {
         check(kotlinClass.isData) {
             "Class $kotlinClass must be Kotlin data class"
+        }
+
+        check(kotlinClass.visibility != KVisibility.PRIVATE) {
+            "Class $kotlinClass must not be private"
         }
 
         // Find primary constructor

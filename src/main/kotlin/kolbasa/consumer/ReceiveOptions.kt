@@ -23,7 +23,7 @@ data class ReceiveOptions<Meta : Any> @JvmOverloads constructor(
     /**
      * Do we need to read metadata?
      * By default, we don't want to read these fields from the DB, parse them and instantiate the
-     * meta-class [Meta] for performance reasons.
+     * metaclass [Meta] for performance reasons.
      *
      * You don't need to read metadata if the only thing you need is to filter (or sort) messages by metadata fields.
      */

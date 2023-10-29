@@ -18,8 +18,8 @@ import kotlin.reflect.full.findAnnotation
 internal abstract class MetaField<Meta : Any>(
     private val kotlinType: KClass<Meta>,
     val fieldName: String,
-    searchable: Searchable?,
-    unique: Unique?
+    val searchable: Searchable?,
+    val unique: Unique?
 ) {
 
     init {

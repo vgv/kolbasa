@@ -4,10 +4,8 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import java.util.concurrent.atomic.AtomicInteger
 
 internal class AndConditionTest {
 
@@ -53,10 +51,12 @@ internal class AndConditionTest {
 
         val queue = mockk<Queue<*, String>>()
         val preparedStatement = mockk<PreparedStatement>()
-        val column = mockk<IntBox>()
+        val column = mockk<ColumnIndex>()
 
         // make a call
-        AndCondition(AndCondition(firstCondition, secondCondition), thirdCondition).fillPreparedQuery(
+        val andCondition = AndCondition(AndCondition(firstCondition, secondCondition), thirdCondition)
+        andCondition.toSqlClause(queue) // to initialize queue
+        andCondition.fillPreparedQuery(
             queue,
             preparedStatement,
             column
@@ -64,6 +64,9 @@ internal class AndConditionTest {
 
         // check
         verifySequence {
+            firstCondition.toSqlClause(queue)
+            secondCondition.toSqlClause(queue)
+            thirdCondition.toSqlClause(queue)
             firstCondition.fillPreparedQuery(queue, preparedStatement, column)
             secondCondition.fillPreparedQuery(queue, preparedStatement, column)
             thirdCondition.fillPreparedQuery(queue, preparedStatement, column)

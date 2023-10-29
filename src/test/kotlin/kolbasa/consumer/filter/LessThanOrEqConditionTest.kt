@@ -5,18 +5,17 @@ import io.mockk.mockk
 import io.mockk.verify
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
+import kolbasa.queue.Searchable
 import kolbasa.queue.meta.MetaHelpers
-import kolbasa.utils.IntBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import java.util.concurrent.atomic.AtomicInteger
 
 internal class LessThanOrEqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val lteExpression = LessThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = lteExpression.toSqlClause(queue)
@@ -25,11 +24,11 @@ internal class LessThanOrEqConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val lteExpression = LessThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
-        val column = IntBox(1)
+        val column = ColumnIndex()
 
         // call
         lteExpression.toSqlClause(queue)
@@ -41,6 +40,9 @@ internal class LessThanOrEqConditionTest {
     }
 
     companion object {
-        data class TestMeta(val intValue: Int, val stringValue: String)
+        data class TestMeta(
+            @Searchable val intValue: Int,
+            val stringValue: String
+        )
     }
 }

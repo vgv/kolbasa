@@ -4,9 +4,7 @@ import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
 import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotSame
-import kotlin.test.assertSame
+import kotlin.test.*
 
 class KotlinMetaClassTest {
 
@@ -57,6 +55,16 @@ class KotlinMetaClassTest {
         assertNotSame(expected, created)
         assertEquals(expected, created)
     }
+
+    @Test
+    fun testErrorIfNotDataClass() {
+        assertFailsWith<IllegalStateException> { KotlinMetaClass(TestNotData::class) }
+    }
+
+    @Test
+    fun testErrorIfPrivateDataClass() {
+        assertFailsWith<IllegalStateException> { KotlinMetaClass(PrivateTestData::class) }
+    }
 }
 
 internal data class TestData(
@@ -65,4 +73,14 @@ internal data class TestData(
     val y: String,
     @Unique
     val z: Boolean
+)
+
+internal class TestNotData(
+    val x: Int,
+    val y: Int
+)
+
+private data class PrivateTestData(
+    val x: Int,
+    val y: Int
 )

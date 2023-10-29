@@ -4,7 +4,7 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
+import kolbasa.queue.Searchable
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 import kotlin.test.assertEquals
@@ -31,7 +31,7 @@ class NativeSqlConditionTest {
             fieldNames = listOf(TestMeta::stringValue.name)
         )
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
-        val column = IntBox(1)
+        val column = ColumnIndex()
 
         // call
         nativeExpression.toSqlClause(queue)
@@ -42,11 +42,14 @@ class NativeSqlConditionTest {
     }
 
     companion object {
-        data class TestMeta(val intValue: Int, val stringValue: String)
+        data class TestMeta(
+            @Searchable val intValue: Int,
+            @Searchable val stringValue: String
+        )
 
         val queue = Queue(
             "test_queue",
-            dataType = PredefinedDataTypes.ByteArray,
+            databaseDataType = PredefinedDataTypes.ByteArray,
             metadata = TestMeta::class.java
         )
     }

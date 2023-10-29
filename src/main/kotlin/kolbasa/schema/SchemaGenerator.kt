@@ -41,7 +41,7 @@ internal object SchemaGenerator {
                 ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
                 ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
                 ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} int not null,
-                ${Const.DATA_COLUMN_NAME} ${queue.dataType.dbColumnType} not null
+                ${Const.DATA_COLUMN_NAME} ${queue.databaseDataType.dbColumnType} not null
             )
             """.trimIndent()
 
