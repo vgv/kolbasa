@@ -2,7 +2,6 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
-import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
 internal abstract class AbstractOneValueCondition<Meta : Any, T>(
@@ -25,8 +24,8 @@ internal abstract class AbstractOneValueCondition<Meta : Any, T>(
         return "${field.dbColumnName}${operator}?"
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
-        field.fillPreparedStatementForValue(preparedStatement, columnIndex.getAndIncrement(), value)
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+        field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), value)
     }
 
 }

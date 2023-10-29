@@ -1,7 +1,6 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 import java.text.MessageFormat
 
@@ -27,7 +26,7 @@ internal class NativeSqlCondition<Meta : Any>(
         return MessageFormat.format(sqlPattern, *names)
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         // NOP
     }
 

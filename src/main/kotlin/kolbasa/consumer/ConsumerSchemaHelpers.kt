@@ -1,10 +1,10 @@
 package kolbasa.consumer
 
+import kolbasa.consumer.filter.ColumnIndex
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
-import kolbasa.utils.IntBox
 import kolbasa.utils.LongBox
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -99,16 +99,16 @@ internal object ConsumerSchemaHelpers {
         receiveOptions: ReceiveOptions<Meta>,
         preparedStatement: PreparedStatement
     ) {
-        val columnIndex = IntBox(1)
+        val columnIndex = ColumnIndex()
 
         // fill filter clauses, if any
         receiveOptions.filter?.fillPreparedQuery(queue, preparedStatement, columnIndex)
 
         // consumer name, if any
         if (consumerOptions.consumer != null) {
-            preparedStatement.setString(columnIndex.getAndIncrement(), consumerOptions.consumer)
+            preparedStatement.setString(columnIndex.nextIndex(), consumerOptions.consumer)
         } else {
-            preparedStatement.setNull(columnIndex.getAndIncrement(), Types.VARCHAR)
+            preparedStatement.setNull(columnIndex.nextIndex(), Types.VARCHAR)
         }
     }
 

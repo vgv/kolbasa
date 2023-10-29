@@ -2,7 +2,6 @@ package kolbasa.consumer.filter
 
 import io.mockk.*
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 import kotlin.test.assertEquals
@@ -50,7 +49,7 @@ internal class OrConditionTest {
 
         val queue = mockk<Queue<*, String>>()
         val preparedStatement = mockk<PreparedStatement>()
-        val column = mockk<IntBox>()
+        val column = mockk<ColumnIndex>()
 
         // make a call
         val orCondition = OrCondition(OrCondition(firstCondition, secondCondition), thirdCondition)
