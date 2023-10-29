@@ -5,7 +5,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
-import kolbasa.utils.LongBox
+import kolbasa.utils.BytesCounter
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
@@ -116,7 +116,7 @@ internal object ConsumerSchemaHelpers {
         queue: Queue<Data, Meta>,
         receiveOptions: ReceiveOptions<Meta>,
         resultSet: ResultSet,
-        approxBytesCounter: LongBox
+        approxBytesCounter: BytesCounter
     ): Message<Data, Meta> {
         var columnIndex = 1
 

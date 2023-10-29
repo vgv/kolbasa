@@ -4,7 +4,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
-import kolbasa.utils.LongBox
+import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 
@@ -79,7 +79,7 @@ internal object ProducerSchemaHelpers {
         producerOptions: ProducerOptions,
         data: List<SendMessage<Data, Meta>>,
         preparedStatement: PreparedStatement,
-        approxBytesCounter: LongBox
+        approxBytesCounter: BytesCounter
     ) {
         var columnIndex = 1
 

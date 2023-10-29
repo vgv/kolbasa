@@ -5,7 +5,7 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
-import kolbasa.utils.LongBox
+import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
@@ -42,7 +42,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
-        val approxBytesCounter = LongBox()
+        val approxBytesCounter = BytesCounter()
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
 
         val (execution, result) = TimeHelper.measure {

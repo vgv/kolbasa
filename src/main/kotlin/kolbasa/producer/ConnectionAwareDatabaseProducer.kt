@@ -5,7 +5,7 @@ import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
-import kolbasa.utils.LongBox
+import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
@@ -28,7 +28,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        val approxStatsBytes = LongBox()
+        val approxStatsBytes = BytesCounter()
         val (execution, result) = TimeHelper.measure {
             when (producerOptions.partialInsert) {
                 PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, data)
@@ -51,7 +51,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun sendProhibited(
         connection: Connection,
-        approxStatsBytes: LongBox,
+        approxStatsBytes: BytesCounter,
         data: List<SendMessage<Data, Meta>>
     ): SendResult<Data, Meta> {
         val result = ArrayList<MessageResult<Data, Meta>>(data.size)
@@ -71,7 +71,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun sendUntilFirstFailure(
         connection: Connection,
-        approxStatsBytes: LongBox,
+        approxStatsBytes: BytesCounter,
         data: List<SendMessage<Data, Meta>>
     ): SendResult<Data, Meta> {
         val results = ArrayList<MessageResult<Data, Meta>>(data.size)
@@ -101,7 +101,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun sendAsMuchAsPossible(
         connection: Connection,
-        approxStatsBytes: LongBox,
+        approxStatsBytes: BytesCounter,
         data: List<SendMessage<Data, Meta>>
     ): SendResult<Data, Meta> {
         val result = ArrayList<MessageResult<Data, Meta>>(data.size)
@@ -121,7 +121,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun executeChunkInSavepoint(
         connection: Connection,
-        approxStatsBytes: LongBox,
+        approxStatsBytes: BytesCounter,
         chunk: List<SendMessage<Data, Meta>>
     ): Result<List<MessageResult<Data, Meta>>> {
         return connection.useSavepoint { _ ->
@@ -131,7 +131,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
     private fun executeChunk(
         connection: Connection,
-        approxStatsBytes: LongBox,
+        approxStatsBytes: BytesCounter,
         chunk: List<SendMessage<Data, Meta>>
     ): List<MessageResult<Data, Meta>> {
         val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, chunk)
