@@ -128,33 +128,29 @@ internal object ConsumerSchemaHelpers {
         val data = when (queue.databaseDataType) {
             is DatabaseQueueDataType.Json -> {
                 val data = resultSet.getString(columnIndex++)
-                // I know that str.length != bytes.size, but it's ok for now
-                // I don't want to convert string to bytes just for metrics because it's not cheap
-                approxBytesCounter.inc(data.length)
+                approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Binary -> {
                 val data = resultSet.getBytes(columnIndex++)
-                approxBytesCounter.inc(data.size)
+                approxBytesCounter.addByteArray(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Text -> {
                 val data = resultSet.getString(columnIndex++)
-                // I know that str.length != bytes.size, but it's ok for now
-                // I don't want to convert string to bytes just for metrics because it's not cheap
-                approxBytesCounter.inc(data.length)
+                approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Int -> {
-                approxBytesCounter.inc(4)
+                approxBytesCounter.addInt()
                 queue.databaseDataType.deserializer(resultSet.getInt(columnIndex++))
             }
 
             is DatabaseQueueDataType.Long -> {
-                approxBytesCounter.inc(8)
+                approxBytesCounter.addLong()
                 queue.databaseDataType.deserializer(resultSet.getLong(columnIndex++))
             }
         }

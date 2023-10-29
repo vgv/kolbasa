@@ -1,5 +1,6 @@
 package kolbasa.producer
 
+import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
@@ -28,7 +29,8 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        val approxStatsBytes = BytesCounter()
+        val approxStatsBytes = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
+
         val (execution, result) = TimeHelper.measure {
             when (producerOptions.partialInsert) {
                 PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, data)

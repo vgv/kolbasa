@@ -98,7 +98,7 @@ internal object ProducerSchemaHelpers {
             when (queue.databaseDataType) {
                 is DatabaseQueueDataType.Json -> {
                     val jsonString = queue.databaseDataType.serializer(item.data)
-                    approxBytesCounter.inc(jsonString.length)
+                    approxBytesCounter.addString(jsonString)
 
                     val jsonObject = PGobject()
                     jsonObject.type = queue.databaseDataType.dbColumnType
@@ -108,23 +108,23 @@ internal object ProducerSchemaHelpers {
 
                 is DatabaseQueueDataType.Binary -> {
                     val binaryData = queue.databaseDataType.serializer(item.data)
-                    approxBytesCounter.inc(binaryData.size)
+                    approxBytesCounter.addByteArray(binaryData)
                     preparedStatement.setBytes(columnIndex++, binaryData)
                 }
 
                 is DatabaseQueueDataType.Text -> {
                     val strData = queue.databaseDataType.serializer(item.data)
-                    approxBytesCounter.inc(strData.length)
+                    approxBytesCounter.addString(strData)
                     preparedStatement.setString(columnIndex++, strData)
                 }
 
                 is DatabaseQueueDataType.Int -> {
-                    approxBytesCounter.inc(4)
+                    approxBytesCounter.addInt()
                     preparedStatement.setInt(columnIndex++, queue.databaseDataType.serializer(item.data))
                 }
 
                 is DatabaseQueueDataType.Long -> {
-                    approxBytesCounter.inc(8)
+                    approxBytesCounter.addLong()
                     preparedStatement.setLong(columnIndex++, queue.databaseDataType.serializer(item.data))
                 }
             }
