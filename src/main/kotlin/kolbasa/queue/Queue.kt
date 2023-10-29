@@ -6,7 +6,7 @@ import kolbasa.stats.prometheus.QueueMetrics
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     val name: String,
-    val dataType: QueueDataType<Data>,
+    val databaseDataType: DatabaseQueueDataType<Data>,
     val options: QueueOptions? = null,
     val metadata: Class<Meta>? = null
 ) {

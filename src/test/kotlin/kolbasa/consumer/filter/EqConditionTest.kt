@@ -14,7 +14,7 @@ internal class EqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val eqExpression = EqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = eqExpression.toSqlClause(queue)
@@ -23,7 +23,7 @@ internal class EqConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val eqExpression = EqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
