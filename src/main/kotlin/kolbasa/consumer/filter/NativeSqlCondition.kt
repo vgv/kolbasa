@@ -15,9 +15,7 @@ internal class NativeSqlCondition<Meta : Any>(
         if (!::names.isInitialized) {
             names = Array(fieldNames.size) {
                 val fieldName = fieldNames[it]
-                val field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-                    "Field $fieldName not found in metadata class ${queue.metadata}"
-                }
+                val field = findField(fieldName)
                 field.dbColumnName
             }
         }

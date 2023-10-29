@@ -15,9 +15,7 @@ internal abstract class AbstractOneValueCondition<Meta : Any, T>(
 
     override fun internalToSqlClause(queue: Queue<*, Meta>): String {
         if (!::field.isInitialized) {
-            field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-                "Field $fieldName not found in metadata class ${queue.metadata}"
-            }
+            field = findField(fieldName)
         }
 
         // Field Operator Parameter, like field=?, field>? etc.
