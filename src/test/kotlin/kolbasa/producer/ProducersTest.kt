@@ -1,11 +1,8 @@
 package kolbasa.producer
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.sql.Connection
-import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.declaredMemberFunctions
-import kotlin.reflect.full.memberFunctions
 
 class ProducersTest {
 
