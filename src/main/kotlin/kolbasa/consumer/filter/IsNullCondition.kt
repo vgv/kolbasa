@@ -10,16 +10,18 @@ internal class IsNullCondition<Meta : Any>(private val fieldName: String) : Cond
 
     override fun internalToSqlClause(queue: Queue<*, Meta>): String {
         if (!::field.isInitialized) {
-            field = requireNotNull(queue.metadataDescription?.findMetaFieldByName(fieldName)) {
-                "Field $fieldName not found in metadata class ${queue.metadata}"
-            }
+            field = findField(fieldName)
         }
 
         return "${field.dbColumnName} is null"
 
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun internalFillPreparedQuery(
+        queue: Queue<*, Meta>,
+        preparedStatement: PreparedStatement,
+        columnIndex: ColumnIndex
+    ) {
         // NOP
     }
 

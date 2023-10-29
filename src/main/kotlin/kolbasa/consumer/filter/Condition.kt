@@ -1,9 +1,20 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.queue.meta.MetaField
 import java.sql.PreparedStatement
 
 abstract class Condition<Meta : Any> {
+
+    internal abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
+
+    internal abstract fun internalFillPreparedQuery(
+        queue: Queue<*, Meta>,
+        preparedStatement: PreparedStatement,
+        columnIndex: ColumnIndex
+    )
+
+    // ------------------------------------------------------------
 
     // Every condition is 'linked' to some queue, but linking is done lately,
     // after first call to toSqlClause() method
@@ -24,17 +35,16 @@ abstract class Condition<Meta : Any> {
         internalFillPreparedQuery(queue, preparedStatement, columnIndex)
     }
 
-    internal abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
+    internal fun findField(fieldName: String): MetaField<Meta> {
+        return requireNotNull(linkedQueue.metadataDescription?.findMetaFieldByName(fieldName)) {
+            "Field $fieldName not found in metadata class ${linkedQueue.metadata}"
+        }
+    }
 
-    internal abstract fun internalFillPreparedQuery(
-        queue: Queue<*, Meta>,
-        preparedStatement: PreparedStatement,
-        columnIndex: ColumnIndex
-    )
-
-
-    private fun checkQueueTheSame(queue: Queue<*, Meta>) = check(linkedQueue == queue) {
-        "Queue $queue is not the same as $linkedQueue"
+    private fun checkQueueTheSame(queue: Queue<*, Meta>) {
+        check(linkedQueue == queue) {
+            "Queue $queue is not the same as $linkedQueue"
+        }
     }
 
 }
