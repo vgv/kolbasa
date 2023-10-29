@@ -2,7 +2,6 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
-import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
 internal class IsNullCondition<Meta : Any>(private val fieldName: String) : Condition<Meta>() {
@@ -20,7 +19,7 @@ internal class IsNullCondition<Meta : Any>(private val fieldName: String) : Cond
 
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         // NOP
     }
 

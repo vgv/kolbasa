@@ -1,7 +1,6 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
 abstract class Condition<Meta : Any> {
@@ -19,7 +18,7 @@ abstract class Condition<Meta : Any> {
         return internalToSqlClause(queue)
     }
 
-    internal fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    internal fun fillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         checkQueueTheSame(queue)
 
         internalFillPreparedQuery(queue, preparedStatement, columnIndex)
@@ -30,7 +29,7 @@ abstract class Condition<Meta : Any> {
     internal abstract fun internalFillPreparedQuery(
         queue: Queue<*, Meta>,
         preparedStatement: PreparedStatement,
-        columnIndex: IntBox
+        columnIndex: ColumnIndex
     )
 
 
@@ -40,3 +39,7 @@ abstract class Condition<Meta : Any> {
 
 }
 
+internal class ColumnIndex {
+    private var index: Int = 1
+    fun nextIndex() = index++
+}

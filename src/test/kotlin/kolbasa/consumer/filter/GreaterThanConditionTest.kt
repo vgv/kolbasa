@@ -6,11 +6,9 @@ import io.mockk.verify
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaHelpers
-import kolbasa.utils.IntBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import java.util.concurrent.atomic.AtomicInteger
 
 internal class GreaterThanConditionTest {
 
@@ -29,7 +27,7 @@ internal class GreaterThanConditionTest {
         val gtExpression = GreaterThanCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
-        val column = IntBox(1)
+        val column = ColumnIndex()
 
         // call
         gtExpression.toSqlClause(queue)

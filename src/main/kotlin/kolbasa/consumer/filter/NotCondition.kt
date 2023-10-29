@@ -1,7 +1,6 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
-import kolbasa.utils.IntBox
 import java.sql.PreparedStatement
 
 internal data class NotCondition<Meta : Any>(val condition: Condition<Meta>) : Condition<Meta>() {
@@ -10,7 +9,7 @@ internal data class NotCondition<Meta : Any>(val condition: Condition<Meta>) : C
         return "not (${condition.toSqlClause(queue)})"
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: IntBox) {
+    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         condition.fillPreparedQuery(queue, preparedStatement, columnIndex)
     }
 
