@@ -1,10 +1,9 @@
-package kolbasa.internal
+package kolbasa.queue.meta
 
 import io.mockk.InternalPlatformDsl.toStr
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
-import kolbasa.queue.meta.MetaHelpers
 import kolbasa.queue.meta.MetaHelpers.enumerateTypes
 import kolbasa.queue.meta.MetaHelpers.findEnumValueOfFunction
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,6 +13,40 @@ import java.math.BigDecimal
 import java.math.BigInteger
 
 internal class MetaHelpersTest {
+
+    enum class TestColor {
+        RED, GREEN, YELLOW
+    }
+
+    @JvmRecord
+    data class TestRecord(val x: Int, val y: String) {
+        constructor(a: String, b: String) : this(a.length, b)
+    }
+
+    // Class to emulate classical Java bean
+    class JavaBean {
+
+        var x: Int
+        var y: String
+
+        constructor(a: String, b: String) {
+            this.x = a.length
+            this.y = b
+        }
+
+        constructor(a: Int) {
+            this.x = a
+            this.y = a.toStr()
+        }
+
+        // this is a 'default', desired constructor
+        constructor(x: Int, y: String) {
+            this.x = x
+            this.y = y
+        }
+
+    }
+
 
     @Test
     fun testGenerateMetaColumnName() {
@@ -463,37 +496,4 @@ internal class MetaHelpersTest {
         assertEquals(Int::class.java, defaultConstructor.parameters[0].type)
         assertEquals(String::class.java, defaultConstructor.parameters[1].type)
     }
-}
-
-private enum class TestColor {
-    RED, GREEN, YELLOW
-}
-
-@JvmRecord
-private data class TestRecord(val x: Int, val y: String) {
-    constructor(a: String, b: String) : this(a.length, b)
-}
-
-// Class to emulate classical Java bean
-private class JavaBean {
-
-    var x: Int
-    var y: String
-
-    constructor(a: String, b: String) {
-        this.x = a.length
-        this.y = b
-    }
-
-    constructor(a: Int) {
-        this.x = a
-        this.y = a.toStr()
-    }
-
-    // this is a 'default', desired constructor
-    constructor(x: Int, y: String) {
-        this.x = x
-        this.y = y
-    }
-
 }
