@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 class BytesCounterTest {
 
     @Test
-    fun testLongBox() {
+    fun test() {
         val box = BytesCounter()
 
         assertEquals(0, box.get())
