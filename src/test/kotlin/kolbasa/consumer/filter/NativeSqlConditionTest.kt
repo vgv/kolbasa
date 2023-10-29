@@ -45,7 +45,7 @@ class NativeSqlConditionTest {
 
         val queue = Queue(
             "test_queue",
-            dataType = PredefinedDataTypes.ByteArray,
+            databaseDataType = PredefinedDataTypes.ByteArray,
             metadata = TestMeta::class.java
         )
     }

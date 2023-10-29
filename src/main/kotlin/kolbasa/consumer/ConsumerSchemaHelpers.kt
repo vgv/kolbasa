@@ -2,7 +2,7 @@ package kolbasa.consumer
 
 import kolbasa.consumer.filter.ColumnIndex
 import kolbasa.queue.Queue
-import kolbasa.queue.QueueDataType
+import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
@@ -125,37 +125,37 @@ internal object ConsumerSchemaHelpers {
         val processingAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
 
-        val data = when (queue.dataType) {
-            is QueueDataType.Json -> {
+        val data = when (queue.databaseDataType) {
+            is DatabaseQueueDataType.Json -> {
                 val data = resultSet.getString(columnIndex++)
                 // I know that str.length != bytes.size, but it's ok for now
                 // I don't want to convert string to bytes just for metrics because it's not cheap
                 approxBytesCounter.inc(data.length)
-                queue.dataType.deserializer(data)
+                queue.databaseDataType.deserializer(data)
             }
 
-            is QueueDataType.Binary -> {
+            is DatabaseQueueDataType.Binary -> {
                 val data = resultSet.getBytes(columnIndex++)
                 approxBytesCounter.inc(data.size)
-                queue.dataType.deserializer(data)
+                queue.databaseDataType.deserializer(data)
             }
 
-            is QueueDataType.Text -> {
+            is DatabaseQueueDataType.Text -> {
                 val data = resultSet.getString(columnIndex++)
                 // I know that str.length != bytes.size, but it's ok for now
                 // I don't want to convert string to bytes just for metrics because it's not cheap
                 approxBytesCounter.inc(data.length)
-                queue.dataType.deserializer(data)
+                queue.databaseDataType.deserializer(data)
             }
 
-            is QueueDataType.Int -> {
+            is DatabaseQueueDataType.Int -> {
                 approxBytesCounter.inc(4)
-                queue.dataType.deserializer(resultSet.getInt(columnIndex++))
+                queue.databaseDataType.deserializer(resultSet.getInt(columnIndex++))
             }
 
-            is QueueDataType.Long -> {
+            is DatabaseQueueDataType.Long -> {
                 approxBytesCounter.inc(8)
-                queue.dataType.deserializer(resultSet.getLong(columnIndex++))
+                queue.databaseDataType.deserializer(resultSet.getLong(columnIndex++))
             }
         }
 

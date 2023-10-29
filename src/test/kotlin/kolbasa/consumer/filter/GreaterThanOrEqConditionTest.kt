@@ -14,7 +14,7 @@ internal class GreaterThanOrEqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val gteExpression = GreaterThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = gteExpression.toSqlClause(queue)
@@ -23,7 +23,7 @@ internal class GreaterThanOrEqConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", dataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val gteExpression = GreaterThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
