@@ -36,9 +36,16 @@ abstract class Condition<Meta : Any> {
     }
 
     internal fun findField(fieldName: String): MetaField<Meta> {
-        return requireNotNull(linkedQueue.metadataDescription?.findMetaFieldByName(fieldName)) {
+        val field = requireNotNull(linkedQueue.metadataDescription?.findMetaFieldByName(fieldName)) {
             "Field $fieldName not found in metadata class ${linkedQueue.metadata}"
         }
+
+        // Check that field is searchable or unique
+        check(field.searchable != null || field.unique != null) {
+            "Field $fieldName is not @Searchable or @Unique, but you are trying to use it in condition"
+        }
+
+        return field
     }
 
     private fun checkQueueTheSame(queue: Queue<*, Meta>) {
