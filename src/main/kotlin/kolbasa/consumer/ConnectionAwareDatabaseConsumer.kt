@@ -1,5 +1,6 @@
 package kolbasa.consumer
 
+import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
@@ -42,7 +43,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
-        val approxBytesCounter = BytesCounter()
+        val approxBytesCounter = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
 
         val (execution, result) = TimeHelper.measure {
