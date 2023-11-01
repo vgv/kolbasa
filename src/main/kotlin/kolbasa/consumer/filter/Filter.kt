@@ -6,12 +6,10 @@ import kotlin.reflect.KProperty1
 
 object Filter {
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.eq(value: T): Condition<Meta> {
         return EqCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.eq(value: T): Condition<Meta> {
         return EqCondition(this.name, value)
     }
@@ -22,12 +20,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.neq(value: T): Condition<Meta> {
         return NeqCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.neq(value: T): Condition<Meta> {
         return NeqCondition(this.name, value)
     }
@@ -38,12 +34,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.greater(value: T): Condition<Meta> {
         return GreaterThanCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.greater(value: T): Condition<Meta> {
         return GreaterThanCondition(this.name, value)
     }
@@ -54,12 +48,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.greaterEq(value: T): Condition<Meta> {
         return GreaterThanOrEqCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.greaterEq(value: T): Condition<Meta> {
         return GreaterThanOrEqCondition(this.name, value)
     }
@@ -70,12 +62,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.less(value: T): Condition<Meta> {
         return LessThanCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.less(value: T): Condition<Meta> {
         return LessThanCondition(this.name, value)
     }
@@ -86,12 +76,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.lessEq(value: T): Condition<Meta> {
         return LessThanOrEqCondition(this.name, value)
     }
 
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.lessEq(value: T): Condition<Meta> {
         return LessThanOrEqCondition(this.name, value)
     }
@@ -110,7 +98,6 @@ object Filter {
      * ```
      * means (field >= 10 and field <= 20)
      */
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KProperty1<Meta, T?>.between(value: Pair<T, T>): Condition<Meta> {
         return BetweenCondition(this.name, value)
     }
@@ -123,7 +110,6 @@ object Filter {
      * ```
      * means (field >= 10 and field <= 20)
      */
-    @JvmStatic
     infix fun <Meta : Any, T : Comparable<T>> KFunction1<Meta, T?>.between(value: Pair<T, T>): Condition<Meta> {
         return BetweenCondition(this.name, value)
     }
@@ -154,12 +140,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     fun <Meta : Any, T : Comparable<T>> isNull(property: KProperty1<Meta, T?>): Condition<Meta> {
         return IsNullCondition(property.name)
     }
 
-    @JvmStatic
     fun <Meta : Any, T : Comparable<T>> isNull(property: KFunction1<Meta, T?>): Condition<Meta> {
         return IsNullCondition(property.name)
     }
@@ -170,12 +154,10 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
-    @JvmStatic
     fun <Meta : Any, T : Comparable<T>> isNotNull(property: KProperty1<Meta, T?>): Condition<Meta> {
         return IsNotNullCondition(property.name)
     }
 
-    @JvmStatic
     fun <Meta : Any, T : Comparable<T>> isNotNull(property: KFunction1<Meta, T?>): Condition<Meta> {
         return IsNotNullCondition(property.name)
     }
@@ -211,7 +193,6 @@ object Filter {
      * Use it with caution, because it's not type-safe.
      * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
      */
-    @JvmStatic
     fun <Meta : Any> nativeSql(sqlPattern: String, vararg properties: KProperty1<Meta, *>): Condition<Meta> {
         return NativeSqlCondition(sqlPattern, properties.map { it.name })
     }
@@ -235,7 +216,6 @@ object Filter {
      * Use it with caution, because it's not type-safe.
      * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
      */
-    @JvmStatic
     fun <Meta : Any> nativeSql(sqlPattern: String, vararg properties: KFunction1<Meta, *>): Condition<Meta> {
         return NativeSqlCondition(sqlPattern, properties.map { it.name })
     }

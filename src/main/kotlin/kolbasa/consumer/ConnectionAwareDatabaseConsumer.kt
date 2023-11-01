@@ -2,6 +2,7 @@ package kolbasa.consumer
 
 import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.sql.SqlDumpHelper
@@ -19,8 +20,8 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         return receive(connection, ReceiveOptions())
     }
 
-    override fun receive(connection: Connection, filter: () -> Condition<Meta>): Message<Data, Meta>? {
-        return receive(connection, ReceiveOptions(filter = filter()))
+    override fun receive(connection: Connection, filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
+        return receive(connection, ReceiveOptions(filter = filter(Filter)))
     }
 
     override fun receive(connection: Connection, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
@@ -32,8 +33,8 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         return receive(connection, limit, ReceiveOptions())
     }
 
-    override fun receive(connection: Connection, limit: Int, filter: () -> Condition<Meta>): List<Message<Data, Meta>> {
-        return receive(connection, limit, ReceiveOptions(filter = filter()))
+    override fun receive(connection: Connection, limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
+        return receive(connection, limit, ReceiveOptions(filter = filter(Filter)))
     }
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
