@@ -19,7 +19,7 @@ internal class GreaterThanConditionTest {
         val gtExpression = GreaterThanCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = gtExpression.toSqlClause(queue)
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + ">?", sql)
+        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " > ?", sql)
     }
 
     @Test
