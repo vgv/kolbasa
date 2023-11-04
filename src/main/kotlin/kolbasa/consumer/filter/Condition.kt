@@ -6,9 +6,9 @@ import java.sql.PreparedStatement
 
 abstract class Condition<Meta : Any> {
 
-    internal abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
+    abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
 
-    internal abstract fun internalFillPreparedQuery(
+    abstract fun internalFillPreparedQuery(
         queue: Queue<*, Meta>,
         preparedStatement: PreparedStatement,
         columnIndex: ColumnIndex
@@ -56,7 +56,7 @@ abstract class Condition<Meta : Any> {
 
 }
 
-internal class ColumnIndex {
+class ColumnIndex {
     private var index: Int = 1
     fun nextIndex() = index++
 }
