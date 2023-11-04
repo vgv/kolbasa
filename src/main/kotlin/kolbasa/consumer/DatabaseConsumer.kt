@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.queue.Queue
 import javax.sql.DataSource
@@ -17,7 +18,7 @@ class DatabaseConsumer<Data, Meta : Any>(
         return dataSource.useConnection { peer.receive(it) }
     }
 
-    override fun receive(filter: () -> Condition<Meta>): Message<Data, Meta>? {
+    override fun receive(filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
         return dataSource.useConnection { peer.receive(it, filter) }
     }
 
@@ -29,7 +30,7 @@ class DatabaseConsumer<Data, Meta : Any>(
         return dataSource.useConnection { peer.receive(it, limit) }
     }
 
-    override fun receive(limit: Int, filter: () -> Condition<Meta>): List<Message<Data, Meta>> {
+    override fun receive(limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
         return dataSource.useConnection { peer.receive(it, limit, filter) }
     }
 
