@@ -19,7 +19,7 @@ internal abstract class AbstractOneValueCondition<Meta : Any, T>(
         }
 
         // Field Operator Parameter, like field=?, field>? etc.
-        return "${field.dbColumnName}${operator}?"
+        return "${field.dbColumnName} $operator ?"
     }
 
     override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {

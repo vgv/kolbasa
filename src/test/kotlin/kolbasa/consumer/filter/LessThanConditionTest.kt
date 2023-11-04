@@ -19,7 +19,7 @@ internal class LessThanConditionTest {
         val ltExpression = LessThanCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = ltExpression.toSqlClause(queue)
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + "<?", sql)
+        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " < ?", sql)
     }
 
     @Test
