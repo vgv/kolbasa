@@ -28,16 +28,28 @@ data class SqlDumpConfig(
     val queues: Map<String, EnumSet<StatementKind>> = emptyMap()
 ) {
 
-    constructor(writer: Writer, queues: Map<Queue<*, *>, List<StatementKind>>) : this(
-        enabled = true,
-        writer = writer,
-        queues = queues.map { it.key.name to EnumSet.copyOf(it.value) }.toMap()
-    )
+    class Builder internal constructor() {
+        private var enabled: Boolean = false
+        private var writer: Writer = Writer.nullWriter()
+        private var queues: MutableMap<String, EnumSet<StatementKind>> = mutableMapOf()
 
-    constructor(writer: Writer, queue: Queue<*, *>, vararg kind: StatementKind = StatementKind.values()) : this(
-        writer = writer,
-        queues = mapOf(queue to kind.toList())
-    )
+        fun enabled() = apply { this.enabled = true }
+        fun disabled() = apply { this.enabled = false }
+        fun writer(writer: Writer) = apply { this.writer = writer }
+        fun queue(queue: Queue<*, *>, vararg kind: StatementKind) = apply {
+            queues[queue.name] = EnumSet.copyOf(kind.toList())
+        }
+
+        fun build() = SqlDumpConfig(enabled, writer, queues)
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder(): Builder {
+            return Builder()
+        }
+    }
+
 }
 
 enum class StatementKind {
