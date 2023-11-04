@@ -1,9 +1,9 @@
 package kolbasa.queue
 
 import kolbasa.schema.Const
-import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotSame
@@ -123,6 +123,13 @@ internal class ChecksTest {
     fun testCheckQueueName_IfEmpty() {
         assertFailsWith<IllegalStateException> {
             Checks.checkQueueName("")
+        }
+    }
+
+    @Test
+    fun testCheckQueueName_InvalidPrefix() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkQueueName("q_customer_email")
         }
     }
 
