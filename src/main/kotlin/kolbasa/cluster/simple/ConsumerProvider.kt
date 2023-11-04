@@ -1,7 +1,10 @@
 package kolbasa.cluster.simple
 
 import kolbasa.consumer.Consumer
+import kolbasa.queue.Queue
 
-interface ConsumerProvider<Data, Meta : Any> {
-    fun consumer(): Consumer<Data, Meta>
+interface ConsumerProvider {
+
+    fun <Data, Meta : Any> consumer(queue: Queue<Data, Meta>): Consumer<Data, Meta>
+
 }
