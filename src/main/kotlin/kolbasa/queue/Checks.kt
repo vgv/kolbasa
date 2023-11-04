@@ -57,6 +57,10 @@ internal object Checks {
             "Queue name is empty"
         }
 
+        check(!queueName.startsWith(Const.QUEUE_TABLE_NAME_PREFIX)) {
+            "Queue name must not begin with '${Const.QUEUE_TABLE_NAME_PREFIX}'. Don't name your queue like 'q_customer_mail' - just 'customer_mail' is enough"
+        }
+
         check(queueName.length <= Const.QUEUE_NAME_MAX_LENGTH) {
             "Queue name length must be less than or equal to ${Const.QUEUE_NAME_MAX_LENGTH} symbols (current=$queueName, length=${queueName.length})"
         }
