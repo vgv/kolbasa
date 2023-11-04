@@ -25,10 +25,11 @@ class SweepHelperTest {
     @ParameterizedTest
     @ValueSource(ints = [3, 5, 13, 25, 143, 567, 34523])
     fun testCheckPeriod(period: Int) {
-        val queue = Queue("test", PredefinedDataTypes.String, metadata = Unit::class.java)
+        val queue = Queue("test_$period", PredefinedDataTypes.String, metadata = Unit::class.java)
 
         // Restart iterations, find next period
         while (!SweepHelper.checkPeriod(queue, period)) {
+            // NOP
         }
 
         // Test
