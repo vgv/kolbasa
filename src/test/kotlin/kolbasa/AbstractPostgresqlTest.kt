@@ -76,6 +76,10 @@ abstract class AbstractPostgresqlTest {
 
     @AfterEach
     fun shutdown() {
+        (dataSource as HikariDataSource).close()
+        (dataSourceFirstSchema as HikariDataSource).close()
+        (dataSourceSecondSchema as HikariDataSource).close()
+
         pgContainer.stop()
     }
 
