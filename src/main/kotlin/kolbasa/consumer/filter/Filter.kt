@@ -128,6 +128,20 @@ object Filter {
     }
 
     // -------------------------------------------------------------------------------------------
+    infix fun <Meta : Any> KProperty1<Meta, String?>.like(value: String): Condition<Meta> {
+        return LikeCondition(this.name, value)
+    }
+
+    infix fun <Meta : Any> KFunction1<Meta, String?>.like(value: String): Condition<Meta> {
+        return LikeCondition(this.name, value)
+    }
+
+    @JvmStatic
+    infix fun <Meta : Any> JavaField<Meta, String?>.like(value: String): Condition<Meta> {
+        return LikeCondition(this.name, value)
+    }
+
+    // -------------------------------------------------------------------------------------------
     @JvmStatic
     infix fun <Meta : Any> Condition<Meta>.and(condition: Condition<Meta>): Condition<Meta> {
         return AndCondition(this, condition)
