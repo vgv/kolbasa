@@ -1,43 +1,45 @@
 package kolbasa.producer
 
-import java.sql.Connection
-
+/**
+ * Base interface for all producers
+ *
+ * Producers are used to send messages to the queues.
+ *
+ * This is a basic interface, implementations of which may behave differently. Kolbasa provides a default, high-performance
+ * implementation of [Producer], which uses just plain JDBC and [DataSource][javax.sql.DataSource] and doesn't require
+ * any additional dependencies.
+ * This default, provided implementation completely hides database handling and transaction management from the user.
+ *
+ * If you require a producer working in context of already opened transaction, please, look at [ConnectionAwareProducer].
+ *
+ * @param Data type of the message
+ * @param Meta type of the metadata
+ */
 interface Producer<Data, Meta : Any> {
-    fun send(data: Data): Long
-    fun send(data: SendMessage<Data, Meta>): Long
-    fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
-}
-
-interface ConnectionAwareProducer<Data, Meta : Any> {
-    fun send(connection: Connection, data: Data): Long
-    fun send(connection: Connection, data: SendMessage<Data, Meta>): Long
-    fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
-}
-
-data class SendResult<Data, Meta : Any>(
-    val failedMessages: Int,
-    val messages: List<MessageResult<Data, Meta>>
-) {
-
-    fun onlySuccessful(): List<MessageResult.Success<Data, Meta>> {
-        return messages.filterIsInstance<MessageResult.Success<Data, Meta>>()
-    }
-
-    fun onlyFailed(): List<MessageResult.Error<Data, Meta>> {
-        return messages.filterIsInstance<MessageResult.Error<Data, Meta>>()
-    }
 
     /**
-     * Convenient function to collect all failed messages to send them again
+     * Just to send one message without metadata and another options
+     *
+     * @param data message to send
+     * @return unique id of the message or throws an exception if something went wrong
      */
-    fun gatherFailedMessages(): List<SendMessage<Data, Meta>> {
-        val collector = ArrayList<SendMessage<Data, Meta>>(failedMessages)
-        return onlyFailed().flatMapTo(collector) { it.messages }
-    }
+    fun send(data: Data): Long
 
-}
+    /**
+     * Send one message with metadata (if any) and/or [SendOptions]
+     *
+     * @param data message, metadata (if any) and options (if any) to send
+     * @return unique id of the message or throws an exception if something went wrong
+     */
+    fun send(data: SendMessage<Data, Meta>): Long
 
-sealed class MessageResult<Data, Meta : Any> {
-    data class Success<Data, Meta : Any>(val id: Long, val message: SendMessage<Data, Meta>) : MessageResult<Data, Meta>()
-    data class Error<Data, Meta : Any>(val error: Throwable, val messages: List<SendMessage<Data, Meta>>) : MessageResult<Data, Meta>()
+    /**
+     * Send many messages with metadata (if any) and/or [SendOptions]
+     *
+     * This is the most effective way to send a lot of messages due to the batching and another optimizations.
+     *
+     * @param data list of messages, metadata (if any) and options (if any) to send
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
 }

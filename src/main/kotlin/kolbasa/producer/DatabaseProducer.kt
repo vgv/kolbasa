@@ -4,6 +4,9 @@ import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
+/**
+ * Default implementation of [Producer]
+ */
 class DatabaseProducer<Data, Meta : Any>(
     private val dataSource: DataSource,
     queue: Queue<Data, Meta>,
