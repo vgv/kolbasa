@@ -10,6 +10,9 @@ import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
+/**
+ * Default implementation of [ConnectionAwareProducer]
+ */
 class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val producerOptions: ProducerOptions = ProducerOptions()
