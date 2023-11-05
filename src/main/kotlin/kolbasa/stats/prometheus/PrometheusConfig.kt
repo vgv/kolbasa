@@ -18,4 +18,24 @@ data class PrometheusConfig(
      * other queue operations (at application startup, for example).
      */
     val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
-)
+) {
+
+    class Builder internal constructor() {
+        private var enabled: Boolean = false
+        private var preciseStringSize: Boolean = false
+        private var registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
+
+        fun enabled() = apply { this.enabled = true }
+        fun disabled() = apply { this.enabled = false }
+        fun preciseStringSize(preciseStringSize: Boolean) = apply { this.preciseStringSize = preciseStringSize }
+        fun registry(registry: PrometheusRegistry) = apply { this.registry = registry }
+
+        fun build() = PrometheusConfig(enabled, preciseStringSize, registry)
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder(): Builder = Builder()
+    }
+
+}
