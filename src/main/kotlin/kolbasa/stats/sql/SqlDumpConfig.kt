@@ -45,9 +45,7 @@ data class SqlDumpConfig(
 
     companion object {
         @JvmStatic
-        fun builder(): Builder {
-            return Builder()
-        }
+        fun builder(): Builder = Builder()
     }
 
 }
