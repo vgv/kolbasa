@@ -44,8 +44,29 @@ data class SweepConfig(
         Checks.checkSweepPeriod(period)
     }
 
-    private companion object {
-        fun defaultLockIdGenerator(queue: Queue<*, *>): Long {
+    class Builder internal constructor() {
+        private var enabled: Boolean = true
+        private var maxRows: Int = Const.DEFAULT_SWEEP_ROWS
+        private var maxIterations: Int = Const.DEFAULT_SWEEP_ITERATIONS
+        private var period: Int = Const.DEFAULT_SWEEP_PERIOD
+        private var lockIdGenerator: (queue: Queue<*, *>) -> Long = Companion::defaultLockIdGenerator
+
+        fun enabled() = apply { this.enabled = true }
+        fun disabled() = apply { this.enabled = false }
+        fun maxRows(maxRows: Int) = apply { this.maxRows = maxRows }
+        fun maxIterations(maxIterations: Int) = apply { this.maxIterations = maxIterations }
+        fun period(period: Int) = apply { this.period = period }
+        fun lockIdGenerator(lockIdGenerator: (queue: Queue<*, *>) -> Long) = apply { this.lockIdGenerator = lockIdGenerator }
+
+        fun build() = SweepConfig(enabled, maxRows, maxIterations, period, lockIdGenerator)
+    }
+
+    companion object {
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
+
+        private fun defaultLockIdGenerator(queue: Queue<*, *>): Long {
             return "sweep-${queue.name}".hashCode().toLong()
         }
     }
