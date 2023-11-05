@@ -19,7 +19,7 @@ internal class NeqConditionTest {
         val neqExpression = NeqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = neqExpression.toSqlClause(queue)
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + "<>?", sql)
+        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " <> ?", sql)
     }
 
     @Test

@@ -65,11 +65,14 @@ tasks.withType<KotlinCompile> {
 
 // Unit tests settings
 tasks.withType<Test> {
+    systemProperties["junit.jupiter.execution.parallel.enabled"] = true
+    systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
+
     useJUnitPlatform {
         enableAssertions = true
         testLogging {
             exceptionFormat = TestExceptionFormat.FULL
-            events = setOf(TestLogEvent.PASSED, TestLogEvent.STARTED, TestLogEvent.FAILED, TestLogEvent.SKIPPED)
+            events = setOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED)
             showStandardStreams = false
         }
     }
