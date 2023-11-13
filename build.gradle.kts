@@ -65,9 +65,11 @@ tasks.withType<KotlinCompile> {
 
 // Unit tests settings
 tasks.withType<Test> {
+    // enable parallel tests execution
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
 
+    // JUnit settings
     useJUnitPlatform {
         enableAssertions = true
         testLogging {
