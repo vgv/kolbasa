@@ -94,7 +94,7 @@ sealed class MessageResult<Data, Meta : Any> {
         /**
          * Exception which occurred during sending messages
          */
-        val error: Throwable,
+        val exception: Throwable,
 
         /**
          * List of messages which failed to send

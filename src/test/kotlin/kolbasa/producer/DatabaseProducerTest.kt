@@ -126,7 +126,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val messages = result.messages[0]
         assertIs<MessageResult.Error<String, TestMeta>>(messages)
-        assertNotNull(messages.error)
+        assertNotNull(messages.exception)
         assertEquals(items, messages.messages)
 
         // check database
