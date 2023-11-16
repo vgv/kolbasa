@@ -1,6 +1,22 @@
 package kolbasa.schema
 
 internal object Const {
+
+    /**
+     * Queue message identifiers range is [MIN_QUEUE_IDENTIFIER_VALUE, MAX_QUEUE_IDENTIFIER_VALUE]
+     * It means that real queue identifiers are always positive and more than or equal to MIN_QUEUE_IDENTIFIER_VALUE.
+     * All identifiers less than MIN_QUEUE_IDENTIFIER_VALUE are reserved for internal usage.
+     */
+    private const val RESERVED_QUEUE_ID_RANGE: Long = 1000
+    const val MIN_QUEUE_IDENTIFIER_VALUE: Long = RESERVED_QUEUE_ID_RANGE + 1
+    const val MAX_QUEUE_IDENTIFIER_VALUE: Long = Long.MAX_VALUE
+
+    /**
+     * Reserved identifier for duplicated messages if we have to return some ID by function contract, for
+     * example, in [kolbasa.producer.Producer.send]
+     */
+    const val RESERVED_DUPLICATE_ID = -1L
+
     /**
      * PG default identifier length
      * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
@@ -15,6 +31,8 @@ internal object Const {
         "_"
 
     const val ID_COLUMN_NAME = "id"
+
+    const val USELESS_COUNTER_COLUMN_NAME = "useless_counter"
 
     const val CREATED_AT_COLUMN_NAME = "created_at"
     const val SCHEDULED_AT_COLUMN_NAME = "scheduled_at"

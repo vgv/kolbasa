@@ -10,7 +10,6 @@ import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -56,8 +55,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val id1 = producer.send("bugaga")
         val id2 = producer.send("bugaga")
-        assertEquals(1, id1)
-        assertEquals(2, id2)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -72,8 +71,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val id1 = firstProducer.send("bugaga")
         val id2 = secondProducer.send("bugaga")
-        assertEquals(1, id1)
-        assertEquals(2, id2)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -89,25 +88,11 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val id1 = producer.send(SendMessage("bugaga", TestMeta(1)))
         val id2 = producer.send(SendMessage("bugaga", TestMeta(2)))
-        assertEquals(1, id1)
-        assertEquals(2, id2)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1)
+        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
-    }
-
-    @Test
-    fun testSendSimpleDataAsSendMessage_IfError() {
-        val producer = DatabaseProducer(dataSource, queue)
-
-        producer.send(SendMessage("bugaga", TestMeta(1)))
-
-        assertFails {
-            producer.send(SendMessage("bugaga", TestMeta(1)))
-        }
-
-        // check database
-        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
     @Test
@@ -126,7 +111,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val messages = result.messages[0]
         assertIs<MessageResult.Error<String, TestMeta>>(messages)
-        assertNotNull(messages.error)
+        assertNotNull(messages.exception)
         assertEquals(items, messages.messages)
 
         // check database
@@ -150,7 +135,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index + 1L, it.id)
+                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE, it.id)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -181,7 +166,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index + 1L, it.id)
+                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE, it.id)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -194,7 +179,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index + 6]).let {
-                assertEquals(index + 9L, it.id)
+                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE + 8, it.id)
                 assertEquals(sendMessage, it.message)
             }
         }

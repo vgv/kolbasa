@@ -41,6 +41,13 @@ data class SendResult<Data, Meta : Any>(
     }
 
     /**
+     * Convenient function to collect all duplicated messages
+     */
+    fun onlyDuplicated(): List<MessageResult.Duplicate<Data, Meta>> {
+        return messages.filterIsInstance<MessageResult.Duplicate<Data, Meta>>()
+    }
+
+    /**
      * Convenient function to collect all failed messages
      */
     fun onlyFailed(): List<MessageResult.Error<Data, Meta>> {
@@ -84,6 +91,16 @@ sealed class MessageResult<Data, Meta : Any> {
     ) : MessageResult<Data, Meta>()
 
     /**
+     * Result of attempting to send a message which has the same unique key as some other message in the queue (duplicate)
+     */
+    data class Duplicate<Data, Meta : Any>(
+        /**
+         * Duplicated message that wasn't sent because there was already a message with the same unique key
+         */
+        val message: SendMessage<Data, Meta>
+    ) : MessageResult<Data, Meta>()
+
+    /**
      * Result of unsuccessful sending of several messages.
      *
      * Unlike [Success], this class contains a list of messages which failed to send, because, due to batching,
@@ -94,7 +111,7 @@ sealed class MessageResult<Data, Meta : Any> {
         /**
          * Exception which occurred during sending messages
          */
-        val error: Throwable,
+        val exception: Throwable,
 
         /**
          * List of messages which failed to send
