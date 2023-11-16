@@ -21,7 +21,8 @@ interface Producer<Data, Meta : Any> {
      * Just to send one message without metadata and another options
      *
      * @param data message to send
-     * @return unique id of the message or throws an exception if something went wrong
+     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
+     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
     fun send(data: Data): Long
 
@@ -29,7 +30,8 @@ interface Producer<Data, Meta : Any> {
      * Send one message with metadata (if any) and/or [SendOptions]
      *
      * @param data message, metadata (if any) and options (if any) to send
-     * @return unique id of the message or throws an exception if something went wrong
+     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
+     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
     fun send(data: SendMessage<Data, Meta>): Long
 

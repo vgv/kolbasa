@@ -44,7 +44,8 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * @param connection JDBC connection to use for sending message
      * @param data message to send
-     * @return unique id of the message or throws an exception if something went wrong
+     * @returns if success - unique id of the message; if error - throws an exception; if duplicate -
+     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
     fun send(connection: Connection, data: Data): Long
 
@@ -53,7 +54,8 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * @param connection JDBC connection to use for sending message
      * @param data message, metadata (if any) and options (if any) to send
-     * @return unique id of the message or throws an exception if something went wrong
+     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
+     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
     fun send(connection: Connection, data: SendMessage<Data, Meta>): Long
 

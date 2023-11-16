@@ -12,6 +12,18 @@ data class ProducerOptions(
      * exploring queue table directly in PostgreSQL, you can set this value.
      */
     val producer: String? = null,
+
+    /**
+     * Deduplication mode.
+     *
+     * When you try to insert a message with a unique key which already exists in the queue table, you have two options:
+     * 1) Throw an exception and let the developer handle this problem. This is the default behavior.
+     * 2) Silently ignore "duplicated" message. In this case, the message will not be inserted into the queue
+     * table and no errors will be thrown. For example, if you try to send 10,000 messages and 100 of them have duplicated
+     * unique keys, only 9,900 messages will be inserted into the queue table.
+     */
+    val deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR,
+
     /**
      * Batch size for sending messages. Default value is 500.
      *
@@ -40,6 +52,22 @@ data class ProducerOptions(
     private companion object {
         private const val DEFAULT_BATCH_SIZE = 500
     }
+}
+
+/**
+ * Different options how to deal with messages with the same unique keys
+ */
+enum class DeduplicationMode {
+    /**
+     * Just throw an exception if there is a message with the same unique key in the queue table.
+     * If you send a bunch of messages, all messages (or one batch) will not be inserted (depending on [PartialInsert] option)
+     */
+    ERROR,
+
+    /**
+     * Messages with the same unique keys will be silently ignored. No errors will be thrown.
+     */
+    IGNORE_DUPLICATES
 }
 
 /**

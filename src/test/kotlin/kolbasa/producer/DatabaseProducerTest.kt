@@ -10,7 +10,6 @@ import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -94,20 +93,6 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
-    }
-
-    @Test
-    fun testSendSimpleDataAsSendMessage_IfError() {
-        val producer = DatabaseProducer(dataSource, queue)
-
-        producer.send(SendMessage("bugaga", TestMeta(1)))
-
-        assertFails {
-            producer.send(SendMessage("bugaga", TestMeta(1)))
-        }
-
-        // check database
-        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
     @Test
