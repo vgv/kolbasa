@@ -2,7 +2,7 @@ package kolbasa.queue
 
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
-import kolbasa.producer.SendOptions
+import kolbasa.producer.MessageOptions
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*
@@ -29,29 +29,29 @@ internal class QueueHelpersTest {
         run {
             val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
             val options = QueueOptions(defaultDelay = duration)
-            val sendOptions = SendOptions()
-            assertEquals(duration, QueueHelpers.calculateDelay(options, sendOptions))
+            val messageOptions = MessageOptions()
+            assertEquals(duration, QueueHelpers.calculateDelay(options, messageOptions))
         }
 
         run {
             val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
             val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val options = QueueOptions(defaultDelay = duration)
-            val sendOptions = SendOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, sendOptions))
+            val messageOptions = MessageOptions(delay = sendDuration)
+            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, messageOptions))
         }
 
         run {
             val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val sendOptions = SendOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(null, sendOptions))
+            val messageOptions = MessageOptions(delay = sendDuration)
+            assertEquals(sendDuration, QueueHelpers.calculateDelay(null, messageOptions))
         }
 
         run {
             val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val options = QueueOptions()
-            val sendOptions = SendOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, sendOptions))
+            val messageOptions = MessageOptions(delay = sendDuration)
+            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, messageOptions))
         }
     }
 
@@ -73,29 +73,29 @@ internal class QueueHelpersTest {
         run {
             val attempts = Random.nextInt(10, 100)
             val options = QueueOptions(defaultAttempts = attempts)
-            val sendOptions = SendOptions()
-            assertEquals(attempts, QueueHelpers.calculateAttempts(options, sendOptions))
+            val messageOptions = MessageOptions()
+            assertEquals(attempts, QueueHelpers.calculateAttempts(options, messageOptions))
         }
 
         run {
             val attempts = Random.nextInt(10, 100)
             val sendAttempts = Random.nextInt(200, 300)
             val options = QueueOptions(defaultAttempts = attempts)
-            val sendOptions = SendOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, sendOptions))
+            val messageOptions = MessageOptions(attempts = sendAttempts)
+            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, messageOptions))
         }
 
         run {
             val sendAttempts = Random.nextInt(200, 300)
             val options = QueueOptions()
-            val sendOptions = SendOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, sendOptions))
+            val messageOptions = MessageOptions(attempts = sendAttempts)
+            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, messageOptions))
         }
 
         run {
             val sendAttempts = Random.nextInt(200, 300)
-            val sendOptions = SendOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(null, sendOptions))
+            val messageOptions = MessageOptions(attempts = sendAttempts)
+            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(null, messageOptions))
         }
     }
 

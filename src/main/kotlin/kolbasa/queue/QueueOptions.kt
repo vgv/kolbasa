@@ -9,15 +9,15 @@ data class QueueOptions(
      * For example, if delay is 5 minutes, message will be visible to consumers after 5 minutes after sending.
      * By default, messages are available to consumers immediately after sending.
      *
-     * Can be overridden by [SendOptions.delay][kolbasa.producer.SendOptions.delay] for every send() call.
-     * [SendOptions.delay][kolbasa.producer.SendOptions.delay] has priority over [defaultDelay]
+     * Can be overridden by [MessageOptions.delay][kolbasa.producer.MessageOptions.delay] for every send() call.
+     * [MessageOptions.delay][kolbasa.producer.MessageOptions.delay] has priority over [defaultDelay]
      */
     val defaultDelay: Duration = DEFAULT_DELAY,
     /**
      * Default queue consume attempts before message will be expired or moved to DLQ. Default value is 5.
      *
-     * Can be overridden by [SendOptions.attempts][kolbasa.producer.SendOptions.attempts] for every send() call.
-     * [SendOptions.attempts][kolbasa.producer.SendOptions.attempts] has priority over [defaultAttempts]
+     * Can be overridden by [MessageOptions.attempts][kolbasa.producer.MessageOptions.attempts] for every send() call.
+     * [MessageOptions.attempts][kolbasa.producer.MessageOptions.attempts] has priority over [defaultAttempts]
      */
     val defaultAttempts: Int = DEFAULT_ATTEMPTS,
     /**

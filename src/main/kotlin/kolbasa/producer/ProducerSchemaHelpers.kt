@@ -21,7 +21,7 @@ internal object ProducerSchemaHelpers {
         // delayMillis
         columns += Const.SCHEDULED_AT_COLUMN_NAME
         data.forEachIndexed { index, item ->
-            val delay = QueueHelpers.calculateDelay(queue.options, item.sendOptions)
+            val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
             values[index] += if (delay != null) {
                 "clock_timestamp() + interval '${delay.toMillis()} millisecond'"
             } else {
@@ -32,7 +32,7 @@ internal object ProducerSchemaHelpers {
         // attempts
         columns += Const.REMAINING_ATTEMPTS_COLUMN_NAME
         data.forEachIndexed { index, item ->
-            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.sendOptions)
+            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
 
             values[index] += "$remainingAttempts"
         }
