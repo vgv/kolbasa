@@ -35,6 +35,7 @@ internal object SchemaGenerator {
         val createTableStatement = """
             create table if not exists ${queue.dbTableName}(
                 ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${Const.MIN_QUEUE_IDENTIFIER_VALUE} maxvalue ${Const.MAX_QUEUE_IDENTIFIER_VALUE} cycle) primary key,
+                ${Const.USELESS_COUNTER_COLUMN_NAME} int,
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,

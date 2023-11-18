@@ -4,6 +4,7 @@ import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
+import kolbasa.schema.Const
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
@@ -27,6 +28,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         return when (val message = result.messages.first()) {
             is MessageResult.Success -> message.id
+            is MessageResult.Duplicate -> Const.RESERVED_DUPLICATE_ID
             is MessageResult.Error -> throw message.exception
         }
     }
@@ -153,13 +155,30 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
                 val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
 
+                var currentIndex = 0
                 preparedStatement.executeQuery().use { resultSet ->
-                    var currentIndex = 0
                     while (resultSet.next()) {
-                        val message = chunk[currentIndex++]
                         val id = resultSet.getLong(1)
-                        result += MessageResult.Success(id, message)
+
+                        when (producerOptions.deduplicationMode) {
+                            DeduplicationMode.ERROR -> {
+                                result += MessageResult.Success(id, message = chunk[currentIndex++])
+                            }
+
+                            DeduplicationMode.IGNORE_DUPLICATES -> {
+                                val realIndex = resultSet.getInt(2)
+                                while (currentIndex < realIndex) {
+                                    result += MessageResult.Duplicate(message = chunk[currentIndex++])
+                                }
+
+                                result += MessageResult.Success(id, message = chunk[currentIndex++])
+                            }
+                        }
                     }
+                }
+
+                while (currentIndex < chunk.size) {
+                    result += MessageResult.Duplicate(chunk[currentIndex++])
                 }
 
                 result

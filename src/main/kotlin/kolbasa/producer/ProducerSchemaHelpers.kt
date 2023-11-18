@@ -58,20 +58,38 @@ internal object ProducerSchemaHelpers {
             }
         }
 
+        // deduplication
+        if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+            columns += Const.USELESS_COUNTER_COLUMN_NAME
+            data.forEachIndexed { index, _ ->
+                // just a sequence 0, 1, 2 etc.
+                values[index] += index.toString()
+            }
+        }
+
         // data
         columns += Const.DATA_COLUMN_NAME
         data.forEachIndexed { index, _ ->
             values[index] += "?"
         }
 
+        // Generate all query parts: columns, values, on conflict, returning etc.
         val columnsStr = columns.joinToString(separator = ",", prefix = "(", postfix = ")")
         val valuesStr = values.joinToString(separator = ",") {
             it.joinToString(separator = ",", prefix = "(", postfix = ")")
         }
+        val onConflictStr = if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+            "on conflict do nothing"
+        } else {
+            ""
+        }
+        val returningColumns = if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+            "${Const.ID_COLUMN_NAME}, ${Const.USELESS_COUNTER_COLUMN_NAME}"
+        } else {
+            Const.ID_COLUMN_NAME
+        }
 
-        return """
-            insert into ${queue.dbTableName} $columnsStr values $valuesStr returning id
-        """.trimIndent()
+        return "insert into ${queue.dbTableName}${columnsStr} values $valuesStr $onConflictStr returning $returningColumns"
     }
 
     fun <Data, Meta : Any> fillInsertPreparedQuery(

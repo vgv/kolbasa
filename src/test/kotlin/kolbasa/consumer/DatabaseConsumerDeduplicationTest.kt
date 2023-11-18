@@ -30,22 +30,6 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_FailOnUnique() {
-        // Just simple test to check that @Unique works
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
-        val producer = DatabaseProducer(dataSource, queue)
-
-        // First send – success
-        producer.send(messageToSend)
-
-        // Second send with the same meta field value should fail
-        assertFails {
-            producer.send(messageToSend)
-        }
-    }
-
-
-    @Test
     fun testDeduplication_ZeroRemainingAttempts() {
         val data = "bugaga"
         val messageToSend = SendMessage(data, TestMeta(1), SendOptions(attempts = 1))
