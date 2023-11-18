@@ -27,7 +27,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         return when (val message = result.messages.first()) {
             is MessageResult.Success -> message.id
-            is MessageResult.Error -> throw message.error
+            is MessageResult.Error -> throw message.exception
         }
     }
 
