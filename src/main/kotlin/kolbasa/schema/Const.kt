@@ -1,6 +1,16 @@
 package kolbasa.schema
 
 internal object Const {
+
+    /**
+     * Queue identifier range is [MIN_QUEUE_IDENTIFIER_VALUE, MAX_QUEUE_IDENTIFIER_VALUE]
+     * It means that real queue identifiers are always positive and more than or equal to MIN_QUEUE_IDENTIFIER_VALUE.
+     * All identifiers less than MIN_QUEUE_IDENTIFIER_VALUE are reserved for internal usage.
+     */
+    private const val RESERVED_QUEUE_ID_RANGE = 1000
+    const val MIN_QUEUE_IDENTIFIER_VALUE = RESERVED_QUEUE_ID_RANGE + 1L
+    const val MAX_QUEUE_IDENTIFIER_VALUE = Long.MAX_VALUE
+
     /**
      * PG default identifier length
      * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
