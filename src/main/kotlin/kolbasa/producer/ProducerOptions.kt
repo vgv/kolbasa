@@ -49,8 +49,25 @@ data class ProducerOptions(
         Checks.checkProducerBatchSize(batchSize)
     }
 
-    private companion object {
+    class Builder internal constructor() {
+        private var producer: String? = null
+        private var deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR
+        private var batchSize: Int = DEFAULT_BATCH_SIZE
+        private var partialInsert: PartialInsert = PartialInsert.PROHIBITED
+
+        fun producer(producer: String?) = apply { this.producer = producer }
+        fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
+        fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
+        fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
+
+        fun build() = ProducerOptions(producer, deduplicationMode, batchSize, partialInsert)
+    }
+
+    companion object {
         private const val DEFAULT_BATCH_SIZE = 500
+
+        @JvmStatic
+        fun builder() = Builder()
     }
 }
 
