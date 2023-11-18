@@ -61,7 +61,7 @@ internal object SchemaGenerator {
             val alterStatement = """
                     alter table ${queue.dbTableName}
                     alter ${Const.SCHEDULED_AT_COLUMN_NAME}
-                    drop default
+                    set default clock_timestamp()
                 """.trimIndent()
 
             if (existingTable != null) {
