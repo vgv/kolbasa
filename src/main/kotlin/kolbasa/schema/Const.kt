@@ -32,7 +32,7 @@ internal object Const {
 
     const val ID_COLUMN_NAME = "id"
 
-    const val USELESS_COUNTER_COLUMN_NAME = "useless_counter"
+    const val USELESS_COUNTER_COLUMN_NAME = "uc"
 
     const val CREATED_AT_COLUMN_NAME = "created_at"
     const val SCHEDULED_AT_COLUMN_NAME = "scheduled_at"
