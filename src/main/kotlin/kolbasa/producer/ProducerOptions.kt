@@ -64,7 +64,19 @@ enum class PartialInsert {
      * For example, batchSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
      * first send 6000 messages, then we will meet a chunk with an invalid message and stop.
      *
-     * So, in total we will send 6,000 messages and not send 4,000.
+     * So, in total we will send 6,000 messages and not send 4,000:
+     * ```
+     *    1..1000  : success
+     * 1001..2000  : success
+     * 2001..3000  : success
+     * 3001..4000  : success
+     * 4001..5000  : success
+     * 5001..6000  : success
+     * 6001..7000  : FAILURE
+     * 7001..8000  : FAILURE
+     * 8001..9000  : FAILURE
+     * 9001..10000 : FAILURE
+     * ```
      */
     UNTIL_FIRST_FAILURE,
 
@@ -73,11 +85,23 @@ enum class PartialInsert {
      * the first chunk with an invalid message (or messages), we skip this chunk and continue sending next chunks.
      * At the end, commit all successfully sent chunks.
      *
-     * For example, batchSize is 1000 and invalid message is 6,500 among 10,000 messages. In this case, we will
+     * For example, batchSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
      * first send 6000 messages, then we will meet a chunk with an invalid message, skip it and continue sending
      * another 3000 messages.
      *
-     * So, in total we will send 9,000 messages (the first 6000 and the last 3000) and not send the 1,000 in between.
+     * So, in total we will send 9,000 messages (the first 6000 and the last 3000) and not send the 1,000 in between:
+     * ```
+     *    1..1000  : success
+     * 1001..2000  : success
+     * 2001..3000  : success
+     * 3001..4000  : success
+     * 4001..5000  : success
+     * 5001..6000  : success
+     * 6001..7000  : FAILURE
+     * 7001..8000  : success
+     * 8001..9000  : success
+     * 9001..10000 : success
+     * ```
      */
     INSERT_AS_MANY_AS_POSSIBLE
 }
