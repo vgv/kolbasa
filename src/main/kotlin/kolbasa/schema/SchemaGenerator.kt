@@ -168,6 +168,7 @@ internal object SchemaGenerator {
                 val indexStatement = """
                     create unique index concurrently if not exists $indexName
                     on ${queue.dbTableName}(${metaField.dbColumnName})
+                    where ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0
                 """.trimIndent()
 
                 if (index == null) {
