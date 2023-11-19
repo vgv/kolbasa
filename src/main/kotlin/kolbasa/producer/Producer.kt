@@ -27,7 +27,7 @@ interface Producer<Data, Meta : Any> {
     fun send(data: Data): Long
 
     /**
-     * Send one message with metadata (if any) and/or [MessageOptions]
+     * Send one message with optional metadata and [MessageOptions]
      *
      * @param data message, metadata (if any) and options (if any) to send
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
@@ -36,7 +36,7 @@ interface Producer<Data, Meta : Any> {
     fun send(data: SendMessage<Data, Meta>): Long
 
     /**
-     * Send many messages with metadata (if any) and/or [MessageOptions]
+     * Send many messages with optional metadata and [MessageOptions] defined for every message
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
@@ -44,4 +44,15 @@ interface Producer<Data, Meta : Any> {
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
     fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
+
+    /**
+     * Send many messages with optional metadata and [MessageOptions] defined for every message and custom [SendOptions]
+     *
+     * This is the most effective way to send a lot of messages due to the batching and another optimizations.
+     *
+     * @param data list of messages, metadata (if any) and options (if any) to send
+     * @param sendOptions options for sending this list of messages, allows to override global [Producer] options
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun send(data: List<SendMessage<Data, Meta>>, sendOptions: SendOptions): SendResult<Data, Meta>
 }

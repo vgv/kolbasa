@@ -12,7 +12,8 @@ internal object ProducerSchemaHelpers {
 
     fun generateInsertPreparedQuery(
         queue: Queue<*, *>,
-        producerOptions: ProducerOptions,
+        producerName: String?,
+        deduplicationMode: DeduplicationMode,
         data: List<SendMessage<*, *>>
     ): String {
         val columns = mutableListOf<String>()
@@ -51,7 +52,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // producer
-        if (producerOptions.producer != null) {
+        if (producerName != null) {
             columns += Const.PRODUCER_COLUMN_NAME
             data.forEachIndexed { index, _ ->
                 values[index] += "?"
@@ -59,7 +60,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // deduplication
-        if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
             columns += Const.USELESS_COUNTER_COLUMN_NAME
             data.forEachIndexed { index, _ ->
                 // just a sequence 0, 1, 2 etc.
@@ -78,12 +79,12 @@ internal object ProducerSchemaHelpers {
         val valuesStr = values.joinToString(separator = ",") {
             it.joinToString(separator = ",", prefix = "(", postfix = ")")
         }
-        val onConflictStr = if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        val onConflictStr = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
             "on conflict do nothing"
         } else {
             ""
         }
-        val returningColumns = if (producerOptions.deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        val returningColumns = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
             "${Const.ID_COLUMN_NAME}, ${Const.USELESS_COUNTER_COLUMN_NAME}"
         } else {
             Const.ID_COLUMN_NAME
@@ -94,7 +95,7 @@ internal object ProducerSchemaHelpers {
 
     fun <Data, Meta : Any> fillInsertPreparedQuery(
         queue: Queue<Data, Meta>,
-        producerOptions: ProducerOptions,
+        producerName: String?,
         data: List<SendMessage<Data, Meta>>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
@@ -108,8 +109,8 @@ internal object ProducerSchemaHelpers {
             }
 
             // producer name
-            if (producerOptions.producer != null) {
-                preparedStatement.setString(columnIndex++, producerOptions.producer)
+            if (producerName != null) {
+                preparedStatement.setString(columnIndex++, producerName)
             }
 
             // message data
@@ -146,6 +147,30 @@ internal object ProducerSchemaHelpers {
                     preparedStatement.setLong(columnIndex++, queue.databaseDataType.serializer(item.data))
                 }
             }
+        }
+    }
+
+    fun calculateDeduplicationMode(producerOptions: ProducerOptions, sendOptions: SendOptions): DeduplicationMode {
+        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
+            sendOptions.deduplicationMode
+        } else {
+            producerOptions.deduplicationMode
+        }
+    }
+
+    fun calculateBatchSize(producerOptions: ProducerOptions, sendOptions: SendOptions): Int {
+        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
+            sendOptions.batchSize
+        } else {
+            producerOptions.batchSize
+        }
+    }
+
+    fun calculatePartialInsert(producerOptions: ProducerOptions, sendOptions: SendOptions): PartialInsert {
+        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
+            sendOptions.partialInsert
+        } else {
+            producerOptions.partialInsert
         }
     }
 }

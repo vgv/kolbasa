@@ -13,7 +13,7 @@ class DatabaseProducer<Data, Meta : Any>(
     producerOptions: ProducerOptions = ProducerOptions()
 ) : Producer<Data, Meta> {
 
-    private val peer = ConnectionAwareDatabaseProducer(queue, producerOptions)
+    private val peer: ConnectionAwareProducer<Data, Meta> = ConnectionAwareDatabaseProducer(queue, producerOptions)
 
     override fun send(data: Data): Long {
         return dataSource.useConnection { peer.send(it, data) }
@@ -27,5 +27,8 @@ class DatabaseProducer<Data, Meta : Any>(
         return dataSource.useConnection { peer.send(it, data) }
     }
 
+    override fun send(data: List<SendMessage<Data, Meta>>, sendOptions: SendOptions): SendResult<Data, Meta> {
+        return dataSource.useConnection { peer.send(it, data, sendOptions) }
+    }
 }
 

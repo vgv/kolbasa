@@ -15,7 +15,7 @@ package kolbasa.producer
  * var result = producer.send(messages)
  * while (result.failedMessages > 0) {
  *     // resend only failed messages again
- *     result = producer.send(result.gatherFailedMessages())
+ *     result = producer.send(result.gatherFailedMessages(), <optionally reduce batchSize>)
  * }
  * ```
  * Of course, in a real application you should add some kind of limit (time or attempts number) to prevent

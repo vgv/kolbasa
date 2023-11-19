@@ -29,12 +29,11 @@ internal object Checks {
         }
     }
 
-    fun checkProducerBatchSize(batchSize: Int) {
+    fun checkBatchSize(batchSize: Int) {
         check(batchSize >= 1) {
-            "Producer options batch size must be greater than or equal to 1 (current: $batchSize)"
+            "Batch size must be greater than or equal to 1 (current: $batchSize)"
         }
     }
-
 
     fun checkConsumerName(consumer: String?) {
         if (consumer == null) return
