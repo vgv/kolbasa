@@ -2,7 +2,7 @@ package kolbasa.queue
 
 import java.time.Duration
 
-data class QueueOptions @JvmOverloads constructor(
+data class QueueOptions(
     /**
      * Default queue delay, before message will be visible to consumers.
      *
@@ -40,7 +40,19 @@ data class QueueOptions @JvmOverloads constructor(
         Checks.checkVisibilityTimeout(defaultVisibilityTimeout)
     }
 
-    internal companion object {
+    class Builder internal constructor() {
+        private var defaultDelay: Duration = DEFAULT_DELAY
+        private var defaultAttempts: Int = DEFAULT_ATTEMPTS
+        private var defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
+
+        fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
+        fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
+        fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) = apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
+
+        fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout)
+    }
+
+    companion object {
         internal val DEFAULT_DELAY = Duration.ZERO
         internal val DELAY_NOT_SET = Duration.ofMillis(-1)
 
@@ -49,5 +61,8 @@ data class QueueOptions @JvmOverloads constructor(
 
         internal val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
         internal val VISIBILITY_TIMEOUT_NOT_SET = Duration.ofMillis(-1)
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
     }
 }
