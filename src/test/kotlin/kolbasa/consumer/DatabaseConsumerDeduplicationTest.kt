@@ -4,7 +4,7 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.DatabaseProducer
 import kolbasa.producer.SendMessage
-import kolbasa.producer.SendOptions
+import kolbasa.producer.MessageOptions
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
@@ -32,7 +32,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     @Test
     fun testDeduplication_ZeroRemainingAttempts() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data, TestMeta(1), SendOptions(attempts = 1))
+        val messageToSend = SendMessage(data, TestMeta(1), MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource, queue)
         val consumer = DatabaseConsumer(dataSource, queue)

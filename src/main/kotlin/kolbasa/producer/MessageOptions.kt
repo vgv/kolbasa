@@ -4,7 +4,7 @@ import kolbasa.queue.Checks
 import kolbasa.queue.QueueOptions
 import java.time.Duration
 
-data class SendOptions @JvmOverloads constructor(
+data class MessageOptions @JvmOverloads constructor(
     /**
      * Delay before message will be visible to consumers.
      *

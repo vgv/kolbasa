@@ -50,7 +50,7 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
     fun send(connection: Connection, data: Data): Long
 
     /**
-     * Send one message with metadata (if any) and/or [SendOptions]
+     * Send one message with metadata (if any) and/or [MessageOptions]
      *
      * @param connection JDBC connection to use for sending message
      * @param data message, metadata (if any) and options (if any) to send
@@ -60,7 +60,7 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
     fun send(connection: Connection, data: SendMessage<Data, Meta>): Long
 
     /**
-     * Send many messages with metadata (if any) and/or [SendOptions]
+     * Send many messages with metadata (if any) and/or [MessageOptions]
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
