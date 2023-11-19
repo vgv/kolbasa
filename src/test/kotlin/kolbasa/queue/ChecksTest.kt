@@ -77,6 +77,16 @@ internal class ChecksTest {
     }
 
     @Test
+    fun testBatchSize_ZeroOrNegativeFails() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkBatchSize(0)
+        }
+        assertFailsWith<IllegalStateException> {
+            Checks.checkBatchSize(-1)
+        }
+    }
+
+    @Test
     fun testCheckConsumerName() {
         Checks.checkConsumerName(null)
         Checks.checkConsumerName("just value shorter than 255 symbols")
