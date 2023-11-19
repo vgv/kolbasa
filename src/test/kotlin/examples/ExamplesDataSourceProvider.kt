@@ -10,7 +10,7 @@ object ExamplesDataSourceProvider {
      * Launch PostgreSQL in Docker container using TestContainers
      */
     fun getDataSource(): DataSource {
-        val pgContainer = PostgreSQLContainer("postgres:16.0-alpine")
+        val pgContainer = PostgreSQLContainer("postgres:16.1-alpine")
 
         // Start PG container
         pgContainer.start()
