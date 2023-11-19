@@ -1,12 +1,12 @@
 package kolbasa.consumer
 
 import kolbasa.Kolbasa
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
+import kolbasa.SweepConfig
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.pg.Lock
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
@@ -57,7 +57,7 @@ object SweepHelper {
 
     internal fun checkPeriod(queue: Queue<*, *>, period: Int): Boolean {
         // If we have to launch sweep at every consume, there is no reason to do any calculations
-        if (period == Const.EVERYTIME_SWEEP_PERIOD) {
+        if (period == SweepConfig.EVERYTIME_SWEEP_PERIOD) {
             return true
         }
 
