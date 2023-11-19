@@ -6,8 +6,10 @@ import java.time.Duration
 
 data class SendOptions @JvmOverloads constructor(
     /**
-     * Delay before message will be visible to consumers. By default, value is not set, which means the
-     * [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] will be used.
+     * Delay before message will be visible to consumers.
+     *
+     * For example, if delay is 5 minutes, message will be visible to consumers after 5 minutes after sending. By default,
+     * value is not set, which means the [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] will be used.
      *
      * Can be configured by [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] at the queue level, but
      * this value has priority over [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay], if configured.
