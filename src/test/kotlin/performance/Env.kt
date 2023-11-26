@@ -16,18 +16,6 @@ object Env {
 
     val pgPassword = System.getenv("password") ?: ""
 
-    // ==========================================================================
-
-    val threads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
-
-    val iterations = System.getenv("iterations")?.toIntOrNull() ?: 10_000_000
-
-    val producerSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
-
-    val producerBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
-
-    val dataSize = System.getenv("data_size")?.toIntOrNull() ?: 500
-
     val dataSourceType = System.getenv("datasource") ?: "internal"
 
     val dataSource = if ("external" == dataSourceType) {
@@ -38,15 +26,49 @@ object Env {
 
     // ==========================================================================
 
-    fun report() {
-        println("--------------------------------------------------")
+    val producerTestThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+    val producerTestIterations = System.getenv("iterations")?.toIntOrNull() ?: 10_000_000
+
+    val producerTestSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
+
+    val producerTestBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
+
+    val producerTestDataSizeBytes = System.getenv("data_size")?.toIntOrNull() ?: 500
+
+    // ==========================================================================
+
+    val emptyConsumerTestThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+    // ==========================================================================
+
+    private fun generalReport() {
         println("Test: $test")
-        println("Threads: $threads")
-        println("Iterations: $iterations")
-        println("Producer send size: $producerSendSize")
-        println("Producer batch size: $producerBatchSize")
-        println("Data size: $dataSize")
-        println("Data source: $dataSourceType")
+        println("Data source type: $dataSourceType")
+        if ("external" == dataSourceType) {
+            println("PG host: $pgHostname")
+            println("PG port: $pgPort")
+            println("PG database: $pgDatabase")
+            println("PG user: $pgUser")
+            println("PG password: ${pgPassword.length} symbols")
+        }
+    }
+
+    fun reportProducerTestEnv() {
+        println("--------------------------------------------------")
+        generalReport()
+        println("Threads: $producerTestThreads")
+        println("Iterations: $producerTestIterations")
+        println("Producer send size: $producerTestSendSize")
+        println("Producer batch size: $producerTestBatchSize")
+        println("Data size: $producerTestDataSizeBytes")
+        println("--------------------------------------------------")
+    }
+
+    fun reportEmptyConsumerTestEnv() {
+        println("--------------------------------------------------")
+        generalReport()
+        println("Threads: $emptyConsumerTestThreads")
         println("--------------------------------------------------")
     }
 }
