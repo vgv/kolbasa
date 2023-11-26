@@ -26,19 +26,33 @@ object Env {
 
     // ==========================================================================
 
-    val producerTestThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+    val pThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
 
-    val producerTestIterations = System.getenv("iterations")?.toIntOrNull() ?: 10_000_000
+    val pSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
 
-    val producerTestSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
+    val pBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
 
-    val producerTestBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
-
-    val producerTestDataSizeBytes = System.getenv("data_size")?.toIntOrNull() ?: 500
+    val pDataSizeBytes = System.getenv("data_size_bytes")?.toIntOrNull() ?: 500
 
     // ==========================================================================
 
-    val emptyConsumerTestThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+    val ecThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+    // ==========================================================================
+
+    val pcProducerThreads: Int = System.getenv("producer-threads")?.toIntOrNull() ?: 1
+
+    val pcConsumerThreads: Int = System.getenv("consumer-threads")?.toIntOrNull() ?: 1
+
+    val pcQueueSizeBaseline = System.getenv("queue_size_baseline")?.toIntOrNull() ?: 0
+
+    val pcSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
+
+    val pcBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
+
+    val pcDataSizeBytes = System.getenv("data_size_bytes")?.toIntOrNull() ?: 500
+
+    val pcConsumerReceiveLimit = System.getenv("consumer_receive_limit")?.toIntOrNull() ?: 1000
 
     // ==========================================================================
 
@@ -50,25 +64,37 @@ object Env {
             println("PG port: $pgPort")
             println("PG database: $pgDatabase")
             println("PG user: $pgUser")
-            println("PG password: ${pgPassword.length} symbols")
         }
     }
 
     fun reportProducerTestEnv() {
         println("--------------------------------------------------")
         generalReport()
-        println("Threads: $producerTestThreads")
-        println("Iterations: $producerTestIterations")
-        println("Producer send size: $producerTestSendSize")
-        println("Producer batch size: $producerTestBatchSize")
-        println("Data size: $producerTestDataSizeBytes")
+        println("Threads: $pThreads")
+        println("Producer send size: $pSendSize")
+        println("Producer batch size: $pBatchSize")
+        println("Data size: $pDataSizeBytes")
         println("--------------------------------------------------")
     }
 
     fun reportEmptyConsumerTestEnv() {
         println("--------------------------------------------------")
         generalReport()
-        println("Threads: $emptyConsumerTestThreads")
+        println("Threads: $ecThreads")
         println("--------------------------------------------------")
     }
+
+    fun reportProducerConsumerTestEnv() {
+        println("--------------------------------------------------")
+        generalReport()
+        println("Producer threads: $pcProducerThreads")
+        println("Consumer threads: $pcConsumerThreads")
+        println("Queue size baseline: $pcQueueSizeBaseline")
+        println("Producer send size: $pcSendSize")
+        println("Producer batch size: $pcBatchSize")
+        println("Data size: $pcDataSizeBytes")
+        println("Consumer receive limit: $pcConsumerReceiveLimit")
+        println("--------------------------------------------------")
+    }
+
 }

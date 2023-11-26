@@ -1,6 +1,7 @@
 package performance
 
 import kolbasa.consumer.DatabaseConsumer
+import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -8,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
-class EmptyConsumerTest: PerformanceTest {
+class EmptyConsumerTest : PerformanceTest {
 
     override fun run() {
         Env.reportEmptyConsumerTestEnv()
@@ -16,9 +17,14 @@ class EmptyConsumerTest: PerformanceTest {
         // Update
         SchemaHelpers.updateDatabaseSchema(Env.dataSource, queue)
 
+        // Truncate table before test
+        Env.dataSource.useStatement { statement ->
+            statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
+        }
+
         val consumeCalls = AtomicLong()
 
-        val consumerThreads = (1..Env.emptyConsumerTestThreads).map {
+        val consumerThreads = (1..Env.ecThreads).map {
             thread {
                 val consumer = DatabaseConsumer(Env.dataSource, queue)
 
@@ -31,13 +37,13 @@ class EmptyConsumerTest: PerformanceTest {
 
         // Report stats
         thread {
-            var lastCalls = 0L
+            val start = System.currentTimeMillis()
 
             while (true) {
                 TimeUnit.SECONDS.sleep(1)
-                val current = consumeCalls.get()
-                println("Consumer calls: ${current - lastCalls} calls/sec")
-                lastCalls = current
+                val currentCalls = consumeCalls.get() / ((System.currentTimeMillis() - start) / 1000)
+                println("Consumer calls: $currentCalls calls/sec")
+                println("-------------------------------------------")
             }
         }
 
@@ -51,4 +57,8 @@ class EmptyConsumerTest: PerformanceTest {
             metadata = null
         )
     }
+}
+
+fun main() {
+    EmptyConsumerTest().run()
 }

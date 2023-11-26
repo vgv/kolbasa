@@ -21,17 +21,18 @@ class ProducerTest : PerformanceTest {
 
         // Generate data
         val randomData = (1..1000).map {
-            val dataSize = Env.producerTestDataSizeBytes + Random.nextInt(-10, 10)
+            val dataSize = (Env.pDataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
+
             Random.nextBytes(dataSize)
         }
 
         val producedRecords = AtomicLong()
 
-        val producerThreads = (1..Env.producerTestThreads).map {
+        val producerThreads = (1..Env.pThreads).map {
             thread {
                 val producer = DatabaseProducer(Env.dataSource, queue)
-                while (producedRecords.get() < Env.producerTestIterations) {
-                    val data = (1..Env.producerTestSendSize).map {
+                while (true) {
+                    val data = (1..Env.pSendSize).map {
                         SendMessage<ByteArray, Unit>(randomData.random())
                     }
 
@@ -49,19 +50,20 @@ class ProducerTest : PerformanceTest {
 
         // Report stats
         thread {
-            var lastRecords = 0L
+            val start = System.currentTimeMillis()
 
-            while (producedRecords.get() < Env.producerTestIterations) {
+            while (true) {
                 TimeUnit.SECONDS.sleep(1)
-                val current = producedRecords.get()
-                println("Produced: ${current - lastRecords} items/sec")
-                lastRecords = current
+                val currentProducer = producedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
+                print("\\033[2J")
+                println("Produced: $currentProducer items/sec")
+                println("-------------------------------------------")
             }
         }
 
         // Truncate table
         thread {
-            while (producedRecords.get() < Env.producerTestIterations) {
+            while (true) {
                 TimeUnit.SECONDS.sleep(1)
                 Env.dataSource.useStatement { statement ->
                     statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
@@ -79,4 +81,8 @@ class ProducerTest : PerformanceTest {
             metadata = null
         )
     }
+}
+
+fun main() {
+    ProducerTest().run()
 }
