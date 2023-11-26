@@ -24,16 +24,10 @@ object PerformanceDataSourceProvider {
      * Use external PostgreSQL installation
      */
     fun externalDatasource(): DataSource {
-        val hostname = System.getenv("host")
-        val port = System.getenv("port")?.toIntOrNull() ?: 5432
-        val database = System.getenv("database")
-        val user = System.getenv("user") ?: "postgres"
-        val pwd = System.getenv("password") ?: ""
-
         return HikariDataSource().apply {
-            jdbcUrl = "jdbc:postgresql://$hostname:$port/$database"
-            username = user
-            password = pwd
+            jdbcUrl = "jdbc:postgresql://${Env.pgHostname}:${Env.pgPort}/${Env.pgDatabase}"
+            username = Env.pgUser
+            password = Env.pgPassword
         }
     }
 
