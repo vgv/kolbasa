@@ -14,24 +14,24 @@ import kotlin.random.Random
 class ProducerTest : PerformanceTest {
 
     override fun run() {
-        Env.report()
+        Env.reportProducerTestEnv()
 
         // Update
         SchemaHelpers.updateDatabaseSchema(Env.dataSource, queue)
 
         // Generate data
         val randomData = (1..1000).map {
-            val dataSize = Env.dataSize + Random.nextInt(-10, 10)
+            val dataSize = Env.producerTestDataSizeBytes + Random.nextInt(-10, 10)
             Random.nextBytes(dataSize)
         }
 
         val producedRecords = AtomicLong()
 
-        val producerThreads = (1..Env.threads).map {
+        val producerThreads = (1..Env.producerTestThreads).map {
             thread {
                 val producer = DatabaseProducer(Env.dataSource, queue)
-                while (producedRecords.get() < Env.iterations) {
-                    val data = (1..Env.producerSendSize).map {
+                while (producedRecords.get() < Env.producerTestIterations) {
+                    val data = (1..Env.producerTestSendSize).map {
                         SendMessage<ByteArray, Unit>(randomData.random())
                     }
 
@@ -51,7 +51,7 @@ class ProducerTest : PerformanceTest {
         thread {
             var lastRecords = 0L
 
-            while (producedRecords.get() < Env.iterations) {
+            while (producedRecords.get() < Env.producerTestIterations) {
                 TimeUnit.SECONDS.sleep(1)
                 val current = producedRecords.get()
                 println("Produced: ${current - lastRecords} items/sec")
@@ -61,7 +61,7 @@ class ProducerTest : PerformanceTest {
 
         // Truncate table
         thread {
-            while (producedRecords.get() < Env.iterations) {
+            while (producedRecords.get() < Env.producerTestIterations) {
                 TimeUnit.SECONDS.sleep(1)
                 Env.dataSource.useStatement { statement ->
                     statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
