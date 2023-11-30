@@ -3,6 +3,7 @@ package performance
 import kolbasa.consumer.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -36,7 +37,7 @@ class ProducerConsumerTest : PerformanceTest {
 
         val producerThreads = (1..Env.pcProducerThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, queue)
+                val producer = DatabaseProducer(Env.dataSource, queue, ProducerOptions(batchSize = Env.pcBatchSize))
                 while (true) {
                     val produced = producedRecords.get()
                     val consumed = consumedRecords.get()
@@ -83,7 +84,8 @@ class ProducerConsumerTest : PerformanceTest {
                 TimeUnit.SECONDS.sleep(1)
                 val currentProducer = producedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
                 val currentConsumer = consumedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
-                println("Produced: $currentProducer items/sec, Consumed: $currentConsumer items/sec")
+                val seconds = ((System.currentTimeMillis() - start) / 1000)
+                println("Seconds: $seconds, produced: $currentProducer items/sec, consumed: $currentConsumer items/sec")
                 println("-------------------------------------------")
             }
         }

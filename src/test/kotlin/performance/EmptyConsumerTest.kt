@@ -42,7 +42,8 @@ class EmptyConsumerTest : PerformanceTest {
             while (true) {
                 TimeUnit.SECONDS.sleep(1)
                 val currentCalls = consumeCalls.get() / ((System.currentTimeMillis() - start) / 1000)
-                println("Consumer calls: $currentCalls calls/sec")
+                val seconds = ((System.currentTimeMillis() - start) / 1000)
+                println("Seconds: $seconds, consumer calls: $currentCalls calls/sec")
                 println("-------------------------------------------")
             }
         }
