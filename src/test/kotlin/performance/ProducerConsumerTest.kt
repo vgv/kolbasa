@@ -99,3 +99,7 @@ class ProducerConsumerTest : PerformanceTest {
         )
     }
 }
+
+fun main() {
+    ProducerConsumerTest().run()
+}
