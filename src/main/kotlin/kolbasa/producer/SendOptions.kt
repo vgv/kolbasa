@@ -35,8 +35,8 @@ data class SendOptions(
         fun build() = SendOptions(deduplicationMode, batchSize, partialInsert)
     }
 
-    internal companion object {
-        val SEND_OPTIONS_NOT_SET = SendOptions()
+    companion object {
+        internal val SEND_OPTIONS_NOT_SET = SendOptions()
 
         @JvmStatic
         fun builder() = Builder()

@@ -4,7 +4,7 @@ import kolbasa.queue.Checks
 import kolbasa.queue.QueueOptions
 import java.time.Duration
 
-data class MessageOptions @JvmOverloads constructor(
+data class MessageOptions(
     /**
      * Delay before message will be visible to consumers.
      *
@@ -30,6 +30,23 @@ data class MessageOptions @JvmOverloads constructor(
     init {
         Checks.checkDelay(delay)
         Checks.checkAttempts(attempts)
+    }
+
+    class Builder internal constructor() {
+        private var delay: Duration = QueueOptions.DELAY_NOT_SET
+        private var attempts: Int = QueueOptions.ATTEMPTS_NOT_SET
+
+        fun delay(delay: Duration) = apply { this.delay = delay }
+        fun attempts(attempts: Int) = apply { this.attempts = attempts }
+
+        fun build() = MessageOptions(delay, attempts)
+    }
+
+    companion object {
+        internal val MESSAGE_OPTIONS_NOT_SET = MessageOptions()
+
+        @JvmStatic
+        fun builder() = Builder()
     }
 
 }
