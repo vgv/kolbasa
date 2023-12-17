@@ -2,7 +2,6 @@ package kolbasa
 
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
 
 data class SweepConfig(
     /**
@@ -14,12 +13,12 @@ data class SweepConfig(
     /**
      * Max rows to delete at each iteration
      */
-    val maxRows: Int = Const.DEFAULT_SWEEP_ROWS,
+    val maxRows: Int = DEFAULT_SWEEP_ROWS,
 
     /**
      * Max cleanup iterations at each sweep
      */
-    val maxIterations: Int = Const.DEFAULT_SWEEP_ITERATIONS,
+    val maxIterations: Int = DEFAULT_SWEEP_ITERATIONS,
 
     /**
      * How often we want to trigger a sweep?
@@ -28,7 +27,7 @@ data class SweepConfig(
      *
      * If you need to trigger a sweep at every consume, you have to use period=1 (EVERYTIME_SWEEP_PERIOD)
      */
-    val period: Int = Const.DEFAULT_SWEEP_PERIOD,
+    val period: Int = DEFAULT_SWEEP_PERIOD,
 
     /**
      * Kolbasa uses PG advisory locks to prevent sweeping one queue by multiple processes at the same time.
@@ -46,9 +45,9 @@ data class SweepConfig(
 
     class Builder internal constructor() {
         private var enabled: Boolean = true
-        private var maxRows: Int = Const.DEFAULT_SWEEP_ROWS
-        private var maxIterations: Int = Const.DEFAULT_SWEEP_ITERATIONS
-        private var period: Int = Const.DEFAULT_SWEEP_PERIOD
+        private var maxRows: Int = DEFAULT_SWEEP_ROWS
+        private var maxIterations: Int = DEFAULT_SWEEP_ITERATIONS
+        private var period: Int = DEFAULT_SWEEP_PERIOD
         private var lockIdGenerator: (queue: Queue<*, *>) -> Long = Companion::defaultLockIdGenerator
 
         fun enabled() = apply { this.enabled = true }
@@ -62,6 +61,32 @@ data class SweepConfig(
     }
 
     companion object {
+
+        /**
+         * How many rows to delete at each iteration during sweep
+         */
+        const val MIN_SWEEP_ROWS = 100
+        const val DEFAULT_SWEEP_ROWS = 1_000
+        const val MAX_SWEEP_ROWS = 100_000
+
+        /**
+         * How many iterations at each sweep
+         */
+        const val MIN_SWEEP_ITERATIONS = 1
+        const val DEFAULT_SWEEP_ITERATIONS = 5
+        const val MAX_SWEEP_ITERATIONS = 100
+
+        /**
+         * How often we want to trigger a sweep?
+         * Every fifth consume? Every tenth? Every hundredth?
+         *
+         * Default value is 5, so, it means that every fifth consume will trigger a sweep.
+         * If you want to trigger a sweep at every consume, you have to use period = 1 (EVERYTIME_SWEEP_PERIOD)
+         */
+        const val EVERYTIME_SWEEP_PERIOD = 1
+        const val MIN_SWEEP_PERIOD = EVERYTIME_SWEEP_PERIOD
+        const val DEFAULT_SWEEP_PERIOD = 5
+        const val MAX_SWEEP_PERIOD = 1_000_000_000
 
         @JvmStatic
         fun builder(): Builder = Builder()

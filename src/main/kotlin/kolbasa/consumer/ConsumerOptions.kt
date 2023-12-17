@@ -31,4 +31,19 @@ data class ConsumerOptions(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
+    class Builder {
+        private var consumer: String? = null
+        private var visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET
+
+        fun consumer(consumer: String?) = apply { this.consumer = consumer }
+        fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
+
+        fun build() = ConsumerOptions(consumer, visibilityTimeout)
+    }
+
+    companion object {
+        @JvmStatic
+        fun builder() = Builder()
+    }
+
 }

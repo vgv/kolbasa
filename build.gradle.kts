@@ -63,6 +63,12 @@ tasks.withType<KotlinCompile> {
     kotlinOptions.languageVersion = "1.7"
 }
 
+// Performance tests
+task<JavaExec>("performance") {
+    mainClass = "performance.MainKt"
+    classpath += java.sourceSets.getByName("test").runtimeClasspath
+}
+
 // Unit tests settings
 tasks.withType<Test> {
     // enable parallel tests execution

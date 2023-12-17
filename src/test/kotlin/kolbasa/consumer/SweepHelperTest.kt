@@ -1,8 +1,8 @@
 package kolbasa.consumer
 
+import kolbasa.SweepConfig
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -18,7 +18,7 @@ class SweepHelperTest {
 
         // Always false, if probability=0
         (1..iterations).forEach { _ ->
-            assertTrue(SweepHelper.checkPeriod(queue, Const.EVERYTIME_SWEEP_PERIOD))
+            assertTrue(SweepHelper.checkPeriod(queue, SweepConfig.EVERYTIME_SWEEP_PERIOD))
         }
     }
 

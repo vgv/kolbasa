@@ -1,15 +1,12 @@
-package examples
+package performance
 
 import com.zaxxer.hikari.HikariDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import javax.sql.DataSource
 
-object ExamplesDataSourceProvider {
+object PerformanceDataSourceProvider {
 
-    /**
-     * Launch PostgreSQL in Docker container using TestContainers
-     */
-    fun getDataSource(): DataSource {
+    fun internalDatasource(): DataSource {
         val pgContainer = PostgreSQLContainer("postgres:16.1-alpine")
 
         // Start PG container
@@ -26,18 +23,12 @@ object ExamplesDataSourceProvider {
     /**
      * Use external PostgreSQL installation
      */
-//    fun getDataSource(): DataSource {
-//        val hostname = ""
-//        val port = 5432
-//        val database = ""
-//        val user = ""
-//        val pwd = ""
-//
-//        return HikariDataSource().apply {
-//            jdbcUrl = "jdbc:postgresql://$hostname:$port/$database"
-//            username = user
-//            password = pwd
-//        }
-//    }
+    fun externalDatasource(): DataSource {
+        return HikariDataSource().apply {
+            jdbcUrl = "jdbc:postgresql://${Env.pgHostname}:${Env.pgPort}/${Env.pgDatabase}"
+            username = Env.pgUser
+            password = Env.pgPassword
+        }
+    }
 
 }

@@ -1,5 +1,6 @@
 package kolbasa.queue
 
+import kolbasa.SweepConfig
 import kolbasa.schema.Const
 import java.time.Duration
 import kotlin.random.Random
@@ -73,6 +74,16 @@ internal class ChecksTest {
         assertFailsWith<IllegalStateException> {
             val longValue = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_LENGTH + 1)
             Checks.checkProducerName(longValue)
+        }
+    }
+
+    @Test
+    fun testBatchSize_ZeroOrNegativeFails() {
+        assertFailsWith<IllegalStateException> {
+            Checks.checkBatchSize(0)
+        }
+        assertFailsWith<IllegalStateException> {
+            Checks.checkBatchSize(-1)
         }
     }
 
@@ -173,42 +184,42 @@ internal class ChecksTest {
     @Test
     fun testCheckSweepMaxRows_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxRows(Const.MIN_SWEEP_ROWS - 1)
+            Checks.checkSweepMaxRows(SweepConfig.MIN_SWEEP_ROWS - 1)
         }
     }
 
     @Test
     fun testCheckSweepMaxRows_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxRows(Const.MAX_SWEEP_ROWS + 1)
+            Checks.checkSweepMaxRows(SweepConfig.MAX_SWEEP_ROWS + 1)
         }
     }
 
     @Test
     fun testCheckSweepMaxIterations_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(Const.MIN_SWEEP_ITERATIONS - 1)
+            Checks.checkSweepMaxIterations(SweepConfig.MIN_SWEEP_ITERATIONS - 1)
         }
     }
 
     @Test
     fun testCheckSweepMaxIterations_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(Const.MAX_SWEEP_ITERATIONS + 1)
+            Checks.checkSweepMaxIterations(SweepConfig.MAX_SWEEP_ITERATIONS + 1)
         }
     }
 
     @Test
     fun testCheckSweepPeriod_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepPeriod(Const.MIN_SWEEP_PERIOD - 1)
+            Checks.checkSweepPeriod(SweepConfig.MIN_SWEEP_PERIOD - 1)
         }
     }
 
     @Test
     fun testCheckSweepPeriod_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepPeriod(Const.MAX_SWEEP_PERIOD + 1)
+            Checks.checkSweepPeriod(SweepConfig.MAX_SWEEP_PERIOD + 1)
         }
     }
 

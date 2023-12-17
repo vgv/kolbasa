@@ -2,20 +2,22 @@ package kolbasa.queue
 
 import java.time.Duration
 
-data class QueueOptions @JvmOverloads constructor(
+data class QueueOptions(
     /**
-     * Default queue delay, before message will be visible to consumers. By default, messages
-     * are available to consumers immediately after sending.
+     * Default queue delay, before message will be visible to consumers.
      *
-     * Can be overridden by [SendOptions.delay][kolbasa.producer.SendOptions.delay] for every send() call.
-     * [SendOptions.delay][kolbasa.producer.SendOptions.delay] has priority over [defaultDelay]
+     * For example, if delay is 5 minutes, message will be visible to consumers after 5 minutes after sending.
+     * By default, messages are available to consumers immediately after sending.
+     *
+     * Can be overridden by [MessageOptions.delay][kolbasa.producer.MessageOptions.delay] for every send() call.
+     * [MessageOptions.delay][kolbasa.producer.MessageOptions.delay] has priority over [defaultDelay]
      */
     val defaultDelay: Duration = DEFAULT_DELAY,
     /**
      * Default queue consume attempts before message will be expired or moved to DLQ. Default value is 5.
      *
-     * Can be overridden by [SendOptions.attempts][kolbasa.producer.SendOptions.attempts] for every send() call.
-     * [SendOptions.attempts][kolbasa.producer.SendOptions.attempts] has priority over [defaultAttempts]
+     * Can be overridden by [MessageOptions.attempts][kolbasa.producer.MessageOptions.attempts] for every send() call.
+     * [MessageOptions.attempts][kolbasa.producer.MessageOptions.attempts] has priority over [defaultAttempts]
      */
     val defaultAttempts: Int = DEFAULT_ATTEMPTS,
     /**
@@ -38,7 +40,19 @@ data class QueueOptions @JvmOverloads constructor(
         Checks.checkVisibilityTimeout(defaultVisibilityTimeout)
     }
 
-    internal companion object {
+    class Builder internal constructor() {
+        private var defaultDelay: Duration = DEFAULT_DELAY
+        private var defaultAttempts: Int = DEFAULT_ATTEMPTS
+        private var defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
+
+        fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
+        fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
+        fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) = apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
+
+        fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout)
+    }
+
+    companion object {
         internal val DEFAULT_DELAY = Duration.ZERO
         internal val DELAY_NOT_SET = Duration.ofMillis(-1)
 
@@ -47,5 +61,8 @@ data class QueueOptions @JvmOverloads constructor(
 
         internal val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
         internal val VISIBILITY_TIMEOUT_NOT_SET = Duration.ofMillis(-1)
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
     }
 }

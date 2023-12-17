@@ -5,7 +5,7 @@ import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.DatabaseProducer
 import kolbasa.producer.SendMessage
-import kolbasa.producer.SendOptions
+import kolbasa.producer.MessageOptions
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
@@ -147,7 +147,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val delay = Duration.of(3000 + Random.nextLong(0, 2000), ChronoUnit.MILLIS)
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(SendMessage(data = data, sendOptions = SendOptions(delay = delay)))
+        val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
         val sendTimestamp = System.nanoTime()
 
         val consumer = DatabaseConsumer(dataSource, queue)

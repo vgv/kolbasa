@@ -1,5 +1,6 @@
 package kolbasa.queue
 
+import kolbasa.SweepConfig
 import kolbasa.schema.Const
 import java.time.Duration
 
@@ -29,12 +30,11 @@ internal object Checks {
         }
     }
 
-    fun checkProducerBatchSize(batchSize: Int) {
+    fun checkBatchSize(batchSize: Int) {
         check(batchSize >= 1) {
-            "Producer options batch size must be greater than or equal to 1 (current: $batchSize)"
+            "Batch size must be greater than or equal to 1 (current: $batchSize)"
         }
     }
-
 
     fun checkConsumerName(consumer: String?) {
         if (consumer == null) return
@@ -89,20 +89,20 @@ internal object Checks {
     }
 
     fun checkSweepMaxRows(rows: Int) {
-        check(rows in Const.MIN_SWEEP_ROWS..Const.MAX_SWEEP_ROWS) {
-            "Sweep max rows must be in the [${Const.MIN_SWEEP_ROWS}..${Const.MAX_SWEEP_ROWS}] range"
+        check(rows in SweepConfig.MIN_SWEEP_ROWS..SweepConfig.MAX_SWEEP_ROWS) {
+            "Sweep max rows must be in the [${SweepConfig.MIN_SWEEP_ROWS}..${SweepConfig.MAX_SWEEP_ROWS}] range"
         }
     }
 
     fun checkSweepMaxIterations(maxIterations: Int) {
-        check(maxIterations in Const.MIN_SWEEP_ITERATIONS..Const.MAX_SWEEP_ITERATIONS) {
-            "Sweep max iterations must be in the [${Const.MIN_SWEEP_ITERATIONS}..${Const.MAX_SWEEP_ITERATIONS}] range"
+        check(maxIterations in SweepConfig.MIN_SWEEP_ITERATIONS..SweepConfig.MAX_SWEEP_ITERATIONS) {
+            "Sweep max iterations must be in the [${SweepConfig.MIN_SWEEP_ITERATIONS}..${SweepConfig.MAX_SWEEP_ITERATIONS}] range"
         }
     }
 
     fun checkSweepPeriod(period: Int) {
-        check(period in Const.MIN_SWEEP_PERIOD..Const.MAX_SWEEP_PERIOD) {
-            "Sweep period must be in the [${Const.MIN_SWEEP_PERIOD}..${Const.MAX_SWEEP_PERIOD}] range"
+        check(period in SweepConfig.MIN_SWEEP_PERIOD..SweepConfig.MAX_SWEEP_PERIOD) {
+            "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PERIOD}..${SweepConfig.MAX_SWEEP_PERIOD}] range"
         }
     }
 
