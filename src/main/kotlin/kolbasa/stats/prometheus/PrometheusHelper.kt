@@ -78,9 +78,9 @@ internal object PrometheusHelper {
             }
 
             // Everything looks fine, let's calculate approximate size
-            val averageRecordSize = lastKnownRecords.toDouble() / lastKnownPages
+            val averageRecordsPerPage = lastKnownRecords.toDouble() / lastKnownPages
             val realPages = databaseSize.toDouble() / blockSize
-            return (realPages * averageRecordSize).toLong()
+            return (realPages * averageRecordsPerPage).toLong()
         }
     }
 
