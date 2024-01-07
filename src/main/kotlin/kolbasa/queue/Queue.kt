@@ -2,7 +2,7 @@ package kolbasa.queue
 
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.QueueMetrics
+import kolbasa.stats.prometheus.metrics.QueueMetrics
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     /**

@@ -1,4 +1,4 @@
-package kolbasa.stats.prometheus
+package kolbasa.stats.prometheus.metrics
 
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
