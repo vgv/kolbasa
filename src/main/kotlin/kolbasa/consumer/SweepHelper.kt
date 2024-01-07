@@ -37,7 +37,7 @@ object SweepHelper {
      * A total of SweepConfig.maxIterations will be made. Every iteration will try to remove the
      * maximum value from SweepConfig.maxRows or limit, whichever is greater.
      *
-     * @return how many expired messages were removed or Int.MIN_VALUE if sweep didn't run due to
+     * @return how many expired messages were removed or -1 if sweep didn't run due to
      * concurrent sweep for the queue at the same time by another consumer
      */
     fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
@@ -45,14 +45,14 @@ object SweepHelper {
 
         val lockId = sweepConfig.lockIdGenerator(queue)
 
-        // Delete max rows den
+        // Choose max rows value to sweep
         val rowsToSweep = max(limit, sweepConfig.maxRows)
 
         val removedRows = Lock.tryRunExclusive(connection, lockId) { _ ->
             rawSweep(connection, queue, rowsToSweep, sweepConfig.maxIterations)
         }
 
-        return removedRows ?: Int.MIN_VALUE
+        return removedRows ?: -1
     }
 
     internal fun checkPeriod(queue: Queue<*, *>, period: Int): Boolean {
