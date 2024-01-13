@@ -5,7 +5,7 @@ import kolbasa.queue.Queue
 import java.sql.Connection
 import java.sql.Statement
 
-internal object PrometheusHelper {
+internal object QueueSizeHelper {
 
     /**
      * Calculate queue length using PostgreSQL statistics

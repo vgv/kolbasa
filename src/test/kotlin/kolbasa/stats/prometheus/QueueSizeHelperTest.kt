@@ -11,14 +11,14 @@ import javax.sql.DataSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class PrometheusHelperTest : AbstractPostgresqlTest() {
+class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_TableNotExists() {
         val queue = Queue<String, Unit>("not_real_queue", PredefinedDataTypes.String)
 
         // Measure table size
-        val length = dataSource.useConnection { PrometheusHelper.calculateQueueLength(it, queue) }
+        val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         assertEquals(0, length)
     }
 
@@ -28,7 +28,7 @@ class PrometheusHelperTest : AbstractPostgresqlTest() {
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         // Measure table size
-        val length = dataSource.useConnection { PrometheusHelper.calculateQueueLength(it, queue) }
+        val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
             assertEquals(-1L, length)
         } else {
@@ -48,7 +48,7 @@ class PrometheusHelperTest : AbstractPostgresqlTest() {
 
         // Measure table size
         // Even if we have inserted 3 records, the table size is still -1 (or 0 on old PG) because we haven't run vacuum yet
-        val length = dataSource.useConnection { PrometheusHelper.calculateQueueLength(it, queue) }
+        val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
             assertEquals(-1L, length)
         } else {
@@ -65,7 +65,7 @@ class PrometheusHelperTest : AbstractPostgresqlTest() {
         fullVacuum(dataSource, queue.dbTableName)
 
         // Measure table size
-        val length = dataSource.useConnection { PrometheusHelper.calculateQueueLength(it, queue) }
+        val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         assertEquals(0L, length)
     }
 
@@ -83,7 +83,7 @@ class PrometheusHelperTest : AbstractPostgresqlTest() {
         fullVacuum(dataSource, queue.dbTableName)
 
         // Measure table size
-        val length = dataSource.useConnection { PrometheusHelper.calculateQueueLength(it, queue) }
+        val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         assertEquals(3L, length)
     }
 
