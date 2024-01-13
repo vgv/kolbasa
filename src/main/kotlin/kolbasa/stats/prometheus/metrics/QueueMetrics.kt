@@ -2,17 +2,27 @@ package kolbasa.stats.prometheus.metrics
 
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
+import io.prometheus.metrics.core.datapoints.GaugeDataPoint
 import kolbasa.Kolbasa
 import kolbasa.producer.PartialInsert
+import kolbasa.stats.prometheus.PrometheusConfig
+import kolbasa.stats.prometheus.queuesize.QueueSizeCache
 import kolbasa.stats.prometheus.metrics.Extensions.incInt
 import kolbasa.stats.prometheus.metrics.Extensions.incLong
 import kolbasa.stats.prometheus.metrics.Extensions.observeNanos
 
-internal class QueueMetrics(queueName: String) {
+internal class QueueMetrics(private val queueName: String) {
 
     // ------------------------------------------------------------------------------
     // Producer
-    fun producerSendMetrics(partialInsert: PartialInsert, allMessages: Int, failedMessages: Int, executionNanos: Long, approxBytes: Long) {
+    fun producerSendMetrics(
+        partialInsert: PartialInsert,
+        allMessages: Int,
+        failedMessages: Int,
+        executionNanos: Long,
+        approxBytes: Long,
+        queueSizeCalcFunc: () -> Long
+    ) {
         if (!Kolbasa.prometheusConfig.enabled) {
             return
         }
@@ -42,6 +52,13 @@ internal class QueueMetrics(queueName: String) {
                 producerSendBytesCounterInsertAsManyAsPossible.incLong(approxBytes)
             }
         }
+
+        // Queue size
+        // We use internal caching to prevent too frequent calls to the database
+        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
+            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
+        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        producerQueueSizeGauge.set(queueSize.toDouble())
     }
 
     private val producerSendCounterProhibited: CounterDataPoint =
@@ -63,7 +80,10 @@ internal class QueueMetrics(queueName: String) {
     private val producerSendFailedRowsCounterUntilFirstFailure: CounterDataPoint =
         PrometheusProducerMetrics.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
     private val producerSendFailedRowsCounterInsertAsManyAsPossible: CounterDataPoint =
-        PrometheusProducerMetrics.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+        PrometheusProducerMetrics.producerSendFailedRowsCounter.labelValues(
+            queueName,
+            PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name
+        )
 
     private val producerSendDurationProhibited: DistributionDataPoint =
         PrometheusProducerMetrics.producerSendDuration.labelValues(queueName, PartialInsert.PROHIBITED.name)
@@ -78,6 +98,9 @@ internal class QueueMetrics(queueName: String) {
         PrometheusProducerMetrics.producerSendBytesCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
     private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint =
         PrometheusProducerMetrics.producerSendBytesCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+
+    private val producerQueueSizeGauge: GaugeDataPoint =
+        PrometheusProducerMetrics.producerQueueSizeGauge.labelValues(queueName)
 
 
     // ------------------------------------------------------------------------------

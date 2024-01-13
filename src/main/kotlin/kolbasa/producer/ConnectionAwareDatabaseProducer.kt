@@ -5,6 +5,7 @@ import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
+import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
@@ -59,7 +60,8 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
             allMessages = data.size,
             failedMessages = result.failedMessages,
             executionNanos = execution.durationNanos,
-            approxBytes = approxStatsBytes.get()
+            approxBytes = approxStatsBytes.get(),
+            queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
         )
 
         return result
