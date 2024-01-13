@@ -2,6 +2,7 @@ package kolbasa.queue
 
 import kolbasa.SweepConfig
 import kolbasa.schema.Const
+import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
 
 internal object Checks {
@@ -103,6 +104,12 @@ internal object Checks {
     fun checkSweepPeriod(period: Int) {
         check(period in SweepConfig.MIN_SWEEP_PERIOD..SweepConfig.MAX_SWEEP_PERIOD) {
             "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PERIOD}..${SweepConfig.MAX_SWEEP_PERIOD}] range"
+        }
+    }
+
+    fun checkCustomQueueSizeMeasureInterval(queueName: String, customDuration: Duration) {
+        check(customDuration >= PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL) {
+            "Custom queue size measure interval must be greater than or equal to ${PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL} (current: $customDuration, queue=$queueName)"
         }
     }
 
