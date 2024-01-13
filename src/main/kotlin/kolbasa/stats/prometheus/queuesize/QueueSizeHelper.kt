@@ -1,4 +1,4 @@
-package kolbasa.stats.prometheus
+package kolbasa.stats.prometheus.queuesize
 
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
@@ -20,13 +20,15 @@ internal object QueueSizeHelper {
      *
      * @param connection - connection to the database
      * @param queue - queue to measure
-     * @return -1 if queue table has never been vacuumed, 0 if queue table is empty or doesn't exist, otherwise approximate
-     * queue length
+     * @return
+     * - [Const.TABLE_HAS_NEVER_BEEN_VACUUMED] if queue table has never been vacuumed
+     * - [Const.TABLE_DOES_NOT_EXIST] if table doesn't exist
+     * - otherwise approximate queue length
      */
     fun calculateQueueLength(connection: Connection, queue: Queue<*, *>): Long {
         val tableSizeData = readTableSizeData(connection, queue.dbTableName)
 
-        return tableSizeData?.getTableSize() ?: 0 // if table does not exist, we assume it's empty
+        return tableSizeData?.getTableSize() ?: Const.TABLE_DOES_NOT_EXIST
     }
 
     private fun readTableSizeData(connection: Connection, tableName: String): TableSizeData? {
@@ -67,7 +69,7 @@ internal object QueueSizeHelper {
             if (lastKnownRecords == -1L) {
                 // Table has never been vacuumed, so we cannot even approximately calculate the size
                 // We return -1 as a signal that we don't know the size, so, caller should not trust the result
-                return -1
+                return Const.TABLE_HAS_NEVER_BEEN_VACUUMED
             }
 
             if (lastKnownPages == 0) {
