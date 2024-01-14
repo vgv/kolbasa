@@ -1,6 +1,7 @@
 package kolbasa.stats.prometheus.metrics
 
 import io.prometheus.metrics.core.metrics.Counter
+import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import kolbasa.Kolbasa
 
@@ -52,5 +53,11 @@ internal object PrometheusConsumerMetrics {
         .labelNames("queue")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
+        .register(Kolbasa.prometheusConfig.registry)
+
+    val consumerQueueSizeGauge: Gauge = Gauge.builder()
+        .name("kolbasa_consumer_queue_size")
+        .help("Consumer queue size")
+        .labelNames("queue")
         .register(Kolbasa.prometheusConfig.registry)
 }

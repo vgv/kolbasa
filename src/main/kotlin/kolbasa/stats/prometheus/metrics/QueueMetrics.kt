@@ -105,7 +105,12 @@ internal class QueueMetrics(private val queueName: String) {
 
     // ------------------------------------------------------------------------------
     // Consumer
-    fun consumerReceiveMetrics(receivedRows: Int, executionNanos: Long, approxBytes: Long) {
+    fun consumerReceiveMetrics(
+        receivedRows: Int,
+        executionNanos: Long,
+        approxBytes: Long,
+        queueSizeCalcFunc: () -> Long
+    ) {
         if (!Kolbasa.prometheusConfig.enabled) {
             return
         }
@@ -114,6 +119,13 @@ internal class QueueMetrics(private val queueName: String) {
         consumerReceiveBytesCounter.incLong(approxBytes)
         consumerReceiveRowsCounter.incInt(receivedRows)
         consumerReceiveDuration.observeNanos(executionNanos)
+
+        // Queue size
+        // We use internal caching to prevent too frequent calls to the database
+        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
+            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
+        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        consumerQueueSizeGauge.set(queueSize.toDouble())
     }
 
     fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long) {
@@ -140,6 +152,8 @@ internal class QueueMetrics(private val queueName: String) {
         PrometheusConsumerMetrics.consumerDeleteRowsCounter.labelValues(queueName)
     private val consumerDeleteDuration: DistributionDataPoint =
         PrometheusConsumerMetrics.consumerDeleteDuration.labelValues(queueName)
+    private val consumerQueueSizeGauge: GaugeDataPoint =
+        PrometheusConsumerMetrics.consumerQueueSizeGauge.labelValues(queueName)
 
     // ------------------------------------------------------------------------------
     // Sweep
