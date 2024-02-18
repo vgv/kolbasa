@@ -13,7 +13,7 @@ import javax.sql.DataSource
 abstract class AbstractPostgresqlTest {
 
     @Container
-    protected val pgContainer = PostgreSQLContainer(CURRENT_IMAGE)
+    protected val pgContainer = PostgreSQLContainer(CURRENT_POSTGRES_IMAGE.dockerImage)
 
     protected lateinit var dataSource: DataSource
     protected lateinit var dataSourceFirstSchema: DataSource
@@ -99,22 +99,24 @@ abstract class AbstractPostgresqlTest {
         const val FIRST_SCHEMA_NAME = "first"
         const val SECOND_SCHEMA_NAME = "second"
 
+        data class Postgres(val dockerImage: String, val modernVacuumStats: Boolean)
+
         // All PG images to run tests
         // Choose random image at every run
         private val POSTGRES_IMAGES = setOf(
-            "postgres:10.23-alpine",
-            "postgres:11.22-alpine",
-            "postgres:12.17-alpine",
-            "postgres:13.13-alpine",
-            "postgres:14.10-alpine",
-            "postgres:15.5-alpine",
-            "postgres:16.1-alpine"
+            Postgres("postgres:10.23-alpine", false),
+            Postgres("postgres:11.22-alpine", false),
+            Postgres("postgres:12.18-alpine", false),
+            Postgres("postgres:13.14-alpine", false),
+            Postgres("postgres:14.11-alpine", true),
+            Postgres("postgres:15.6-alpine", true),
+            Postgres("postgres:16.2-alpine", true)
         )
 
-        private val CURRENT_IMAGE = POSTGRES_IMAGES.random()
+        val CURRENT_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
 
         init {
-            println("PostgreSQL docker image: $CURRENT_IMAGE")
+            println("PostgreSQL docker image: ${CURRENT_POSTGRES_IMAGE.dockerImage}")
         }
     }
 
