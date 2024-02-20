@@ -1,11 +1,9 @@
 package kolbasa.stats.prometheus
 
-import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import java.sql.Connection
 import java.sql.Statement
-import javax.sql.DataSource
 
 internal object PrometheusHelper {
 
@@ -20,13 +18,13 @@ internal object PrometheusHelper {
      * month. So, if you have an extreme case, you need an extreme solution, for example – do vacuum on a manual basis
      * right after the peak load.
      *
-     * @param dataSource - data source to connect to the database
+     * @param connection - connection to the database
      * @param queue - queue to measure
      * @return -1 if queue table has never been vacuumed, 0 if queue table is empty or doesn't exist, otherwise approximate
      * queue length
      */
-    fun calculateQueueLength(dataSource: DataSource, queue: Queue<*, *>): Long {
-        val tableSizeData = dataSource.useConnection { readTableSizeData(it, queue.dbTableName) }
+    fun calculateQueueLength(connection: Connection, queue: Queue<*, *>): Long {
+        val tableSizeData =readTableSizeData(connection, queue.dbTableName)
 
         return tableSizeData?.getTableSize() ?: 0 // if table does not exist, we assume it's empty
     }
