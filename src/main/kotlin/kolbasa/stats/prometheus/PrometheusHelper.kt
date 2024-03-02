@@ -9,8 +9,8 @@ internal object PrometheusHelper {
 
     /**
      * Calculate queue length using PostgreSQL statistics
-     * This is a very fast and efficient way to calculate table size with only one drawback – it's not 100% accurate. The result
-     * is approximate and can be far from perfection if the table has never been vacuumed or vacuumed very rarely.
+     * This is a very fast and efficient way to calculate table size with only one drawback – it's not 100% accurate. The
+     * result is approximate and can be far from perfection if the table has never been vacuumed or vacuumed very rarely.
      *
      * However, for queueing purposes it's ok to use this method, because queues usually have predictable
      * workload (send/receive rate) with average record size (for particular queue) and vacuuming is a regular operation.
@@ -24,7 +24,7 @@ internal object PrometheusHelper {
      * queue length
      */
     fun calculateQueueLength(connection: Connection, queue: Queue<*, *>): Long {
-        val tableSizeData =readTableSizeData(connection, queue.dbTableName)
+        val tableSizeData = readTableSizeData(connection, queue.dbTableName)
 
         return tableSizeData?.getTableSize() ?: 0 // if table does not exist, we assume it's empty
     }
@@ -81,6 +81,5 @@ internal object PrometheusHelper {
             return (realPages * averageRecordsPerPage).toLong()
         }
     }
-
 
 }
