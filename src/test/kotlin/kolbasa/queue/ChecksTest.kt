@@ -2,6 +2,7 @@ package kolbasa.queue
 
 import kolbasa.SweepConfig
 import kolbasa.schema.Const
+import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.Test
@@ -220,6 +221,15 @@ internal class ChecksTest {
     fun testCheckSweepPeriod_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
             Checks.checkSweepPeriod(SweepConfig.MAX_SWEEP_PERIOD + 1)
+        }
+    }
+
+    @Test
+    fun testCheckCustomQueueSizeMeasureInterval() {
+        assertFailsWith<IllegalStateException> {
+            val ulp = Duration.ofNanos(1)
+            val aBitSmaller = PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
+            Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
         }
     }
 
