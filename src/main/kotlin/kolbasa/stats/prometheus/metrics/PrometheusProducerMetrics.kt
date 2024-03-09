@@ -1,6 +1,7 @@
 package kolbasa.stats.prometheus.metrics
 
 import io.prometheus.metrics.core.metrics.Counter
+import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import kolbasa.Kolbasa
 
@@ -36,6 +37,12 @@ internal object PrometheusProducerMetrics {
         .name("kolbasa_producer_send_bytes")
         .help("Amount of bytes sent by producer send() calls")
         .labelNames("queue", "partial_insert_type")
+        .register(Kolbasa.prometheusConfig.registry)
+
+    val producerQueueSizeGauge: Gauge = Gauge.builder()
+        .name("kolbasa_producer_queue_size")
+        .help("Producer queue size")
+        .labelNames("queue")
         .register(Kolbasa.prometheusConfig.registry)
 
 }
