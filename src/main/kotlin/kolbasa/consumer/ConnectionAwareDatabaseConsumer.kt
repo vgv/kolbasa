@@ -5,6 +5,7 @@ import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
+import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
@@ -69,7 +70,8 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         queue.queueMetrics.consumerReceiveMetrics(
             receivedRows = result.size,
             executionNanos = execution.durationNanos,
-            approxBytes = approxBytesCounter.get()
+            approxBytes = approxBytesCounter.get(),
+            queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
         )
 
         return result
