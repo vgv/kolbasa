@@ -1,4 +1,4 @@
-package kolbasa.stats.prometheus
+package kolbasa.stats.prometheus.queuesize
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.useConnection
@@ -19,7 +19,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
         // Measure table size
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
-        assertEquals(0, length)
+        assertEquals(Const.TABLE_DOES_NOT_EXIST, length)
     }
 
     @Test
@@ -30,7 +30,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
         // Measure table size
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
-            assertEquals(-1L, length)
+            assertEquals(Const.TABLE_HAS_NEVER_BEEN_VACUUMED, length)
         } else {
             assertEquals(0L, length)
         }
@@ -50,7 +50,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
         // Even if we have inserted 3 records, the table size is still -1 (or 0 on old PG) because we haven't run vacuum yet
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
         if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
-            assertEquals(-1L, length)
+            assertEquals(Const.TABLE_HAS_NEVER_BEEN_VACUUMED, length)
         } else {
             assertEquals(0L, length)
         }
