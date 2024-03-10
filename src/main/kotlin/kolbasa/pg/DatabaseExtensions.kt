@@ -19,7 +19,19 @@ internal object DatabaseExtensions {
                 connection.rollback()
                 throw e
             }
+        }
+    }
 
+    fun <T> DataSource.useConnectionWithAutocommit(block: (Connection) -> T): T {
+        return connection.use { connection ->
+            connection.autoCommit = true
+
+            try {
+                val result = block(connection)
+                result
+            } catch (e: Exception) {
+                throw e
+            }
         }
     }
 

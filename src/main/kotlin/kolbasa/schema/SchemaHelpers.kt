@@ -1,5 +1,6 @@
 package kolbasa.schema
 
+import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
@@ -51,8 +52,8 @@ object SchemaHelpers {
             return
         }
 
-        dataSource.connection.use { connection ->
-            connection.autoCommit = true // separate transaction for each statement
+        dataSource.useConnectionWithAutocommit { connection ->
+            // separate transaction for each statement
             connection.createStatement().use { statement ->
                 statements.tableStatements.forEach(statement::execute)
                 statements.indexStatements.forEach(statement::execute)

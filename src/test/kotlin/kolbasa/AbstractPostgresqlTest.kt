@@ -1,6 +1,7 @@
 package kolbasa
 
 import com.zaxxer.hikari.HikariDataSource
+import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -54,20 +55,20 @@ abstract class AbstractPostgresqlTest {
         }
 
         // Insert test data for all schemas, if any
-        dataSource.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSource.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestData().forEach(statement::execute)
             }
         }
-        dataSourceFirstSchema.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSourceFirstSchema.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataFirstSchema().forEach(statement::execute)
             }
         }
-        dataSourceSecondSchema.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSourceSecondSchema.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataSecondSchema().forEach(statement::execute)
             }

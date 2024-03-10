@@ -2,6 +2,7 @@ package kolbasa.stats.prometheus.queuesize
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
@@ -88,8 +89,8 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
     }
 
     private fun fullVacuum(dataSource: DataSource, tableName: String) {
-        dataSource.connection.use { connection ->
-            connection.autoCommit = true
+        // vacuum full runs only in auto-commit mode
+        dataSource.useConnectionWithAutocommit { connection ->
             connection.useStatement { it.execute("vacuum full $tableName") }
         }
     }
