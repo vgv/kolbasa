@@ -14,7 +14,7 @@ import javax.sql.DataSource
 abstract class AbstractPostgresqlTest {
 
     @Container
-    protected val pgContainer = PostgreSQLContainer(CURRENT_POSTGRES_IMAGE.dockerImage)
+    protected val pgContainer = PostgreSQLContainer(RANDOM_POSTGRES_IMAGE.dockerImage)
 
     protected lateinit var dataSource: DataSource
     protected lateinit var dataSourceFirstSchema: DataSource
@@ -114,10 +114,11 @@ abstract class AbstractPostgresqlTest {
             Postgres("postgres:16.2-alpine", true)
         )
 
-        val CURRENT_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
+        val RANDOM_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
+        val NEWEST_POSTGRES_IMAGE = POSTGRES_IMAGES.last()
 
         init {
-            println("PostgreSQL docker image: ${CURRENT_POSTGRES_IMAGE.dockerImage}")
+            println("PostgreSQL docker image: ${RANDOM_POSTGRES_IMAGE.dockerImage}")
         }
     }
 
