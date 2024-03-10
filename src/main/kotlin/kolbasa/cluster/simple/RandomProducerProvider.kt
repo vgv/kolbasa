@@ -29,6 +29,16 @@ class RandomProducerProvider(
         return queueProducers.random() as Producer<Data, Meta>
     }
 
+    override fun <Data, Meta : Any> producer(queue: Queue<Data, Meta>, shard: Int): Producer<Data, Meta> {
+        val queueProducers = producers.computeIfAbsent(queue) {
+            generateProducers(queue)
+        }
+
+        val index = shard % queueProducers.size
+        @Suppress("UNCHECKED_CAST")
+        return queueProducers[index] as Producer<Data, Meta>
+    }
+
     private fun <Data, Meta : Any> generateProducers(queue: Queue<Data, Meta>): List<Producer<Data, Meta>> {
         return dataSources.map { dataSource ->
             DatabaseProducer(dataSource, queue, producerOptions)
