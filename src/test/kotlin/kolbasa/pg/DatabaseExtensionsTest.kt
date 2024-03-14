@@ -9,6 +9,7 @@ import kolbasa.pg.DatabaseExtensions.readLongList
 import kolbasa.pg.DatabaseExtensions.readString
 import kolbasa.pg.DatabaseExtensions.readStringList
 import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.Test
@@ -60,6 +61,50 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
         // read again after commit^ above
         dataSource.useConnection { connection: Connection ->
             assertEquals(0, connection.readInt("select count(*) from full_table"))
+        }
+
+        // Check that
+        assertNotEquals(-1L, firstTransaction) // transaction id was assigned
+        assertNotEquals(-1L, secondTransaction) // transaction id was assigned
+        assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testUseConnectionWithAutocommit_CheckAutoCommit() {
+        // Check auto-commit is off
+        dataSource.useConnectionWithAutocommit { connection: Connection ->
+            assertTrue(connection.autoCommit)
+        }
+    }
+
+    @Test
+    fun testUseConnectionWithAutocommit_CheckTransactionBoundaries() {
+        var firstTransaction: Long = -1
+        var secondTransaction: Long = -1
+
+        dataSource.useConnectionWithAutocommit { connection: Connection ->
+            assertEquals(3, connection.readInt("select count(*) from full_table"))
+            connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
+            assertEquals(0, connection.readInt("select count(*) from full_table"))
+            firstTransaction = connection.readLong("select txid_current()")
+
+            // read in another transaction
+            dataSource.useConnectionWithAutocommit { otherConnection ->
+                assertEquals(0, otherConnection.readInt("select count(*) from full_table"))
+                otherConnection.useStatement { statement -> statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('a',1,10,false)") }
+                assertEquals(1, otherConnection.readInt("select count(*) from full_table"))
+                secondTransaction = otherConnection.readLong("select txid_current()")
+            }
+
+            // read again in the first transaction
+            assertEquals(1, connection.readInt("select count(*) from full_table"))
+        }
+
+        // read again after commit^ above
+        dataSource.useConnectionWithAutocommit { connection: Connection ->
+            assertEquals(1, connection.readInt("select count(*) from full_table"))
         }
 
         // Check that
