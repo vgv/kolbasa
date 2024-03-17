@@ -7,4 +7,6 @@ interface ProducerProvider {
 
     fun <Data, Meta : Any> producer(queue: Queue<Data, Meta>): Producer<Data, Meta>
 
+    fun <Data, Meta : Any> producer(queue: Queue<Data, Meta>, shard: Int): Producer<Data, Meta>
+
 }
