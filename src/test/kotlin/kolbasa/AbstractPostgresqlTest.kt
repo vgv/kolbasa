@@ -1,6 +1,7 @@
 package kolbasa
 
 import com.zaxxer.hikari.HikariDataSource
+import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -13,7 +14,7 @@ import javax.sql.DataSource
 abstract class AbstractPostgresqlTest {
 
     @Container
-    protected val pgContainer = PostgreSQLContainer(CURRENT_POSTGRES_IMAGE.dockerImage)
+    protected val pgContainer = PostgreSQLContainer(RANDOM_POSTGRES_IMAGE.dockerImage)
 
     protected lateinit var dataSource: DataSource
     protected lateinit var dataSourceFirstSchema: DataSource
@@ -54,20 +55,20 @@ abstract class AbstractPostgresqlTest {
         }
 
         // Insert test data for all schemas, if any
-        dataSource.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSource.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestData().forEach(statement::execute)
             }
         }
-        dataSourceFirstSchema.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSourceFirstSchema.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataFirstSchema().forEach(statement::execute)
             }
         }
-        dataSourceSecondSchema.connection.use { connection ->
-            connection.autoCommit = true // execute all statements in a separate transaction for each statement
+        // execute all statements in a separate transaction for each statement
+        dataSourceSecondSchema.useConnectionWithAutocommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataSecondSchema().forEach(statement::execute)
             }
@@ -113,10 +114,11 @@ abstract class AbstractPostgresqlTest {
             Postgres("postgres:16.2-alpine", true)
         )
 
-        val CURRENT_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
+        val RANDOM_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
+        val NEWEST_POSTGRES_IMAGE = POSTGRES_IMAGES.last()
 
         init {
-            println("PostgreSQL docker image: ${CURRENT_POSTGRES_IMAGE.dockerImage}")
+            println("PostgreSQL docker image: ${RANDOM_POSTGRES_IMAGE.dockerImage}")
         }
     }
 
