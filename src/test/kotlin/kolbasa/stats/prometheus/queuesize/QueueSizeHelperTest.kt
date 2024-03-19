@@ -30,7 +30,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
         // Measure table size
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
-        if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
+        if (RANDOM_POSTGRES_IMAGE.modernVacuumStats) {
             assertEquals(Const.TABLE_HAS_NEVER_BEEN_VACUUMED, length)
         } else {
             assertEquals(0L, length)
@@ -50,7 +50,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
         // Measure table size
         // Even if we have inserted 3 records, the table size is still -1 (or 0 on old PG) because we haven't run vacuum yet
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
-        if (CURRENT_POSTGRES_IMAGE.modernVacuumStats) {
+        if (RANDOM_POSTGRES_IMAGE.modernVacuumStats) {
             assertEquals(Const.TABLE_HAS_NEVER_BEEN_VACUUMED, length)
         } else {
             assertEquals(0L, length)
