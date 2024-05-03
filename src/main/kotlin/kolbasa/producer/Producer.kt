@@ -50,9 +50,8 @@ interface Producer<Data, Meta : Any> {
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
-     * @param data list of messages, metadata (if any) and options (if any) to send
-     * @param sendOptions options for sending this list of messages, allows to override global [Producer] options
+     * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(data: List<SendMessage<Data, Meta>>, sendOptions: SendOptions): SendResult<Data, Meta>
+    fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta>
 }
