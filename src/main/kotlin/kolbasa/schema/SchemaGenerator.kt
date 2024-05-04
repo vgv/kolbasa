@@ -13,6 +13,9 @@ internal object SchemaGenerator {
         // table
         forTable(queue, existingTable, mutableSchema)
 
+        // OT column, remove after 0.30.0 release
+        forOpenTelemetry(queue, existingTable, mutableSchema)
+
         // scheduledAt column
         forScheduledAtColumn(queue, existingTable, mutableSchema)
 
@@ -36,6 +39,7 @@ internal object SchemaGenerator {
             create table if not exists ${queue.dbTableName}(
                 ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${Const.MIN_QUEUE_IDENTIFIER_VALUE} maxvalue ${Const.MAX_QUEUE_IDENTIFIER_VALUE} cycle) primary key,
                 ${Const.USELESS_COUNTER_COLUMN_NAME} int,
+                ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
@@ -49,6 +53,19 @@ internal object SchemaGenerator {
         mutableSchema.allTables += createTableStatement
         if (existingTable == null) {
             mutableSchema.requiredTables += createTableStatement
+        }
+    }
+
+    private fun forOpenTelemetry(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema){
+        val hasColumn = existingTable?.findColumn(Const.OPENTELEMETRY_COLUMN_NAME) != null
+        val openTelemetryColumn = """
+            alter table ${queue.dbTableName}
+            add if not exists ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[]
+        """.trimIndent()
+
+        mutableSchema.allTables += openTelemetryColumn
+        if (!hasColumn) {
+            mutableSchema.requiredTables += openTelemetryColumn
         }
     }
 
