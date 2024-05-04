@@ -3,7 +3,7 @@ package kolbasa.consumer
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
-import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
 import kolbasa.queue.PredefinedDataTypes

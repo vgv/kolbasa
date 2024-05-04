@@ -1,10 +1,11 @@
-package kolbasa.producer
+package kolbasa.producer.connection
 
 import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
+import kolbasa.producer.*
+import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -15,39 +16,20 @@ import java.sql.Connection
 /**
  * Default implementation of [ConnectionAwareProducer]
  */
-class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
+class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
     private val queue: Queue<Data, Meta>,
-    private val producerOptions: ProducerOptions = ProducerOptions()
+    private val producerOptions: ProducerOptions = ProducerOptions(),
+    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList()
 ) : ConnectionAwareProducer<Data, Meta> {
 
-    override fun send(connection: Connection, data: Data): Long {
-        return send(connection, SendMessage(data))
-    }
-
-    override fun send(connection: Connection, data: SendMessage<Data, Meta>): Long {
-        val result = send(connection, listOf(data))
-
-        return when (val message = result.messages.first()) {
-            is MessageResult.Success -> message.id
-            is MessageResult.Duplicate -> Const.RESERVED_DUPLICATE_ID
-            is MessageResult.Error -> throw message.exception
-        }
-    }
-
-    override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        return send(connection, SendRequest(data = data))
-    }
-
     override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return queue.queueTracing.makeProducerCall(request) {
-            internalSend(connection, request)
+        return ConnectionAwareProducerInterceptor.recursiveApplyInterceptors(interceptors, connection, request) { conn, req ->
+            doRealSend(conn, req)
         }
     }
 
-    private fun internalSend(
-        connection: Connection,
-        request: SendRequest<Data, Meta>
-    ): SendResult<Data, Meta> {
+    // real send method without any interceptors, recursion and other stuff, just put data into the database
+    private fun doRealSend(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         val approxStatsBytes = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
@@ -211,5 +193,4 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
         return result
     }
-
 }

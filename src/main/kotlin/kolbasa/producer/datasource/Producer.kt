@@ -1,4 +1,8 @@
-package kolbasa.producer
+package kolbasa.producer.datasource
+
+import kolbasa.producer.SendMessage
+import kolbasa.producer.SendRequest
+import kolbasa.producer.SendResult
 
 /**
  * Base interface for all producers
@@ -10,7 +14,7 @@ package kolbasa.producer
  * any additional dependencies.
  * This default, provided implementation completely hides database handling and transaction management from the user.
  *
- * If you require a producer working in context of already opened transaction, please, look at [ConnectionAwareProducer].
+ * If you require a producer working in context of already opened transaction, please, look at [kolbasa.producer.connection.ConnectionAwareProducer].
  *
  * @param Data type of the message
  * @param Meta type of the metadata
@@ -24,29 +28,37 @@ interface Producer<Data, Meta : Any> {
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(data: Data): Long
+    fun send(data: Data): Long {
+        return send(SendMessage(data = data))
+    }
 
     /**
-     * Send one message with optional metadata and [MessageOptions]
+     * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
      * @param data message, metadata (if any) and options (if any) to send
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(data: SendMessage<Data, Meta>): Long
+    fun send(data: SendMessage<Data, Meta>): Long {
+        val result = send(listOf(data))
+        return result.extractSingularId()
+    }
 
     /**
-     * Send many messages with optional metadata and [MessageOptions] defined for every message
+     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta>
+    fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+        return send(SendRequest(data = data))
+    }
 
     /**
-     * Send many messages with optional metadata and [MessageOptions] defined for every message and custom [SendOptions]
+     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
+     * custom [kolbasa.producer.SendOptions]
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *

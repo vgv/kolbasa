@@ -4,7 +4,7 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers

@@ -1,7 +1,7 @@
 package performance
 
 import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes

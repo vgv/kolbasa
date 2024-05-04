@@ -1,6 +1,6 @@
 package kolbasa.cluster.simple
 
-import kolbasa.producer.Producer
+import kolbasa.producer.datasource.Producer
 import kolbasa.queue.Queue
 
 interface ProducerProvider {
