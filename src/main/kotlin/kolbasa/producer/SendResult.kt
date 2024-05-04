@@ -1,5 +1,7 @@
 package kolbasa.producer
 
+import kolbasa.schema.Const
+
 /**
  * Result of sending a batch of messages
  *
@@ -63,6 +65,18 @@ data class SendResult<Data, Meta : Any>(
     fun gatherFailedMessages(): List<SendMessage<Data, Meta>> {
         val collector = ArrayList<SendMessage<Data, Meta>>(failedMessages)
         return onlyFailed().flatMapTo(collector) { it.messages }
+    }
+
+    internal fun extractSingularId(): Long {
+        check(messages.size == 1) {
+            "To extract a singular id you must have a singular response. Current response size: ${messages.size}"
+        }
+
+        return when (val message = messages.first()) {
+            is MessageResult.Success -> message.id
+            is MessageResult.Duplicate -> Const.RESERVED_DUPLICATE_ID
+            is MessageResult.Error -> throw message.exception
+        }
     }
 
 }

@@ -1,7 +1,9 @@
 package kolbasa.producer
 
+import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SendResultTest {
 
@@ -44,4 +46,72 @@ class SendResultTest {
         assertEquals(listOf(second1, second2), failedMessages)
     }
 
+    @Test
+    fun testExtractSingularId_CheckIfSendResultIsNotSingular() {
+        // Check with zero messages
+        val sendResultWithZeroMessages = SendResult<String, Nothing>(
+            failedMessages = 0,
+            messages = emptyList()
+        )
+        assertFailsWith<IllegalStateException> { sendResultWithZeroMessages.extractSingularId() }
+
+        // Check with two messages
+        val first = SendMessage("1", null, null)
+        val second = SendMessage("2", null, null)
+
+        val firstResult = MessageResult.Success(1L, first)
+        val secondResult = MessageResult.Success(2L, second)
+
+        val sendResultWithTwoMessages = SendResult(
+            failedMessages = 0,
+            messages = listOf(firstResult, secondResult)
+        )
+        assertFailsWith<IllegalStateException> { sendResultWithTwoMessages.extractSingularId() }
+    }
+
+    @Test
+    fun testExtractSingularId_Success() {
+        // Check with two messages
+        val first = SendMessage("1", null, null)
+
+        val firstResult = MessageResult.Success(1L, first)
+
+        val sendResult = SendResult(
+            failedMessages = 0,
+            messages = listOf(firstResult)
+        )
+
+        assertEquals(1, sendResult.extractSingularId())
+    }
+
+    @Test
+    fun testExtractSingularId_Duplicate() {
+        // Check with two messages
+        val first = SendMessage("1", null, null)
+
+        val firstResult = MessageResult.Duplicate(first)
+
+        val sendResult = SendResult(
+            failedMessages = 0,
+            messages = listOf(firstResult)
+        )
+
+        assertEquals(Const.RESERVED_DUPLICATE_ID, sendResult.extractSingularId())
+    }
+
+    @Test
+    fun testExtractSingularId_Error() {
+        // Check with two messages
+        val first = SendMessage("1", null, null)
+        val exception = RuntimeException()
+
+        val firstResult = MessageResult.Error(exception, listOf(first))
+
+        val sendResult = SendResult(
+            failedMessages = 1,
+            messages = listOf(firstResult)
+        )
+
+        assertFailsWith<RuntimeException> { sendResult.extractSingularId() }
+    }
 }
