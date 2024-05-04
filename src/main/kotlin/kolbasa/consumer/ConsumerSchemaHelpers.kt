@@ -24,6 +24,7 @@ internal object ConsumerSchemaHelpers {
             Const.CREATED_AT_COLUMN_NAME,
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
+            Const.OPENTELEMETRY_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
         // if we need metadata - we need to read these fields
@@ -124,6 +125,9 @@ internal object ConsumerSchemaHelpers {
         val createdAt = resultSet.getTimestamp(columnIndex++).time
         val processingAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
+        val otData = resultSet.getArray(columnIndex++)?.let {
+            it.array as Array<String>
+        } ?: emptyArray<String>()
 
         val data = when (queue.databaseDataType) {
             is DatabaseQueueDataType.Json -> {
@@ -173,7 +177,19 @@ internal object ConsumerSchemaHelpers {
             null
         }
 
-        return Message(id, createdAt, processingAt, attempts, data, meta)
+        val m = Message(id, createdAt, processingAt, attempts, data, meta)
+        var i = 0
+        while (i < otData.size) {
+            val key = otData[i]
+            val value = otData[i + 1]
+            if (m.openTelemetryData == null) {
+                m.openTelemetryData = mutableMapOf()
+            }
+            m.openTelemetryData!![key] = value
+            i += 2
+        }
+
+        return m
     }
 
     fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Long>): String {
