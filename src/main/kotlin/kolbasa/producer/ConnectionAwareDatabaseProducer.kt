@@ -35,29 +35,34 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        return send(connection, data, SendOptions.SEND_OPTIONS_NOT_SET)
+        return send(connection, SendRequest(data = data))
     }
 
-    override fun send(
+    override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+        return queue.queueTracing.makeCall(request) {
+            internalSend(connection, request)
+        }
+    }
+
+    private fun internalSend(
         connection: Connection,
-        data: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
         val approxStatsBytes = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
-        val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, sendOptions)
+        val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
             when (partialInsert) {
-                PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, data, sendOptions)
-                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, approxStatsBytes, data, sendOptions)
-                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, approxStatsBytes, data, sendOptions)
+                PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, request)
+                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, approxStatsBytes, request)
+                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, approxStatsBytes, request)
             }
         }
 
         // Prometheus
         queue.queueMetrics.producerSendMetrics(
             partialInsert,
-            allMessages = data.size,
+            allMessages = request.data.size,
             failedMessages = result.failedMessages,
             executionNanos = execution.durationNanos,
             approxBytes = approxStatsBytes.get(),
@@ -70,18 +75,18 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private fun sendProhibited(
         connection: Connection,
         approxStatsBytes: BytesCounter,
-        data: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
-        val result = ArrayList<MessageResult<Data, Meta>>(data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
+        val result = ArrayList<MessageResult<Data, Meta>>(request.data.size)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
 
-        data.asSequence().chunked(batchSize).forEach { chunk ->
+        request.chunked(batchSize).forEach { chunk ->
             try {
-                result += executeChunk(connection, approxStatsBytes, chunk, sendOptions)
+                result += executeChunk(connection, approxStatsBytes, chunk)
             } catch (e: Exception) {
                 // just stop all sequence execution and return the result
-                return SendResult(data.size, listOf(MessageResult.Error(e, data)))
+                // all messages were failed
+                return SendResult(failedMessages = request.data.size, listOf(MessageResult.Error(e, request.data)))
             }
         }
 
@@ -92,24 +97,23 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private fun sendUntilFirstFailure(
         connection: Connection,
         approxStatsBytes: BytesCounter,
-        data: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
-        val results = ArrayList<MessageResult<Data, Meta>>(data.size)
+        val results = ArrayList<MessageResult<Data, Meta>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data, Meta>>()
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
         lateinit var exception: Throwable
 
-        data.asSequence().chunked(batchSize).forEach { chunk ->
+        request.chunked(batchSize).forEach { chunk ->
             if (failResults.isNotEmpty()) {
                 // If we have at least one failed message – let's fail others
-                failResults += chunk
+                failResults += chunk.data
             } else {
-                executeChunkInSavepoint(connection, approxStatsBytes, chunk, sendOptions)
+                executeChunkInSavepoint(connection, approxStatsBytes, chunk)
                     .onSuccess { results += it }
                     .onFailure { ex ->
                         exception = ex
-                        failResults += chunk
+                        failResults += chunk.data
                     }
             }
         }
@@ -124,19 +128,18 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private fun sendAsMuchAsPossible(
         connection: Connection,
         approxStatsBytes: BytesCounter,
-        data: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
-        val result = ArrayList<MessageResult<Data, Meta>>(data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
+        val result = ArrayList<MessageResult<Data, Meta>>(request.data.size)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
         var failedMessages = 0
 
-        data.asSequence().chunked(batchSize).forEach { chunk ->
-            executeChunkInSavepoint(connection, approxStatsBytes, chunk, sendOptions)
+        request.chunked(batchSize).forEach { chunk ->
+            executeChunkInSavepoint(connection, approxStatsBytes, chunk)
                 .onSuccess { result += it }
                 .onFailure { ex ->
-                    failedMessages += chunk.size
-                    result += MessageResult.Error(ex, chunk)
+                    failedMessages += chunk.data.size
+                    result += MessageResult.Error(ex, chunk.data)
                 }
         }
 
@@ -146,34 +149,32 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     private fun executeChunkInSavepoint(
         connection: Connection,
         approxStatsBytes: BytesCounter,
-        chunk: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): Result<List<MessageResult<Data, Meta>>> {
         return connection.useSavepoint { _ ->
-            executeChunk(connection, approxStatsBytes, chunk, sendOptions)
+            executeChunk(connection, approxStatsBytes, request)
         }
     }
 
     private fun executeChunk(
         connection: Connection,
         approxStatsBytes: BytesCounter,
-        chunk: List<SendMessage<Data, Meta>>,
-        sendOptions: SendOptions
+        request: SendRequest<Data, Meta>
     ): List<MessageResult<Data, Meta>> {
-        val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, sendOptions)
-        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions.producer, deduplicationMode, chunk)
+        val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, request.sendOptions)
+        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions.producer, deduplicationMode, request)
 
         val (execution, result) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->
                 ProducerSchemaHelpers.fillInsertPreparedQuery(
                     queue,
                     producerName = producerOptions.producer,
-                    chunk,
+                    request,
                     preparedStatement,
                     approxStatsBytes
                 )
 
-                val result = ArrayList<MessageResult<Data, Meta>>(chunk.size)
+                val result = ArrayList<MessageResult<Data, Meta>>(request.data.size)
 
                 var currentIndex = 0
                 preparedStatement.executeQuery().use { resultSet ->
@@ -182,23 +183,23 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
 
                         when (deduplicationMode) {
                             DeduplicationMode.ERROR -> {
-                                result += MessageResult.Success(id, message = chunk[currentIndex++])
+                                result += MessageResult.Success(id, message = request.data[currentIndex++])
                             }
 
                             DeduplicationMode.IGNORE_DUPLICATES -> {
                                 val realIndex = resultSet.getInt(2)
                                 while (currentIndex < realIndex) {
-                                    result += MessageResult.Duplicate(message = chunk[currentIndex++])
+                                    result += MessageResult.Duplicate(message = request.data[currentIndex++])
                                 }
 
-                                result += MessageResult.Success(id, message = chunk[currentIndex++])
+                                result += MessageResult.Success(id, message = request.data[currentIndex++])
                             }
                         }
                     }
                 }
 
-                while (currentIndex < chunk.size) {
-                    result += MessageResult.Duplicate(chunk[currentIndex++])
+                while (currentIndex < request.data.size) {
+                    result += MessageResult.Duplicate(request.data[currentIndex++])
                 }
 
                 result

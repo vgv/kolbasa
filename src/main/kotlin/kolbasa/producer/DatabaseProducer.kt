@@ -27,8 +27,8 @@ class DatabaseProducer<Data, Meta : Any>(
         return dataSource.useConnection { peer.send(it, data) }
     }
 
-    override fun send(data: List<SendMessage<Data, Meta>>, sendOptions: SendOptions): SendResult<Data, Meta> {
-        return dataSource.useConnection { peer.send(it, data, sendOptions) }
+    override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+        return dataSource.useConnection { peer.send(it, request) }
     }
 }
 
