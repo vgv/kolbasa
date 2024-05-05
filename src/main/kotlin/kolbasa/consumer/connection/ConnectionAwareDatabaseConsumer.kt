@@ -13,16 +13,26 @@ import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions()
+    private val consumerOptions: ConsumerOptions = ConsumerOptions(),
+    private val interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList()
 ) : ConnectionAwareConsumer<Data, Meta> {
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        return queue.queueTracing.makeConsumerCall {
-            internalReceive(connection, limit, receiveOptions)
+        return ConnectionAwareConsumerInterceptor.recursiveApplyReceiveInterceptors(
+            interceptors,
+            connection,
+            limit,
+            receiveOptions
+        ) { conn, lmt, rcvOptions ->
+            doRealReceive(conn, lmt, rcvOptions)
         }
     }
 
-    private fun internalReceive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
+    private fun doRealReceive(
+        connection: Connection,
+        limit: Int,
+        receiveOptions: ReceiveOptions<Meta>
+    ): List<Message<Data, Meta>> {
         // delete expired messages before next read
         if (SweepHelper.needSweep(queue)) {
             SweepHelper.sweep(connection, queue, limit)
@@ -62,6 +72,16 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     }
 
     override fun delete(connection: Connection, messageIds: List<Long>): Int {
+        return ConnectionAwareConsumerInterceptor.recursiveApplyDeleteInterceptors(
+            interceptors,
+            connection,
+            messageIds
+        ) { conn, msgIds ->
+            doRealDelete(conn, msgIds)
+        }
+    }
+
+    private fun doRealDelete(connection: Connection, messageIds: List<Long>): Int {
         if (messageIds.isEmpty()) {
             return 0
         }
