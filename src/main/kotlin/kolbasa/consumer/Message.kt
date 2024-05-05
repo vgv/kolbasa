@@ -29,6 +29,6 @@ data class Message<Data, Meta>(
     val meta: Meta?
 ) {
 
-    internal var openTelemetryData: MutableMap<String, String>? = null
+    internal var openTelemetryData: Map<String, String>? = null
 
 }

@@ -45,6 +45,9 @@ data class ReceiveOptions<Meta : Any> @JvmOverloads constructor(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
+    // do we need to read, parse and propagate OT data?
+    internal var readOpenTelemetryData: Boolean = false
+
 }
 
 
