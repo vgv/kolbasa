@@ -1,8 +1,7 @@
-package kolbasa.consumer
+package kolbasa.consumer.connection
 
 import kolbasa.Kolbasa
-import kolbasa.consumer.filter.Condition
-import kolbasa.consumer.filter.Filter
+import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.Queue
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
@@ -16,27 +15,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions()
 ) : ConnectionAwareConsumer<Data, Meta> {
-
-    override fun receive(connection: Connection): Message<Data, Meta>? {
-        return receive(connection, ReceiveOptions())
-    }
-
-    override fun receive(connection: Connection, filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
-        return receive(connection, ReceiveOptions(filter = filter(Filter)))
-    }
-
-    override fun receive(connection: Connection, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
-        val result = receive(connection, limit = 1, receiveOptions)
-        return result.firstOrNull()
-    }
-
-    override fun receive(connection: Connection, limit: Int): List<Message<Data, Meta>> {
-        return receive(connection, limit, ReceiveOptions())
-    }
-
-    override fun receive(connection: Connection, limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
-        return receive(connection, limit, ReceiveOptions(filter = filter(Filter)))
-    }
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         return queue.queueTracing.makeConsumerCall {
@@ -83,10 +61,6 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         return result
     }
 
-    override fun delete(connection: Connection, messageId: Long): Int {
-        return delete(connection, listOf(messageId))
-    }
-
     override fun delete(connection: Connection, messageIds: List<Long>): Int {
         if (messageIds.isEmpty()) {
             return 0
@@ -108,11 +82,4 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         return removedRows
     }
 
-    override fun delete(connection: Connection, message: Message<Data, Meta>): Int {
-        return delete(connection, message.id)
-    }
-
-    override fun delete(connection: Connection, messages: Collection<Message<Data, Meta>>): Int {
-        return delete(connection, messages.map(Message<Data, Meta>::id))
-    }
 }

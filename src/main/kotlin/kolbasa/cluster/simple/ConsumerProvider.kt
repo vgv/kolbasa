@@ -1,6 +1,6 @@
 package kolbasa.cluster.simple
 
-import kolbasa.consumer.Consumer
+import kolbasa.consumer.datasource.Consumer
 import kolbasa.queue.Queue
 
 interface ConsumerProvider {

@@ -1,6 +1,6 @@
 package examples
 
-import kolbasa.consumer.DatabaseConsumer
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.lessEq

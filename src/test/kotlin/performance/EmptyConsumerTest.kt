@@ -1,6 +1,6 @@
 package performance
 
-import kolbasa.consumer.DatabaseConsumer
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
