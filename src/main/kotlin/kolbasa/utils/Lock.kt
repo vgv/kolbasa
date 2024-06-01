@@ -1,4 +1,4 @@
-package kolbasa.pg
+package kolbasa.utils
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.Lock
