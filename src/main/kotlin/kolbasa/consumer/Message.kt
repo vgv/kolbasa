@@ -27,4 +27,8 @@ data class Message<Data, Meta>(
      * 2) [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] set to true
      */
     val meta: Meta?
-)
+) {
+
+    internal var openTelemetryData: MutableMap<String, String>? = null
+
+}

@@ -39,7 +39,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any>(
     }
 
     override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return queue.queueTracing.makeCall(request) {
+        return queue.queueTracing.makeProducerCall(request) {
             internalSend(connection, request)
         }
     }
