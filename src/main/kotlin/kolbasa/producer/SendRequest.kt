@@ -43,7 +43,7 @@ data class SendRequest<Data, Meta : Any>(
      * Split this [SendRequest] into multiple [SendRequest]s with the same options, but with smaller data chunks
      */
     internal fun chunked(chunkSize: Int): Sequence<SendRequest<Data, Meta>> {
-        return if (chunkSize <= data.size) {
+        return if (data.size <= chunkSize) {
             // Just an optimization
             sequenceOf(this)
         } else {
