@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage

@@ -1,8 +1,8 @@
 package kolbasa.cluster.simple
 
-import kolbasa.consumer.Consumer
+import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.ConsumerOptions
-import kolbasa.consumer.DatabaseConsumer
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.queue.Queue
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource

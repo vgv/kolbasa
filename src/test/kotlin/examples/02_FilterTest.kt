@@ -1,6 +1,6 @@
 package examples
 
-import kolbasa.consumer.DatabaseConsumer
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes

@@ -1,7 +1,7 @@
 package kolbasa.cluster.simple
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.consumer.Consumer
+import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
