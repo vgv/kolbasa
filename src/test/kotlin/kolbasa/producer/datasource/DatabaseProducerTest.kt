@@ -1,7 +1,11 @@
-package kolbasa.producer
+package kolbasa.producer.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
+import kolbasa.producer.MessageResult
+import kolbasa.producer.PartialInsert
+import kolbasa.producer.ProducerOptions
+import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Unique
