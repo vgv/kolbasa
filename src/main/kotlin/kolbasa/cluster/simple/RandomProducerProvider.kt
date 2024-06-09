@@ -1,7 +1,7 @@
 package kolbasa.cluster.simple
 
-import kolbasa.producer.DatabaseProducer
-import kolbasa.producer.Producer
+import kolbasa.producer.datasource.DatabaseProducer
+import kolbasa.producer.datasource.Producer
 import kolbasa.producer.ProducerOptions
 import kolbasa.queue.Queue
 import java.util.concurrent.ConcurrentHashMap

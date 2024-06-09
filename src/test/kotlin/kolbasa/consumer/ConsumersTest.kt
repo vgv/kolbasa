@@ -1,5 +1,7 @@
 package kolbasa.consumer
 
+import kolbasa.consumer.connection.ConnectionAwareConsumer
+import kolbasa.consumer.datasource.Consumer
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.reflect.full.declaredMemberFunctions

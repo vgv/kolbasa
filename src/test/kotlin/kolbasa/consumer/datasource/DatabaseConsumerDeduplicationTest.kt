@@ -1,8 +1,8 @@
-package kolbasa.consumer
+package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
 import kolbasa.queue.PredefinedDataTypes

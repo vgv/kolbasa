@@ -1,12 +1,12 @@
 package examples
 
-import kolbasa.consumer.DatabaseConsumer
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.lessEq
 import kolbasa.consumer.filter.Filter.or
 import kolbasa.consumer.order.Order.Companion.desc
-import kolbasa.producer.DatabaseProducer
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue

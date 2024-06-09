@@ -107,11 +107,12 @@ abstract class AbstractPostgresqlTest {
         private val POSTGRES_IMAGES = setOf(
             Postgres("postgres:10.23-alpine", false),
             Postgres("postgres:11.22-alpine", false),
-            Postgres("postgres:12.18-alpine", false),
-            Postgres("postgres:13.14-alpine", false),
-            Postgres("postgres:14.11-alpine", true),
-            Postgres("postgres:15.6-alpine", true),
-            Postgres("postgres:16.2-alpine", true)
+            Postgres("postgres:12.19-alpine", false),
+            Postgres("postgres:13.15-alpine", false),
+            Postgres("postgres:14.12-alpine", true),
+            Postgres("postgres:15.7-alpine", true),
+            Postgres("postgres:16.3-alpine", true),
+            Postgres("postgres:17beta1-alpine", true)
         )
 
         val RANDOM_POSTGRES_IMAGE = POSTGRES_IMAGES.random()

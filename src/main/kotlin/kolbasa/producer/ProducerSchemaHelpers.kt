@@ -14,14 +14,14 @@ internal object ProducerSchemaHelpers {
         queue: Queue<*, *>,
         producerName: String?,
         deduplicationMode: DeduplicationMode,
-        data: List<SendMessage<*, *>>
+        request: SendRequest<*, *>
     ): String {
         val columns = mutableListOf<String>()
-        val values = Array<MutableList<String>>(data.size) { mutableListOf() }
+        val values = Array<MutableList<String>>(request.data.size) { mutableListOf() }
 
         // delayMillis
         columns += Const.SCHEDULED_AT_COLUMN_NAME
-        data.forEachIndexed { index, item ->
+        request.data.forEachIndexed { index, item ->
             val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
             values[index] += if (delay != null) {
                 "clock_timestamp() + interval '${delay.toMillis()} millisecond'"
@@ -32,7 +32,7 @@ internal object ProducerSchemaHelpers {
 
         // attempts
         columns += Const.REMAINING_ATTEMPTS_COLUMN_NAME
-        data.forEachIndexed { index, item ->
+        request.data.forEachIndexed { index, item ->
             val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
 
             values[index] += "$remainingAttempts"
@@ -44,17 +44,25 @@ internal object ProducerSchemaHelpers {
                 columns += field.dbColumnName
             }
 
-            data.forEachIndexed { index, _ ->
+            request.data.forEachIndexed { index, _ ->
                 queue.metadataDescription.fields.forEach { _ ->
                     values[index] += "?"
                 }
             }
         }
 
-        // producer
+        // producer name
         if (producerName != null) {
             columns += Const.PRODUCER_COLUMN_NAME
-            data.forEachIndexed { index, _ ->
+            request.data.forEachIndexed { index, _ ->
+                values[index] += "?"
+            }
+        }
+
+        // OpenTelemetry context propagation data
+        if (request.openTelemetryContext != null) {
+            columns += Const.OPENTELEMETRY_COLUMN_NAME
+            request.data.forEachIndexed { index, _ ->
                 values[index] += "?"
             }
         }
@@ -62,7 +70,7 @@ internal object ProducerSchemaHelpers {
         // deduplication
         if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
             columns += Const.USELESS_COUNTER_COLUMN_NAME
-            data.forEachIndexed { index, _ ->
+            request.data.forEachIndexed { index, _ ->
                 // just a sequence 0, 1, 2 etc.
                 values[index] += index.toString()
             }
@@ -70,7 +78,7 @@ internal object ProducerSchemaHelpers {
 
         // data
         columns += Const.DATA_COLUMN_NAME
-        data.forEachIndexed { index, _ ->
+        request.data.forEachIndexed { index, _ ->
             values[index] += "?"
         }
 
@@ -96,13 +104,18 @@ internal object ProducerSchemaHelpers {
     fun <Data, Meta : Any> fillInsertPreparedQuery(
         queue: Queue<Data, Meta>,
         producerName: String?,
-        data: List<SendMessage<Data, Meta>>,
+        request: SendRequest<Data, Meta>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
     ) {
+        // If we have OT data – let's create PG array once and use it for all rows
+        val openTelemetryData = request.openTelemetryContext?.let { context ->
+            preparedStatement.connection.createArrayOf("varchar", context.toTypedArray())
+        }
+
         var columnIndex = 1
 
-        data.forEach { item ->
+        request.data.forEach { item ->
             // All meta fields
             queue.metadataDescription?.fields?.forEach { field ->
                 field.fillPreparedStatement(preparedStatement, columnIndex++, item.meta)
@@ -111,6 +124,10 @@ internal object ProducerSchemaHelpers {
             // producer name
             if (producerName != null) {
                 preparedStatement.setString(columnIndex++, producerName)
+            }
+
+            if (openTelemetryData != null) {
+                preparedStatement.setArray(columnIndex++, openTelemetryData)
             }
 
             // message data

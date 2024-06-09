@@ -1,5 +1,6 @@
 package kolbasa
 
+import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
 
@@ -16,5 +17,9 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var prometheusConfig: PrometheusConfig = PrometheusConfig()
+
+    @JvmStatic
+    @Volatile
+    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig()
 
 }

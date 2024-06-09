@@ -6,6 +6,7 @@ import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.Helpers
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
@@ -31,6 +32,10 @@ internal object ConsumerSchemaHelpers {
             queue.metadataDescription?.fields?.forEach { metaField ->
                 dataColumns += metaField.dbColumnName
             }
+        }
+        // if we need OT data - read it
+        if (receiveOptions.readOpenTelemetryData) {
+            dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
         }
 
         // ----------------------------------------------------------
@@ -173,7 +178,19 @@ internal object ConsumerSchemaHelpers {
             null
         }
 
-        return Message(id, createdAt, processingAt, attempts, data, meta)
+        val otData = if (receiveOptions.readOpenTelemetryData) {
+            // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}
+            @Suppress("UNCHECKED_CAST")
+            val otArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
+            Helpers.arrayToMap(otArray)
+        } else {
+            null
+        }
+
+        val message = Message(id, createdAt, processingAt, attempts, data, meta)
+        message.openTelemetryData = otData
+
+        return message
     }
 
     fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Long>): String {

@@ -34,6 +34,10 @@ internal object Const {
 
     const val USELESS_COUNTER_COLUMN_NAME = "uc"
 
+    // OpenTelemetry
+    const val OPENTELEMETRY_COLUMN_NAME = "opentelemetry"
+    const val OPENTELEMETRY_VALUE_LENGTH = 1024 // OpenTelemetry propagation data key/value max length
+
     const val CREATED_AT_COLUMN_NAME = "created_at"
     const val SCHEDULED_AT_COLUMN_NAME = "scheduled_at"
     const val PROCESSING_AT_COLUMN_NAME = "processing_at"

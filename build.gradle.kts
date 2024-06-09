@@ -24,6 +24,10 @@ dependencies {
     val testContainersVersion: String by project
     val logbackVersion: String by project
     val hikariVersion: String by project
+    val openTelemetryVersion: String by project
+    val openTelemetryInstrumentationVersion: String by project
+    val openTelemetrySemconvVersion: String by project
+    val openTelemetryInstrumentationSemconvVersion: String by project
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -35,6 +39,15 @@ dependencies {
 
     // Metrics
     implementation("io.prometheus:prometheus-metrics-core:$prometheusVersion")
+
+    // OpenTelemetry
+    implementation("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
+    implementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
+    implementation("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
+    implementation("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-semconv:$openTelemetryInstrumentationSemconvVersion")
 
     // ---------------------------------------------------------------------------------
 
@@ -61,6 +74,8 @@ tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "17"
     kotlinOptions.apiVersion = "1.7"
     kotlinOptions.languageVersion = "1.7"
+    // to generate default method implementations in interfaces
+    kotlinOptions.freeCompilerArgs = listOf("-Xjvm-default=all")
 }
 
 // Performance tests
