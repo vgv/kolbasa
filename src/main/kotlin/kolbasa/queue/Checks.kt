@@ -108,8 +108,8 @@ internal object Checks {
     }
 
     fun checkCustomQueueSizeMeasureInterval(queueName: String, customDuration: Duration) {
-        check(customDuration >= PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL) {
-            "Custom queue size measure interval must be greater than or equal to ${PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL} (current: $customDuration, queue=$queueName)"
+        check(customDuration >= PrometheusConfig.Real.MIN_QUEUE_SIZE_MEASURE_INTERVAL) {
+            "Custom queue size measure interval must be greater than or equal to ${PrometheusConfig.Real.MIN_QUEUE_SIZE_MEASURE_INTERVAL} (current: $customDuration, queue=$queueName)"
         }
     }
 

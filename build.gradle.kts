@@ -53,6 +53,7 @@ dependencies {
 
     // Test
     testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation("io.prometheus:prometheus-metrics-core:$prometheusVersion")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
 

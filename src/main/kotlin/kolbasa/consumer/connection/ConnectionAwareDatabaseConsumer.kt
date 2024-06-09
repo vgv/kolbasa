@@ -39,7 +39,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
-        val approxBytesCounter = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
+        val approxBytesCounter = BytesCounter(false)
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
 
         val (execution, result) = TimeHelper.measure {

@@ -23,7 +23,7 @@ internal class QueueMetrics(private val queueName: String) {
         approxBytes: Long,
         queueSizeCalcFunc: () -> Long
     ) {
-        if (!Kolbasa.prometheusConfig.enabled) {
+        if (Kolbasa.prometheusConfig is PrometheusConfig.None) {
             return
         }
 
@@ -55,10 +55,10 @@ internal class QueueMetrics(private val queueName: String) {
 
         // Queue size
         // We use internal caching to prevent too frequent calls to the database
-        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
-            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
-        producerQueueSizeGauge.set(queueSize.toDouble())
+//        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
+//            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
+//        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+//        producerQueueSizeGauge.set(queueSize.toDouble())
     }
 
     private val producerSendCounterProhibited: CounterDataPoint =
@@ -111,7 +111,7 @@ internal class QueueMetrics(private val queueName: String) {
         approxBytes: Long,
         queueSizeCalcFunc: () -> Long
     ) {
-        if (!Kolbasa.prometheusConfig.enabled) {
+        if (Kolbasa.prometheusConfig is PrometheusConfig.None) {
             return
         }
 
@@ -122,14 +122,14 @@ internal class QueueMetrics(private val queueName: String) {
 
         // Queue size
         // We use internal caching to prevent too frequent calls to the database
-        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
-            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
-        consumerQueueSizeGauge.set(queueSize.toDouble())
+//        val queueSizeMeasureInterval = Kolbasa.prometheusConfig.customQueueSizeMeasureInterval[queueName]
+//            ?: PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
+//        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+//        consumerQueueSizeGauge.set(queueSize.toDouble())
     }
 
     fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long) {
-        if (!Kolbasa.prometheusConfig.enabled) {
+        if (Kolbasa.prometheusConfig is PrometheusConfig.None) {
             return
         }
 
@@ -158,7 +158,7 @@ internal class QueueMetrics(private val queueName: String) {
     // ------------------------------------------------------------------------------
     // Sweep
     fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long) {
-        if (!Kolbasa.prometheusConfig.enabled) {
+        if (Kolbasa.prometheusConfig is PrometheusConfig.None) {
             return
         }
 

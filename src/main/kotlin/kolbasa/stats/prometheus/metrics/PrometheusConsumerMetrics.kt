@@ -12,19 +12,19 @@ internal object PrometheusConsumerMetrics {
         .name("kolbasa_consumer_receive")
         .help("Amount of consumer receive() calls")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerReceiveBytesCounter: Counter = Counter.builder()
         .name("kolbasa_consumer_receive_bytes")
         .help("Amount of bytes read by consumer receive() calls")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerReceiveRowsCounter: Counter = Counter.builder()
         .name("kolbasa_consumer_receive_rows")
         .help("Amount of rows received by consumer receive() calls")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerReceiveDuration: Histogram = Histogram.builder()
         .name("kolbasa_consumer_receive_duration_seconds")
@@ -32,20 +32,20 @@ internal object PrometheusConsumerMetrics {
         .labelNames("queue")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     // Delete
     val consumerDeleteCounter: Counter = Counter.builder()
         .name("kolbasa_consumer_delete")
         .help("Amount of consumer delete() calls")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerDeleteRowsCounter: Counter = Counter.builder()
         .name("kolbasa_consumer_delete_rows")
         .help("Amount of rows removed by consumer delete() calls")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerDeleteDuration: Histogram = Histogram.builder()
         .name("kolbasa_consumer_delete_duration_seconds")
@@ -53,11 +53,11 @@ internal object PrometheusConsumerMetrics {
         .labelNames("queue")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val consumerQueueSizeGauge: Gauge = Gauge.builder()
         .name("kolbasa_consumer_queue_size")
         .help("Consumer queue size")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 }

@@ -30,7 +30,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
 
     // real send method without any interceptors, recursion and other stuff, just put data into the database
     private fun doRealSend(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        val approxStatsBytes = BytesCounter(Kolbasa.prometheusConfig.preciseStringSize)
+        val approxStatsBytes = BytesCounter(false)
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {

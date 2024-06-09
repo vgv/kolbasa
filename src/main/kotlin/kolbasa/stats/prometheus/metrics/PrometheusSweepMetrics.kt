@@ -10,19 +10,19 @@ internal object PrometheusSweepMetrics {
         .name("kolbasa_sweep")
         .help("Number of sweeps")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val sweepIterationsCounter: Counter = Counter.builder()
         .name("kolbasa_sweep_iterations")
         .help("Number of sweep iterations (every sweep can have multiple iterations)")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val sweepRowsRemovedCounter: Counter = Counter.builder()
         .name("kolbasa_sweep_removed_rows")
         .help("Number of rows removed by sweep")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val sweepDuration: Histogram = Histogram.builder()
         .name("kolbasa_sweep_duration_seconds")
@@ -30,6 +30,6 @@ internal object PrometheusSweepMetrics {
         .labelNames("queue")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
 }

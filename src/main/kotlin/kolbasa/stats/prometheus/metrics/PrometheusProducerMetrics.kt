@@ -11,19 +11,19 @@ internal object PrometheusProducerMetrics {
         .name("kolbasa_producer_send")
         .help("Amount of producer send() calls")
         .labelNames("queue", "partial_insert_type")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val producerSendRowsCounter: Counter = Counter.builder()
         .name("kolbasa_producer_send_rows")
         .help("Amount of all (successful and failed) rows sent by producer send() calls")
         .labelNames("queue", "partial_insert_type")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val producerSendFailedRowsCounter: Counter = Counter.builder()
         .name("kolbasa_producer_send_rows_failed")
         .help("Amount of failed rows sent by producer send() calls")
         .labelNames("queue", "partial_insert_type")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val producerSendDuration: Histogram = Histogram.builder()
         .name("kolbasa_producer_send_duration_seconds")
@@ -31,18 +31,18 @@ internal object PrometheusProducerMetrics {
         .labelNames("queue", "partial_insert_type")
         .classicOnly()
         .classicUpperBounds(*Const.histogramBuckets())
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val producerSendBytesCounter: Counter = Counter.builder()
         .name("kolbasa_producer_send_bytes")
         .help("Amount of bytes sent by producer send() calls")
         .labelNames("queue", "partial_insert_type")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
     val producerQueueSizeGauge: Gauge = Gauge.builder()
         .name("kolbasa_producer_queue_size")
         .help("Producer queue size")
         .labelNames("queue")
-        .register(Kolbasa.prometheusConfig.registry)
+        .register()
 
 }
