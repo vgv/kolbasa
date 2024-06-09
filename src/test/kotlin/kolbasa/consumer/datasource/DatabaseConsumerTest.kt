@@ -1,7 +1,8 @@
-package kolbasa.consumer
+package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.consumer.Message
+import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.datasource.DatabaseProducer
