@@ -43,12 +43,10 @@ object SweepHelper {
     fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
-        val lockId = sweepConfig.lockIdGenerator(queue)
-
         // Choose max rows value to sweep
         val rowsToSweep = max(limit, sweepConfig.maxRows)
 
-        val removedRows = Lock.tryRunExclusive(connection, lockId) { _ ->
+        val removedRows = Lock.tryRunExclusive(queue.name) {
             rawSweep(connection, queue, rowsToSweep, sweepConfig.maxIterations)
         }
 
