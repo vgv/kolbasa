@@ -1,4 +1,4 @@
-package kolbasa.pg
+package kolbasa.utils
 
 import kolbasa.AbstractPostgresqlTest
 import org.junit.jupiter.api.Test

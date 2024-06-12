@@ -3,7 +3,7 @@ package kolbasa.consumer
 import kolbasa.Kolbasa
 import kolbasa.SweepConfig
 import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.pg.Lock
+import kolbasa.utils.Lock
 import kolbasa.queue.Queue
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
