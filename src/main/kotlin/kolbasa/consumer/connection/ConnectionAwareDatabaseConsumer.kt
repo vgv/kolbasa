@@ -3,6 +3,7 @@ package kolbasa.consumer.connection
 import kolbasa.Kolbasa
 import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
@@ -14,7 +15,8 @@ import java.sql.Connection
 class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList()
+    private val interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList(),
+    private val serverId: String? = null
 ) : ConnectionAwareConsumer<Data, Meta> {
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
@@ -49,7 +51,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
                     val result = ArrayList<Message<Data, Meta>>(limit)
 
                     while (resultSet.next()) {
-                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, serverId, approxBytesCounter)
                     }
 
                     result
@@ -71,7 +73,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         return result
     }
 
-    override fun delete(connection: Connection, messageIds: List<Long>): Int {
+    override fun delete(connection: Connection, messageIds: List<Id>): Int {
         return ConnectionAwareConsumerInterceptor.recursiveApplyDeleteInterceptors(
             interceptors,
             connection,
@@ -81,7 +83,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
     }
 
-    private fun doRealDelete(connection: Connection, messageIds: List<Long>): Int {
+    private fun doRealDelete(connection: Connection, messageIds: List<Id>): Int {
         if (messageIds.isEmpty()) {
             return 0
         }

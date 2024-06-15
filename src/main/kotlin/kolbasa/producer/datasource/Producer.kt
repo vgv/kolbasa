@@ -1,5 +1,6 @@
 package kolbasa.producer.datasource
 
+import kolbasa.producer.Id
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -28,7 +29,7 @@ interface Producer<Data, Meta : Any> {
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(data: Data): Long {
+    fun send(data: Data): Id {
         return send(SendMessage(data = data))
     }
 
@@ -39,7 +40,7 @@ interface Producer<Data, Meta : Any> {
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(data: SendMessage<Data, Meta>): Long {
+    fun send(data: SendMessage<Data, Meta>): Id {
         val result = send(listOf(data))
         return result.extractSingularId()
     }

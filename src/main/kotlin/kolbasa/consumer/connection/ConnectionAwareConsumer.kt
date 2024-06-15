@@ -4,6 +4,7 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
+import kolbasa.producer.Id
 import java.sql.Connection
 
 interface ConnectionAwareConsumer<Data, Meta : Any> {
@@ -41,9 +42,9 @@ interface ConnectionAwareConsumer<Data, Meta : Any> {
         return delete(connection, messages.map(Message<Data, Meta>::id))
     }
 
-    fun delete(connection: Connection, messageId: Long): Int {
+    fun delete(connection: Connection, messageId: Id): Int {
         return delete(connection, listOf(messageId))
     }
 
-    fun delete(connection: Connection, messageIds: List<Long>): Int
+    fun delete(connection: Connection, messageIds: List<Id>): Int
 }

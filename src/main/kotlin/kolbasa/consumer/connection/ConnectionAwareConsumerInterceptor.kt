@@ -2,6 +2,7 @@ package kolbasa.consumer.connection
 
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
+import kolbasa.producer.Id
 import java.sql.Connection
 
 interface ConnectionAwareConsumerInterceptor<Data, Meta : Any> {
@@ -32,15 +33,15 @@ interface ConnectionAwareConsumerInterceptor<Data, Meta : Any> {
 
     fun beforeDelete(
         connection: Connection,
-        messageIds: List<Long>
-    ): List<Long> {
+        messageIds: List<Id>
+    ): List<Id> {
         return messageIds
     }
 
     fun aroundDelete(
         connection: Connection,
-        messageIds: List<Long>,
-        call: (Connection, List<Long>) -> Int
+        messageIds: List<Id>,
+        call: (Connection, List<Id>) -> Int
     ): Int {
         return call(connection, messageIds)
     }
@@ -83,8 +84,8 @@ interface ConnectionAwareConsumerInterceptor<Data, Meta : Any> {
         internal tailrec fun <Data, Meta : Any> recursiveApplyDeleteInterceptors(
             interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>>,
             connection: Connection,
-            messageIds: List<Long>,
-            call: (Connection, List<Long>) -> Int
+            messageIds: List<Id>,
+            call: (Connection, List<Id>) -> Int
         ): Int {
             if (interceptors.isEmpty()) {
                 return call(connection, messageIds)
