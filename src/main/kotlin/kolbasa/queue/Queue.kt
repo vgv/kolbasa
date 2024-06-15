@@ -23,6 +23,11 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
      * it's safe to choose [PredefinedDataTypes.ByteArray] since it's the most data and serialization agnostic format.
      */
     val databaseDataType: DatabaseQueueDataType<Data>,
+    /**
+     * Global queue options.
+     * Producers, consumers, send request and even particular message options can override global queue options. Read more
+     * details in [QueueOptions]
+     */
     val options: QueueOptions? = null,
     /**
      * Metadata class for queue.
