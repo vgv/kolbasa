@@ -1,5 +1,6 @@
 package kolbasa.producer.connection
 
+import kolbasa.producer.Id
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -49,7 +50,7 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      * @returns if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(connection: Connection, data: Data): Long {
+    fun send(connection: Connection, data: Data): Id {
         return send(connection, SendMessage(data))
     }
 
@@ -61,7 +62,7 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      * @return if success - unique id of the message; if error - throws an exception; if duplicate -
      * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
      */
-    fun send(connection: Connection, data: SendMessage<Data, Meta>): Long {
+    fun send(connection: Connection, data: SendMessage<Data, Meta>): Id {
         val result = send(connection, listOf(data))
         return result.extractSingularId()
     }

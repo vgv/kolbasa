@@ -4,6 +4,7 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
+import kolbasa.producer.Id
 
 interface Consumer<Data, Meta : Any> {
 
@@ -40,11 +41,11 @@ interface Consumer<Data, Meta : Any> {
         return delete(messages.map(Message<Data, Meta>::id))
     }
 
-    fun delete(messageId: Long): Int {
+    fun delete(messageId: Id): Int {
         return delete(listOf(messageId))
     }
 
-    fun delete(messageIds: List<Long>): Int
+    fun delete(messageIds: List<Id>): Int
 
 }
 

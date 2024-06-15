@@ -1,9 +1,9 @@
 package kolbasa.producer
 
-import kolbasa.schema.Const
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 
 class SendResultTest {
 
@@ -15,10 +15,10 @@ class SendResultTest {
         val third = SendMessage("3", null, null)
         val fourth = SendMessage("4", null, null)
 
-        val firstResult = MessageResult.Success(1L, first)
+        val firstResult = MessageResult.Success(Id(1, null), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))
         val thirdResult = MessageResult.Duplicate(third)
-        val fourthResult = MessageResult.Success(3L, fourth)
+        val fourthResult = MessageResult.Success(Id(3, null), fourth)
 
         val sendResult = SendResult(
             failedMessages = 2,
@@ -37,9 +37,9 @@ class SendResultTest {
         val second2 = SendMessage("2-2", null, null)
         val third = SendMessage("3", null, null)
 
-        val firstResult = MessageResult.Success(1L, first)
+        val firstResult = MessageResult.Success(Id(1, null), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))
-        val thirdResult = MessageResult.Success(3L, third)
+        val thirdResult = MessageResult.Success(Id(3, null), third)
 
         val sendResult = SendResult(2, listOf(firstResult, secondResult, thirdResult))
         val failedMessages = sendResult.gatherFailedMessages()
@@ -59,8 +59,8 @@ class SendResultTest {
         val first = SendMessage("1", null, null)
         val second = SendMessage("2", null, null)
 
-        val firstResult = MessageResult.Success(1L, first)
-        val secondResult = MessageResult.Success(2L, second)
+        val firstResult = MessageResult.Success(Id(1, null), first)
+        val secondResult = MessageResult.Success(Id(2, null), second)
 
         val sendResultWithTwoMessages = SendResult(
             failedMessages = 0,
@@ -74,14 +74,14 @@ class SendResultTest {
         // Check with two messages
         val first = SendMessage("1", null, null)
 
-        val firstResult = MessageResult.Success(1L, first)
+        val firstResult = MessageResult.Success(Id(1, null), first)
 
         val sendResult = SendResult(
             failedMessages = 0,
             messages = listOf(firstResult)
         )
 
-        assertEquals(1, sendResult.extractSingularId())
+        assertEquals(Id(1, null), sendResult.extractSingularId())
     }
 
     @Test
@@ -96,7 +96,7 @@ class SendResultTest {
             messages = listOf(firstResult)
         )
 
-        assertEquals(Const.RESERVED_DUPLICATE_ID, sendResult.extractSingularId())
+        assertSame(Id.DEFAULT_DUPLICATE_ID, sendResult.extractSingularId())
     }
 
     @Test

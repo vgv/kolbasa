@@ -1,10 +1,12 @@
 package kolbasa.consumer
 
+import kolbasa.producer.Id
+
 data class Message<Data, Meta>(
     /**
      * Unique message identifier
      */
-    val id: Long,
+    val id: Id,
     /**
      * Timestamp when this message was created
      */

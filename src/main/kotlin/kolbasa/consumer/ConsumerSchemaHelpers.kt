@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.consumer.filter.ColumnIndex
+import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
@@ -121,11 +122,12 @@ internal object ConsumerSchemaHelpers {
         queue: Queue<Data, Meta>,
         receiveOptions: ReceiveOptions<Meta>,
         resultSet: ResultSet,
+        serverId: String?,
         approxBytesCounter: BytesCounter
     ): Message<Data, Meta> {
         var columnIndex = 1
 
-        val id = resultSet.getLong(columnIndex++)
+        val localId = resultSet.getLong(columnIndex++)
         val createdAt = resultSet.getTimestamp(columnIndex++).time
         val processingAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
@@ -187,18 +189,20 @@ internal object ConsumerSchemaHelpers {
             null
         }
 
-        val message = Message(id, createdAt, processingAt, attempts, data, meta)
+        val message = Message(Id(localId, serverId), createdAt, processingAt, attempts, data, meta)
         message.openTelemetryData = otData
 
         return message
     }
 
-    fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Long>): String {
+    fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Id>): String {
         check(ids.isNotEmpty()) {
             "ID list must not be empty"
         }
 
-        val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")")
+        val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
+            id.localId.toString()
+        }
         return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME} in $idsList"
     }
 
