@@ -1,10 +1,6 @@
 package kolbasa.stats.opentelemetry
 
-import io.opentelemetry.api.common.AttributesBuilder
-import io.opentelemetry.context.Context
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesGetter
-import io.opentelemetry.instrumentation.api.instrumenter.AttributesExtractor
-import io.opentelemetry.semconv.incubating.MessagingIncubatingAttributes
 import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -57,7 +53,11 @@ internal class SendRequestAttributesGetter<Data, Meta : Any>(private val queueNa
     }
 
     override fun getBatchMessageCount(request: SendRequest<Data, Meta>, response: SendResult<Data, Meta>?): Long? {
-        return null
+        return if (request.data.size > 1) {
+            request.data.size.toLong()
+        } else {
+            null
+        }
     }
 }
 
@@ -117,46 +117,10 @@ internal class ConsumerResponseAttributesGetter<Data, Meta : Any>(private val qu
     }
 
     override fun getBatchMessageCount(request: List<Message<Data, Meta>>, response: Unit?): Long? {
-        return null
-    }
-}
-
-
-internal class SendRequestAttributesExtractor<Data, Meta : Any> : AttributesExtractor<SendRequest<Data, Meta>, SendResult<Data, Meta>> {
-
-    override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: SendRequest<Data, Meta>) {
-        if (request.data.size > 1) {
-            attributes.put(MessagingIncubatingAttributes.MESSAGING_BATCH_MESSAGE_COUNT, request.data.size.toLong())
+        return if (request.size > 1) {
+            return request.size.toLong()
+        } else {
+            null
         }
     }
-
-    override fun onEnd(
-        attributes: AttributesBuilder,
-        context: Context,
-        request: SendRequest<Data, Meta>,
-        response: SendResult<Data, Meta>?,
-        error: Throwable?
-    ) {
-        // NOP
-    }
 }
-
-internal class ConsumerResponseAttributesExtractor<Data, Meta: Any>: AttributesExtractor<List<Message<Data, Meta>>, Unit> {
-
-    override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: List<Message<Data, Meta>>) {
-        if (request.size > 1) {
-            attributes.put(MessagingIncubatingAttributes.MESSAGING_BATCH_MESSAGE_COUNT, request.size.toLong())
-        }
-    }
-
-    override fun onEnd(
-        attributes: AttributesBuilder,
-        context: Context,
-        request: List<Message<Data, Meta>>,
-        response: Unit?,
-        error: Throwable?
-    ) {
-        // NOP
-    }
-}
-

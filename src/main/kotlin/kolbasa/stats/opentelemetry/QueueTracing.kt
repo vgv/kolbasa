@@ -83,7 +83,6 @@ internal class QueueTracing<Data, Meta : Any>(queueName: String) {
         return Instrumenter
             .builder<SendRequest<Data, Meta>, SendResult<Data, Meta>>(openTelemetry, "kolbasa", spanNameExtractor)
             .addAttributesExtractor(attributesExtractor)
-            .addAttributesExtractor(SendRequestAttributesExtractor())
             .buildProducerInstrumenter(ContextToMessageSetter())
     }
 
@@ -111,7 +110,6 @@ internal class QueueTracing<Data, Meta : Any>(queueName: String) {
                 )
             )
             .addAttributesExtractor(attributesExtractor)
-            .addAttributesExtractor(ConsumerResponseAttributesExtractor())
             .buildInstrumenter(SpanKindExtractor.alwaysConsumer())
     }
 
