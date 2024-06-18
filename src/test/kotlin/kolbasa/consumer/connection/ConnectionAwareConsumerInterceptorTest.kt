@@ -3,6 +3,7 @@ package kolbasa.consumer.connection
 import io.mockk.mockk
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
+import kolbasa.producer.Id
 import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
@@ -32,7 +33,7 @@ class ConnectionAwareConsumerInterceptorTest {
         assertSame(originalResult, defaultImpl.afterReceive(connection, originalResult))
 
         // Delete
-        val originalRequest = listOf<Long>()
+        val originalRequest = listOf<Id>()
         val originalResponse = 1313
         assertSame(originalRequest, defaultImpl.beforeDelete(connection, originalRequest))
         assertEquals(originalResponse, defaultImpl.aroundDelete(connection, originalRequest) { conn, req ->
@@ -131,21 +132,21 @@ class ConnectionAwareConsumerInterceptorTest {
 
     @Test
     fun testRecursiveApplyDeleteInterceptors() {
-        val requestCapture = mutableListOf<List<Long>>()
+        val requestCapture = mutableListOf<List<Id>>()
         val responseCapture = mutableListOf<Int>()
 
-        val firstBeforeRequest = listOf<Long>()
-        val firstAroundRequest = listOf<Long>()
+        val firstBeforeRequest = listOf<Id>()
+        val firstAroundRequest = listOf<Id>()
         val firstAroundResult = 423423
         val firstAfterResult = 56423
 
-        val secondBeforeRequest = listOf<Long>()
-        val secondAroundRequest = listOf<Long>()
+        val secondBeforeRequest = listOf<Id>()
+        val secondAroundRequest = listOf<Id>()
         val secondAroundResult = 63452
         val secondAfterResult = 879645
 
-        val thirdBeforeRequest = listOf<Long>()
-        val thirdAroundRequest = listOf<Long>()
+        val thirdBeforeRequest = listOf<Id>()
+        val thirdAroundRequest = listOf<Id>()
         val thirdAroundResult = 1234334
         val thirdAfterResult = 345567
 
@@ -178,7 +179,7 @@ class ConnectionAwareConsumerInterceptorTest {
         )
 
         val connection = mockk<Connection>()
-        val originalRequest = listOf<Long>()
+        val originalRequest = listOf<Id>()
         val originalResult = 234564
 
         val finalResult = ConnectionAwareConsumerInterceptor.recursiveApplyDeleteInterceptors(
@@ -245,21 +246,21 @@ class ConnectionAwareConsumerInterceptorTest {
     }
 
     private class TestInterceptorForDelete(
-        private val requestCapture: MutableList<List<Long>>,
+        private val requestCapture: MutableList<List<Id>>,
         private val responseCapture: MutableList<Int>,
 
-        private val beforeRequest: List<Long>,
-        private val aroundRequest: List<Long>,
+        private val beforeRequest: List<Id>,
+        private val aroundRequest: List<Id>,
         private val aroundResult: Int,
         private val afterResult: Int
     ) : ConnectionAwareConsumerInterceptor<String, Unit> {
 
-        override fun beforeDelete(connection: Connection, messageIds: List<Long>): List<Long> {
+        override fun beforeDelete(connection: Connection, messageIds: List<Id>): List<Id> {
             requestCapture += messageIds
             return beforeRequest
         }
 
-        override fun aroundDelete(connection: Connection, messageIds: List<Long>, call: (Connection, List<Long>) -> Int): Int {
+        override fun aroundDelete(connection: Connection, messageIds: List<Id>, call: (Connection, List<Id>) -> Int): Int {
             requestCapture += messageIds
             responseCapture += call(connection, aroundRequest)
             return aroundResult

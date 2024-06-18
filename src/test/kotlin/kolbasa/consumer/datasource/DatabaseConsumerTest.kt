@@ -5,6 +5,7 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
+import kolbasa.producer.Id
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
@@ -19,7 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -116,7 +117,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val consumer = DatabaseConsumer(dataSource, queue)
         val latch = CountDownLatch(1)
 
-        val receivedIds = ConcurrentSkipListSet<Long>()
+        val receivedIds = Collections.synchronizedSet(mutableSetOf<Id>())
 
         val launchedThreads = (1..threads).map { _ ->
             thread {

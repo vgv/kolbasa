@@ -3,18 +3,19 @@ package kolbasa.producer.datasource
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.DeduplicationMode
+import kolbasa.producer.Id
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
-import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertSame
 
 class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
@@ -93,7 +94,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         producer.send(messageToSend)
 
         // Second send with the same meta field value should return Const.RESERVED_DUPLICATE_ID and not insert anything
-        assertEquals(Const.RESERVED_DUPLICATE_ID, producer.send(messageToSend))
+        assertSame(Id.DEFAULT_DUPLICATE_ID, producer.send(messageToSend))
 
         // raw database check
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))

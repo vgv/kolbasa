@@ -6,6 +6,7 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareConsumer
 import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
@@ -37,13 +38,13 @@ class DatabaseConsumer<Data, Meta : Any> @JvmOverloads constructor(
         return dataSource.useConnection { peer.receive(it, limit, receiveOptions) }
     }
 
-    override fun delete(messageIds: List<Long>): Int {
+    override fun delete(messageIds: List<Id>): Int {
         return ConsumerInterceptor.recursiveApplyDeleteInterceptors(interceptors, messageIds) { msgIds ->
             doRealDelete(msgIds)
         }
     }
 
-    private fun doRealDelete(messageIds: List<Long>): Int {
+    private fun doRealDelete(messageIds: List<Id>): Int {
         return dataSource.useConnection { peer.delete(it, messageIds) }
     }
 

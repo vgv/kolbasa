@@ -19,7 +19,8 @@ import java.sql.Connection
 class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
     private val queue: Queue<Data, Meta>,
     private val producerOptions: ProducerOptions = ProducerOptions(),
-    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList()
+    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList(),
+    private val serverId: String? = null
 ) : ConnectionAwareProducer<Data, Meta> {
 
     override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
@@ -161,11 +162,12 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
                 var currentIndex = 0
                 preparedStatement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
-                        val id = resultSet.getLong(1)
+                        val localId = resultSet.getLong(1)
 
                         when (deduplicationMode) {
                             DeduplicationMode.ERROR -> {
-                                result += MessageResult.Success(id, message = request.data[currentIndex++])
+                                val id = Id(localId, serverId)
+                                result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
                             DeduplicationMode.IGNORE_DUPLICATES -> {
@@ -174,7 +176,8 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])
                                 }
 
-                                result += MessageResult.Success(id, message = request.data[currentIndex++])
+                                val id = Id(localId, serverId)
+                                result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
                         }
                     }
