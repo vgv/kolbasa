@@ -46,7 +46,6 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
     implementation("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
-    implementation("io.opentelemetry.semconv:opentelemetry-semconv-incubating:$openTelemetrySemconvVersion")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator:$openTelemetryInstrumentationIncubatorVersion")
     // ---------------------------------------------------------------------------------
