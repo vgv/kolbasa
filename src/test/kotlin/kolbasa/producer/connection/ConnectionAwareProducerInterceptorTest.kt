@@ -1,10 +1,7 @@
 package kolbasa.producer.connection
 
 import io.mockk.mockk
-import kolbasa.producer.MessageResult
-import kolbasa.producer.SendMessage
-import kolbasa.producer.SendRequest
-import kolbasa.producer.SendResult
+import kolbasa.producer.*
 import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
@@ -85,14 +82,14 @@ class ConnectionAwareProducerInterceptorTest {
             val result = call(connection, newRequest)
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(id, SendMessage("around_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("around_$id"))
             )
         }
 
         override fun afterSend(connection: Connection, result: SendResult<String, Unit>): SendResult<String, Unit> {
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(id, SendMessage("after_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("after_$id"))
             )
         }
     }

@@ -1,9 +1,6 @@
 package kolbasa.producer.datasource
 
-import kolbasa.producer.MessageResult
-import kolbasa.producer.SendMessage
-import kolbasa.producer.SendRequest
-import kolbasa.producer.SendResult
+import kolbasa.producer.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -25,7 +22,7 @@ class ProducerInterceptorTest {
         })
         assertSame(originalResult, defaultImpl.afterSend(originalResult))
     }
-    
+
     @Test
     fun testRecursiveApply() {
         val interceptors = listOf(
@@ -79,14 +76,14 @@ class ProducerInterceptorTest {
             val result = call(newRequest)
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(id, SendMessage("around_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("around_$id"))
             )
         }
 
         override fun afterSend(result: SendResult<String, Unit>): SendResult<String, Unit> {
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(id, SendMessage("after_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("after_$id"))
             )
         }
     }

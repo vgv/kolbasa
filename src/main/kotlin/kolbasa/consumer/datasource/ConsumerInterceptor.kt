@@ -2,6 +2,7 @@ package kolbasa.consumer.datasource
 
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
+import kolbasa.producer.Id
 
 interface ConsumerInterceptor<Data, Meta : Any> {
 
@@ -27,14 +28,14 @@ interface ConsumerInterceptor<Data, Meta : Any> {
     }
 
     fun beforeDelete(
-        messageIds: List<Long>
-    ): List<Long> {
+        messageIds: List<Id>
+    ): List<Id> {
         return messageIds
     }
 
     fun aroundDelete(
-        messageIds: List<Long>,
-        call: (List<Long>) -> Int
+        messageIds: List<Id>,
+        call: (List<Id>) -> Int
     ): Int {
         return call(messageIds)
     }
@@ -68,8 +69,8 @@ interface ConsumerInterceptor<Data, Meta : Any> {
 
         internal tailrec fun <Data, Meta : Any> recursiveApplyDeleteInterceptors(
             interceptors: List<ConsumerInterceptor<Data, Meta>>,
-            messageIds: List<Long>,
-            call: (List<Long>) -> Int
+            messageIds: List<Id>,
+            call: (List<Id>) -> Int
         ): Int {
             if (interceptors.isEmpty()) {
                 return call(messageIds)
