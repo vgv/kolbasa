@@ -26,8 +26,8 @@ dependencies {
     val hikariVersion: String by project
     val openTelemetryVersion: String by project
     val openTelemetryInstrumentationVersion: String by project
+    val openTelemetryInstrumentationIncubatorVersion: String by project
     val openTelemetrySemconvVersion: String by project
-    val openTelemetryInstrumentationSemconvVersion: String by project
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -46,9 +46,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
     implementation("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
+    implementation("io.opentelemetry.semconv:opentelemetry-semconv-incubating:$openTelemetrySemconvVersion")
     implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-semconv:$openTelemetryInstrumentationSemconvVersion")
-
+    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator:$openTelemetryInstrumentationIncubatorVersion")
     // ---------------------------------------------------------------------------------
 
     // Test

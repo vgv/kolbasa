@@ -2,11 +2,11 @@ package kolbasa.stats.opentelemetry
 
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.context.Context
+import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessageOperation
+import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesExtractor
+import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingSpanNameExtractor
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
-import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessageOperation
-import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingAttributesExtractor
-import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingSpanNameExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.Kolbasa
 import kolbasa.consumer.Message
