@@ -38,7 +38,7 @@ dependencies {
     implementation("org.postgresql:postgresql:$postgresqlVersion")
 
     // Metrics
-    implementation("io.prometheus:prometheus-metrics-core:$prometheusVersion")
+    compileOnly("io.prometheus:prometheus-metrics-core:$prometheusVersion")
 
     // OpenTelemetry
     implementation("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")

@@ -1,9 +1,12 @@
 package kolbasa.queue
 
+import kolbasa.Kolbasa
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
 import kolbasa.stats.opentelemetry.QueueTracing
-import kolbasa.stats.prometheus.metrics.QueueMetrics
+import kolbasa.stats.prometheus.PrometheusConfig
+import kolbasa.stats.prometheus.metrics.EmptyQueueMetrics
+import kolbasa.stats.prometheus.metrics.PrometheusQueueMetrics
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     /**
@@ -52,7 +55,12 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
     // and cache it in the queue object to avoid excessive allocations.
     // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
-    internal val queueMetrics by lazy { QueueMetrics(name) }
+    internal val queueMetrics by lazy {
+        when (val config = Kolbasa.prometheusConfig) {
+            is PrometheusConfig.None -> EmptyQueueMetrics()
+            is PrometheusConfig.Config -> PrometheusQueueMetrics(name, config)
+        }
+    }
 
     // Performance optimization: create all opentelemetry stuff for the queue (instrumenter, setters etc.)
     // and cache it to avoid excessive allocations.

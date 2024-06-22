@@ -16,7 +16,7 @@ object Kolbasa {
 
     @JvmStatic
     @Volatile
-    var prometheusConfig: PrometheusConfig = PrometheusConfig()
+    var prometheusConfig: PrometheusConfig = PrometheusConfig.None
 
     @JvmStatic
     @Volatile
