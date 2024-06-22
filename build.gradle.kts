@@ -26,8 +26,8 @@ dependencies {
     val hikariVersion: String by project
     val openTelemetryVersion: String by project
     val openTelemetryInstrumentationVersion: String by project
+    val openTelemetryInstrumentationIncubatorVersion: String by project
     val openTelemetrySemconvVersion: String by project
-    val openTelemetryInstrumentationSemconvVersion: String by project
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -38,17 +38,16 @@ dependencies {
     implementation("org.postgresql:postgresql:$postgresqlVersion")
 
     // Metrics
-    implementation("io.prometheus:prometheus-metrics-core:$prometheusVersion")
+    compileOnly("io.prometheus:prometheus-metrics-core:$prometheusVersion")
 
     // OpenTelemetry
-    implementation("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
-    implementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
-    implementation("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
-    implementation("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-semconv:$openTelemetryInstrumentationSemconvVersion")
-
+    compileOnly("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
+    compileOnly("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
+    compileOnly("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
+    compileOnly("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
+    compileOnly("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
+    compileOnly("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
+    compileOnly("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator:$openTelemetryInstrumentationIncubatorVersion")
     // ---------------------------------------------------------------------------------
 
     // Test

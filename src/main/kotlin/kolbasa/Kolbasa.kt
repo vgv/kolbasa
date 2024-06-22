@@ -16,10 +16,10 @@ object Kolbasa {
 
     @JvmStatic
     @Volatile
-    var prometheusConfig: PrometheusConfig = PrometheusConfig()
+    var prometheusConfig: PrometheusConfig = PrometheusConfig.None
 
     @JvmStatic
     @Volatile
-    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig()
+    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
 
 }
