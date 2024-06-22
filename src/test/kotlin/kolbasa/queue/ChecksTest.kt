@@ -228,7 +228,7 @@ internal class ChecksTest {
     fun testCheckCustomQueueSizeMeasureInterval() {
         assertFailsWith<IllegalStateException> {
             val ulp = Duration.ofNanos(1)
-            val aBitSmaller = PrometheusConfig.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
+            val aBitSmaller = PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
             Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
         }
     }
