@@ -21,9 +21,9 @@ sealed class PrometheusConfig {
         val preciseStringSize: Boolean = false,
 
         /**
-         * By default, kolbasa measures the queue size every [PrometheusConfig.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL],
-         * however, if you want to measure more/less often for specific queues – you can
-         * change the default measurement interval here.
+         * By default, kolbasa measures the queue size every
+         * [DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL][PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL], however, if
+         * you want to measure more/less often for specific queues – you can change the default measurement interval here.
          *
          * Please note that current implementation relies on PostgreSQL vacuum statistics, so, if you don't run vacuum every
          * five seconds (for example) it's almost nonsense to measure the queue size every five seconds.
