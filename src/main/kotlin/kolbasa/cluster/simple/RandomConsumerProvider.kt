@@ -2,17 +2,16 @@ package kolbasa.cluster.simple
 
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.Consumer
-import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.queue.Queue
+import kolbasa.stats.opentelemetry.TracingConsumerInterceptor
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 import kotlin.random.Random
 
 class RandomConsumerProvider(
     private val dataSources: List<DataSource>,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val interceptors: List<ConsumerInterceptor<*, *>> = emptyList()
+    private val consumerOptions: ConsumerOptions = ConsumerOptions()
 ) : ConsumerProvider {
 
     private val consumers: MutableMap<Queue<*, *>, List<Consumer<*, *>>> = ConcurrentHashMap()
@@ -48,14 +47,9 @@ class RandomConsumerProvider(
 
     private fun <Data, Meta : Any> generateConsumers(queue: Queue<Data, Meta>): List<Consumer<Data, Meta>> {
         return dataSources.map { dataSource ->
-            val castedIntr = if (interceptors.isEmpty()) {
-                emptyList()
-            } else {
-                // ugly hack for a few weeks
-                interceptors as List<ConsumerInterceptor<Data, Meta>>
-            }
+            val tracing = TracingConsumerInterceptor(queue)
 
-            DatabaseConsumer(dataSource, queue, consumerOptions, castedIntr)
+            DatabaseConsumer(dataSource, queue, consumerOptions, listOf(tracing))
         }
     }
 
