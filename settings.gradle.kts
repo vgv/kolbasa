@@ -1,3 +1,5 @@
+rootProject.name = "kolbasa"
+
 pluginManagement {
     val kotlinVersion: String by settings
     val nexusPublishVersion: String by settings
