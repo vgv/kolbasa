@@ -3,10 +3,14 @@ package kolbasa.queue
 import kolbasa.Kolbasa
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
+import kolbasa.stats.opentelemetry.EmptyQueueTracing
+import kolbasa.stats.opentelemetry.OpenTelemetryConfig
+import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
 import kolbasa.stats.opentelemetry.QueueTracing
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.metrics.EmptyQueueMetrics
 import kolbasa.stats.prometheus.metrics.PrometheusQueueMetrics
+import kolbasa.stats.prometheus.metrics.QueueMetrics
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     /**
@@ -52,9 +56,9 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
 
     internal val metadataDescription: MetaClass<Meta>? = metadata?.let { MetaClass.of(metadata) }
 
-    internal val queueMetrics by lazy {
+    internal val queueMetrics: QueueMetrics by lazy {
         when (val config = Kolbasa.prometheusConfig) {
-            // No Prometheus - no metrics collection
+            // No Prometheus config - no metrics collection
             is PrometheusConfig.None -> EmptyQueueMetrics()
 
             // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
@@ -64,8 +68,15 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
         }
     }
 
-    // Performance optimization: create all opentelemetry stuff for the queue (instrumenter, setters etc.)
-    // and cache it to avoid excessive allocations.
-    internal val queueTracing by lazy { QueueTracing<Data, Meta>(name) }
+    internal val queueTracing: QueueTracing<Data, Meta> by lazy {
+        when (val config = Kolbasa.openTelemetryConfig) {
+            // No OpenTelemetry config - no OT data collection/propagation
+            is OpenTelemetryConfig.None -> EmptyQueueTracing()
+
+            // Performance optimization: create all opentelemetry stuff for the queue (instrumenter, setters etc.)
+            // and cache it to avoid excessive allocations.
+            is OpenTelemetryConfig.Config -> OpenTelemetryQueueTracing(name, config)
+        }
+    }
 }
 

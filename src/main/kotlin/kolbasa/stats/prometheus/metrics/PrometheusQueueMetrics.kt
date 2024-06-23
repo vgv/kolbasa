@@ -10,56 +10,6 @@ import kolbasa.stats.prometheus.metrics.Extensions.incLong
 import kolbasa.stats.prometheus.metrics.Extensions.observeNanos
 import kolbasa.stats.prometheus.queuesize.QueueSizeCache
 
-interface QueueMetrics {
-
-    fun producerSendMetrics(
-        partialInsert: PartialInsert,
-        allMessages: Int,
-        failedMessages: Int,
-        executionNanos: Long,
-        approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
-    )
-
-    fun consumerReceiveMetrics(
-        receivedRows: Int,
-        executionNanos: Long,
-        approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
-    )
-
-    fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long)
-
-    fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long)
-
-}
-
-internal class EmptyQueueMetrics : QueueMetrics {
-    override fun producerSendMetrics(
-        partialInsert: PartialInsert,
-        allMessages: Int,
-        failedMessages: Int,
-        executionNanos: Long,
-        approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
-    ) {
-    }
-
-    override fun consumerReceiveMetrics(
-        receivedRows: Int,
-        executionNanos: Long,
-        approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
-    ) {
-    }
-
-    override fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long) {
-    }
-
-    override fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long) {
-    }
-}
-
 internal class PrometheusQueueMetrics(
     private val queueName: String,
     private val prometheusConfig: PrometheusConfig.Config

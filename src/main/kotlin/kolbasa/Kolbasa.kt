@@ -20,6 +20,6 @@ object Kolbasa {
 
     @JvmStatic
     @Volatile
-    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig()
+    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
 
 }

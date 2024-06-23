@@ -51,7 +51,10 @@ class TracingConsumerInterceptor<Data, Meta : Any>(
         call: (Int, ReceiveOptions<Meta>) -> List<Message<Data, Meta>>
     ): List<Message<Data, Meta>> {
         // Do we need to read OT data?
-        receiveOptions.readOpenTelemetryData = Kolbasa.openTelemetryConfig.enabled
+        receiveOptions.readOpenTelemetryData = when (Kolbasa.openTelemetryConfig) {
+            is OpenTelemetryConfig.None -> false
+            is OpenTelemetryConfig.Config -> true
+        }
 
         return queue.queueTracing.makeConsumerCall {
             call(limit, receiveOptions)
@@ -71,7 +74,10 @@ class TracingConnectionAwareConsumerInterceptor<Data, Meta : Any>(
         call: (Connection, Int, ReceiveOptions<Meta>) -> List<Message<Data, Meta>>
     ): List<Message<Data, Meta>> {
         // Do we need to read OT data?
-        receiveOptions.readOpenTelemetryData = Kolbasa.openTelemetryConfig.enabled
+        receiveOptions.readOpenTelemetryData = when (Kolbasa.openTelemetryConfig) {
+            is OpenTelemetryConfig.None -> false
+            is OpenTelemetryConfig.Config -> true
+        }
 
         return queue.queueTracing.makeConsumerCall {
             call(connection, limit, receiveOptions)
