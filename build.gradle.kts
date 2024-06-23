@@ -4,11 +4,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
-    kotlin("jvm")
+    alias(libs.plugins.kotlin.jvm)
     signing
     `maven-publish`
-    id("com.netflix.nebula.release")
-    id("io.github.gradle-nexus.publish-plugin")
+    alias(libs.plugins.nebula.release)
+    alias(libs.plugins.nexus.publish)
 }
 
 repositories {
