@@ -1,7 +1,8 @@
 package kolbasa.cluster.simple
 
-import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.ConsumerOptions
+import kolbasa.consumer.datasource.Consumer
+import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.queue.Queue
 import java.util.concurrent.ConcurrentHashMap
@@ -10,7 +11,8 @@ import kotlin.random.Random
 
 class RandomConsumerProvider(
     private val dataSources: List<DataSource>,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions()
+    private val consumerOptions: ConsumerOptions = ConsumerOptions(),
+    private val interceptors: List<ConsumerInterceptor<*, *>> = emptyList()
 ) : ConsumerProvider {
 
     private val consumers: MutableMap<Queue<*, *>, List<Consumer<*, *>>> = ConcurrentHashMap()
@@ -46,7 +48,14 @@ class RandomConsumerProvider(
 
     private fun <Data, Meta : Any> generateConsumers(queue: Queue<Data, Meta>): List<Consumer<Data, Meta>> {
         return dataSources.map { dataSource ->
-            DatabaseConsumer(dataSource, queue, consumerOptions)
+            val castedIntr = if (interceptors.isEmpty()) {
+                emptyList()
+            } else {
+                // ugly hack for a few weeks
+                interceptors as List<ConsumerInterceptor<Data, Meta>>
+            }
+
+            DatabaseConsumer(dataSource, queue, consumerOptions, castedIntr)
         }
     }
 
