@@ -1,9 +1,10 @@
 package kolbasa.cluster.simple
 
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
-import kolbasa.producer.ProducerOptions
 import kolbasa.queue.Queue
+import kolbasa.stats.opentelemetry.TracingProducerInterceptor
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
@@ -41,7 +42,8 @@ class RandomProducerProvider(
 
     private fun <Data, Meta : Any> generateProducers(queue: Queue<Data, Meta>): List<Producer<Data, Meta>> {
         return dataSources.map { dataSource ->
-            DatabaseProducer(dataSource, queue, producerOptions)
+            val tracing = TracingProducerInterceptor(queue)
+            DatabaseProducer(dataSource, queue, producerOptions, listOf(tracing))
         }
     }
 }
