@@ -16,56 +16,41 @@ repositories {
 }
 
 dependencies {
-    val kotlinVersion: String by project
-    val postgresqlVersion: String by project
-    val prometheusVersion: String by project
-    val junitVersion: String by project
-    val mockkVersion: String by project
-    val testContainersVersion: String by project
-    val logbackVersion: String by project
-    val hikariVersion: String by project
-    val openTelemetryVersion: String by project
-    val openTelemetryInstrumentationVersion: String by project
-    val openTelemetryInstrumentationIncubatorVersion: String by project
-    val openTelemetrySemconvVersion: String by project
-
     // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.reflect)
 
     // PostgreSQL
-    implementation("org.postgresql:postgresql:$postgresqlVersion")
+    implementation(libs.postgresql)
 
     // Metrics
-    compileOnly("io.prometheus:prometheus-metrics-core:$prometheusVersion")
+    compileOnly(libs.prometheus.metrics.core)
 
     // OpenTelemetry
-    compileOnly("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
-    compileOnly("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
-    compileOnly("io.opentelemetry:opentelemetry-sdk-trace:$openTelemetryVersion")
-    compileOnly("io.opentelemetry:opentelemetry-exporter-otlp:$openTelemetryVersion")
-    compileOnly("io.opentelemetry.semconv:opentelemetry-semconv:$openTelemetrySemconvVersion")
-    compileOnly("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api:$openTelemetryInstrumentationVersion")
-    compileOnly("io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator:$openTelemetryInstrumentationIncubatorVersion")
+    compileOnly(libs.opentelemetry.api)
+    compileOnly(libs.opentelemetry.sdk)
+    compileOnly(libs.opentelemetry.sdk.trace)
+    compileOnly(libs.opentelemetry.exporter.otlp)
+    compileOnly(libs.opentelemetry.semconv)
+    compileOnly(libs.opentelemetry.instrumentation.api)
+    compileOnly(libs.opentelemetry.instrumentation.api.incubator)
     // ---------------------------------------------------------------------------------
 
     // Test
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation(libs.junit.jupiter)
 
-    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation(libs.mockk)
 
-    testImplementation("org.testcontainers:testcontainers:$testContainersVersion")
-    testImplementation("org.testcontainers:junit-jupiter:$testContainersVersion")
-    testImplementation("org.testcontainers:postgresql:$testContainersVersion")
+    testImplementation(libs.testcontainers.testcontainers)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.postgresql)
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-common:$kotlinVersion")
+    testImplementation(libs.kotlin.test)
 
-    testImplementation("ch.qos.logback:logback-core:$logbackVersion")
-    testImplementation("ch.qos.logback:logback-classic:$logbackVersion")
-    testImplementation("com.zaxxer:HikariCP:$hikariVersion")
-    testImplementation("io.prometheus:prometheus-metrics-exporter-httpserver:$prometheusVersion")
+    testImplementation(libs.logback.core)
+    testImplementation(libs.logback.classic)
+    testImplementation(libs.hikaricp)
+    testImplementation(libs.prometheus.metrics.exporter.httpserver)
 }
 
 // Kotlin settings
