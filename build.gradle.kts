@@ -29,8 +29,6 @@ dependencies {
     // OpenTelemetry
     compileOnly(libs.opentelemetry.api)
     compileOnly(libs.opentelemetry.sdk)
-    compileOnly(libs.opentelemetry.sdk.trace)
-    compileOnly(libs.opentelemetry.exporter.otlp)
     compileOnly(libs.opentelemetry.semconv)
     compileOnly(libs.opentelemetry.instrumentation.api)
     compileOnly(libs.opentelemetry.instrumentation.api.incubator)
