@@ -18,7 +18,7 @@ opentelemetry-semconv = "1.25.0-alpha"
 hikaricp = "5.1.0"
 postgresql = "42.7.3"
 
-logback = "1.4.14"
+logback = "1.5.6"
 testcontainers = "1.19.8"
 junit = "5.10.1"
 mockk = "1.13.9"
