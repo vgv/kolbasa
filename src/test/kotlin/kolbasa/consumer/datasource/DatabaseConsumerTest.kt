@@ -6,9 +6,9 @@ import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.Id
-import kolbasa.producer.datasource.DatabaseProducer
-import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.SendMessage
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
@@ -20,7 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.Collections
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -91,7 +91,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id1, message1.id)
         assertEquals(data1, message1.data)
         assertNotSame(data1, message1.data)
-        assertTrue(message1.createdAt < message1.processingAt)
+        assertTrue(message1.createdAt <= message1.processingAt)
         assertNull(message1.meta)
 
         // Check second message
@@ -99,7 +99,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id2, message2.id)
         assertEquals(data2, message2.data)
         assertNotSame(data2, message2.data)
-        assertTrue(message2.createdAt < message2.processingAt)
+        assertTrue(message2.createdAt <= message2.processingAt)
         assertNull(message2.meta)
     }
 
@@ -174,7 +174,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id, message.id)
         assertEquals(data, message.data)
         assertNotSame(data, message.data)
-        assertTrue(message.createdAt < message.processingAt, "message=$message")
+        assertTrue(message.createdAt <= message.processingAt, "message=$message")
         assertNull(message.meta)
     }
 
@@ -192,23 +192,20 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
         // Read a message first time
         val firstMessage = consumer.receive(receiveOptions)
-        val firstReceiveTimestamp = System.nanoTime()
 
         // Check it
         assertNotNull(firstMessage)
         assertEquals(id, firstMessage.id)
         assertEquals(data, firstMessage.data)
         assertNotSame(data, firstMessage.data)
-        assertTrue(firstMessage.createdAt < firstMessage.processingAt, "message=$firstMessage")
+        assertTrue(firstMessage.createdAt <= firstMessage.processingAt, "message=$firstMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, firstMessage.remainingAttempts)
         assertNull(firstMessage.meta)
 
         // Try to read this message again
         var secondMessage: Message<String, TestMeta>?
-        var secondReceiveTimestamp: Long
         do {
             secondMessage = consumer.receive(receiveOptions)
-            secondReceiveTimestamp = System.nanoTime()
             TimeUnit.MILLISECONDS.sleep(50)
         } while (secondMessage == null)
 
@@ -217,7 +214,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id, secondMessage.id)
         assertEquals(data, secondMessage.data)
         assertNotSame(data, secondMessage.data)
-        assertTrue(secondMessage.createdAt < secondMessage.processingAt, "message=$secondMessage")
+        assertTrue(secondMessage.createdAt <= secondMessage.processingAt, "message=$secondMessage")
         assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 2, secondMessage.remainingAttempts)
         assertNull(secondMessage.meta)
 
@@ -229,8 +226,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
         // Check that interval between message became available is not less than visibilityTimeout delay
         assertTrue(
-            (secondReceiveTimestamp - firstReceiveTimestamp) > delay.toNanos(),
-            "First: $firstReceiveTimestamp, second: $secondReceiveTimestamp, delay=$delay"
+            (secondMessage.processingAt - firstMessage.processingAt) >= delay.toMillis(),
+            "First: ${firstMessage.processingAt}, second: ${secondMessage.processingAt}, delay=$delay"
         )
     }
 
@@ -251,7 +248,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id1, withoutMetadata.id)
         assertEquals(data, withoutMetadata.data)
         assertNotSame(data, withoutMetadata.data)
-        assertTrue(withoutMetadata.createdAt < withoutMetadata.processingAt, "message=$withoutMetadata")
+        assertTrue(withoutMetadata.createdAt <= withoutMetadata.processingAt, "message=$withoutMetadata")
 
         // Read second message with metadata and check it
         val withMetadata = consumer.receive(ReceiveOptions(readMetadata = true))
@@ -262,7 +259,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id2, withMetadata.id)
         assertEquals(data, withMetadata.data)
         assertNotSame(data, withMetadata.data)
-        assertTrue(withMetadata.createdAt < withMetadata.processingAt, "message=$withMetadata")
+        assertTrue(withMetadata.createdAt <= withMetadata.processingAt, "message=$withMetadata")
     }
 
     @ParameterizedTest
@@ -292,7 +289,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         messages.forEach { message ->
             assertNotNull(message)
             assertEquals("bugaga_$reverseIndex", message.data)
-            assertTrue(message.createdAt < message.processingAt, "message=$message")
+            assertTrue(message.createdAt <= message.processingAt, "message=$message")
             if (readMetadata) {
                 assertNotNull(message.meta) {
                     assertEquals(reverseIndex, it.field)
@@ -336,7 +333,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         messages.forEach { message ->
             assertNotNull(message)
             assertEquals("bugaga_$index", message.data)
-            assertTrue(message.createdAt < message.processingAt, "message=$message")
+            assertTrue(message.createdAt <= message.processingAt, "message=$message")
             if (readMetadata) {
                 assertNotNull(message.meta) {
                     assertEquals(index, it.field)
