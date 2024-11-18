@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
+import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
 import java.sql.Statement
@@ -51,6 +52,16 @@ internal object Schema {
             $STATUS_COLUMN_NAME = '$ACTIVE_STATUS'
     """.trimIndent()
 
+    private val UPDATE_NODE_INFO_STATEMENT = """
+        update
+            $NODE_TABLE_NAME
+        set
+            $SEND_ENABLED_COLUMN_NAME = ?,
+            $RECEIVE_ENABLED_COLUMN_NAME = ?
+        where
+            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS'
+    """.trimIndent()
+
     fun createAndInitNodeTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
@@ -79,6 +90,14 @@ internal object Schema {
                     null
                 }
             }
+        }
+    }
+
+    fun updateNodeInfo(dataSource: DataSource, sendEnabled: Boolean, receiveEnabled: Boolean) {
+        dataSource.usePreparedStatement(UPDATE_NODE_INFO_STATEMENT) { statement ->
+            statement.setBoolean(1, sendEnabled)
+            statement.setBoolean(2, receiveEnabled)
+            statement.executeUpdate()
         }
     }
 
