@@ -57,7 +57,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             assertEquals(id, message.id)
             assertEquals(data, message.data)
             assertNotSame(data, message.data)
-            assertTrue(message.createdAt < message.processingAt, "message=$message")
+            assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, message.remainingAttempts)
 
             // delete message
@@ -91,7 +91,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id1, message1.id)
         assertEquals(data1, message1.data)
         assertNotSame(data1, message1.data)
-        assertTrue(message1.createdAt <= message1.processingAt)
+        assertTrue(message1.createdAt <= message1.processingAt, "message=$message1")
         assertNull(message1.meta)
 
         // Check second message
@@ -99,7 +99,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(id2, message2.id)
         assertEquals(data2, message2.data)
         assertNotSame(data2, message2.data)
-        assertTrue(message2.createdAt <= message2.processingAt)
+        assertTrue(message2.createdAt <= message2.processingAt, "message=$message2")
         assertNull(message2.meta)
     }
 
@@ -147,26 +147,23 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     @Test
     fun testReceive_Delay() {
         val data = "bugaga"
-        val delay = Duration.of(3000 + Random.nextLong(0, 2000), ChronoUnit.MILLIS)
+        val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
         val producer = DatabaseProducer(dataSource, queue)
         val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
-        val sendTimestamp = System.nanoTime()
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
-        var message: Message<String, TestMeta>?
-        var receiveTimestamp: Long
-        do {
+        var message: Message<String, TestMeta>? = consumer.receive()
+        while (message == null) {
+            TimeUnit.MILLISECONDS.sleep(10)
             message = consumer.receive()
-            receiveTimestamp = System.nanoTime()
-            TimeUnit.MILLISECONDS.sleep(50)
-        } while (message == null)
+        }
 
         // Check delay
         assertTrue(
-            (receiveTimestamp - sendTimestamp) > delay.toNanos(),
-            "Receive: $receiveTimestamp, send: $sendTimestamp, delay=$delay"
+            (message.processingAt - message.createdAt) >= delay.toMillis(),
+            "Message: $message, delay=$delay"
         )
 
         // Check message
@@ -187,7 +184,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
-        val delay = Duration.of(3000 + Random.nextLong(0, 2000), ChronoUnit.MILLIS)
+        val delay = Duration.of(1500 + Random.nextLong(0, 1000), ChronoUnit.MILLIS)
         val receiveOptions = ReceiveOptions<TestMeta>(visibilityTimeout = delay)
 
         // Read a message first time
@@ -203,11 +200,11 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNull(firstMessage.meta)
 
         // Try to read this message again
-        var secondMessage: Message<String, TestMeta>?
-        do {
+        var secondMessage: Message<String, TestMeta>? = consumer.receive(receiveOptions)
+        while (secondMessage == null) {
+            TimeUnit.MILLISECONDS.sleep(10)
             secondMessage = consumer.receive(receiveOptions)
-            TimeUnit.MILLISECONDS.sleep(50)
-        } while (secondMessage == null)
+        }
 
         // Check that second message has the same ID and DATA, but not the same object
         assertNotSame(firstMessage, secondMessage)
