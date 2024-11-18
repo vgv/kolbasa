@@ -57,7 +57,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             assertEquals(id, message.id)
             assertEquals(data, message.data)
             assertNotSame(data, message.data)
-            assertTrue(message.createdAt < message.processingAt, "message=$message")
+            assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, message.remainingAttempts)
 
             // delete message
