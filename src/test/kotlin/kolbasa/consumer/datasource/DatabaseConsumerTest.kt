@@ -184,7 +184,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
-        val delay = Duration.of(3000 + Random.nextLong(0, 2000), ChronoUnit.MILLIS)
+        val delay = Duration.of(1500 + Random.nextLong(0, 1000), ChronoUnit.MILLIS)
         val receiveOptions = ReceiveOptions<TestMeta>(visibilityTimeout = delay)
 
         // Read a message first time
@@ -200,11 +200,11 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNull(firstMessage.meta)
 
         // Try to read this message again
-        var secondMessage: Message<String, TestMeta>?
-        do {
+        var secondMessage: Message<String, TestMeta>? = consumer.receive(receiveOptions)
+        while (secondMessage == null) {
+            TimeUnit.MILLISECONDS.sleep(10)
             secondMessage = consumer.receive(receiveOptions)
-            TimeUnit.MILLISECONDS.sleep(50)
-        } while (secondMessage == null)
+        }
 
         // Check that second message has the same ID and DATA, but not the same object
         assertNotSame(firstMessage, secondMessage)
