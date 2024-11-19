@@ -1,5 +1,7 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -53,11 +55,13 @@ dependencies {
 
 // Kotlin settings
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
-    kotlinOptions.apiVersion = "1.7"
-    kotlinOptions.languageVersion = "1.7"
-    // to generate default method implementations in interfaces
-    kotlinOptions.freeCompilerArgs = listOf("-Xjvm-default=all")
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+        apiVersion = KotlinVersion.KOTLIN_1_7
+        languageVersion = KotlinVersion.KOTLIN_1_7
+        // to generate default method implementations in interfaces
+        freeCompilerArgs = listOf("-Xjvm-default=all")
+    }
 }
 
 // Performance tests
