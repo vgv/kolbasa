@@ -6,8 +6,10 @@ internal data class NodeInfo(
     val receiveEnabled: Boolean
 ) : Comparable<NodeInfo> {
 
+    private val compareKey = "$serverId-$sendEnabled-$receiveEnabled"
+
     override fun compareTo(other: NodeInfo): Int {
-        return this.serverId.compareTo(other.serverId)
+        return compareKey compareTo other.compareKey
     }
 
 }
