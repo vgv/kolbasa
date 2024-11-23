@@ -28,16 +28,27 @@ class ClusterConsumer<Data, Meta : Any>(
     override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         updateConsumers()
 
-        val randomConsumer = consumers.entries.random().value
-        return randomConsumer.receive(limit, receiveOptions)
+        return if (consumers.isEmpty()) {
+            emptyList()
+        } else {
+            val randomConsumer = consumers.entries.random().value
+            randomConsumer.receive(limit, receiveOptions)
+        }
     }
 
     override fun delete(messageIds: List<Id>): Int {
         updateConsumers()
 
-        return messageIds.groupBy { it.serverId }.map { (serverId, ids) ->
-            consumers[serverId]?.delete(ids)
-        }.filterNotNull().sum()
+        val byServer = messageIds.groupBy {
+            it.serverId ?: throw IllegalArgumentException("No known server with serverId=null")
+        }
+
+        val results = byServer.map { (serverId, ids) ->
+            val consumer = consumers[serverId] ?: throw IllegalArgumentException("No known server with serverId=$serverId")
+            consumer.delete(ids)
+        }
+
+        return results.sum()
     }
 
     private fun updateConsumers() {

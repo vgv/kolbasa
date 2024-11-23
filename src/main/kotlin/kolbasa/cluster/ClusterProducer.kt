@@ -26,6 +26,7 @@ class ClusterProducer<Data, Meta : Any>(
 
     override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         updateProducers()
+
         val producer = producers.random()
         return producer.send(request)
     }
