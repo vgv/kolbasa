@@ -15,7 +15,7 @@ class DataSourcesStorage(private val dataSourcesProvider: () -> List<DataSource>
     internal var readyToReceiveDataSources: SortedMap<NodeInfo, DataSource> = sortedMapOf()
 
     @Synchronized
-    internal fun update() {
+    fun update() {
         val newDataSources = dataSourcesProvider().associateBy { dataSource ->
             Schema.createAndInitNodeTable(dataSource)
             requireNotNull(Schema.readNodeInfo(dataSource))
