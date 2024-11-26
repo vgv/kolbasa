@@ -16,7 +16,7 @@ data class SendOptions(
     /**
      * @see [ProducerOptions.partialInsert]
      */
-    val partialInsert: PartialInsert = PartialInsert.PROHIBITED
+    val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
 ) {
 
     init {
@@ -26,7 +26,7 @@ data class SendOptions(
     class Builder internal constructor() {
         private var deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR
         private var batchSize: Int = ProducerOptions.DEFAULT_BATCH_SIZE
-        private var partialInsert: PartialInsert = PartialInsert.PROHIBITED
+        private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
 
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
         fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
