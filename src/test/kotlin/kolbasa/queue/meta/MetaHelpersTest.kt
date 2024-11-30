@@ -23,31 +23,6 @@ internal class MetaHelpersTest {
         constructor(a: String, b: String) : this(a.length, b)
     }
 
-    // Class to emulate classical Java bean
-    class JavaBean {
-
-        var x: Int
-        var y: String
-
-        constructor(a: String, b: String) {
-            this.x = a.length
-            this.y = b
-        }
-
-        constructor(a: Int) {
-            this.x = a
-            this.y = a.toStr()
-        }
-
-        // this is a 'default', desired constructor
-        constructor(x: Int, y: String) {
-            this.x = x
-            this.y = y
-        }
-
-    }
-
-
     @Test
     fun testGenerateMetaColumnName() {
         assertEquals("meta_int_value", MetaHelpers.generateMetaColumnName("intValue"))
@@ -485,15 +460,5 @@ internal class MetaHelpersTest {
         val canonicalConstructor = MetaHelpers.findCanonicalRecordConstructor(TestRecord::class.java)
         assertEquals(Int::class.java, canonicalConstructor.parameters[0].type)
         assertEquals(String::class.java, canonicalConstructor.parameters[1].type)
-    }
-
-    @Test
-    fun testFindJavaBeanDefaultConstructor() {
-        val allConstructors = JavaBean::class.java.constructors
-        assertEquals(3, allConstructors.size)
-
-        val defaultConstructor = MetaHelpers.findJavaBeanDefaultConstructor(JavaBean::class.java)
-        assertEquals(Int::class.java, defaultConstructor.parameters[0].type)
-        assertEquals(String::class.java, defaultConstructor.parameters[1].type)
     }
 }

@@ -4,7 +4,6 @@ import kolbasa.queue.Checks
 import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
 import kolbasa.schema.Const
-import java.beans.PropertyDescriptor
 import java.lang.reflect.RecordComponent
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -162,21 +161,6 @@ internal class JavaRecordPropertyMetaField<Meta : Any>(
 
     override fun getValue(meta: Meta): Any? {
         return recordComponent.accessor(meta)
-    }
-}
-
-@Suppress("UNCHECKED_CAST")
-internal class JavaBeanMetaField<Meta : Any>(
-    private val propertyDescriptor: PropertyDescriptor
-) : MetaField<Meta>(
-    kotlinType = propertyDescriptor.propertyType.kotlin as KClass<Meta>,
-    fieldName = propertyDescriptor.name,
-    searchable = propertyDescriptor.propertyType.getAnnotation(Searchable::class.java),
-    unique = propertyDescriptor.propertyType.getAnnotation(Unique::class.java)
-) {
-
-    override fun getValue(meta: Meta): Any? {
-        return propertyDescriptor.readMethod(meta)
     }
 }
 
