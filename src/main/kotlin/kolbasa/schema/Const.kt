@@ -13,7 +13,7 @@ internal object Const {
 
     /**
      * Reserved identifier for duplicated messages if we have to return some ID by function contract, for
-     * example, in [kolbasa.producer.Producer.send]
+     * example, in [kolbasa.producer.datasource.Producer.send]
      */
     const val RESERVED_DUPLICATE_ID = -1L
 
@@ -37,6 +37,8 @@ internal object Const {
     // OpenTelemetry
     const val OPENTELEMETRY_COLUMN_NAME = "opentelemetry"
     const val OPENTELEMETRY_VALUE_LENGTH = 1024 // OpenTelemetry propagation data key/value max length
+
+    const val SHARD_COLUMN_NAME = "shard"
 
     const val CREATED_AT_COLUMN_NAME = "created_at"
     const val SCHEDULED_AT_COLUMN_NAME = "scheduled_at"
