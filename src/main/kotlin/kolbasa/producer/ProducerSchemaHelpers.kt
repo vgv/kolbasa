@@ -1,5 +1,7 @@
 package kolbasa.producer
 
+import kolbasa.cluster.Shard
+import kolbasa.cluster.ShardStrategy
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
@@ -36,6 +38,12 @@ internal object ProducerSchemaHelpers {
             val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
 
             values[index] += "$remainingAttempts"
+        }
+
+        // shard
+        columns += Const.SHARD_COLUMN_NAME
+        request.data.forEachIndexed { index, _ ->
+            values[index] += "${request.effectiveShard}"
         }
 
         // meta fields
@@ -189,5 +197,17 @@ internal object ProducerSchemaHelpers {
         } else {
             producerOptions.partialInsert
         }
+    }
+
+    fun calculateEffectiveShard(producerOptions: ProducerOptions, sendOptions: SendOptions, shardStrategy: ShardStrategy): Int {
+        if (sendOptions.shard != null) {
+            return sendOptions.shard % Shard.SHARD_COUNT
+        }
+
+        if (producerOptions.shard != null) {
+            return producerOptions.shard % Shard.SHARD_COUNT
+        }
+
+        return shardStrategy.getShard() % Shard.SHARD_COUNT
     }
 }

@@ -10,7 +10,7 @@ import kolbasa.schema.Const
  */
 data class Id(
     val localId: Long,
-    val serverId: String?
+    val serverId: String? // TODO: replace int
 ) {
 
     override fun toString(): String {
