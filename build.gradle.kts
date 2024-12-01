@@ -57,8 +57,8 @@ dependencies {
 tasks.withType<KotlinCompile> {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
-        apiVersion = KotlinVersion.KOTLIN_1_7
-        languageVersion = KotlinVersion.KOTLIN_1_7
+        apiVersion = KotlinVersion.KOTLIN_1_8
+        languageVersion = KotlinVersion.KOTLIN_1_8
         // to generate default method implementations in interfaces
         freeCompilerArgs = listOf("-Xjvm-default=all")
     }
