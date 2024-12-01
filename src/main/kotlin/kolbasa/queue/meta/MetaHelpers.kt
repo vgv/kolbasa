@@ -77,16 +77,4 @@ internal object MetaHelpers {
         return recordClass.getDeclaredConstructor(*componentTypes)
     }
 
-    fun <T> findJavaBeanDefaultConstructor(clazz: Class<T>): Constructor<T> {
-        val beanInfo = Introspector.getBeanInfo(clazz)
-        val args = beanInfo.propertyDescriptors
-            .filterNot { it.propertyType == Class::class.java }
-            .map { propertyDescriptor ->
-                propertyDescriptor.propertyType
-            }
-            .toTypedArray()
-
-        return clazz.getDeclaredConstructor(*args)
-    }
-
 }
