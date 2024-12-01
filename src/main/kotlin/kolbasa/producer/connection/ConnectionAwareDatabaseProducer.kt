@@ -1,10 +1,12 @@
 package kolbasa.producer.connection
 
+import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
 import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.queue.Queue
+import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -30,7 +32,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
 
     // real send method without any interceptors, recursion and other stuff, just put data into the database
     private fun doRealSend(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        val approxStatsBytes = BytesCounter(false) // TODO
+        val approxStatsBytes = BytesCounter((Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false)
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
