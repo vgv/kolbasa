@@ -1,5 +1,7 @@
 package kolbasa.producer
 
+import kolbasa.schema.Const
+
 /**
  * Result of sending a batch of messages
  *
@@ -72,7 +74,7 @@ data class SendResult<Data, Meta : Any>(
 
         return when (val message = messages.first()) {
             is MessageResult.Success -> message.id
-            is MessageResult.Duplicate -> Id.DEFAULT_DUPLICATE_ID
+            is MessageResult.Duplicate -> Id(Const.RESERVED_DUPLICATE_ID, -1) // TODO
             is MessageResult.Error -> throw message.exception
         }
     }

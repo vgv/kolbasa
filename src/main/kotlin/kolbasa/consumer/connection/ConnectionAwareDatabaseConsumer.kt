@@ -1,6 +1,7 @@
 package kolbasa.consumer.connection
 
 import kolbasa.Kolbasa
+import kolbasa.cluster.Shards
 import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
@@ -13,12 +14,18 @@ import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
-class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
+class ConnectionAwareDatabaseConsumer<Data, Meta : Any> internal constructor(
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
     private val interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList(),
-    private val serverId: String? = null
+    private val shards: Shards
 ) : ConnectionAwareConsumer<Data, Meta> {
+
+    constructor(
+        queue: Queue<Data, Meta>,
+        consumerOptions: ConsumerOptions = ConsumerOptions(),
+        interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList()
+    ) : this(queue, consumerOptions, interceptors, Shards.ALL_SHARDS)
 
     override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         return ConnectionAwareConsumerInterceptor.recursiveApplyReceiveInterceptors(
@@ -42,8 +49,13 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
         }
 
         // read
-        val approxBytesCounter = BytesCounter((Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false)
-        val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, receiveOptions, limit)
+        val approxBytesCounter = BytesCounter(
+            (Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false
+        )
+
+        val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(
+            queue, consumerOptions, shards, receiveOptions, limit
+        )
 
         val (execution, result) = TimeHelper.measure {
             connection.prepareStatement(query).use { preparedStatement ->
@@ -52,7 +64,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any>(
                     val result = ArrayList<Message<Data, Meta>>(limit)
 
                     while (resultSet.next()) {
-                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, serverId, approxBytesCounter)
+                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
                     }
 
                     result

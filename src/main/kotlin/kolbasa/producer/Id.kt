@@ -1,5 +1,6 @@
 package kolbasa.producer
 
+import kolbasa.cluster.Shard
 import kolbasa.schema.Const
 
 /**
@@ -10,19 +11,11 @@ import kolbasa.schema.Const
  */
 data class Id(
     val localId: Long,
-    val serverId: String? // TODO: replace int
+    val shard: Int
 ) {
 
     override fun toString(): String {
-        return if (serverId == null) {
-            localId.toString()
-        } else {
-            "$localId/$serverId"
-        }
-    }
-
-    companion object {
-        internal val DEFAULT_DUPLICATE_ID = Id(Const.RESERVED_DUPLICATE_ID, null)
+        return "$localId/$shard"
     }
 
 }

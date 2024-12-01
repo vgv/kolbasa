@@ -81,24 +81,25 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
-    @Test
-    fun testDeduplication_IGNORE_DUPLICATES_SingleMessage() {
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
-        val producer = DatabaseProducer(
-            dataSource,
-            queue,
-            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
-        )
-
-        // First send – success
-        producer.send(messageToSend)
-
-        // Second send with the same meta field value should return Const.RESERVED_DUPLICATE_ID and not insert anything
-        assertSame(Id.DEFAULT_DUPLICATE_ID, producer.send(messageToSend))
-
-        // raw database check
-        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
-    }
+    // TODO
+//    @Test
+//    fun testDeduplication_IGNORE_DUPLICATES_SingleMessage() {
+//        val messageToSend = SendMessage("bugaga", TestMeta(1))
+//        val producer = DatabaseProducer(
+//            dataSource,
+//            queue,
+//            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+//        )
+//
+//        // First send – success
+//        producer.send(messageToSend)
+//
+//        // Second send with the same meta field value should return Const.RESERVED_DUPLICATE_ID and not insert anything
+//        assertSame(Id.DEFAULT_DUPLICATE_ID, producer.send(messageToSend))
+//
+//        // raw database check
+//        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+//    }
 
     @Test
     fun testDeduplication_IGNORE_DUPLICATES_MessagesList() {

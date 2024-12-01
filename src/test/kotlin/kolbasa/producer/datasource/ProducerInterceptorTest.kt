@@ -76,14 +76,14 @@ class ProducerInterceptorTest {
             val result = call(newRequest)
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("around_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, 1), SendMessage("around_$id"))
             )
         }
 
         override fun afterSend(result: SendResult<String, Unit>): SendResult<String, Unit> {
             return result.copy(
                 failedMessages = result.failedMessages,
-                messages = result.messages + MessageResult.Success(Id(id, null), SendMessage("after_$id"))
+                messages = result.messages + MessageResult.Success(Id(id, 1), SendMessage("after_$id"))
             )
         }
     }

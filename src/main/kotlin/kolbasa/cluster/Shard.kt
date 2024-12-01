@@ -2,7 +2,7 @@ package kolbasa.cluster
 
 import kotlin.random.Random
 
-data class Shard(
+internal data class Shard(
     val shard: Int,
     val producerNode: String,
     val consumerNode: String?,
@@ -10,7 +10,9 @@ data class Shard(
 ) {
 
     init {
-        check((producerNode == consumerNode && nextConsumerNode == null) || (producerNode == nextConsumerNode && consumerNode == null)) {
+        val stableState = (producerNode == consumerNode) && (nextConsumerNode == null)
+        val migrationState = (producerNode == nextConsumerNode) && (consumerNode == null)
+        check(stableState xor migrationState) {
             "Invalid shard state: producerNode=$producerNode, consumerNode=$consumerNode, nextConsumerNode=$nextConsumerNode"
         }
 
@@ -22,11 +24,11 @@ data class Shard(
     companion object {
         const val MIN_SHARD = 0
         const val MAX_SHARD = 1023
-        const val SHARD_COUNT = MAX_SHARD - MIN_SHARD + 1
+        const val SHARD_COUNT = MAX_SHARD + 1
 
         fun randomShard(): Int {
             return Random.nextInt(MIN_SHARD, MAX_SHARD + 1)
         }
     }
-
 }
+
