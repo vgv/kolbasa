@@ -13,8 +13,8 @@ internal object SchemaGenerator {
         // table
         forTable(queue, existingTable, mutableSchema)
 
-        // OT column, remove after 0.30.0 release
-        forOpenTelemetry(queue, existingTable, mutableSchema)
+        // shard column
+        forShard(queue, existingTable, mutableSchema)
 
         // scheduledAt column
         forScheduledAtColumn(queue, existingTable, mutableSchema)
@@ -40,6 +40,7 @@ internal object SchemaGenerator {
                 ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${Const.MIN_QUEUE_IDENTIFIER_VALUE} maxvalue ${Const.MAX_QUEUE_IDENTIFIER_VALUE} cycle) primary key,
                 ${Const.USELESS_COUNTER_COLUMN_NAME} int,
                 ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
+                ${Const.SHARD_COLUMN_NAME} int not null,
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
@@ -56,16 +57,29 @@ internal object SchemaGenerator {
         }
     }
 
-    private fun forOpenTelemetry(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema){
-        val hasColumn = existingTable?.findColumn(Const.OPENTELEMETRY_COLUMN_NAME) != null
-        val openTelemetryColumn = """
+    private fun forShard(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema){
+        val hasColumn = existingTable?.findColumn(Const.SHARD_COLUMN_NAME) != null
+        val shardColumn = """
             alter table ${queue.dbTableName}
-            add if not exists ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[]
+            add if not exists ${Const.SHARD_COLUMN_NAME} int not null
         """.trimIndent()
 
-        mutableSchema.allTables += openTelemetryColumn
+        mutableSchema.allTables += shardColumn
         if (!hasColumn) {
-            mutableSchema.requiredTables += openTelemetryColumn
+            mutableSchema.requiredTables += shardColumn
+        }
+
+        // index
+        val indexName = queue.dbTableName + "_" + Const.SHARD_COLUMN_NAME
+        val indexStatement = """
+                create index concurrently if not exists $indexName
+                on ${queue.dbTableName}(${Const.SHARD_COLUMN_NAME})
+            """.trimIndent()
+
+        val hasIndex = existingTable?.findIndex(indexName) != null
+        mutableSchema.allIndexes += indexStatement
+        if (!hasIndex) {
+            mutableSchema.requiredIndexes += indexStatement
         }
     }
 
