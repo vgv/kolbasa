@@ -1,6 +1,5 @@
 package kolbasa.cluster
 
-import kolbasa.cluster.IdSchema.NODE_COLUMN_LENGTH
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
@@ -19,9 +18,9 @@ internal object ShardSchema {
     private val CREATE_SHARD_TABLE_STATEMENT = """
         create table if not exists $SHARD_TABLE_NAME(
             $SHARD_COLUMN_NAME int not null primary key,
-            $PRODUCER_NODE_COLUMN_NAME varchar($NODE_COLUMN_LENGTH) not null,
-            $CONSUMER_NODE_COLUMN_NAME varchar($NODE_COLUMN_LENGTH),
-            $NEXT_CONSUMER_NODE_COLUMN_NAME varchar($NODE_COLUMN_LENGTH),
+            $PRODUCER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}) not null,
+            $CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}),
+            $NEXT_CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}),
             check (
                 ($PRODUCER_NODE_COLUMN_NAME=$CONSUMER_NODE_COLUMN_NAME and $NEXT_CONSUMER_NODE_COLUMN_NAME is null) or
                 ($PRODUCER_NODE_COLUMN_NAME=$NEXT_CONSUMER_NODE_COLUMN_NAME and $CONSUMER_NODE_COLUMN_NAME is null)

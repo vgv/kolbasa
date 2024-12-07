@@ -11,44 +11,52 @@ internal object IdSchema {
     private const val NODE_ID_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     private const val NODE_ID_DEFAULT_LENGTH = 12
 
-    private const val ID_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_id"
-    private const val ID_COLUMN_NAME = "id"
-    private const val NODE_COLUMN_NAME = "node"
-    const val NODE_COLUMN_LENGTH = 1000
+    // q__node
+    private const val NODE_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_node"
+    private const val STATUS_COLUMN_NAME = "status"
+    private const val STATUS_COLUMN_LENGTH = 100
+    private const val SERVER_ID_COLUMN_NAME = "server_id"
+    internal const val SERVER_ID_COLUMN_LENGTH = 100
     private const val CREATED_AT_COLUMN_NAME = "created_at"
+    // TODO: drop after a few releases
+    private const val SEND_ENABLED_COLUMN_NAME = "send_enabled"
+    private const val RECEIVE_ENABLED_COLUMN_NAME = "receive_enabled"
 
-    private const val ID_DEFAULT_VALUE = 1L
+    private const val ACTIVE_STATUS = "active"
 
-    private val CREATE_ID_TABLE_STATEMENT = """
-        create table if not exists $ID_TABLE_NAME(
-               $ID_COLUMN_NAME bigint not null primary key,
-               $NODE_COLUMN_NAME varchar($NODE_COLUMN_LENGTH) not null,
+    private val CREATE_TABLE_STATEMENT = """
+        create table if not exists $NODE_TABLE_NAME(
+               $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
+               $SERVER_ID_COLUMN_NAME varchar($SERVER_ID_COLUMN_LENGTH) not null,
                $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp
         )
     """.trimIndent()
 
-    private val INIT_ID_TABLE_STATEMENT: String
+    private val INIT_TABLE_STATEMENT: String
         get() = """
-                insert into $ID_TABLE_NAME
-                    ($ID_COLUMN_NAME, $NODE_COLUMN_NAME)
+                insert into $NODE_TABLE_NAME
+                    ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME)
                 values
-                    ($ID_DEFAULT_VALUE, '${generateNodeId()}')
+                    ('$ACTIVE_STATUS', '${generateNodeId()}')
                 on conflict do nothing
             """.trimIndent()
 
-    private val READ_NODE_ID_STATEMENT = """
+    private val SELECT_NODE_INFO_STATEMENT = """
         select
-            $NODE_COLUMN_NAME
+            $SERVER_ID_COLUMN_NAME
         from
-            $ID_TABLE_NAME
+            $NODE_TABLE_NAME
         where
-            $ID_COLUMN_NAME = 1
+            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS'
     """.trimIndent()
 
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
-            CREATE_ID_TABLE_STATEMENT,
-            INIT_ID_TABLE_STATEMENT
+            CREATE_TABLE_STATEMENT,
+            INIT_TABLE_STATEMENT,
+            // TODO: drop after a few releases
+            "alter table $NODE_TABLE_NAME drop column if exists $SEND_ENABLED_COLUMN_NAME",
+            "alter table $NODE_TABLE_NAME drop column if exists $RECEIVE_ENABLED_COLUMN_NAME",
         )
 
         dataSource.useConnectionWithAutocommit { connection ->
@@ -63,7 +71,7 @@ internal object IdSchema {
 
     fun readNodeId(dataSource: DataSource): String? {
         return dataSource.useStatement { statement: Statement ->
-            statement.executeQuery(READ_NODE_ID_STATEMENT).use { resultSet ->
+            statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
                 if (resultSet.next()) {
                     resultSet.getString(1)
                 } else {
