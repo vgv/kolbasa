@@ -1,6 +1,5 @@
 package kolbasa.cluster
 
-import java.util.*
 import javax.sql.DataSource
 
 class Cluster(private val dataSources: () -> List<DataSource>) {
@@ -8,10 +7,10 @@ class Cluster(private val dataSources: () -> List<DataSource>) {
     constructor(dataSources: List<DataSource>) : this({ dataSources })
 
     @Volatile
-    private lateinit var state: ClusterState
+    private var state: ClusterState = ClusterState.NOT_INITIALIZED
 
     @Synchronized
-    fun update() {
+    fun updateState() {
         val dataSources = dataSources()
         if (dataSources.isEmpty()) {
             throw IllegalArgumentException("Data sources list is empty")
@@ -21,48 +20,53 @@ class Cluster(private val dataSources: () -> List<DataSource>) {
         val shards = initShards(nodes)
 
         val newState = ClusterState(nodes, shards)
-        if (!this::state.isInitialized || newState != this.state) {
-            this.state = newState
+        if (newState != state) {
+            state = newState
         }
     }
 
-    private fun initNodes(dataSources: List<DataSource>): SortedMap<String, DataSource> {
+    private fun initNodes(dataSources: List<DataSource>): Map<String, DataSource> {
         return dataSources
             .associateBy { dataSource ->
                 IdSchema.createAndInitIdTable(dataSource)
                 requireNotNull(IdSchema.readNodeId(dataSource)) {
                     "Node info is not found, dataSource: $dataSource"
                 }
-            }.toSortedMap()
+            }
     }
 
-    private fun initShards(nodes: SortedMap<String, DataSource>): Map<Int, Shard> {
-        val existingShardTable = findShardTable(nodes)
-        if (existingShardTable != null) {
-            return existingShardTable
+    private fun initShards(nodes: Map<String, DataSource>): Map<Int, Shard> {
+        val sortedNodes = nodes.toSortedMap()
+
+        // First, try to find a node with a 100% initialized shard table, if found, return it
+        for ((_, dataSource) in sortedNodes) {
+            val shards = try {
+                ShardSchema.readShards(dataSource)
+            } catch (e: Exception) {
+                // Shard table doesn't exist
+                emptyMap()
+            }
+
+            // Shard table is 100% initialized, return it
+            if (shards.size == Shard.SHARD_COUNT) {
+                return shards
+            }
         }
 
-        // No filled shard table at all, fill it with random nodes
-        // First, find a node with the smallest id
-        val firstDataSource = nodes.values.first()
-        ShardSchema.fillShardTable(firstDataSource, nodes.keys.toList())
-        return ShardSchema.readShards(firstDataSource)
+        // No fully initialized shard table found, let's create a
+        // fully initialized shard table on the node with the smallest id
+        val (_, dataSource) = sortedNodes.entries.first()
+        ShardSchema.createShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+        return ShardSchema.readShards(dataSource)
     }
 
-    private fun findShardTable(nodes: Map<String, DataSource>): Map<Int, Shard>? {
-        return nodes
-            .mapValues { (_, dataSource) ->
-                ShardSchema.createShardTable(dataSource)
-                ShardSchema.readShards(dataSource)
-            }
-            .filter { (_, shards) ->
-                shards.isNotEmpty()
-            }
-            .toSortedMap()
-            .values
-            .firstOrNull()
-    }
+    internal fun getState(): ClusterState {
+        check(state !== ClusterState.NOT_INITIALIZED) {
+            "Cluster state isn't initialized, maybe you forgot to call updateState() method?"
+        }
 
-    internal fun getState() = state
+        return state
+    }
 
 }

@@ -86,4 +86,8 @@ internal data class ClusterState(
     private fun dataSource(node: String): DataSource {
         return nodes[node] ?: throw IllegalArgumentException("Node $node is not found")
     }
+
+    companion object {
+        val NOT_INITIALIZED = ClusterState(emptyMap(), emptyMap())
+    }
 }
