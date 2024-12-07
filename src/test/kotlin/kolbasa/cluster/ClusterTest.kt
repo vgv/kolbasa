@@ -11,6 +11,15 @@ import kotlin.test.*
 class ClusterTest : AbstractPostgresqlTest() {
 
     @Test
+    fun testInitCluster_If_No_DataSources() {
+        val cluster = Cluster(emptyList())
+
+        assertFailsWith<IllegalStateException> {
+            cluster.updateState()
+        }
+    }
+
+    @Test
     fun testInitCluster_IfNotInitialized() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val cluster = Cluster(dataSources)
