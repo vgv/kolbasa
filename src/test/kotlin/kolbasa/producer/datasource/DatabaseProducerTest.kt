@@ -57,8 +57,16 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData() {
         val producer = DatabaseProducer(dataSource, queue)
 
-        val id1 = producer.send("bugaga")
-        val id2 = producer.send("bugaga")
+        val result1 = producer.send("bugaga")
+        assertEquals(0, result1.failedMessages)
+        assertEquals(1, result1.onlySuccessful().size)
+        val id1 = result1.onlySuccessful().first().id
+
+        val result2 = producer.send("bugaga")
+        assertEquals(0, result2.failedMessages)
+        assertEquals(1, result2.onlySuccessful().size)
+        val id2 = result2.onlySuccessful().first().id
+
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
 
@@ -73,8 +81,16 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         val firstProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = firstProducerName))
         val secondProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = secondProducerName))
 
-        val id1 = firstProducer.send("bugaga")
-        val id2 = secondProducer.send("bugaga")
+        val result1 = firstProducer.send("bugaga")
+        assertEquals(0, result1.failedMessages)
+        assertEquals(1, result1.onlySuccessful().size)
+        val id1 = result1.onlySuccessful().first().id
+
+        val result2 = secondProducer.send("bugaga")
+        assertEquals(0, result2.failedMessages)
+        assertEquals(1, result2.onlySuccessful().size)
+        val id2 = result2.onlySuccessful().first().id
+
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
 
@@ -90,8 +106,16 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleDataAsSendMessage() {
         val producer = DatabaseProducer(dataSource, queue)
 
-        val id1 = producer.send(SendMessage("bugaga", TestMeta(1)))
-        val id2 = producer.send(SendMessage("bugaga", TestMeta(2)))
+        val result1 = producer.send(SendMessage("bugaga", TestMeta(1)))
+        assertEquals(0, result1.failedMessages)
+        assertEquals(1, result1.onlySuccessful().size)
+        val id1 = result1.onlySuccessful().first().id
+
+        val result2 = producer.send(SendMessage("bugaga", TestMeta(2)))
+        assertEquals(0, result2.failedMessages)
+        assertEquals(1, result2.onlySuccessful().size)
+        val id2 = result2.onlySuccessful().first().id
+
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
 

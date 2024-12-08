@@ -1,6 +1,7 @@
 package kolbasa.producer
 
-import kolbasa.schema.Const
+import kolbasa.producer.MessageResult.Error
+import kolbasa.producer.MessageResult.Success
 
 /**
  * Result of sending a batch of messages
@@ -38,8 +39,8 @@ data class SendResult<Data, Meta : Any>(
     /**
      * Convenient function to collect all successful messages
      */
-    fun onlySuccessful(): List<MessageResult.Success<Data, Meta>> {
-        return messages.filterIsInstance<MessageResult.Success<Data, Meta>>()
+    fun onlySuccessful(): List<Success<Data, Meta>> {
+        return messages.filterIsInstance<Success<Data, Meta>>()
     }
 
     /**
@@ -52,8 +53,8 @@ data class SendResult<Data, Meta : Any>(
     /**
      * Convenient function to collect all failed messages
      */
-    fun onlyFailed(): List<MessageResult.Error<Data, Meta>> {
-        return messages.filterIsInstance<MessageResult.Error<Data, Meta>>()
+    fun onlyFailed(): List<Error<Data, Meta>> {
+        return messages.filterIsInstance<Error<Data, Meta>>()
     }
 
     /**
@@ -66,19 +67,6 @@ data class SendResult<Data, Meta : Any>(
         val collector = ArrayList<SendMessage<Data, Meta>>(failedMessages)
         return onlyFailed().flatMapTo(collector) { it.messages }
     }
-
-    internal fun extractSingularId(): Id {
-        check(messages.size == 1) {
-            "To extract a singular id you must have a singular response. Current response size: ${messages.size}"
-        }
-
-        return when (val message = messages.first()) {
-            is MessageResult.Success -> message.id
-            is MessageResult.Duplicate -> Id(Const.RESERVED_DUPLICATE_ID, -1) // TODO
-            is MessageResult.Error -> throw message.exception
-        }
-    }
-
 }
 
 /**

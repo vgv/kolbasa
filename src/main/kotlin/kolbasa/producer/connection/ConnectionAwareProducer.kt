@@ -1,6 +1,5 @@
 package kolbasa.producer.connection
 
-import kolbasa.producer.Id
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -47,10 +46,9 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * @param connection JDBC connection to use for sending message
      * @param data message to send
-     * @returns if success - unique id of the message; if error - throws an exception; if duplicate -
-     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
+     * @returns [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, data: Data): Id {
+    fun send(connection: Connection, data: Data): SendResult<Data, Meta> {
         return send(connection, SendMessage(data))
     }
 
@@ -59,12 +57,10 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * @param connection JDBC connection to use for sending message
      * @param data message, metadata (if any) and options (if any) to send
-     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
-     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
+     * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, data: SendMessage<Data, Meta>): Id {
-        val result = send(connection, listOf(data))
-        return result.extractSingularId()
+    fun send(connection: Connection, data: SendMessage<Data, Meta>): SendResult<Data, Meta> {
+        return send(connection, listOf(data))
     }
 
     /**

@@ -45,7 +45,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(data)
+        val result = producer.send(data)
+        assertEquals(0, result.failedMessages)
+        assertEquals(1, result.onlySuccessful().size)
+        val id = result.onlySuccessful().first().id
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
@@ -78,8 +81,15 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data2 = "bugaga-2"
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id1 = producer.send(data1)
-        val id2 = producer.send(data2)
+        val result1 = producer.send(data1)
+        val result2 = producer.send(data2)
+        assertEquals(0, result1.failedMessages)
+        assertEquals(0, result2.failedMessages)
+        assertEquals(1, result1.onlySuccessful().size)
+        assertEquals(1, result2.onlySuccessful().size)
+        val id1 = result1.onlySuccessful().first().id
+        val id2 = result2.onlySuccessful().first().id
+
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
@@ -150,7 +160,11 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
+        val result = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
+        assertEquals(0, result.failedMessages)
+        assertEquals(1, result.onlySuccessful().size)
+        val id = result.onlySuccessful().first().id
+
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
@@ -180,7 +194,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(data)
+        val result = producer.send(data)
+        assertEquals(0, result.failedMessages)
+        assertEquals(1, result.onlySuccessful().size)
+        val id = result.onlySuccessful().first().id
 
         val consumer = DatabaseConsumer(dataSource, queue)
 
@@ -233,8 +250,15 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
 
         val producer = DatabaseProducer(dataSource, queue)
-        val id1 = producer.send(SendMessage(data, TestMeta(1)))
-        val id2 = producer.send(SendMessage(data, TestMeta(2)))
+        val result1 = producer.send(SendMessage(data, TestMeta(1)))
+        val result2 = producer.send(SendMessage(data, TestMeta(2)))
+        assertEquals(0, result1.failedMessages)
+        assertEquals(0, result2.failedMessages)
+        assertEquals(1, result1.onlySuccessful().size)
+        assertEquals(1, result2.onlySuccessful().size)
+        val id1 = result1.onlySuccessful().first().id
+        val id2 = result2.onlySuccessful().first().id
+
 
         val consumer = DatabaseConsumer(dataSource, queue)
 

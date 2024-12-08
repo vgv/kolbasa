@@ -1,6 +1,5 @@
 package kolbasa.producer.datasource
 
-import kolbasa.producer.Id
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -26,10 +25,9 @@ interface Producer<Data, Meta : Any> {
      * Just to send one message without metadata and another options
      *
      * @param data message to send
-     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
-     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
+     * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(data: Data): Id {
+    fun send(data: Data): SendResult<Data, Meta> {
         return send(SendMessage(data = data))
     }
 
@@ -37,12 +35,10 @@ interface Producer<Data, Meta : Any> {
      * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
      * @param data message, metadata (if any) and options (if any) to send
-     * @return if success - unique id of the message; if error - throws an exception; if duplicate -
-     * [Const.RESERVED_DUPLICATE_ID][kolbasa.schema.Const.RESERVED_DUPLICATE_ID]
+     * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(data: SendMessage<Data, Meta>): Id {
-        val result = send(listOf(data))
-        return result.extractSingularId()
+    fun send(data: SendMessage<Data, Meta>): SendResult<Data, Meta> {
+        return send(listOf(data))
     }
 
     /**
