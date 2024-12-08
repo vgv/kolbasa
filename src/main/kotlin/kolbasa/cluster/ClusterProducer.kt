@@ -24,7 +24,8 @@ class ClusterProducer<Data, Meta : Any>(
             shardStrategy = Kolbasa.shardStrategy
         )
 
-        val producer = cluster.getState().getProducer(this, request.effectiveShard) { dataSource ->
+        val currentState = cluster.getState()
+        val producer = currentState.getProducer(this, request.effectiveShard) { dataSource ->
             DatabaseProducer(dataSource, queue, producerOptions, interceptors)
         }
 

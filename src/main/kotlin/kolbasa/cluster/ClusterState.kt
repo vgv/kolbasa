@@ -15,6 +15,13 @@ internal data class ClusterState(
     private val consumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
     private val aliveConsumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
 
+    // DataSources available to store data if primary shard producer is not available
+    private val dataSourcesAvailableForProducers: List<DataSource> = shards
+        .values
+        .map { shard -> shard.producerNode }
+        .distinct()
+        .mapNotNull { producerNode -> nodes[producerNode] }
+
     private val aliveConsumerNodes: List<String> = shards
         .values
         .mapNotNull { it.consumerNode }
@@ -24,22 +31,28 @@ internal data class ClusterState(
         Shards(shards.filter { it.value.consumerNode == node }.keys.toList())
     }
 
-
     fun <Data, Meta : Any> getProducer(
         clusterProducer: ClusterProducer<Data, Meta>,
         shard: Int,
-        compute: (DataSource) -> Producer<Data, Meta>
+        generateProducer: (DataSource) -> Producer<Data, Meta>
     ): Producer<Data, Meta> {
-        val node = producerNode(shard)
+        val nodeToProducers = producers.computeIfAbsent(clusterProducer) { _ ->
+            ConcurrentHashMap()
+        }
 
-        return producers
-            .computeIfAbsent(clusterProducer) { _ ->
-                ConcurrentHashMap()
+        val node = producerNode(shard)
+        val producer = nodeToProducers.computeIfAbsent(node) { _ ->
+            val dataSource = nodes.getOrElse(node) {
+                // Alive node is not found, let's use any available node to store data because we have no other choice
+                // It's better to store data on random node than to lose it
+                // Eventually we will find these messages and migrate them to the correct node
+                dataSourcesAvailableForProducers.random()
             }
-            .computeIfAbsent(node) { _ ->
-                compute(dataSource(node))
-            }
-            as Producer<Data, Meta>
+
+            generateProducer(dataSource)
+        }
+
+        return producer as Producer<Data, Meta>
     }
 
     fun <Data, Meta : Any> getActiveConsumer(
