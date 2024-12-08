@@ -18,16 +18,20 @@ class ClusterConsumer<Data, Meta : Any>(
 ) : Consumer<Data, Meta> {
 
     override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        val consumer = cluster.getState().getActiveConsumer(this) { dataSource, shards ->
+        val latestState = cluster.getState()
+        val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
             val c = ConnectionAwareDatabaseConsumer(queue, consumerOptions, emptyList(), shards)
             DatabaseConsumer(dataSource, c, interceptors)
         }
 
-        return if (consumer == null) {
-            emptyList()
-        } else {
-            consumer.receive(limit, receiveOptions)
+        // No active consumers at all:
+        // 1) All shards are migrating or
+        // 2) The entire shard table contains references to invalid consumer nodes
+        if (consumer == null) {
+            return emptyList()
         }
+
+        return consumer.receive(limit, receiveOptions)
     }
 
     override fun delete(messageIds: List<Id>): Int {

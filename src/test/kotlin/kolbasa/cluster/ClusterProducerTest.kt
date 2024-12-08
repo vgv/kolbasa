@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.Kolbasa
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement
@@ -23,12 +24,13 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         databaseDataType = PredefinedDataTypes.Int
     )
 
+    private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
     private lateinit var clusterProducer: ClusterProducer<Int, Unit>
 
     @BeforeTest
     fun before() {
-        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        Kolbasa.shardStrategy = ShardStrategy.Random
 
         dataSources.forEach { dataSource ->
             SchemaHelpers.updateDatabaseSchema(dataSource, queue)
@@ -62,7 +64,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     fun testMessagesDistribution_SendOneMessageIfProducerNodeFailed() {
         // change producer node to 'unknown' for this dataSource
         val id = requireNotNull(IdSchema.readNodeId(dataSource))
-        findDataSourceWithInitializedShard().useStatement { statement: Statement ->
+        findDataSourceWithInitializedShard(dataSources).useStatement { statement: Statement ->
             val sql = """
                        update
                             ${ShardSchema.SHARD_TABLE_NAME}
@@ -106,7 +108,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     @Test
     fun testMessagesDistribution_SendOneMessageIfAllProducerNodesNotFound() {
         // change producer node to 'unknown' for all dataSource
-        findDataSourceWithInitializedShard().useStatement { statement: Statement ->
+        findDataSourceWithInitializedShard(dataSources).useStatement { statement: Statement ->
             val sql = """
                        update
                             ${ShardSchema.SHARD_TABLE_NAME}
@@ -219,22 +221,22 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         return messages
     }
 
-    private fun findDataSourceWithInitializedShard(): DataSource {
-        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { ds ->
-            val shards = try {
-                ShardSchema.readShards(ds)
-            } catch (e: Exception) {
-                // Shard table doesn't exist
-                emptyMap()
-            }
+}
 
-            // Shard table is 100% initialized
-            if (shards.size == Shard.SHARD_COUNT) {
-                return ds
-            }
+fun findDataSourceWithInitializedShard(dataSources: List<DataSource>): DataSource {
+    dataSources.forEach { ds ->
+        val shards = try {
+            ShardSchema.readShards(ds)
+        } catch (e: Exception) {
+            // Shard table doesn't exist
+            emptyMap()
         }
 
-        throw IllegalStateException("No fully initialized shard table found")
+        // Shard table is 100% initialized
+        if (shards.size == Shard.SHARD_COUNT) {
+            return ds
+        }
     }
 
+    throw IllegalStateException("No fully initialized shard table found")
 }

@@ -13,7 +13,7 @@ internal object ShardSchema {
     const val SHARD_COLUMN_NAME = "shard"
     const val PRODUCER_NODE_COLUMN_NAME = "producer_node"
     const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"
-    private const val NEXT_CONSUMER_NODE_COLUMN_NAME = "next_consumer_node"
+    const val NEXT_CONSUMER_NODE_COLUMN_NAME = "next_consumer_node"
 
     private const val CREATE_SHARD_TABLE_STATEMENT = """
         create table if not exists $SHARD_TABLE_NAME(
