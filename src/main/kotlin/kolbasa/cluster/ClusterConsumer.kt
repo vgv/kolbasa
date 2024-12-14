@@ -9,6 +9,7 @@ import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import javax.sql.DataSource
 
 class ClusterConsumer<Data, Meta : Any>(
     private val cluster: Cluster,
@@ -19,6 +20,7 @@ class ClusterConsumer<Data, Meta : Any>(
 
     override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         val latestState = cluster.getState()
+
         val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
             val c = ConnectionAwareDatabaseConsumer(queue, consumerOptions, emptyList(), shards)
             DatabaseConsumer(dataSource, c, interceptors)
@@ -35,19 +37,33 @@ class ClusterConsumer<Data, Meta : Any>(
     }
 
     override fun delete(messageIds: List<Id>): Int {
-        val byShard = messageIds.groupBy {
-            it.shard
-        }
+        val latestState = cluster.getState()
 
-        val state = cluster.getState()
-        val results = byShard.map { (shard, ids) ->
-            val consumer = state.getConsumer(this, shard) { dataSource ->
+        val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
+
+        var deleted = byNodes
+            .map { (node, ids) ->
+                if (node == null) {
+                    return@map 0
+                }
+
+                val consumer = latestState.getConsumer(this, node) { dataSource ->
+                    DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
+                }
+
+                consumer.delete(ids)
+            }.sum()
+
+        if (deleted < messageIds.size) {
+            val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
                 DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
             }
 
-            consumer.delete(ids)
+            consumers.forEach { consumer ->
+                deleted += consumer.delete(messageIds)
+            }
         }
 
-        return results.sum()
+        return deleted
     }
 }
