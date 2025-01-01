@@ -32,7 +32,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     @Test
     fun testDeduplication_ZeroRemainingAttempts() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data, TestMeta(1), MessageOptions(attempts = 1))
+        val messageToSend = SendMessage(data = data, meta = TestMeta(1), messageOptions = MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource, queue)
         val consumer = DatabaseConsumer(dataSource, queue)

@@ -20,8 +20,7 @@ import java.sql.Connection
 class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
     private val queue: Queue<Data, Meta>,
     private val producerOptions: ProducerOptions = ProducerOptions(),
-    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList(),
-    private val serverId: String? = null
+    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList()
 ) : ConnectionAwareProducer<Data, Meta> {
 
     override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
@@ -167,7 +166,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
 
                         when (deduplicationMode) {
                             DeduplicationMode.ERROR -> {
-                                val id = Id(localId, serverId)
+                                val id = Id(localId, request.effectiveShard.toString())
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
@@ -177,7 +176,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])
                                 }
 
-                                val id = Id(localId, serverId)
+                                val id = Id(localId, request.effectiveShard.toString())
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
                         }
