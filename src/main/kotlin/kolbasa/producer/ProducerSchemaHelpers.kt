@@ -9,6 +9,7 @@ import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
+import kotlin.math.abs
 
 internal object ProducerSchemaHelpers {
 
@@ -201,13 +202,13 @@ internal object ProducerSchemaHelpers {
 
     fun calculateEffectiveShard(producerOptions: ProducerOptions, sendOptions: SendOptions, shardStrategy: ShardStrategy): Int {
         if (sendOptions.shard != null) {
-            return sendOptions.shard % Shard.SHARD_COUNT
+            return abs(sendOptions.shard % Shard.SHARD_COUNT)
         }
 
         if (producerOptions.shard != null) {
-            return producerOptions.shard % Shard.SHARD_COUNT
+            return abs(producerOptions.shard % Shard.SHARD_COUNT)
         }
 
-        return shardStrategy.getShard() % Shard.SHARD_COUNT
+        return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
     }
 }

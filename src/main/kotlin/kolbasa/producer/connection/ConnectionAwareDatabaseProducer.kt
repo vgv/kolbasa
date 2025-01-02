@@ -166,7 +166,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
 
                         when (deduplicationMode) {
                             DeduplicationMode.ERROR -> {
-                                val id = Id(localId, request.effectiveShard.toString())
+                                val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
@@ -176,7 +176,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])
                                 }
 
-                                val id = Id(localId, request.effectiveShard.toString())
+                                val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
                         }

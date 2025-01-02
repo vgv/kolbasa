@@ -1,5 +1,6 @@
 package kolbasa.consumer
 
+import kolbasa.cluster.Shards
 import kolbasa.consumer.filter.ColumnIndex
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
@@ -17,12 +18,14 @@ internal object ConsumerSchemaHelpers {
     fun <Meta : Any> generateSelectPreparedQuery(
         queue: Queue<*, Meta>,
         consumerOptions: ConsumerOptions,
+        shards: Shards,
         receiveOptions: ReceiveOptions<Meta>,
         limit: Int
     ): String {
         // Columns to read from database
         val dataColumns = mutableListOf(
             Const.ID_COLUMN_NAME,
+            Const.SHARD_COLUMN_NAME,
             Const.CREATED_AT_COLUMN_NAME,
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
@@ -46,6 +49,9 @@ internal object ConsumerSchemaHelpers {
             "${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
+        if (shards != Shards.ALL_SHARDS) {
+            whereClauses += "${Const.SHARD_COLUMN_NAME} in (${shards.asText})"
+        }
         receiveOptions.filter?.let { filter ->
             whereClauses += filter.toSqlClause(queue)
         }
@@ -122,12 +128,12 @@ internal object ConsumerSchemaHelpers {
         queue: Queue<Data, Meta>,
         receiveOptions: ReceiveOptions<Meta>,
         resultSet: ResultSet,
-        serverId: String?,
         approxBytesCounter: BytesCounter
     ): Message<Data, Meta> {
         var columnIndex = 1
 
         val localId = resultSet.getLong(columnIndex++)
+        val shard = resultSet.getInt(columnIndex++)
         val createdAt = resultSet.getTimestamp(columnIndex++).time
         val processingAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
@@ -189,7 +195,7 @@ internal object ConsumerSchemaHelpers {
             null
         }
 
-        val message = Message(Id(localId, serverId), createdAt, processingAt, attempts, data, meta)
+        val message = Message(Id(localId, shard), createdAt, processingAt, attempts, data, meta)
         message.openTelemetryData = otData
 
         return message
