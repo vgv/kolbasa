@@ -39,31 +39,15 @@ implementation "io.github.vgv:kolbasa:0.49.0"
 </dependency>
 ```
 
-## How to use
+## Examples
+The easiest way to try kolbasa is to try running real, working examples, illustrating different features and modes. All examples can be found in the [examples](src/test/kotlin/examples) folder. Each example is a ready to run, complete mini-program that can be launched from the IDE or Gradle. To run from Gradle, you need to execute the command `./gradlew example -P example_name=01_SimpleTest`, where `example_name` is the name of the file with the example.
+
+You need to have a working PostgreSQL instance to run examples and here you have two options:
+1) Easiest (default) – just have running Docker on your machine. All examples will use Docker to start PostgreSQL instance.
+2) If you don't want to or can't use Docker, you have a second option – use a real PostgreSQL installation. File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourceProvider.kt) is the place where you can specify url, username and password for you existing PostgreSQL instance.
+
 ### Simple example
-This is the simplest possible example to send and receive one simple message.
-
-```kotlin
-// Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
-val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Unit::class.java)
-
-val dataSource = ... // Valid datasource from DI, static factory etc.
-
-// Update PostgreSQL schema
-// We need to create (or update) queue table before send/receive
-SchemaHelpers.updateDatabaseSchema(dataSource, queue)
-
-// Create producer and send simple message
-val producer = DatabaseProducer(dataSource, queue)
-producer.send("Test message")
-
-// Create consumer, try to read message from the queue, process it and delete
-val consumer = DatabaseConsumer(dataSource, queue)
-consumer.receive()?.let { message ->
-    println(message.data)
-    consumer.delete(message)
-}
-```
+The simplest possible example to send and receive one simple message: [01_SimpleTest](src/test/kotlin/examples/01_SimpleTest.kt)
 
 ### Filtering and sorting
 What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and we want to receive messages with a specific userId and sort them by `priority`? Kolbasa can receive only particular messages from queue using convenient type-safe DSL and order them.
