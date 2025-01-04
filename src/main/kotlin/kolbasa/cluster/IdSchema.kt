@@ -12,7 +12,7 @@ internal object IdSchema {
     private const val NODE_ID_DEFAULT_LENGTH = 12
 
     // q__node
-    private const val NODE_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_node"
+    const val NODE_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_node"
     private const val STATUS_COLUMN_NAME = "status"
     private const val STATUS_COLUMN_LENGTH = 100
     private const val SERVER_ID_COLUMN_NAME = "server_id"

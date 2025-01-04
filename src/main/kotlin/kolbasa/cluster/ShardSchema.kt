@@ -77,7 +77,7 @@ internal object ShardSchema {
     }
 
     fun readShards(dataSource: DataSource): Map<Int, Shard> {
-        val shards = mutableMapOf<Int, Shard>()
+        val shards = hashMapOf<Int, Shard>()
 
         dataSource.useStatement { statement: Statement ->
             statement.executeQuery(READ_SHARD_TABLE_STATEMENT).use { resultSet ->
