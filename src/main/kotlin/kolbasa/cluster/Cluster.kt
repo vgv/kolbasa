@@ -12,8 +12,8 @@ class Cluster(private val dataSources: () -> List<DataSource>) {
     @Synchronized
     fun updateState() {
         val dataSources = dataSources()
-        if (dataSources.isEmpty()) {
-            throw IllegalArgumentException("Data sources list is empty")
+        check(dataSources.isNotEmpty()) {
+            "Data sources list is empty"
         }
 
         val nodes = initNodes(dataSources)
