@@ -2,6 +2,11 @@ package kolbasa.cluster
 
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.cluster.ShardSchema.CONSUMER_NODE_COLUMN_NAME
+import kolbasa.cluster.ShardSchema.PRODUCER_NODE_COLUMN_NAME
+import kolbasa.cluster.ShardSchema.SHARD_COLUMN_NAME
+import kolbasa.cluster.ShardSchema.SHARD_TABLE_NAME
+import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.Test
 import java.sql.Statement
@@ -28,6 +33,35 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
     }
 
     @Test
+    fun testCreateShardTableAndFill_TestShardsOutOfBounds() {
+        val nodes = listOf("node1", "node2", "node3")
+        ShardSchema.createShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes)
+
+        // insert additional shards with invalid shard numbers
+        val shardsBeforeInsert = dataSource.readInt("select count(*) from $SHARD_TABLE_NAME")
+        assertEquals(Shard.SHARD_COUNT, shardsBeforeInsert)
+        dataSource.useStatement { statement: Statement ->
+            val sql = """
+                insert into $SHARD_TABLE_NAME
+                    ($SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME)
+                values
+                    (${Shard.MAX_SHARD + 1}, 'a', 'a')
+                on conflict do nothing
+            """.trimIndent()
+            statement.execute(sql)
+        }
+        val shardsAfterInsert = dataSource.readInt("select count(*) from $SHARD_TABLE_NAME")
+        assertEquals(Shard.SHARD_COUNT + 1, shardsAfterInsert)
+
+        // Read shard table and check that
+        // 1) Shard with invalid number wasn't read
+        // 2) All other shards were read
+        val full = ShardSchema.readShards(dataSource)
+        checkFullShardsTable(full, nodes)
+    }
+
+    @Test
     fun testCreateShardTableAndFill_FromNotSoEmptyToFull() {
         val nodes = listOf("node1", "node2", "node3")
         ShardSchema.createShardTable(dataSource)
@@ -45,8 +79,8 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
             .toSet()
         dataSource.useStatement { statement: Statement ->
             val sql = """
-                delete from ${ShardSchema.SHARD_TABLE_NAME}
-                where ${ShardSchema.SHARD_COLUMN_NAME} in (${shardsToDelete.joinToString(separator = ",")})
+                delete from $SHARD_TABLE_NAME
+                where $SHARD_COLUMN_NAME in (${shardsToDelete.joinToString(separator = ",")})
             """.trimIndent()
             statement.execute(sql)
         }

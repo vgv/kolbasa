@@ -11,11 +11,11 @@ internal object ShardSchema {
     // q__shard
     const val SHARD_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_shard"
     const val SHARD_COLUMN_NAME = "shard"
-    private const val PRODUCER_NODE_COLUMN_NAME = "producer_node"
-    private const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"
+    const val PRODUCER_NODE_COLUMN_NAME = "producer_node"
+    const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"
     private const val NEXT_CONSUMER_NODE_COLUMN_NAME = "next_consumer_node"
 
-    private val CREATE_SHARD_TABLE_STATEMENT = """
+    private const val CREATE_SHARD_TABLE_STATEMENT = """
         create table if not exists $SHARD_TABLE_NAME(
             $SHARD_COLUMN_NAME int not null primary key,
             $PRODUCER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}) not null,
@@ -26,13 +26,15 @@ internal object ShardSchema {
                 ($PRODUCER_NODE_COLUMN_NAME=$NEXT_CONSUMER_NODE_COLUMN_NAME and $CONSUMER_NODE_COLUMN_NAME is null)
             )
         )
-    """.trimIndent()
+    """
 
     private const val READ_SHARD_TABLE_STATEMENT = """
         select
             $SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $NEXT_CONSUMER_NODE_COLUMN_NAME
         from
             $SHARD_TABLE_NAME
+        where
+            $SHARD_COLUMN_NAME between ${Shard.MIN_SHARD} and ${Shard.MAX_SHARD}
         order by
             $SHARD_COLUMN_NAME
     """
@@ -53,7 +55,8 @@ internal object ShardSchema {
     }
 
     fun fillShardTable(dataSource: DataSource, nodes: List<String>) {
-        val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(100).map { shards ->
+        val shardsPerStatement = 100
+        val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
                 "($shard, '$randomNode', '$randomNode')"
