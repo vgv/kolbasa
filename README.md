@@ -54,12 +54,14 @@ File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourcePro
 
 ### Simple example
 The simplest possible example to send and receive one simple text message: [SimpleExample](src/test/kotlin/examples/SimpleExample.kt)
+
 No filtering, no message deduplication, sharding or other features. Just send and receive one message.
 
 ### Filtering and sorting
 What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and
-we want to receive messages with a specific userId and sort them by `priority`? Kolbasa can receive only particular messages
-from queue using convenient type-safe DSL and order them.
+we want to receive messages with a specific userId and sort them by `priority`?
+
+Kolbasa can receive only particular messages from queue using convenient type-safe DSL and order them.
 
 For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
