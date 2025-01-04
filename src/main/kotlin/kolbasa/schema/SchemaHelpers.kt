@@ -28,7 +28,19 @@ object SchemaHelpers {
     }
 
     /**
-     * Update database schema
+     * Update database schema.
+     *
+     * Every kolbasa queue has its own real table in the database. This method creates or updates the table schema for the queue.
+     * When we want to use a queue, we may have the following situations:
+     * 1) This is the first use of the queue and the table in the database simply does not exist, it must be created from scratch
+     * 2) The queue has already been used, the table in the database exists, but since the last use, the queue metadata
+     *    has changed and one or more columns/indexes must be added to the table in the database
+     * 3) The queue has not changed, but the internal data representation in kolbasa itself has changed and several service
+     *    columns/indexes must be added/removed
+     * 4) The queue has not changed, the table in the database is up-to-date, nothing needs to be done
+     *
+     * This is a convenient method that allows you to simply bring the table in the database to the current queue state,
+     * making the correct data migration for each of the above cases
      */
     @JvmStatic
     fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>) {
@@ -40,6 +52,8 @@ object SchemaHelpers {
 
     /**
      * Update database schema
+     *
+     * See [updateDatabaseSchema] for more details
      */
     @JvmStatic
     fun updateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>) {
