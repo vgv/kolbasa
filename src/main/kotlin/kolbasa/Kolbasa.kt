@@ -13,7 +13,7 @@ object Kolbasa {
 
     @JvmStatic
     @Volatile
-    var shardStrategy: ShardStrategy = ShardStrategy.Random
+    var shardStrategy: ShardStrategy = ShardStrategy.ThreadLocalWithInterval()
 
     @JvmStatic
     @Volatile
