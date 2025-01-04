@@ -1,5 +1,6 @@
 package kolbasa.schema
 
+import kolbasa.cluster.Shard
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.MetaField
@@ -61,7 +62,7 @@ internal object SchemaGenerator {
         val hasColumn = existingTable?.findColumn(Const.SHARD_COLUMN_NAME) != null
         val shardColumn = """
             alter table ${queue.dbTableName}
-            add if not exists ${Const.SHARD_COLUMN_NAME} int not null
+            add if not exists ${Const.SHARD_COLUMN_NAME} int not null default ${Shard.MIN_SHARD}
         """.trimIndent()
 
         mutableSchema.allTables += shardColumn

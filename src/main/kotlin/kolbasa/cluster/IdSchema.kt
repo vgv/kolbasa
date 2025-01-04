@@ -17,9 +17,11 @@ internal object IdSchema {
     const val NODE_COLUMN_LENGTH = 1000
     private const val CREATED_AT_COLUMN_NAME = "created_at"
 
+    private const val ID_DEFAULT_VALUE = 1L
+
     private val CREATE_ID_TABLE_STATEMENT = """
         create table if not exists $ID_TABLE_NAME(
-               $ID_COLUMN_NAME bigint generated always as (1) stored primary key,
+               $ID_COLUMN_NAME bigint not null primary key,
                $NODE_COLUMN_NAME varchar($NODE_COLUMN_LENGTH) not null,
                $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp
         )
@@ -28,9 +30,9 @@ internal object IdSchema {
     private val INIT_ID_TABLE_STATEMENT: String
         get() = """
                 insert into $ID_TABLE_NAME
-                    ($NODE_COLUMN_NAME)
+                    ($ID_COLUMN_NAME, $NODE_COLUMN_NAME)
                 values
-                    ('${generateNodeId()}')
+                    ($ID_DEFAULT_VALUE, '${generateNodeId()}')
                 on conflict do nothing
             """.trimIndent()
 
@@ -39,6 +41,8 @@ internal object IdSchema {
             $NODE_COLUMN_NAME
         from
             $ID_TABLE_NAME
+        where
+            $ID_COLUMN_NAME = 1
     """.trimIndent()
 
     fun createAndInitIdTable(dataSource: DataSource) {
