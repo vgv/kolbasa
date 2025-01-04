@@ -26,6 +26,11 @@ object ExamplesDataSourceProvider {
 
     /**
      * Use external PostgreSQL installation
+     *
+     * If you want to use a real PG installation:
+     * 1) Comment out `getDataSource()` method above
+     * 2) Uncomment this one
+     * 3) Provide your own connection parameters (hostname, port, database, user, pwd)
      */
 //    fun getDataSource(): DataSource {
 //        val hostname = ""
