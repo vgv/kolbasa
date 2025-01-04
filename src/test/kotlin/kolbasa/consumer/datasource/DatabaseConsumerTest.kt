@@ -8,6 +8,7 @@ import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.Id
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -160,10 +161,11 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
         val producer = DatabaseProducer(dataSource, queue)
-        val result = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
-        assertEquals(0, result.failedMessages)
-        assertEquals(1, result.onlySuccessful().size)
-        val id = result.onlySuccessful().first().id
+        val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay))).let { (failedMessages, result) ->
+            assertEquals(0, failedMessages)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
 
         val consumer = DatabaseConsumer(dataSource, queue)
@@ -250,10 +252,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
 
         val producer = DatabaseProducer(dataSource, queue)
-        val result1 = producer.send(SendMessage(data, TestMeta(1)))
-        val result2 = producer.send(SendMessage(data, TestMeta(2)))
-        assertEquals(0, result1.failedMessages)
-        assertEquals(0, result2.failedMessages)
+        val (failedMessages1, result1) = producer.send(SendMessage(data, TestMeta(1)))
+        val (failedMessages2, result2) = producer.send(SendMessage(data, TestMeta(2)))
+        assertEquals(0, failedMessages1)
+        assertEquals(0, failedMessages2)
         assertEquals(1, result1.onlySuccessful().size)
         assertEquals(1, result2.onlySuccessful().size)
         val id1 = result1.onlySuccessful().first().id

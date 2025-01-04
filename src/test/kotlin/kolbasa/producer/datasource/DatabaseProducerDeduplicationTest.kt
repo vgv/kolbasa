@@ -5,6 +5,9 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.DeduplicationMode
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendResult.Companion.onlyDuplicated
+import kolbasa.producer.SendResult.Companion.onlyFailed
+import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
@@ -42,8 +45,8 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         producer.send(messageToSend)
 
         // Second send with the same meta field value should fail
-        val result = producer.send(messageToSend)
-        assertEquals(1, result.failedMessages)
+        val (failedMessages, result) = producer.send(messageToSend)
+        assertEquals(1, failedMessages)
         assertEquals(0, result.onlySuccessful().size) // zero really inserted
         assertEquals(0, result.onlyDuplicated().size) // zero duplicates
         assertEquals(1, result.onlyFailed().size)  // one error
@@ -92,8 +95,8 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         producer.send(messageToSend)
 
         // Second send with the same meta field value should return Const.RESERVED_DUPLICATE_ID and not insert anything
-        val result = producer.send(messageToSend)
-        assertEquals(0, result.failedMessages)
+        val (failedMessages, result) = producer.send(messageToSend)
+        assertEquals(0, failedMessages)
         assertEquals(0, result.onlySuccessful().size)
         assertEquals(1, result.onlyDuplicated().size)
         assertEquals(0, result.onlyFailed().size)
