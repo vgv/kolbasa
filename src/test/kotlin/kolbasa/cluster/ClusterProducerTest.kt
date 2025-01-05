@@ -118,6 +118,10 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         }
         // re-read cluster state after shards changing
         cluster.updateState()
+        // check that all producer nodes are NOT THE SAME that really existing nodes
+        val allProducerNodes = cluster.getState().shards.values.map { it.producerNode }.toSet()
+        val allNodes = cluster.getState().nodes.keys
+        assertTrue(allNodes.intersect(allProducerNodes).isEmpty(), "allNodes: $allNodes, allProducerNodes: $allProducerNodes")
 
         // send to random nodes
         val results = (1..messagesToSend).map {
