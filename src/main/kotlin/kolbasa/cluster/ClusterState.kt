@@ -16,13 +16,13 @@ internal data class ClusterState(
     private val aliveConsumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
 
     // DataSources available to store data if primary shard producer is not available
-    private val dataSourcesAvailableForProducers: List<DataSource> = shards
+    private val dataSourcesWithActiveProducers: List<DataSource> = shards
         .values
         .map { shard -> shard.producerNode }
         .distinct()
         .mapNotNull { producerNode -> nodes[producerNode] }
 
-    private val aliveConsumerNodes: List<String> = shards
+    private val availableConsumerNodes: List<String> = shards
         .values
         .mapNotNull { it.consumerNode }
         .distinct()
@@ -40,13 +40,18 @@ internal data class ClusterState(
             ConcurrentHashMap()
         }
 
-        val node = producerNode(shard)
-        val producer = nodeToProducers.computeIfAbsent(node) { _ ->
-            val dataSource = nodes.getOrElse(node) {
-                // Alive node is not found, let's use any available node to store data because we have no other choice
+        val nodeId = producerNode(shard)
+        val producer = nodeToProducers.computeIfAbsent(nodeId) { _ ->
+            val dataSource = nodes.getOrElse(nodeId) {
+                // Node with nodeId not found, let's use any available node to store data because we have no other choice
                 // It's better to store data on random node than to lose it
                 // Eventually we will find these messages and migrate them to the correct node
-                dataSourcesAvailableForProducers.random()
+                // The algorithm of choosing a node is as follows:
+                // 1) We try to avoid nodes without active producers, because such nodes are likely to be in the
+                //    process of data migration, and we don't want to add more data to them
+                // 2) However, if all nodes have no active producers, then this means, firstly, that this is a very strange
+                //    cluster state ¯\_(ツ)_/¯, and secondly, that we have no choice and have to return literally any node
+                dataSourcesWithActiveProducers.randomOrNull() ?: nodes.values.random()
             }
 
             generateProducer(dataSource)

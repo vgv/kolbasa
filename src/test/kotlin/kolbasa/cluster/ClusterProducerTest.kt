@@ -62,12 +62,8 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     fun testMessagesDistribution_SendOneMessageIfProducerNodeFailed() {
         // change producer node to 'unknown' for this dataSource
         val id = requireNotNull(IdSchema.readNodeId(dataSource))
-        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { ds ->
-            try {
-                ShardSchema.readShards(ds)
-                // shard table found, let's change producer nodes
-                ds.useStatement { statement: Statement ->
-                    val sql = """
+        findDataSourceWithInitializedShard().useStatement { statement: Statement ->
+            val sql = """
                        update
                             ${ShardSchema.SHARD_TABLE_NAME}
                        set
@@ -76,11 +72,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
                        where
                             ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '$id'
                    """.trimIndent()
-                    statement.executeUpdate(sql)
-                }
-            } catch (e: Exception) {
-                // NOP
-            }
+            statement.executeUpdate(sql)
         }
         // re-read cluster state after shards changing
         cluster.updateState()
@@ -105,9 +97,50 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val second = readData(dataSourceFirstSchema)
         val third = readData(dataSourceSecondSchema)
 
-        // Check that "non-existing"
+        // Check that "non-existing" node didn't receive any messages
         assertEquals(0, first.size)
+        // Check that other nodes received all messages
         assertEquals(messagesToSend, second.size + third.size)
+    }
+
+    @Test
+    fun testMessagesDistribution_SendOneMessageIfAllProducerNodesNotFound() {
+        // change producer node to 'unknown' for all dataSource
+        findDataSourceWithInitializedShard().useStatement { statement: Statement ->
+            val sql = """
+                       update
+                            ${ShardSchema.SHARD_TABLE_NAME}
+                       set
+                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'unknown',
+                            ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'unknown'
+                   """.trimIndent()
+            statement.executeUpdate(sql)
+        }
+        // re-read cluster state after shards changing
+        cluster.updateState()
+
+        // send to random nodes
+        val results = (1..messagesToSend).map {
+            val shard = ShardStrategy.Random.getShard()
+            val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+            clusterProducer.send(sendRequest)
+        }
+
+        // Test that all messages were sent successfully
+        results.forEach { sendResult ->
+            assertEquals(0, sendResult.failedMessages)
+            sendResult.onlySuccessful().forEach {
+                assertEquals(it.message.data, it.id.shard)
+            }
+        }
+
+        // Read from the specified shard using direct consumer
+        val first = readData(dataSource)
+        val second = readData(dataSourceFirstSchema)
+        val third = readData(dataSourceSecondSchema)
+
+        // Check that all messages have been distributed across all nodes
+        assertEquals(messagesToSend, first.size + second.size + third.size)
     }
 
     @Test
@@ -180,6 +213,24 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val messages = consumer.receive(messagesToSend)
         consumer.delete(messages)
         return messages
+    }
+
+    private fun findDataSourceWithInitializedShard(): DataSource {
+        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { ds ->
+            val shards = try {
+                ShardSchema.readShards(ds)
+            } catch (e: Exception) {
+                // Shard table doesn't exist
+                emptyMap()
+            }
+
+            // Shard table is 100% initialized
+            if (shards.size == Shard.SHARD_COUNT) {
+                return ds
+            }
+        }
+
+        throw IllegalStateException("No fully initialized shard table found")
     }
 
 }
