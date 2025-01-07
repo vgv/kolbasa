@@ -12,8 +12,11 @@ internal data class ClusterState(
 ) {
 
     private val producers = ConcurrentHashMap<ClusterProducer<*, *>, ConcurrentMap<String, Producer<*, *>>>()
+
+    // Consumers ready to receive messages
+    private val activeConsumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
     private val consumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
-    private val aliveConsumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
+
 
     // DataSources available to store data if primary shard producer is not available
     private val dataSourcesWithActiveProducers: List<DataSource> = shards
@@ -22,13 +25,18 @@ internal data class ClusterState(
         .distinct()
         .mapNotNull { producerNode -> nodes[producerNode] }
 
-    private val availableConsumerNodes: List<String> = shards
+    private val activeConsumerNodes: List<String> = shards
         .values
         .mapNotNull { it.consumerNode }
         .distinct()
+        .filter { consumerNode -> nodes.containsKey(consumerNode) }
 
-    private val aliveConsumerShards: Map<String, Shards> = aliveConsumerNodes.associateWith { node ->
-        Shards(shards.filter { it.value.consumerNode == node }.keys.toList())
+    private val activeConsumerShards: Map<String, Shards> = activeConsumerNodes.associateWith { node ->
+        val thisNodeShards = shards
+            .filter { it.value.consumerNode == node }
+            .keys
+            .toList()
+        Shards(thisNodeShards)
     }
 
     fun <Data, Meta : Any> getProducer(
@@ -62,24 +70,27 @@ internal data class ClusterState(
 
     fun <Data, Meta : Any> getActiveConsumer(
         clusterConsumer: ClusterConsumer<Data, Meta>,
-        compute: (DataSource, Shards) -> Consumer<Data, Meta>
+        generateConsumer: (DataSource, Shards) -> Consumer<Data, Meta>
     ): Consumer<Data, Meta>? {
-        val randomNode = aliveConsumerNodes.random()
+        val nodesToConsumers = activeConsumers.computeIfAbsent(clusterConsumer) { _ ->
+            ConcurrentHashMap()
+        }
 
-        return aliveConsumers
-            .computeIfAbsent(clusterConsumer) { _ ->
-                ConcurrentHashMap()
-            }
-            .computeIfAbsent(randomNode) { _ ->
-                compute(dataSource(randomNode), aliveConsumerShards[randomNode]!!)
-            }
-            as Consumer<Data, Meta>
+        val randomNode = activeConsumerNodes.randomOrNull() ?: return null
+
+        val consumer = nodesToConsumers.computeIfAbsent(randomNode) { _ ->
+            val dataSource = nodes[randomNode] ?: throw IllegalStateException("Node $randomNode not found")
+            val shards = activeConsumerShards[randomNode] ?: throw IllegalStateException("Shards for node $randomNode not found")
+            generateConsumer(dataSource, shards)
+        }
+
+        return consumer as Consumer<Data, Meta>
     }
 
     fun <Data, Meta : Any> getConsumer(
         clusterConsumer: ClusterConsumer<Data, Meta>,
         shard: Int,
-        compute: (DataSource) -> Consumer<Data, Meta>
+        generateConsumer: (DataSource) -> Consumer<Data, Meta>
     ): Consumer<Data, Meta> {
         val node = consumerNode(shard)
 
@@ -88,7 +99,7 @@ internal data class ClusterState(
                 ConcurrentHashMap()
             }
             .computeIfAbsent(node) { _ ->
-                compute(dataSource(node))
+                generateConsumer(dataSource(node))
             }
             as Consumer<Data, Meta>
     }
