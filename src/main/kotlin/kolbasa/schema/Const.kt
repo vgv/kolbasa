@@ -12,12 +12,6 @@ internal object Const {
     const val MAX_QUEUE_IDENTIFIER_VALUE: Long = Long.MAX_VALUE
 
     /**
-     * Reserved identifier for duplicated messages if we have to return some ID by function contract, for
-     * example, in [kolbasa.producer.datasource.Producer.send]
-     */
-    const val RESERVED_DUPLICATE_ID = -1L
-
-    /**
      * PG default identifier length
      * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
      */

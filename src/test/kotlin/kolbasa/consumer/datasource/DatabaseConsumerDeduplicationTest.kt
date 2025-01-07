@@ -38,10 +38,18 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         val consumer = DatabaseConsumer(dataSource, queue)
 
         // First send – success
-        val id = producer.send(messageToSend)
+        val result = producer.send(messageToSend)
+        assertEquals(0, result.failedMessages)
+        assertEquals(1, result.onlySuccessful().size)
+        val id = result.onlySuccessful().first().id
 
         // Second produce with the same meta field value should fail...
-        assertFails { producer.send(messageToSend) }
+        val failedResult = producer.send(messageToSend)
+        assertEquals(1, failedResult.failedMessages)
+        assertEquals(0, failedResult.onlySuccessful().size)
+        assertEquals(0, failedResult.onlyDuplicated().size)
+        assertEquals(1, failedResult.onlyFailed().size)
+
 
         // ... but, if we read this message, it will set remainingAttempts to zero
         // in this case, we have to be able to send the message with the same meta field again, even if it has unique constraint
