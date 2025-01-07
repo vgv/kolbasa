@@ -207,9 +207,9 @@ internal object ConsumerSchemaHelpers {
         }
 
         val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-            id.localId.toString()
+            "(${id.localId},${id.shard})"
         }
-        return "delete from ${queue.dbTableName} where ${Const.ID_COLUMN_NAME} in $idsList"
+        return "delete from ${queue.dbTableName} where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idsList"
     }
 
     fun generateDeleteExpiredMessagesQuery(queue: Queue<*, *>, limit: Int): String {
