@@ -11,33 +11,88 @@ internal data class ClusterState(
     val shards: Map<Int, Shard>
 ) {
 
-    private val producers = ConcurrentHashMap<ClusterProducer<*, *>, ConcurrentMap<String, Producer<*, *>>>()
+    // -------------------------------------------------------------------------------------------------
+    // DataSources available to store data if some shard producer is not available
+    private val dataSourcesWithActiveProducers: List<DataSource> by lazy {
+        // Collect all known producer nodes from shard table.
+        // Shard table can contain references to nodes that are not in the cluster, but at this step
+        // we don't care about it, because we will check the availability of nodes later.
+        // Just collect all producer nodes names
+        val allKnownProducerNodes = shards
+            .values
+            .map { shard -> shard.producerNode }
+            .distinct()
 
-    // Consumers ready to receive messages
-    private val activeConsumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
-    private val consumers = ConcurrentHashMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>>()
+        // Second step - filter all possible producer nodes names and leave only those that are in the cluster
+        val existingProducerNodes = allKnownProducerNodes
+            .mapNotNull { producerNode -> nodes[producerNode] }
 
-
-    // DataSources available to store data if primary shard producer is not available
-    private val dataSourcesWithActiveProducers: List<DataSource> = shards
-        .values
-        .map { shard -> shard.producerNode }
-        .distinct()
-        .mapNotNull { producerNode -> nodes[producerNode] }
-
-    private val activeConsumerNodes: List<String> = shards
-        .values
-        .mapNotNull { it.consumerNode }
-        .distinct()
-        .filter { consumerNode -> nodes.containsKey(consumerNode) }
-
-    private val activeConsumerShards: Map<String, Shards> = activeConsumerNodes.associateWith { node ->
-        val thisNodeShards = shards
-            .filter { it.value.consumerNode == node }
-            .keys
-            .toList()
-        Shards(thisNodeShards)
+        existingProducerNodes
     }
+
+    // List of nodes that have active consumers or, in other words, nodes from which we can read data
+    private val activeConsumerNodes: List<String> by lazy {
+        // Collect all known consumer nodes from shard table.
+        // Shard table can contain references to nodes that are not in the cluster, but at this step
+        // we don't care about it, because we will check the availability of nodes later.
+        // Just collect all consumer nodes names
+        val allKnownConsumerNodes = shards
+            .values
+            .mapNotNull { shard -> shard.consumerNode }
+            .distinct()
+
+        // Second step - filter all possible consumer nodes names and leave only those that are in the cluster
+        val existingConsumerNodes = allKnownConsumerNodes
+            .filter { consumerNode -> nodes.containsKey(consumerNode) }
+
+        existingConsumerNodes
+    }
+
+    // Shards that are assigned to each active consumer node right now
+    // For example, we had 100 shards on one node, but one shard started migrating to another node. In this case, we
+    // will have 99 shards on this particular node
+    // node -> shard[]
+    private val activeConsumerNodesToShards: Map<String, Shards> by lazy {
+        activeConsumerNodes.associateWith { node ->
+            // Collect all shards that are assigned to this node right now
+            val thisNodeShards = shards
+                .filter { it.value.consumerNode == node }
+                .keys
+                .toList()
+
+            Shards(thisNodeShards)
+        }
+    }
+
+    // Map of active shards to active consumer nodes
+    // shard -> node
+    private val activeConsumerShardsToNodes: Map<Int, String> by lazy {
+        val result = hashMapOf<Int, String>()
+        activeConsumerNodesToShards.forEach { (node, shards) ->
+            shards.shards.forEach { shard ->
+                result[shard] = node
+            }
+        }
+
+        result
+    }
+
+    // -------------------------------------------------------------------------------------------------
+
+    private val producers: ConcurrentMap<ClusterProducer<*, *>, ConcurrentMap<String, Producer<*, *>>> by lazy {
+        ConcurrentHashMap()
+    }
+
+    private val activeConsumers: ConcurrentMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>> by lazy {
+        ConcurrentHashMap()
+    }
+
+    private val allConsumers: ConcurrentMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>> by lazy {
+        ConcurrentHashMap()
+    }
+
+    // -------------------------------------------------------------------------------------------------
+
 
     fun <Data, Meta : Any> getProducer(
         clusterProducer: ClusterProducer<Data, Meta>,
@@ -48,9 +103,10 @@ internal data class ClusterState(
             ConcurrentHashMap()
         }
 
-        val nodeId = producerNode(shard)
-        val producer = nodeToProducers.computeIfAbsent(nodeId) { _ ->
-            val dataSource = nodes.getOrElse(nodeId) {
+        val node = shards[shard]?.producerNode ?: throw IllegalArgumentException("Shard $shard is not found")
+
+        val producer = nodeToProducers.computeIfAbsent(node) { _ ->
+            val dataSource = nodes.getOrElse(node) {
                 // Node with nodeId not found, let's use any available node to store data because we have no other choice
                 // It's better to store data on random node than to lose it
                 // Eventually we will find these messages and migrate them to the correct node
@@ -80,40 +136,53 @@ internal data class ClusterState(
 
         val consumer = nodesToConsumers.computeIfAbsent(randomNode) { _ ->
             val dataSource = nodes[randomNode] ?: throw IllegalStateException("Node $randomNode not found")
-            val shards = activeConsumerShards[randomNode] ?: throw IllegalStateException("Shards for node $randomNode not found")
+            val shards =
+                activeConsumerNodesToShards[randomNode] ?: throw IllegalStateException("Shards for node $randomNode not found")
             generateConsumer(dataSource, shards)
         }
 
         return consumer as Consumer<Data, Meta>
     }
 
+    fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> Int): Map<String?, List<T>> {
+        return list.groupBy { item ->
+            val shard = shardFunc(item)
+            activeConsumerShardsToNodes[shard]
+        }
+    }
+
     fun <Data, Meta : Any> getConsumer(
         clusterConsumer: ClusterConsumer<Data, Meta>,
-        shard: Int,
+        node: String,
         generateConsumer: (DataSource) -> Consumer<Data, Meta>
     ): Consumer<Data, Meta> {
-        val node = consumerNode(shard)
+        val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
+            ConcurrentHashMap()
+        }
 
-        return consumers
-            .computeIfAbsent(clusterConsumer) { _ ->
-                ConcurrentHashMap()
+        val consumer = nodesToConsumers.computeIfAbsent(node) { _ ->
+            val dataSource = nodes[node] ?: throw IllegalStateException("Node $node not found")
+            generateConsumer(dataSource)
+        }
+
+        return consumer as Consumer<Data, Meta>
+    }
+
+    fun <Data, Meta : Any> getConsumers(
+        clusterConsumer: ClusterConsumer<Data, Meta>,
+        generateConsumer: (DataSource) -> Consumer<Data, Meta>
+    ): List<Consumer<Data, Meta>> {
+        val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
+            ConcurrentHashMap()
+        }
+
+        val consumers = nodes.map { (node, dataSource) ->
+            nodesToConsumers.computeIfAbsent(node) { _ ->
+                generateConsumer(dataSource)
             }
-            .computeIfAbsent(node) { _ ->
-                generateConsumer(dataSource(node))
-            }
-            as Consumer<Data, Meta>
-    }
+        }
 
-    private fun producerNode(shard: Int): String {
-        return shards[shard]?.producerNode ?: throw IllegalArgumentException("Shard $shard is not found")
-    }
-
-    private fun consumerNode(shard: Int): String {
-        return shards[shard]?.consumerNode ?: throw IllegalArgumentException("Shard $shard is not found")
-    }
-
-    private fun dataSource(node: String): DataSource {
-        return nodes[node] ?: throw IllegalArgumentException("Node $node is not found")
+        return consumers as List<Consumer<Data, Meta>>
     }
 
     companion object {
