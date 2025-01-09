@@ -1,5 +1,6 @@
 package kolbasa.producer
 
+import kolbasa.cluster.Shard
 import kotlin.math.min
 
 data class SendRequest<Data, Meta : Any>(
@@ -12,6 +13,11 @@ data class SendRequest<Data, Meta : Any>(
      */
     val sendOptions: SendOptions = SendOptions.SEND_OPTIONS_NOT_SET
 ) {
+
+    // Effective shard, depends of many factors
+    // ----------------------------------------------------------------------------------------------
+    internal var effectiveShard: Int = Shard.MIN_SHARD
+    // ----------------------------------------------------------------------------------------------
 
     // OpenTelemetry
     // ----------------------------------------------------------------------------------------------
@@ -33,8 +39,9 @@ data class SendRequest<Data, Meta : Any>(
     private fun makeView(firstIndex: Int, lastIndex: Int): SendRequest<Data, Meta> {
         val partialCopy = this.copy(
             data = data.subList(firstIndex, lastIndex),
-            sendOptions = sendOptions
+            sendOptions = sendOptions,
         )
+        partialCopy.effectiveShard = effectiveShard
         partialCopy.openTelemetryContext = openTelemetryContext
         return partialCopy
     }

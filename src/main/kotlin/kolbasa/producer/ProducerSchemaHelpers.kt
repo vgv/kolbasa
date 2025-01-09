@@ -1,5 +1,7 @@
 package kolbasa.producer
 
+import kolbasa.cluster.Shard
+import kolbasa.cluster.ShardStrategy
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
@@ -7,6 +9,7 @@ import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
+import kotlin.math.abs
 
 internal object ProducerSchemaHelpers {
 
@@ -36,6 +39,12 @@ internal object ProducerSchemaHelpers {
             val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
 
             values[index] += "$remainingAttempts"
+        }
+
+        // shard
+        columns += Const.SHARD_COLUMN_NAME
+        request.data.forEachIndexed { index, _ ->
+            values[index] += "${request.effectiveShard}"
         }
 
         // meta fields
@@ -189,5 +198,17 @@ internal object ProducerSchemaHelpers {
         } else {
             producerOptions.partialInsert
         }
+    }
+
+    fun calculateEffectiveShard(producerOptions: ProducerOptions, sendOptions: SendOptions, shardStrategy: ShardStrategy): Int {
+        if (sendOptions.shard != null) {
+            return abs(sendOptions.shard % Shard.SHARD_COUNT)
+        }
+
+        if (producerOptions.shard != null) {
+            return abs(producerOptions.shard % Shard.SHARD_COUNT)
+        }
+
+        return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
     }
 }

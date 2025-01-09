@@ -41,7 +41,9 @@ data class ProducerOptions(
     /**
      * Partial insert strategy. See [PartialInsert] for details.
      */
-    val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
+    val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
+
+    val shard: Int? = null // TODO
 ) {
 
     init {
@@ -54,13 +56,15 @@ data class ProducerOptions(
         private var deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR
         private var batchSize: Int = DEFAULT_BATCH_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
+        private var shard: Int? = null
 
         fun producer(producer: String?) = apply { this.producer = producer }
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
         fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
+        fun shard(shard: Int) = apply { this.shard = shard }
 
-        fun build() = ProducerOptions(producer, deduplicationMode, batchSize, partialInsert)
+        fun build() = ProducerOptions(producer, deduplicationMode, batchSize, partialInsert, shard)
     }
 
     companion object {

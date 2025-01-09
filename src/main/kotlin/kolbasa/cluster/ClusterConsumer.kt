@@ -9,64 +9,61 @@ import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
-import java.util.*
 import javax.sql.DataSource
 
 class ClusterConsumer<Data, Meta : Any>(
-    private val dataSources: DataSourcesStorage,
+    private val cluster: Cluster,
     private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
     private val interceptors: List<ConsumerInterceptor<Data, Meta>> = emptyList(),
 ) : Consumer<Data, Meta> {
 
-    @Volatile
-    private var lastValue: SortedMap<NodeInfo, DataSource> = sortedMapOf()
-
-    @Volatile
-    private var consumers: Map<String, Consumer<Data, Meta>> = emptyMap()
-
     override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        updateConsumers()
+        val latestState = cluster.getState()
 
-        return if (consumers.isEmpty()) {
-            emptyList()
-        } else {
-            val randomConsumer = consumers.entries.random().value
-            randomConsumer.receive(limit, receiveOptions)
+        val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
+            val c = ConnectionAwareDatabaseConsumer(queue, consumerOptions, emptyList(), shards)
+            DatabaseConsumer(dataSource, c, interceptors)
         }
+
+        // No active consumers at all:
+        // 1) All shards are migrating or
+        // 2) The entire shard table contains references to invalid consumer nodes
+        if (consumer == null) {
+            return emptyList()
+        }
+
+        return consumer.receive(limit, receiveOptions)
     }
 
     override fun delete(messageIds: List<Id>): Int {
-        updateConsumers()
+        val latestState = cluster.getState()
 
-        val byServer = messageIds.groupBy {
-            it.serverId ?: throw IllegalArgumentException("No known server with serverId=null")
-        }
+        val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
 
-        val results = byServer.map { (serverId, ids) ->
-            val consumer = consumers[serverId] ?: throw IllegalArgumentException("No known server with serverId=$serverId")
-            consumer.delete(ids)
-        }
+        var deleted = byNodes
+            .map { (node, ids) ->
+                if (node == null) {
+                    return@map 0
+                }
 
-        return results.sum()
-    }
+                val consumer = latestState.getConsumer(this, node) { dataSource ->
+                    DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
+                }
 
-    private fun updateConsumers() {
-        val newDataSources = dataSources.readyToReceiveDataSources
+                consumer.delete(ids)
+            }.sum()
 
-        if (newDataSources !== lastValue) {
-            consumers = newDataSources.entries.associate { (clusterInfo, dataSource) ->
-                val connectionAwareConsumer = ConnectionAwareDatabaseConsumer(
-                    queue = queue,
-                    consumerOptions = consumerOptions,
-                    interceptors = emptyList(),
-                    serverId = clusterInfo.serverId
-                )
-
-                clusterInfo.serverId to DatabaseConsumer(dataSource, connectionAwareConsumer, interceptors)
+        if (deleted < messageIds.size) {
+            val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
+                DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
             }
 
-            lastValue = newDataSources
+            consumers.forEach { consumer ->
+                deleted += consumer.delete(messageIds)
+            }
         }
+
+        return deleted
     }
 }

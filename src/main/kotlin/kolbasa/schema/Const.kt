@@ -12,12 +12,6 @@ internal object Const {
     const val MAX_QUEUE_IDENTIFIER_VALUE: Long = Long.MAX_VALUE
 
     /**
-     * Reserved identifier for duplicated messages if we have to return some ID by function contract, for
-     * example, in [kolbasa.producer.Producer.send]
-     */
-    const val RESERVED_DUPLICATE_ID = -1L
-
-    /**
      * PG default identifier length
      * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
      */
@@ -37,6 +31,8 @@ internal object Const {
     // OpenTelemetry
     const val OPENTELEMETRY_COLUMN_NAME = "opentelemetry"
     const val OPENTELEMETRY_VALUE_LENGTH = 1024 // OpenTelemetry propagation data key/value max length
+
+    const val SHARD_COLUMN_NAME = "shard"
 
     const val CREATED_AT_COLUMN_NAME = "created_at"
     const val SCHEDULED_AT_COLUMN_NAME = "scheduled_at"

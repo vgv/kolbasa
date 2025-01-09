@@ -3,7 +3,6 @@ package kolbasa.producer.datasource
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.DeduplicationMode
-import kolbasa.producer.Id
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.queue.PredefinedDataTypes
@@ -14,8 +13,6 @@ import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertSame
 
 class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
@@ -45,9 +42,11 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         producer.send(messageToSend)
 
         // Second send with the same meta field value should fail
-        assertFails {
-            producer.send(messageToSend)
-        }
+        val result = producer.send(messageToSend)
+        assertEquals(1, result.failedMessages)
+        assertEquals(0, result.onlySuccessful().size) // zero really inserted
+        assertEquals(0, result.onlyDuplicated().size) // zero duplicates
+        assertEquals(1, result.onlyFailed().size)  // one error
 
         // raw database check
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -76,7 +75,6 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         assertEquals(1, sendResult.onlyFailed().size) // One error containing all 100 messages, because nothing was inserted
         assertEquals(100, sendResult.failedMessages) // 100 messages failed, because the whole list failed
 
-
         // raw database check
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
@@ -94,7 +92,11 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         producer.send(messageToSend)
 
         // Second send with the same meta field value should return Const.RESERVED_DUPLICATE_ID and not insert anything
-        assertSame(Id.DEFAULT_DUPLICATE_ID, producer.send(messageToSend))
+        val result = producer.send(messageToSend)
+        assertEquals(0, result.failedMessages)
+        assertEquals(0, result.onlySuccessful().size)
+        assertEquals(1, result.onlyDuplicated().size)
+        assertEquals(0, result.onlyFailed().size)
 
         // raw database check
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -125,6 +127,5 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
         // raw database check
         assertEquals(100, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
-
 
 }
