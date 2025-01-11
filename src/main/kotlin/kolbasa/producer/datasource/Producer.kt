@@ -35,11 +35,11 @@ interface Producer<Data, Meta : Any> {
     /**
      * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
-     * @param data message, metadata (if any) and options (if any) to send
+     * @param message data, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <D, M : Any> send(queue: Queue<D, M>, data: SendMessage<D, M>): SendResult<D, M> {
-        return send(queue, listOf(data))
+    fun <D, M : Any> send(queue: Queue<D, M>, message: SendMessage<D, M>): SendResult<D, M> {
+        return send(queue, listOf(message))
     }
 
     /**
@@ -47,11 +47,11 @@ interface Producer<Data, Meta : Any> {
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
-     * @param data list of messages, metadata (if any) and options (if any) to send
+     * @param messages list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <D, M : Any> send(queue: Queue<D, M>, data: List<SendMessage<D, M>>): SendResult<D, M> {
-        return send(queue, SendRequest(data = data))
+    fun <D, M : Any> send(queue: Queue<D, M>, messages: List<SendMessage<D, M>>): SendResult<D, M> {
+        return send(queue, SendRequest(data = messages))
     }
 
     /**
@@ -73,6 +73,7 @@ interface Producer<Data, Meta : Any> {
      * @param data message to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
+    @Deprecated("Use send(queue, data) instead", ReplaceWith("send(queue, data)"))
     fun send(data: Data): SendResult<Data, Meta> {
         return send(SendMessage(data = data))
     }
@@ -83,6 +84,7 @@ interface Producer<Data, Meta : Any> {
      * @param data message, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
+    @Deprecated("Use send(queue, data) instead", ReplaceWith("send(queue, data)"))
     fun send(data: SendMessage<Data, Meta>): SendResult<Data, Meta> {
         return send(listOf(data))
     }
@@ -95,6 +97,7 @@ interface Producer<Data, Meta : Any> {
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
+    @Deprecated("Use send(queue, data) instead", ReplaceWith("send(queue, data)"))
     fun send(data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
         return send(SendRequest(data = data))
     }
@@ -108,5 +111,6 @@ interface Producer<Data, Meta : Any> {
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
+    @Deprecated("Use send(queue, request) instead", ReplaceWith("send(queue, request)"))
     fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta>
 }

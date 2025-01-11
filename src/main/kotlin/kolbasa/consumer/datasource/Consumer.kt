@@ -50,43 +50,52 @@ interface Consumer<Data, Meta : Any> {
 
     // -----------------------------------------------------------------------------------------------------
 
+    @Deprecated("Use receive(queue) instead", ReplaceWith("receive(queue)"))
     fun receive(): Message<Data, Meta>? {
         return receive(ReceiveOptions())
     }
 
+    @Deprecated("Use receive(queue, filter) instead", ReplaceWith("receive(queue, filter)"))
     fun receive(filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
         return receive(ReceiveOptions(filter = filter(Filter)))
     }
 
+    @Deprecated("Use receive(queue, receiveOptions) instead", ReplaceWith("receive(queue, receiveOptions)"))
     fun receive(receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
         val result = receive(limit = 1, receiveOptions)
         return result.firstOrNull()
     }
 
+    @Deprecated("Use receive(queue, limit) instead", ReplaceWith("receive(queue, limit)"))
     fun receive(limit: Int): List<Message<Data, Meta>> {
         return receive(limit, ReceiveOptions())
     }
 
+    @Deprecated("Use receive(queue, limit, filter) instead", ReplaceWith("receive(queue, limit, filter)"))
     fun receive(limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
         return receive(limit, ReceiveOptions(filter = filter(Filter)))
     }
 
+    @Deprecated("Use receive(queue, limit, receiveOptions) instead", ReplaceWith("receive(queue, limit, receiveOptions)"))
     fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>>
 
     // Delete
-
+    @Deprecated("Use delete(queue, message) instead", ReplaceWith("delete(queue, message)"))
     fun delete(message: Message<Data, Meta>): Int {
         return delete(message.id)
     }
 
+    @Deprecated("Use delete(queue, messages) instead", ReplaceWith("delete(queue, messages)"))
     fun delete(messages: Collection<Message<Data, Meta>>): Int {
         return delete(messages.map(Message<Data, Meta>::id))
     }
 
+    @Deprecated("Use delete(queue, messageId) instead", ReplaceWith("delete(queue, messageId)"))
     fun delete(messageId: Id): Int {
         return delete(listOf(messageId))
     }
 
+    @Deprecated("Use delete(queue, messageIds) instead", ReplaceWith("delete(queue, messageIds)"))
     fun delete(messageIds: List<Id>): Int
 
 }
