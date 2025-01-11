@@ -5,46 +5,47 @@ import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
 import kolbasa.producer.Id
+import kolbasa.queue.Queue
 import java.sql.Connection
 
-interface ConnectionAwareConsumer<Data, Meta : Any> {
+interface ConnectionAwareConsumer {
 
-    fun receive(connection: Connection): Message<Data, Meta>? {
-        return receive(connection, ReceiveOptions())
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>): Message<Data, Meta>? {
+        return receive(connection, queue, ReceiveOptions())
     }
 
-    fun receive(connection: Connection, filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
-        return receive(connection, ReceiveOptions(filter = filter(Filter)))
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>, filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
+        return receive(connection, queue, ReceiveOptions(filter = filter(Filter)))
     }
 
-    fun receive(connection: Connection, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
-        val result = receive(connection, limit = 1, receiveOptions)
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
+        val result = receive(connection, queue, limit = 1, receiveOptions)
         return result.firstOrNull()
     }
 
-    fun receive(connection: Connection, limit: Int): List<Message<Data, Meta>> {
-        return receive(connection, limit, ReceiveOptions())
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>, limit: Int): List<Message<Data, Meta>> {
+        return receive(connection, queue, limit, ReceiveOptions())
     }
 
-    fun receive(connection: Connection, limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
-        return receive(connection, limit, ReceiveOptions(filter = filter(Filter)))
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>, limit: Int, filter: Filter.() -> Condition<Meta>): List<Message<Data, Meta>> {
+        return receive(connection, queue, limit, ReceiveOptions(filter = filter(Filter)))
     }
 
-    fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>>
+    fun <Data, Meta : Any> receive(connection: Connection, queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>>
 
     // Delete
 
-    fun delete(connection: Connection, message: Message<Data, Meta>): Int {
-        return delete(connection, message.id)
+    fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, message: Message<Data, Meta>): Int {
+        return delete(connection, queue, message.id)
     }
 
-    fun delete(connection: Connection, messages: Collection<Message<Data, Meta>>): Int {
-        return delete(connection, messages.map(Message<Data, Meta>::id))
+    fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, messages: Collection<Message<Data, Meta>>): Int {
+        return delete(connection, queue, messages.map(Message<Data, Meta>::id))
     }
 
-    fun delete(connection: Connection, messageId: Id): Int {
-        return delete(connection, listOf(messageId))
+    fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, messageId: Id): Int {
+        return delete(connection, queue, listOf(messageId))
     }
 
-    fun delete(connection: Connection, messageIds: List<Id>): Int
+    fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, messageIds: List<Id>): Int
 }

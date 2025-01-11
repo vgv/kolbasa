@@ -12,7 +12,8 @@ import javax.sql.DataSource
 
 class DatabaseConsumer<Data, Meta : Any> @JvmOverloads constructor(
     private val dataSource: DataSource,
-    private val peer: ConnectionAwareConsumer<Data, Meta>,
+    private val queue: Queue<Data, Meta>,
+    private val peer: ConnectionAwareConsumer,
     private val interceptors: List<ConsumerInterceptor<Data, Meta>> = emptyList()
 ) : Consumer<Data, Meta> {
 
@@ -24,7 +25,8 @@ class DatabaseConsumer<Data, Meta : Any> @JvmOverloads constructor(
         interceptors: List<ConsumerInterceptor<Data, Meta>> = emptyList()
     ) : this(
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseConsumer(queue, consumerOptions),
+        queue = queue,
+        peer = ConnectionAwareDatabaseConsumer(consumerOptions),
         interceptors = interceptors
     )
 
@@ -35,7 +37,7 @@ class DatabaseConsumer<Data, Meta : Any> @JvmOverloads constructor(
     }
 
     private fun doRealReceive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        return dataSource.useConnection { peer.receive(it, limit, receiveOptions) }
+        return dataSource.useConnection { peer.receive(it, queue, limit, receiveOptions) }
     }
 
     override fun delete(messageIds: List<Id>): Int {
@@ -45,7 +47,7 @@ class DatabaseConsumer<Data, Meta : Any> @JvmOverloads constructor(
     }
 
     private fun doRealDelete(messageIds: List<Id>): Int {
-        return dataSource.useConnection { peer.delete(it, messageIds) }
+        return dataSource.useConnection { peer.delete(it, queue, messageIds) }
     }
 
 }
