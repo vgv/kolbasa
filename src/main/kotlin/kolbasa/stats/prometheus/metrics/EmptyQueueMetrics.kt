@@ -2,7 +2,10 @@ package kolbasa.stats.prometheus.metrics
 
 import kolbasa.producer.PartialInsert
 
-internal class EmptyQueueMetrics : QueueMetrics {
+internal object EmptyQueueMetrics : QueueMetrics {
+
+    override fun usePreciseStringSize(): Boolean = false
+
     override fun producerSendMetrics(
         partialInsert: PartialInsert,
         allMessages: Int,

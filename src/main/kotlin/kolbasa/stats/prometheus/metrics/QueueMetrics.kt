@@ -4,6 +4,8 @@ import kolbasa.producer.PartialInsert
 
 internal interface QueueMetrics {
 
+    fun usePreciseStringSize(): Boolean
+
     fun producerSendMetrics(
         partialInsert: PartialInsert,
         allMessages: Int,

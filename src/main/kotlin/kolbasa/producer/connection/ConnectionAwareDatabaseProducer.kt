@@ -1,11 +1,9 @@
 package kolbasa.producer.connection
 
-import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
-import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -25,7 +23,7 @@ class ConnectionAwareDatabaseProducer(
         queue: Queue<Data, Meta>,
         request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
-        val approxStatsBytes = BytesCounter((Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false)
+        val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
