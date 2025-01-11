@@ -7,17 +7,15 @@ import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
-import kolbasa.producer.datasource.ProducerInterceptor
 import kolbasa.queue.Queue
 
 class ClusterProducer<Data, Meta : Any>(
     private val cluster: Cluster,
     private val queue: Queue<Data, Meta>,
-    private val producerOptions: ProducerOptions = ProducerOptions(),
-    private val interceptors: List<ProducerInterceptor<Data, Meta>> = emptyList(),
+    private val producerOptions: ProducerOptions = ProducerOptions()
 ) : Producer<Data, Meta> {
 
-    override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+    override fun <D, M : Any> send(queue: Queue<D, M>, request: SendRequest<D, M>): SendResult<D, M> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
             producerOptions = producerOptions,
             sendOptions = request.sendOptions,
@@ -26,9 +24,13 @@ class ClusterProducer<Data, Meta : Any>(
 
         val currentState = cluster.getState()
         val producer = currentState.getProducer(this, request.effectiveShard) { dataSource ->
-            DatabaseProducer(dataSource, queue, producerOptions, interceptors)
+            DatabaseProducer(dataSource, queue, producerOptions)
         }
 
-        return producer.send(request)
+        return producer.send(queue, request)
+    }
+
+    override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+        return send(queue, request)
     }
 }

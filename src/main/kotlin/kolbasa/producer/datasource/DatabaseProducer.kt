@@ -12,11 +12,10 @@ import javax.sql.DataSource
 /**
  * Default implementation of [Producer]
  */
-class DatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
+class DatabaseProducer<Data, Meta : Any>(
     private val dataSource: DataSource,
     private val queue: Queue<Data, Meta>,
-    private val peer: ConnectionAwareProducer,
-    private val interceptors: List<ProducerInterceptor<Data, Meta>> = emptyList(),
+    private val peer: ConnectionAwareProducer
 ) : Producer<Data, Meta> {
 
     @JvmOverloads
@@ -24,22 +23,20 @@ class DatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
         dataSource: DataSource,
         queue: Queue<Data, Meta>,
         producerOptions: ProducerOptions = ProducerOptions(),
-        interceptors: List<ProducerInterceptor<Data, Meta>> = emptyList(),
     ) : this(
         dataSource = dataSource,
         queue = queue,
-        peer = ConnectionAwareDatabaseProducer(producerOptions),
-        interceptors = interceptors
+        peer = ConnectionAwareDatabaseProducer(producerOptions)
     )
 
-    override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return ProducerInterceptor.recursiveApplyInterceptors(interceptors, request) { req ->
-            doRealSend(req)
+    override fun <D, M : Any> send(queue: Queue<D, M>, request: SendRequest<D, M>): SendResult<D, M> {
+        return queue.queueTracing.makeProducerCall(request) {
+            dataSource.useConnection { peer.send(it, queue, request) }
         }
     }
 
-    private fun doRealSend(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return dataSource.useConnection { peer.send(it, queue, request) }
+    override fun send(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+        return send(queue, request)
     }
 }
 
