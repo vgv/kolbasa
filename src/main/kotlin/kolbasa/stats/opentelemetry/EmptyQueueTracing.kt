@@ -6,6 +6,10 @@ import kolbasa.producer.SendResult
 
 internal class EmptyQueueTracing<Data, Meta : Any>: QueueTracing<Data, Meta> {
 
+    override fun readOpenTelemetryData(): Boolean {
+        return false
+    }
+
     override fun makeProducerCall(
         request: SendRequest<Data, Meta>,
         businessCall: () -> SendResult<Data, Meta>
