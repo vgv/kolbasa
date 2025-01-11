@@ -5,6 +5,9 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.SendResult.Companion.onlyDuplicated
+import kolbasa.producer.SendResult.Companion.onlyFailed
+import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
@@ -38,18 +41,19 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         val consumer = DatabaseConsumer(dataSource, queue)
 
         // First send – success
-        val result = producer.send(messageToSend)
-        assertEquals(0, result.failedMessages)
-        assertEquals(1, result.onlySuccessful().size)
-        val id = result.onlySuccessful().first().id
+        val id = producer.send(messageToSend).let { (failedMessages, result) ->
+            assertEquals(0, failedMessages)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
         // Second produce with the same meta field value should fail...
-        val failedResult = producer.send(messageToSend)
-        assertEquals(1, failedResult.failedMessages)
-        assertEquals(0, failedResult.onlySuccessful().size)
-        assertEquals(0, failedResult.onlyDuplicated().size)
-        assertEquals(1, failedResult.onlyFailed().size)
-
+        producer.send(messageToSend).let { (failedMessages, result) ->
+            assertEquals(1, failedMessages)
+            assertEquals(0, result.onlySuccessful().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlyFailed().size)
+        }
 
         // ... but, if we read this message, it will set remainingAttempts to zero
         // in this case, we have to be able to send the message with the same meta field again, even if it has unique constraint

@@ -6,6 +6,7 @@ import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Unique
@@ -97,8 +98,14 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
         // check first producer
-        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$firstProducerName'"))
-        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$secondProducerName'"))
+        assertEquals(
+            1,
+            dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$firstProducerName'")
+        )
+        assertEquals(
+            1,
+            dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$secondProducerName'")
+        )
     }
 
 
@@ -106,15 +113,17 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleDataAsSendMessage() {
         val producer = DatabaseProducer(dataSource, queue)
 
-        val result1 = producer.send(SendMessage("bugaga", TestMeta(1)))
-        assertEquals(0, result1.failedMessages)
-        assertEquals(1, result1.onlySuccessful().size)
-        val id1 = result1.onlySuccessful().first().id
+        val id1 = producer.send(SendMessage("bugaga", TestMeta(1))).let { (failedMessages, result) ->
+            assertEquals(0, failedMessages)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
-        val result2 = producer.send(SendMessage("bugaga", TestMeta(2)))
-        assertEquals(0, result2.failedMessages)
-        assertEquals(1, result2.onlySuccessful().size)
-        val id2 = result2.onlySuccessful().first().id
+        val id2 = producer.send(SendMessage("bugaga", TestMeta(2))).let { (failedMessages, result) ->
+            assertEquals(0, failedMessages)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
         assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)

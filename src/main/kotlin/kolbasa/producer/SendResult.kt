@@ -40,21 +40,21 @@ data class SendResult<Data, Meta : Any>(
      * Convenient function to collect all successful messages
      */
     fun onlySuccessful(): List<Success<Data, Meta>> {
-        return messages.filterIsInstance<Success<Data, Meta>>()
+        return messages.onlySuccessful()
     }
 
     /**
      * Convenient function to collect all duplicated messages
      */
     fun onlyDuplicated(): List<MessageResult.Duplicate<Data, Meta>> {
-        return messages.filterIsInstance<MessageResult.Duplicate<Data, Meta>>()
+        return messages.onlyDuplicated()
     }
 
     /**
      * Convenient function to collect all failed messages
      */
     fun onlyFailed(): List<Error<Data, Meta>> {
-        return messages.filterIsInstance<Error<Data, Meta>>()
+        return messages.onlyFailed()
     }
 
     /**
@@ -66,6 +66,21 @@ data class SendResult<Data, Meta : Any>(
     fun gatherFailedMessages(): List<SendMessage<Data, Meta>> {
         val collector = ArrayList<SendMessage<Data, Meta>>(failedMessages)
         return onlyFailed().flatMapTo(collector) { it.messages }
+    }
+
+    companion object {
+
+        fun <Data, Meta : Any> List<MessageResult<Data, Meta>>.onlySuccessful(): List<Success<Data, Meta>> {
+            return filterIsInstance<Success<Data, Meta>>()
+        }
+
+        fun <Data, Meta : Any> List<MessageResult<Data, Meta>>.onlyDuplicated(): List<MessageResult.Duplicate<Data, Meta>> {
+            return filterIsInstance<MessageResult.Duplicate<Data, Meta>>()
+        }
+
+        fun <Data, Meta : Any> List<MessageResult<Data, Meta>>.onlyFailed(): List<Error<Data, Meta>> {
+            return filterIsInstance<Error<Data, Meta>>()
+        }
     }
 }
 
