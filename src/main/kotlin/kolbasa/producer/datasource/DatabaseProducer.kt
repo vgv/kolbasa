@@ -14,7 +14,8 @@ import javax.sql.DataSource
  */
 class DatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
     private val dataSource: DataSource,
-    private val peer: ConnectionAwareProducer<Data, Meta>,
+    private val queue: Queue<Data, Meta>,
+    private val peer: ConnectionAwareProducer,
     private val interceptors: List<ProducerInterceptor<Data, Meta>> = emptyList(),
 ) : Producer<Data, Meta> {
 
@@ -26,7 +27,8 @@ class DatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
         interceptors: List<ProducerInterceptor<Data, Meta>> = emptyList(),
     ) : this(
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseProducer(queue, producerOptions),
+        queue = queue,
+        peer = ConnectionAwareDatabaseProducer(producerOptions),
         interceptors = interceptors
     )
 
@@ -37,7 +39,7 @@ class DatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
     }
 
     private fun doRealSend(request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return dataSource.useConnection { peer.send(it, request) }
+        return dataSource.useConnection { peer.send(it, queue, request) }
     }
 }
 

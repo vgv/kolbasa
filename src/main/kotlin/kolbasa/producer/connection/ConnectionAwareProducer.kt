@@ -3,6 +3,7 @@ package kolbasa.producer.connection
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
+import kolbasa.queue.Queue
 import java.sql.Connection
 
 /**
@@ -35,32 +36,40 @@ import java.sql.Connection
  *
  * Kolbasa provides a default, high-performance implementation of [ConnectionAwareProducer]
  * (see class [ConnectionAwareDatabaseProducer]), which uses just plain JDBC and doesn't require any additional dependencies.
- *
- * @param Data type of the message
- * @param Meta type of the metadata
  */
-interface ConnectionAwareProducer<Data, Meta : Any> {
+interface ConnectionAwareProducer {
 
     /**
      * Just to send one message without metadata and another options
      *
+     * @param Data type of the message
+     * @param Meta type of the metadata
      * @param connection JDBC connection to use for sending message
+     * @param queue queue to send message
      * @param data message to send
      * @returns [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, data: Data): SendResult<Data, Meta> {
-        return send(connection, SendMessage(data))
+    fun <Data, Meta : Any> send(connection: Connection, queue: Queue<Data, Meta>, data: Data): SendResult<Data, Meta> {
+        return send(connection, queue, SendMessage(data))
     }
+
 
     /**
      * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
+     * @param Data type of the message
+     * @param Meta type of the metadata
      * @param connection JDBC connection to use for sending message
+     * @param queue queue to send message
      * @param data message, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, data: SendMessage<Data, Meta>): SendResult<Data, Meta> {
-        return send(connection, listOf(data))
+    fun <Data, Meta : Any> send(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        data: SendMessage<Data, Meta>
+    ): SendResult<Data, Meta> {
+        return send(connection, queue, listOf(data))
     }
 
     /**
@@ -68,12 +77,19 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
+     * @param Data type of the message
+     * @param Meta type of the metadata
      * @param connection JDBC connection to use for sending messages
+     * @param queue queue to send message
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, data: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
-        return send(connection, SendRequest(data = data))
+    fun <Data, Meta : Any> send(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        data: List<SendMessage<Data, Meta>>
+    ): SendResult<Data, Meta> {
+        return send(connection, queue, SendRequest(data = data))
     }
 
     /**
@@ -82,9 +98,16 @@ interface ConnectionAwareProducer<Data, Meta : Any> {
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
+     * @param Data type of the message
+     * @param Meta type of the metadata
      * @param connection JDBC connection to use for sending messages
+     * @param queue queue to send message
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta>
+    fun <Data, Meta : Any> send(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        request: SendRequest<Data, Meta>
+    ): SendResult<Data, Meta>
 }
