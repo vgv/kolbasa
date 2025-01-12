@@ -70,6 +70,20 @@ task<JavaExec>("performance") {
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 
+// Examples
+task<JavaExec>("example") {
+    val propertyName = "name"
+    val propertyValue = project.providers.gradleProperty(propertyName)
+    val exampleName = if (propertyValue.isPresent) {
+        propertyValue.get()
+    } else {
+        "SimpleExample"
+    }
+
+    mainClass = "examples.${exampleName}Kt"
+    classpath += java.sourceSets.getByName("test").runtimeClasspath
+}
+
 // Unit tests settings
 tasks.withType<Test> {
     // enable parallel tests execution

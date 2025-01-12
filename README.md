@@ -16,9 +16,11 @@ Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based
 * Share load between different PostgreSQL servers
 
 ## Concepts
-Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Scala etc.).
+Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
 
-Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, ensure ACID and allow filtering and sorting. Kolbasa doesn't require any special PostgreSQL plugins or specific compile/runtime settings. It works on plain PostgreSQL version 10 and above.
+Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, ensure ACID and allow filtering and sorting.
+Kolbasa doesn't require any special PostgreSQL plugins or specific compile/runtime settings. It works on plain PostgreSQL
+version 10 and above.
 
 ## Requirements
 * PostgreSQL 10+
@@ -28,86 +30,67 @@ Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, e
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.43.0"
+implementation "io.github.vgv:kolbasa:0.49.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.43.0</version>
+    <version>0.49.0</version>
 </dependency>
 ```
 
-## How to use
+## Examples
+The easiest way to try kolbasa is to try running real, working examples, illustrating different features and modes. All examples
+can be found in the [examples](src/test/kotlin/examples) folder. Each example is a ready to run, complete mini-program that can
+be launched from the IDE or Gradle.
+
+The preferred way to run the examples is to use an IDE (like IntelliJ IDEA), as you can not only run the examples, but also
+modify them, set breakpoints, and see how everything goes step by step. But you can also run the examples from Gradle.
+
+To run from Gradle, you need to execute the command `./gradlew example -P name=FilterExample`, where `name` is
+the name of the file from the [examples](src/test/kotlin/examples) folder.
+
+Examples needs to have a working PostgreSQL instance to run and here you have two options:
+1) The default (and easiest) way – just have running Docker on your machine. All examples will use Docker to start PostgreSQL instance.
+2) If you don't want to or can't use Docker, you have a second option – use a real PostgreSQL installation.
+File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourceProvider.kt) is the place where you can specify
+url, username and password for your existing PostgreSQL instance.
+
 ### Simple example
-This is the simplest possible example to send and receive one simple message.
+The simplest possible example to send and receive one simple text message: [SimpleExample](src/test/kotlin/examples/SimpleExample.kt)
 
-```kotlin
-// Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
-val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Unit::class.java)
-
-val dataSource = ... // Valid datasource from DI, static factory etc.
-
-// Update PostgreSQL schema
-// We need to create (or update) queue table before send/receive
-SchemaHelpers.updateDatabaseSchema(dataSource, queue)
-
-// Create producer and send simple message
-val producer = DatabaseProducer(dataSource, queue)
-producer.send("Test message")
-
-// Create consumer, try to read message from the queue, process it and delete
-val consumer = DatabaseConsumer(dataSource, queue)
-consumer.receive()?.let { message ->
-    println(message.data)
-    consumer.delete(message)
-}
-```
+No filtering, no message deduplication, sharding or other features. Just send and receive one message.
 
 ### Filtering and sorting
-What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and we want to receive messages with a specific userId and sort them by `priority`? Kolbasa can receive only particular messages from queue using convenient type-safe DSL and order them.
+What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and
+we want to receive messages with a specific userId and sort them by `priority`?
 
-First, let's look at filtering
-```kotlin
-// User-defined class to store meta-information
-data class Metadata(
-    @Searchable val userId: Int,
-    @Searchable val priority: Int
-)
+Kolbasa can receive only specific messages from a queue, and only in a specific order, using a convenient type-safe DSL. Both
+filtering and ordering are performed on the queue broker side (PostgreSQL) to make receiving more efficient.
 
-// Define queue with name `test_queue`, varchar type as data storage and metadata
-val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
+For simplicity, this example is broken into two parts:
+1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
+2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
 
-val dataSource = ... // Valid datasource from DI, static factory etc.
+### Transaction context
+Imagine that in your application you have a `customer` table containing important information about your customers - name, email
+and some big and complex additional data that takes a long time to calculate. To calculate this data, you need to read a lot from
+a database or even from a third-party system. It may take several minutes or even hours to obtain all the necessary data.
 
-// Update PostgreSQL schema
-// We need to create (or update) queue table before send/receive
-SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+We can't calculate that data at the time of user registration, because it will slow down the registration process. So, the usual
+solution is to postpone this task and calculate this heavy data in the background a little later. For this, it is logical to
+queue the task like "Customer with id=NNN was registered". However, if the customer registration failed due to
+non-unique email (for example), we do not want this task to appear in the queue at all.
 
-// Create producer and send several messages with meta information
-val producer = DatabaseProducer(dataSource, queue)
-producer.send(SendMessage("First message", Metadata(userId = 1, priority = 10)))
-producer.send(SendMessage("Second message", Metadata(userId = 2, priority = 1)))
+We want the sending of the message to the queue to be commited (or rolled back) along with the request for user registration.
+New record in the `customer` table and the new message in the queue or nothing at all.
 
-// Create consumer
-val consumer = DatabaseConsumer(dataSource, queue)
-// Try to read 100 messages with userId=1 from the queue
-val messages = consumer.receive(100) {
-    Metadata::userId eq 1  // Type-safe DSL to filter messages
-}
-messages.forEach {  /* process messages */ }
-// Delete all messages after processing
-consumer.delete(messages)
-```
+To do this, we need to use special [ConnectionAwareDatabaseProducer](src/main/kotlin/kolbasa/producer/connection/ConnectionAwareDatabaseProducer.kt)
+and [ConnectionAwareDatabaseConsumer](src/main/kotlin/kolbasa/consumer/connection/ConnectionAwareDatabaseConsumer.kt) that can
+work in the context of an existing transaction. They do not take over the transaction management, completely delegating this work
+to the calling code. It works perfectly with plain JDBC or more complex frameworks like [Hibernate](https://hibernate.org),
+[Exposed](https://jetbrains.github.io/Exposed/home.html) etc.
 
-
-Second, let's add sorting here
-```kotlin
-val receiveOptions = ReceiveOptions(
-    order = Metadata::priority.desc(), // order by priority desc
-    filter = Metadata::userId eq 1 // ... and filter by userId
-)
-// Try to read 100 messages with userId=1 and `priority desc` sorting from the queue
-val messages = consumer.receive(100, receiveOptions)
-```
+Example: [TransactionContextExample](src/test/kotlin/examples/TransactionContextExample.kt)

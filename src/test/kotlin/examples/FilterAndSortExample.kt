@@ -26,7 +26,13 @@ fun main() {
     val dataSource = ExamplesDataSourceProvider.getDataSource()
 
     // Update PostgreSQL schema
-    // We need to create (or update) queue table before send/receive
+    // We need to create (or update) the queue table before the first use, since the table schema can be changed - for
+    // example, new meta fields were added or other internal schema changes occurred. This is a convenient method that allows
+    // you not to think about whether this queue has been used before or this is the first time and simply brings its state
+    // in the database to the current one.
+    // Of course, in a real application this should be done once at the start of the service, and not before each send/receive.
+    // A good analogy is updating the business tables schema before the start of the service using migration or other
+    // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
     // Create producer and send several messages with meta information

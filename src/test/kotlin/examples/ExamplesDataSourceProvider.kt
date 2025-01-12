@@ -1,6 +1,7 @@
 package examples
 
 import com.zaxxer.hikari.HikariDataSource
+import kolbasa.AbstractPostgresqlTest
 import org.testcontainers.containers.PostgreSQLContainer
 import javax.sql.DataSource
 
@@ -10,7 +11,7 @@ object ExamplesDataSourceProvider {
      * Launch PostgreSQL in Docker container using TestContainers
      */
     fun getDataSource(): DataSource {
-        val pgContainer = PostgreSQLContainer("postgres:16.1-alpine")
+        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE.dockerImage)
 
         // Start PG container
         pgContainer.start()
@@ -25,6 +26,11 @@ object ExamplesDataSourceProvider {
 
     /**
      * Use external PostgreSQL installation
+     *
+     * If you want to use a real PG installation:
+     * 1) Comment out `getDataSource()` method above
+     * 2) Uncomment this one
+     * 3) Provide your own connection parameters (hostname, port, database, user, pwd)
      */
 //    fun getDataSource(): DataSource {
 //        val hostname = ""
