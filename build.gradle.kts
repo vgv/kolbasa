@@ -72,12 +72,13 @@ task<JavaExec>("performance") {
 
 // Examples
 task<JavaExec>("example") {
-    val propertyName = "example_name"
-    if (!project.hasProperty(propertyName)) {
-        throw GradleException("Property '$propertyName' is not set. Correct way to run example is: ./gradlew example -P ${propertyName}=SimpleExample")
+    val propertyName = "name"
+    val propertyValue = project.providers.gradleProperty(propertyName)
+    val exampleName = if (propertyValue.isPresent) {
+        propertyValue.get()
+    } else {
+        "SimpleExample"
     }
-
-    val exampleName = project.property(propertyName) as String
 
     mainClass = "examples.${exampleName}Kt"
     classpath += java.sourceSets.getByName("test").runtimeClasspath
