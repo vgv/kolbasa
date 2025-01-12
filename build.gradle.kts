@@ -74,18 +74,12 @@ task<JavaExec>("performance") {
 task<JavaExec>("example") {
     val propertyName = "example_name"
     if (!project.hasProperty(propertyName)) {
-        throw GradleException("Property '$propertyName' is not set. Correct way to run example is: ./gradlew example -P ${propertyName}=01_SimpleTest")
+        throw GradleException("Property '$propertyName' is not set. Correct way to run example is: ./gradlew example -P ${propertyName}=SimpleExample")
     }
 
     val exampleName = project.property(propertyName) as String
-    val className = if (exampleName.first().isDigit()) {
-        // if Kotlin class starts with a digit, we need to add an underscore before it to have the real JVM class name
-        "_${exampleName}Kt"
-    } else {
-        "${exampleName}Kt"
-    }
 
-    mainClass = "examples.$className"
+    mainClass = "examples.${exampleName}Kt"
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 

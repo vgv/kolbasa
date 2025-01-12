@@ -47,7 +47,7 @@ You need to have a working PostgreSQL instance to run examples and here you have
 2) If you don't want to or can't use Docker, you have a second option – use a real PostgreSQL installation. File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourceProvider.kt) is the place where you can specify url, username and password for you existing PostgreSQL instance.
 
 ### Simple example
-The simplest possible example to send and receive one simple message: [01_SimpleTest](src/test/kotlin/examples/01_SimpleTest.kt)
+The simplest possible example to send and receive one simple message: [SimpleExample](src/test/kotlin/examples/SimpleExample.kt)
 
 ### Filtering and sorting
 What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and we want to receive messages with a specific userId and sort them by `priority`? Kolbasa can receive only particular messages from queue using convenient type-safe DSL and order them.
