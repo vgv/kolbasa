@@ -28,14 +28,14 @@ Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, e
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.43.0"
+implementation "io.github.vgv:kolbasa:0.49.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.43.0</version>
+    <version>0.49.0</version>
 </dependency>
 ```
 
