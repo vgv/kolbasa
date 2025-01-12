@@ -9,21 +9,6 @@ import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import java.sql.Statement
 
-/**
- * Here we emulate a typical example from business application - a producer-consumer pattern
- * Imagine, that in
- *
- *
- * For the producer:
- * 1) Register a user
- * 2) Send a pending job to the queue to later calculate some "heavy" data for this user
- *
- * For the consumer:
- *
- * 1) Read the job from the queue
- * 2) Calculate the heavy data and update the user
- * 3) If everything went well, remove the job from the queue
- */
 fun main() {
     // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
     val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Unit::class.java)

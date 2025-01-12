@@ -16,7 +16,7 @@ Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based
 * Share load between different PostgreSQL servers
 
 ## Concepts
-Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Scala etc.).
+Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
 
 Kolbasa uses PostgreSQL as a storage to manage all queues, store all messages, ensure ACID and allow filtering and sorting.
 Kolbasa doesn't require any special PostgreSQL plugins or specific compile/runtime settings. It works on plain PostgreSQL
@@ -65,7 +65,7 @@ Kolbasa can receive only particular messages from queue using convenient type-sa
 
 For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
-2) Second, let's add sorting here: [SortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
+2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
 
 ### Transaction context
 Imagine that in your application, when registering a new user, there is some data related to this user that takes a long time to
