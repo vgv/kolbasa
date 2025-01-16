@@ -6,7 +6,6 @@ import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
-import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
@@ -27,11 +26,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         receiveOptions: ReceiveOptions<Meta>
     ): List<Message<Data, Meta>> {
         // Do we need to read OT data?
-        // TODO: think about it
-        receiveOptions.readOpenTelemetryData = when (Kolbasa.openTelemetryConfig) {
-            is OpenTelemetryConfig.None -> false
-            is OpenTelemetryConfig.Config -> true
-        }
+        receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
         return queue.queueTracing.makeConsumerCall {
             doRealReceive(connection, queue, limit, receiveOptions)
