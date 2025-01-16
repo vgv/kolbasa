@@ -433,6 +433,46 @@ object Filter {
         return IsNotNullCondition(property.name)
     }
 
+    /**
+     * PostgreSQL in operator.
+     *
+     * Usage is the same as in SQL:
+     * ```
+     * Meta::field in listOf(42)
+     * ```
+     * means `meta_field = ANY (42)`
+     */
+    infix fun <Meta : Any, T> KProperty1<Meta, T?>.`in`(values: Collection<T>): Condition<Meta> {
+        return InCondition(this.name, values)
+    }
+
+    /**
+     * PostgreSQL in operator.
+     *
+     * Usage is the same as in SQL:
+     * ```
+     * Meta::field in listOf(42)
+     * ```
+     * means `meta_field = ANY (42)`
+     */
+    infix fun <Meta : Any, T> KFunction1<Meta, T?>.`in`(values: Collection<T>): Condition<Meta> {
+        return InCondition(this.name, values)
+    }
+
+    /**
+     * PostgreSQL normal equality operator.
+     *
+     * Usage is the same as in SQL:
+     * ```
+     * Filter.eq(JavaField.of(...), ArrayList(42))
+     * ```
+     * means `meta_field = ANY (42)`
+     */
+    @JvmStatic
+    infix fun <Meta : Any, T> JavaField<Meta, T?>.`in`(values: Collection<T>): Condition<Meta> {
+        return InCondition(this.name, values)
+    }
+
     // -------------------------------------------------------------------------------------------
     @JvmStatic
     fun <Meta : Any> not(condition: Condition<Meta>): Condition<Meta> {

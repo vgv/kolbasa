@@ -6,6 +6,7 @@ import kolbasa.consumer.filter.Filter.like
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greater
 import kolbasa.consumer.filter.Filter.greaterEq
+import kolbasa.consumer.filter.Filter.`in`
 import kolbasa.consumer.filter.Filter.isNotNull
 import kolbasa.consumer.filter.Filter.less
 import kolbasa.consumer.filter.Filter.lessEq
@@ -82,6 +83,11 @@ internal class FilterTest {
     @Test
     fun testNot() {
         assertIs<NotCondition<*>>(not(TestMeta::strValue eq "123"))
+    }
+
+    @Test
+    fun testIn() {
+        assertIs<InCondition<*, *>>(TestMeta::strValue `in` listOf("local"))
     }
 
     @Test
