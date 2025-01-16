@@ -1,12 +1,10 @@
 package kolbasa.consumer.connection
 
-import kolbasa.Kolbasa
 import kolbasa.cluster.Shards
 import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
-import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -45,9 +43,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // read
-        val approxBytesCounter = BytesCounter(
-            (Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false
-        )
+        val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(
             queue, consumerOptions, shards, receiveOptions, limit
