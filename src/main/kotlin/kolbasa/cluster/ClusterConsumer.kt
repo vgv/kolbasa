@@ -5,7 +5,6 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.Consumer
-import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
@@ -14,16 +13,15 @@ import javax.sql.DataSource
 class ClusterConsumer<Data, Meta : Any>(
     private val cluster: Cluster,
     private val queue: Queue<Data, Meta>,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val interceptors: List<ConsumerInterceptor<Data, Meta>> = emptyList(),
+    private val consumerOptions: ConsumerOptions = ConsumerOptions()
 ) : Consumer<Data, Meta> {
 
-    override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
+    override fun <D, M : Any> receive(queue: Queue<D, M>, limit: Int, receiveOptions: ReceiveOptions<M>): List<Message<D, M>> {
         val latestState = cluster.getState()
 
         val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
             val c = ConnectionAwareDatabaseConsumer(consumerOptions, shards)
-            DatabaseConsumer(dataSource, queue, c, interceptors)
+            DatabaseConsumer(dataSource, queue, c)
         }
 
         // No active consumers at all:
@@ -34,9 +32,10 @@ class ClusterConsumer<Data, Meta : Any>(
         }
 
         return consumer.receive(limit, receiveOptions)
+
     }
 
-    override fun delete(messageIds: List<Id>): Int {
+    override fun <D, M : Any> delete(queue: Queue<D, M>, messageIds: List<Id>): Int {
         val latestState = cluster.getState()
 
         val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
@@ -48,7 +47,7 @@ class ClusterConsumer<Data, Meta : Any>(
                 }
 
                 val consumer = latestState.getConsumer(this, node) { dataSource ->
-                    DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
+                    DatabaseConsumer(dataSource, queue, consumerOptions)
                 }
 
                 consumer.delete(ids)
@@ -56,7 +55,7 @@ class ClusterConsumer<Data, Meta : Any>(
 
         if (deleted < messageIds.size) {
             val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
-                DatabaseConsumer(dataSource, queue, consumerOptions, interceptors)
+                DatabaseConsumer(dataSource, queue, consumerOptions)
             }
 
             consumers.forEach { consumer ->
@@ -65,5 +64,16 @@ class ClusterConsumer<Data, Meta : Any>(
         }
 
         return deleted
+    }
+
+
+    // -----------------------------------------------------------------------------------------------------
+
+    override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
+        return receive(queue, limit, receiveOptions)
+    }
+
+    override fun delete(messageIds: List<Id>): Int {
+        return delete(queue, messageIds)
     }
 }

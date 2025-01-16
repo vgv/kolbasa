@@ -125,7 +125,7 @@ internal data class ClusterState(
     }
 
     fun <Data, Meta : Any> getActiveConsumer(
-        clusterConsumer: ClusterConsumer<Data, Meta>,
+        clusterConsumer: ClusterConsumer<*, *>,
         generateConsumer: (DataSource, Shards) -> Consumer<Data, Meta>
     ): Consumer<Data, Meta>? {
         val nodesToConsumers = activeConsumers.computeIfAbsent(clusterConsumer) { _ ->
@@ -152,7 +152,7 @@ internal data class ClusterState(
     }
 
     fun <Data, Meta : Any> getConsumer(
-        clusterConsumer: ClusterConsumer<Data, Meta>,
+        clusterConsumer: ClusterConsumer<*, *>,
         node: String,
         generateConsumer: (DataSource) -> Consumer<Data, Meta>
     ): Consumer<Data, Meta> {
@@ -169,7 +169,7 @@ internal data class ClusterState(
     }
 
     fun <Data, Meta : Any> getConsumers(
-        clusterConsumer: ClusterConsumer<Data, Meta>,
+        clusterConsumer: ClusterConsumer<*, *>,
         generateConsumer: (DataSource) -> Consumer<Data, Meta>
     ): List<Consumer<Data, Meta>> {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
