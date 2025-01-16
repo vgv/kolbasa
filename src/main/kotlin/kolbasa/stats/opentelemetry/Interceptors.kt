@@ -7,7 +7,6 @@ import kolbasa.consumer.connection.ConnectionAwareConsumerInterceptor
 import kolbasa.consumer.datasource.ConsumerInterceptor
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
-import kolbasa.producer.connection.ConnectionAwareProducerInterceptor
 import kolbasa.producer.datasource.ProducerInterceptor
 import kolbasa.queue.Queue
 import java.sql.Connection
@@ -22,21 +21,6 @@ class TracingProducerInterceptor<Data, Meta : Any>(
     ): SendResult<Data, Meta> {
         return queue.queueTracing.makeProducerCall(request) {
             call(request)
-        }
-    }
-}
-
-class TracingConnectionAwareProducerInterceptor<Data, Meta : Any>(
-    private val queue: Queue<Data, Meta>
-) : ConnectionAwareProducerInterceptor<Data, Meta> {
-
-    override fun aroundSend(
-        connection: Connection,
-        request: SendRequest<Data, Meta>,
-        call: (Connection, SendRequest<Data, Meta>) -> SendResult<Data, Meta>
-    ): SendResult<Data, Meta> {
-        return queue.queueTracing.makeProducerCall(request) {
-            call(connection, request)
         }
     }
 }

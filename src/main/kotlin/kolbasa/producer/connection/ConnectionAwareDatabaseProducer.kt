@@ -4,7 +4,6 @@ import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
-import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.queue.Queue
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
@@ -17,28 +16,25 @@ import java.sql.Connection
 /**
  * Default implementation of [ConnectionAwareProducer]
  */
-class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructor(
-    private val queue: Queue<Data, Meta>,
-    private val producerOptions: ProducerOptions = ProducerOptions(),
-    private val interceptors: List<ConnectionAwareProducerInterceptor<Data, Meta>> = emptyList()
-) : ConnectionAwareProducer<Data, Meta> {
+class ConnectionAwareDatabaseProducer(
+    private val producerOptions: ProducerOptions = ProducerOptions()
+) : ConnectionAwareProducer {
 
-    override fun send(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
-        return ConnectionAwareProducerInterceptor.recursiveApplyInterceptors(interceptors, connection, request) { conn, req ->
-            doRealSend(conn, req)
-        }
-    }
-
-    // real send method without any interceptors, recursion and other stuff, just put data into the database
-    private fun doRealSend(connection: Connection, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+    override fun <Data, Meta : Any> send(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        request: SendRequest<Data, Meta>
+    ): SendResult<Data, Meta> {
         val approxStatsBytes = BytesCounter((Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false)
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
-            when (partialInsert) {
-                PartialInsert.PROHIBITED -> sendProhibited(connection, approxStatsBytes, request)
-                PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, approxStatsBytes, request)
-                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, approxStatsBytes, request)
+            queue.queueTracing.makeProducerCall(request) {
+                when (partialInsert) {
+                    PartialInsert.PROHIBITED -> sendProhibited(connection, queue, approxStatsBytes, request)
+                    PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, queue, approxStatsBytes, request)
+                    PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, queue, approxStatsBytes, request)
+                }
             }
         }
 
@@ -55,8 +51,9 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
         return result
     }
 
-    private fun sendProhibited(
+    private fun <Data, Meta : Any> sendProhibited(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
@@ -65,7 +62,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
 
         request.chunked(batchSize).forEach { chunk ->
             try {
-                result += executeChunk(connection, approxStatsBytes, chunk)
+                result += executeChunk(connection, queue, approxStatsBytes, chunk)
             } catch (e: Exception) {
                 // just stop all sequence execution and return the result
                 // all messages were failed
@@ -77,8 +74,9 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
         return SendResult(failedMessages = 0, result)
     }
 
-    private fun sendUntilFirstFailure(
+    private fun <Data, Meta : Any> sendUntilFirstFailure(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
@@ -92,7 +90,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
                 // If we have at least one failed message – let's fail others
                 failResults += chunk.data
             } else {
-                executeChunkInSavepoint(connection, approxStatsBytes, chunk)
+                executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk)
                     .onSuccess { results += it }
                     .onFailure { ex ->
                         exception = ex
@@ -108,8 +106,9 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
         return SendResult(failedMessages = failResults.size, results)
     }
 
-    private fun sendAsMuchAsPossible(
+    private fun <Data, Meta : Any> sendAsMuchAsPossible(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
@@ -118,7 +117,7 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
         var failedMessages = 0
 
         request.chunked(batchSize).forEach { chunk ->
-            executeChunkInSavepoint(connection, approxStatsBytes, chunk)
+            executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk)
                 .onSuccess { result += it }
                 .onFailure { ex ->
                     failedMessages += chunk.data.size
@@ -129,18 +128,20 @@ class ConnectionAwareDatabaseProducer<Data, Meta : Any> @JvmOverloads constructo
         return SendResult(failedMessages, result)
     }
 
-    private fun executeChunkInSavepoint(
+    private fun <Data, Meta : Any> executeChunkInSavepoint(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data, Meta>
     ): Result<List<MessageResult<Data, Meta>>> {
         return connection.useSavepoint { _ ->
-            executeChunk(connection, approxStatsBytes, request)
+            executeChunk(connection, queue, approxStatsBytes, request)
         }
     }
 
-    private fun executeChunk(
+    private fun <Data, Meta : Any> executeChunk(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data, Meta>
     ): List<MessageResult<Data, Meta>> {
