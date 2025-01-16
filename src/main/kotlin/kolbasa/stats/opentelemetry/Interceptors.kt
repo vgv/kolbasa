@@ -4,24 +4,7 @@ import kolbasa.Kolbasa
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.ConsumerInterceptor
-import kolbasa.producer.SendRequest
-import kolbasa.producer.SendResult
-import kolbasa.producer.datasource.ProducerInterceptor
 import kolbasa.queue.Queue
-
-class TracingProducerInterceptor<Data, Meta : Any>(
-    private val queue: Queue<Data, Meta>
-) : ProducerInterceptor<Data, Meta> {
-
-    override fun aroundSend(
-        request: SendRequest<Data, Meta>,
-        call: (SendRequest<Data, Meta>) -> SendResult<Data, Meta>
-    ): SendResult<Data, Meta> {
-        return queue.queueTracing.makeProducerCall(request) {
-            call(request)
-        }
-    }
-}
 
 class TracingConsumerInterceptor<Data, Meta : Any>(
     private val queue: Queue<Data, Meta>

@@ -3,6 +3,7 @@ package kolbasa.producer.datasource
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
+import kolbasa.queue.Queue
 
 /**
  * Base interface for all producers
@@ -20,6 +21,51 @@ import kolbasa.producer.SendResult
  * @param Meta type of the metadata
  */
 interface Producer<Data, Meta : Any> {
+
+    /**
+     * Just to send one message without metadata and another options
+     *
+     * @param data message to send
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun <D, M : Any> send(queue: Queue<D, M>, data: D): SendResult<D, M> {
+        return send(queue, SendMessage(data = data))
+    }
+
+    /**
+     * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
+     *
+     * @param data message, metadata (if any) and options (if any) to send
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun <D, M : Any> send(queue: Queue<D, M>, data: SendMessage<D, M>): SendResult<D, M> {
+        return send(queue, listOf(data))
+    }
+
+    /**
+     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
+     *
+     * This is the most effective way to send a lot of messages due to the batching and another optimizations.
+     *
+     * @param data list of messages, metadata (if any) and options (if any) to send
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun <D, M : Any> send(queue: Queue<D, M>, data: List<SendMessage<D, M>>): SendResult<D, M> {
+        return send(queue, SendRequest(data = data))
+    }
+
+    /**
+     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
+     * custom [kolbasa.producer.SendOptions]
+     *
+     * This is the most effective way to send a lot of messages due to the batching and another optimizations.
+     *
+     * @param request list of messages, metadata (if any) and options (if any) to send
+     * @return [SendResult] with the list of failed messages and the list of successful messages
+     */
+    fun <D, M : Any> send(queue: Queue<D, M>, request: SendRequest<D, M>): SendResult<D, M>
+
+    // ----------------------------------------------------------------------------------------------------------
 
     /**
      * Just to send one message without metadata and another options

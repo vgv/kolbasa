@@ -95,7 +95,7 @@ internal data class ClusterState(
 
 
     fun <Data, Meta : Any> getProducer(
-        clusterProducer: ClusterProducer<Data, Meta>,
+        clusterProducer: ClusterProducer<*, *>,
         shard: Int,
         generateProducer: (DataSource) -> Producer<Data, Meta>
     ): Producer<Data, Meta> {
