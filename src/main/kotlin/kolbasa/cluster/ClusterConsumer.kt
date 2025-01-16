@@ -22,8 +22,8 @@ class ClusterConsumer<Data, Meta : Any>(
         val latestState = cluster.getState()
 
         val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
-            val c = ConnectionAwareDatabaseConsumer(queue, consumerOptions, emptyList(), shards)
-            DatabaseConsumer(dataSource, c, interceptors)
+            val c = ConnectionAwareDatabaseConsumer(consumerOptions, shards)
+            DatabaseConsumer(dataSource, queue, c, interceptors)
         }
 
         // No active consumers at all:
