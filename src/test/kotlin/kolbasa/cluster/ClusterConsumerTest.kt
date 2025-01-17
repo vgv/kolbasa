@@ -24,7 +24,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
 
     private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
-    private lateinit var clusterConsumer: ClusterConsumer<Int, Unit>
+    private lateinit var clusterConsumer: ClusterConsumer
 
     @BeforeTest
     fun before() {
@@ -37,7 +37,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         cluster = Cluster(dataSources)
         cluster.updateState()
 
-        clusterConsumer = ClusterConsumer(cluster, queue)
+        clusterConsumer = ClusterConsumer(cluster)
     }
 
     @Test
@@ -100,9 +100,9 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     }
 
     private fun readData(dataSource: DataSource): List<Message<Int, Unit>> {
-        val consumer = DatabaseConsumer(dataSource, queue)
-        val messages = consumer.receive(Shard.SHARD_COUNT)
-        consumer.delete(messages)
+        val consumer = DatabaseConsumer(dataSource)
+        val messages = consumer.receive(queue, Shard.SHARD_COUNT)
+        consumer.delete(queue, messages)
         return messages
     }
 
@@ -113,9 +113,9 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
 
         var emptyReceiveAttempt = 0
         do {
-            val messages = clusterConsumer.receive(Shard.SHARD_COUNT)
+            val messages = clusterConsumer.receive(queue, Shard.SHARD_COUNT)
             received += messages
-            clusterConsumer.delete(messages)
+            clusterConsumer.delete(queue, messages)
 
             if (messages.isEmpty()) {
                 emptyReceiveAttempt++

@@ -44,7 +44,7 @@ fun main() {
 
 
     // Create consumer
-    val consumer = DatabaseConsumer(dataSource, queue)
+    val consumer = DatabaseConsumer(dataSource)
 
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue and sort them by priority desc
     val receiveOptions = ReceiveOptions(

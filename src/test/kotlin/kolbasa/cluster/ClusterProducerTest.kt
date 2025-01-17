@@ -52,8 +52,8 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         // read directly from the producer node
         val producerNode = requireNotNull(cluster.getState().shards[shard]?.producerNode)
         val dataSource = requireNotNull(cluster.getState().nodes[producerNode])
-        val consumer = DatabaseConsumer(dataSource, queue)
-        val rawMessages = consumer.receive(messagesToSend)
+        val consumer = DatabaseConsumer(dataSource)
+        val rawMessages = consumer.receive(queue, messagesToSend)
 
         assertEquals(1, rawMessages.size)
         assertEquals(sendResult.onlySuccessful().map { it.id }, rawMessages.map { it.id })
@@ -215,9 +215,9 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     }
 
     private fun readData(dataSource: DataSource): List<Message<Int, Unit>> {
-        val consumer = DatabaseConsumer(dataSource, queue)
-        val messages = consumer.receive(messagesToSend)
-        consumer.delete(messages)
+        val consumer = DatabaseConsumer(dataSource)
+        val messages = consumer.receive(queue, messagesToSend)
+        consumer.delete(queue, messages)
         return messages
     }
 

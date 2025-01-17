@@ -38,7 +38,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         val messageToSend = SendMessage(data = data, meta = TestMeta(1), messageOptions = MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource)
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
         // First send – success
         val id = producer.send(queue, messageToSend).let { (failedMessages, result) ->
@@ -59,7 +59,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         // in this case, we have to be able to send the message with the same meta field again, even if it has unique constraint
         // Read message and NOT DELETE IT
         run {
-            val message = consumer.receive()
+            val message = consumer.receive(queue)
 
             assertNotNull(message)
             assertEquals(id, message.id)
