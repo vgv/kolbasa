@@ -45,8 +45,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_Simple() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val result = producer.send(queue, data)
         assertEquals(0, result.failedMessages)
         assertEquals(1, result.onlySuccessful().size)
         val id = result.onlySuccessful().first().id
@@ -81,9 +81,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data1 = "bugaga-1"
         val data2 = "bugaga-2"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result1 = producer.send(data1)
-        val result2 = producer.send(data2)
+        val producer = DatabaseProducer(dataSource)
+        val result1 = producer.send(queue, data1)
+        val result2 = producer.send(queue, data2)
         assertEquals(0, result1.failedMessages)
         assertEquals(0, result2.failedMessages)
         assertEquals(1, result1.onlySuccessful().size)
@@ -122,8 +122,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage<String, TestMeta>("data_$it")
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val sendResult = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val sendResult = producer.send(queue, data)
 
         val consumer = DatabaseConsumer(dataSource, queue)
         val latch = CountDownLatch(1)
@@ -160,8 +160,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
         val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay))).let { (failedMessages, result) ->
+        val producer = DatabaseProducer(dataSource)
+        val id = producer.send(queue, SendMessage(data = data, messageOptions = MessageOptions(delay = delay))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
@@ -195,8 +195,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_VisibitilyTimeout() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val result = producer.send(queue, data)
         assertEquals(0, result.failedMessages)
         assertEquals(1, result.onlySuccessful().size)
         val id = result.onlySuccessful().first().id
@@ -251,9 +251,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_ReadMetadata() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val (failedMessages1, result1) = producer.send(SendMessage(data, TestMeta(1)))
-        val (failedMessages2, result2) = producer.send(SendMessage(data, TestMeta(2)))
+        val producer = DatabaseProducer(dataSource)
+        val (failedMessages1, result1) = producer.send(queue, SendMessage(data, TestMeta(1)))
+        val (failedMessages2, result2) = producer.send(queue, SendMessage(data, TestMeta(2)))
         assertEquals(0, failedMessages1)
         assertEquals(0, failedMessages2)
         assertEquals(1, result1.onlySuccessful().size)
@@ -293,8 +293,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage("bugaga_$index", TestMeta(index))
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
 
         val consumer = DatabaseConsumer(dataSource, queue)
         // messages were sent with natural ordering, TestMeta.field is 1,2,3,4...
@@ -333,8 +333,8 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage("bugaga_$index", TestMeta(index))
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
 
         val consumer = DatabaseConsumer(dataSource, queue)
         // messages have TestMeta.field from 1 till 100

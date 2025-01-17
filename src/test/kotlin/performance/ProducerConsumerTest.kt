@@ -37,7 +37,7 @@ class ProducerConsumerTest : PerformanceTest {
 
         val producerThreads = (1..Env.pcProducerThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, queue, ProducerOptions(batchSize = Env.pcBatchSize))
+                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pcBatchSize))
                 while (true) {
                     val produced = producedRecords.get()
                     val consumed = consumedRecords.get()
@@ -49,7 +49,7 @@ class ProducerConsumerTest : PerformanceTest {
                             SendMessage<ByteArray, Unit>(randomData.random())
                         }
 
-                        val result = producer.send(data)
+                        val result = producer.send(queue, data)
                         if (result.failedMessages > 0) {
                             // Just throw first exception and finish
                             throw result.onlyFailed().first().exception

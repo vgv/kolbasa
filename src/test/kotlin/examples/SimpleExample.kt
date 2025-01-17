@@ -24,7 +24,7 @@ fun main() {
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
     // Create producer and send simple message
-    val producer = DatabaseProducer(dataSource, queue)
+    val producer = DatabaseProducer(dataSource)
     producer.send(queue, "Test message")
 
     // Create consumer, try to read message from the queue, process it and delete

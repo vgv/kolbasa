@@ -26,7 +26,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
 
     private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
-    private lateinit var clusterProducer: ClusterProducer<Int, Unit>
+    private lateinit var clusterProducer: ClusterProducer
 
     @BeforeTest
     fun before() {
@@ -39,7 +39,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         cluster = Cluster(dataSources)
         cluster.updateState()
 
-        clusterProducer = ClusterProducer(cluster, queue)
+        clusterProducer = ClusterProducer(cluster)
     }
 
     @Test
@@ -47,7 +47,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val shard = 123
 
         val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
-        val sendResult = clusterProducer.send(sendRequest)
+        val sendResult = clusterProducer.send(queue, sendRequest)
 
         // read directly from the producer node
         val producerNode = requireNotNull(cluster.getState().shards[shard]?.producerNode)
@@ -83,7 +83,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
             val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // Test that all messages were sent successfully
@@ -129,7 +129,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
             val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // Test that all messages were sent successfully
@@ -155,7 +155,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
 
         val results = (1..messagesToSend).map {
             val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // Test that all messages were sent successfully and only to the specified shard
@@ -194,7 +194,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
             val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // Test that all messages were sent successfully and only to the specified shard
