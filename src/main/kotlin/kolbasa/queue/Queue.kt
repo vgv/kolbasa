@@ -59,7 +59,7 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     internal val queueMetrics: QueueMetrics by lazy {
         when (val config = Kolbasa.prometheusConfig) {
             // No Prometheus config - no metrics collection
-            is PrometheusConfig.None -> EmptyQueueMetrics()
+            is PrometheusConfig.None -> EmptyQueueMetrics
 
             // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
             // and cache it in the queue object to avoid excessive allocations.

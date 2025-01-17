@@ -15,6 +15,10 @@ internal class PrometheusQueueMetrics(
     private val prometheusConfig: PrometheusConfig.Config
 ) : QueueMetrics {
 
+    override fun usePreciseStringSize(): Boolean {
+        return prometheusConfig.preciseStringSize
+    }
+
     // ------------------------------------------------------------------------------
     // Producer
     override fun producerSendMetrics(

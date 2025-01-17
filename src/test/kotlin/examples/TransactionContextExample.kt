@@ -41,7 +41,7 @@ fun main() {
 
     // PRODUCER
     // Create producer and send simple message using the same transaction with business query
-    val producer = ConnectionAwareDatabaseProducer(queue)
+    val producer = ConnectionAwareDatabaseProducer()
     dataSource.useConnection { connection ->
         // Execute business query - insert new customer to the business table
         val businessQuery = "insert into customer(id, email, name) values(1, 'john.doe@example.com', 'John Doe')"
@@ -51,19 +51,19 @@ fun main() {
         // If this transaction fails, the new customer won't be inserted and the message will not be sent to the queue.
         // Please note that the ConnectionAware* methods take the connection as the first argument. This is different from
         // the regular Producer/Consumer
-        producer.send(connection, "User 'John Doe' was created")
+        producer.send(connection, queue, "User 'John Doe' was created")
 
         println("The user has been inserted and the message has been sent to the queue")
     }
 
     // CONSUMER
     // Create consumer and try to read message from the queue, process it and delete
-    val consumer = ConnectionAwareDatabaseConsumer(queue)
+    val consumer = ConnectionAwareDatabaseConsumer()
     dataSource.useConnection { connection ->
         // Receive the message from the queue using the same connection (and transaction) as the business query
         // Please note that the ConnectionAware* methods take the connection as the first argument. This is different from
         // the regular Producer/Consumer
-        consumer.receive(connection)?.let { message ->
+        consumer.receive(connection, queue)?.let { message ->
             // the message from the queue was received, we can emulate the heavy calculation and update the business table
             val heavyData = "Large and heavy calculated data" // in the real application this will be more complex of course
             val businessQuery = "update customer set additional_info = '$heavyData' where id = 1"
@@ -73,7 +73,7 @@ fun main() {
             // If the transaction fails, the message will not be removed from the queue and will be processed again later.
             // Please note that the ConnectionAware* methods take the connection as the first argument. This is different from
             // the regular Producer/Consumer
-            consumer.delete(connection, message)
+            consumer.delete(connection, queue, message)
 
             println("The message has been received, the user has been updated and the message has been deleted from the queue")
         }

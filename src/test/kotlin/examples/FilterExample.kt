@@ -36,13 +36,13 @@ fun main() {
     val messagesToSend = (1..100).map { index ->
         SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
     }
-    producer.send(messagesToSend)
+    producer.send(queue, messagesToSend)
 
 
     // Create consumer
     val consumer = DatabaseConsumer(dataSource, queue)
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue
-    val messages = consumer.receive(100) {
+    val messages = consumer.receive(queue, 100) {
         // Type-safe DSL to filter messages
         (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
     }
@@ -50,6 +50,6 @@ fun main() {
         println(it)
     }
     // Delete all messages after processing
-    consumer.delete(messages)
+    consumer.delete(queue, messages)
 }
 

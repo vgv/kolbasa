@@ -24,6 +24,10 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
     private val consumerInstrumenter: Instrumenter<List<Message<Data, Meta>>, Unit> =
         buildConsumerInstrumenter(openTelemetryConfig.openTelemetry, queueName)
 
+    override fun readOpenTelemetryData(): Boolean {
+        return true
+    }
+
     override fun makeProducerCall(
         request: SendRequest<Data, Meta>,
         businessCall: () -> SendResult<Data, Meta>

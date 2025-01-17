@@ -25,12 +25,12 @@ fun main() {
 
     // Create producer and send simple message
     val producer = DatabaseProducer(dataSource, queue)
-    producer.send("Test message")
+    producer.send(queue, "Test message")
 
     // Create consumer, try to read message from the queue, process it and delete
     val consumer = DatabaseConsumer(dataSource, queue)
-    consumer.receive()?.let { message ->
+    consumer.receive(queue)?.let { message ->
         println(message.data)
-        consumer.delete(message)
+        consumer.delete(queue, message)
     }
 }

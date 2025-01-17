@@ -40,7 +40,7 @@ fun main() {
     val messagesToSend = (1..100).map { index ->
         SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
     }
-    producer.send(messagesToSend)
+    producer.send(queue, messagesToSend)
 
 
     // Create consumer
@@ -52,11 +52,11 @@ fun main() {
         order = Metadata::priority.desc(),
         filter = (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
     )
-    val messages = consumer.receive(limit = 100, receiveOptions)
+    val messages = consumer.receive(queue, limit = 100, receiveOptions)
     messages.forEach {
         println(it)
     }
     // Delete all messages after processing
-    consumer.delete(messages)
+    consumer.delete(queue, messages)
 }
 

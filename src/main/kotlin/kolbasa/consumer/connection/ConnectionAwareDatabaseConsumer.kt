@@ -1,12 +1,10 @@
 package kolbasa.consumer.connection
 
-import kolbasa.Kolbasa
 import kolbasa.cluster.Shards
 import kolbasa.consumer.*
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
-import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -14,32 +12,28 @@ import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
-class ConnectionAwareDatabaseConsumer<Data, Meta : Any> internal constructor(
-    private val queue: Queue<Data, Meta>,
+class ConnectionAwareDatabaseConsumer internal constructor(
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList(),
-    private val shards: Shards
-) : ConnectionAwareConsumer<Data, Meta> {
+    private val shards: Shards = Shards.ALL_SHARDS
+) : ConnectionAwareConsumer {
 
-    constructor(
+    override fun <Data, Meta : Any> receive(
+        connection: Connection,
         queue: Queue<Data, Meta>,
-        consumerOptions: ConsumerOptions = ConsumerOptions(),
-        interceptors: List<ConnectionAwareConsumerInterceptor<Data, Meta>> = emptyList()
-    ) : this(queue, consumerOptions, interceptors, Shards.ALL_SHARDS)
+        limit: Int,
+        receiveOptions: ReceiveOptions<Meta>
+    ): List<Message<Data, Meta>> {
+        // Do we need to read OT data?
+        receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
-    override fun receive(connection: Connection, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        return ConnectionAwareConsumerInterceptor.recursiveApplyReceiveInterceptors(
-            interceptors,
-            connection,
-            limit,
-            receiveOptions
-        ) { conn, lmt, rcvOptions ->
-            doRealReceive(conn, lmt, rcvOptions)
+        return queue.queueTracing.makeConsumerCall {
+            doRealReceive(connection, queue, limit, receiveOptions)
         }
     }
 
-    private fun doRealReceive(
+    private fun <Data, Meta : Any> doRealReceive(
         connection: Connection,
+        queue: Queue<Data, Meta>,
         limit: Int,
         receiveOptions: ReceiveOptions<Meta>
     ): List<Message<Data, Meta>> {
@@ -49,9 +43,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any> internal constructor(
         }
 
         // read
-        val approxBytesCounter = BytesCounter(
-            (Kolbasa.prometheusConfig as? PrometheusConfig.Config)?.preciseStringSize ?: false
-        )
+        val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(
             queue, consumerOptions, shards, receiveOptions, limit
@@ -86,17 +78,7 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any> internal constructor(
         return result
     }
 
-    override fun delete(connection: Connection, messageIds: List<Id>): Int {
-        return ConnectionAwareConsumerInterceptor.recursiveApplyDeleteInterceptors(
-            interceptors,
-            connection,
-            messageIds
-        ) { conn, msgIds ->
-            doRealDelete(conn, msgIds)
-        }
-    }
-
-    private fun doRealDelete(connection: Connection, messageIds: List<Id>): Int {
+    override fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, messageIds: List<Id>): Int {
         if (messageIds.isEmpty()) {
             return 0
         }
@@ -116,5 +98,4 @@ class ConnectionAwareDatabaseConsumer<Data, Meta : Any> internal constructor(
 
         return removedRows
     }
-
 }
