@@ -38,6 +38,15 @@ internal abstract class MetaField<Meta : Any>(
         fillPreparedStatementForValue(ps, columnIndex, propertyValue)
     }
 
+    fun fillPreparedStatementForValues(ps: PreparedStatement, columnIndex: Int, propertyValues: Collection<*>?) {
+        if (propertyValues == null) {
+            ps.setNull(columnIndex, sqlColumnType)
+        } else {
+            val sqlArray = ps.connection.createArrayOf(dbColumnType, propertyValues.toTypedArray())
+            ps.setArray(columnIndex, sqlArray)
+        }
+    }
+
     fun fillPreparedStatementForValue(ps: PreparedStatement, columnIndex: Int, propertyValue: Any?) {
         if (propertyValue == null) {
             ps.setNull(columnIndex, sqlColumnType)
