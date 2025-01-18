@@ -2,6 +2,7 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.Kolbasa
+import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement

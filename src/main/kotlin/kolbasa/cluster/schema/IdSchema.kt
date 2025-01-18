@@ -1,4 +1,4 @@
-package kolbasa.cluster
+package kolbasa.cluster.schema
 
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement

@@ -1,5 +1,7 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.schema.IdSchema
+import kolbasa.cluster.schema.ShardSchema
 import javax.sql.DataSource
 
 class Cluster(private val dataSources: () -> List<DataSource>) {
