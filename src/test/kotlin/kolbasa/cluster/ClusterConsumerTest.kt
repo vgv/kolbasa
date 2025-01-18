@@ -24,7 +24,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
 
     private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
-    private lateinit var clusterConsumer: ClusterConsumer<Int, Unit>
+    private lateinit var clusterConsumer: ClusterConsumer
 
     @BeforeTest
     fun before() {
@@ -37,15 +37,15 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         cluster = Cluster(dataSources)
         cluster.updateState()
 
-        clusterConsumer = ClusterConsumer(cluster, queue)
+        clusterConsumer = ClusterConsumer(cluster)
     }
 
     @Test
     fun testReceive_JustReceiveTest() {
         // Send N messages
-        val clusterProducer = ClusterProducer(cluster, queue)
+        val clusterProducer = ClusterProducer(cluster)
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
-            clusterProducer.send(message)
+            clusterProducer.send(queue, message)
         }
 
         // Try to receive all messages and test that all messages are received
@@ -57,14 +57,14 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     @Test
     fun testMessagesDistribution_TestOneMigratingShard() {
         // Send N messages randomly to all nodes
-        val clusterProducer = ClusterProducer(cluster, queue)
+        val clusterProducer = ClusterProducer(cluster)
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
             val sendRequest = SendRequest<Int, Unit>(
                 data = listOf(SendMessage(data = message)),
                 sendOptions = SendOptions(shard = message)
             )
 
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // change consumer node to 'unknown' for this dataSource
@@ -100,9 +100,9 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     }
 
     private fun readData(dataSource: DataSource): List<Message<Int, Unit>> {
-        val consumer = DatabaseConsumer(dataSource, queue)
-        val messages = consumer.receive(Shard.SHARD_COUNT)
-        consumer.delete(messages)
+        val consumer = DatabaseConsumer(dataSource)
+        val messages = consumer.receive(queue, Shard.SHARD_COUNT)
+        consumer.delete(queue, messages)
         return messages
     }
 
@@ -113,9 +113,9 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
 
         var emptyReceiveAttempt = 0
         do {
-            val messages = clusterConsumer.receive(Shard.SHARD_COUNT)
+            val messages = clusterConsumer.receive(queue, Shard.SHARD_COUNT)
             received += messages
-            clusterConsumer.delete(messages)
+            clusterConsumer.delete(queue, messages)
 
             if (messages.isEmpty()) {
                 emptyReceiveAttempt++

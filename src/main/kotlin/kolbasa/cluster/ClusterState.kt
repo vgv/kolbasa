@@ -79,26 +79,25 @@ internal data class ClusterState(
 
     // -------------------------------------------------------------------------------------------------
 
-    private val producers: ConcurrentMap<ClusterProducer<*, *>, ConcurrentMap<String, Producer<*, *>>> by lazy {
+    private val producers: ConcurrentMap<ClusterProducer, ConcurrentMap<String, Producer>> by lazy {
         ConcurrentHashMap()
     }
 
-    private val activeConsumers: ConcurrentMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>> by lazy {
+    private val activeConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<String, Consumer>> by lazy {
         ConcurrentHashMap()
     }
 
-    private val allConsumers: ConcurrentMap<ClusterConsumer<*, *>, ConcurrentMap<String, Consumer<*, *>>> by lazy {
+    private val allConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<String, Consumer>> by lazy {
         ConcurrentHashMap()
     }
 
     // -------------------------------------------------------------------------------------------------
 
-
-    fun <Data, Meta : Any> getProducer(
-        clusterProducer: ClusterProducer<*, *>,
+    fun getProducer(
+        clusterProducer: ClusterProducer,
         shard: Int,
-        generateProducer: (DataSource) -> Producer<Data, Meta>
-    ): Producer<Data, Meta> {
+        generateProducer: (DataSource) -> Producer
+    ): Producer {
         val nodeToProducers = producers.computeIfAbsent(clusterProducer) { _ ->
             ConcurrentHashMap()
         }
@@ -121,13 +120,13 @@ internal data class ClusterState(
             generateProducer(dataSource)
         }
 
-        return producer as Producer<Data, Meta>
+        return producer
     }
 
-    fun <Data, Meta : Any> getActiveConsumer(
-        clusterConsumer: ClusterConsumer<*, *>,
-        generateConsumer: (DataSource, Shards) -> Consumer<Data, Meta>
-    ): Consumer<Data, Meta>? {
+    fun getActiveConsumer(
+        clusterConsumer: ClusterConsumer,
+        generateConsumer: (DataSource, Shards) -> Consumer
+    ): Consumer? {
         val nodesToConsumers = activeConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
         }
@@ -141,7 +140,7 @@ internal data class ClusterState(
             generateConsumer(dataSource, shards)
         }
 
-        return consumer as Consumer<Data, Meta>
+        return consumer
     }
 
     fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> Int): Map<String?, List<T>> {
@@ -151,11 +150,11 @@ internal data class ClusterState(
         }
     }
 
-    fun <Data, Meta : Any> getConsumer(
-        clusterConsumer: ClusterConsumer<*, *>,
+    fun getConsumer(
+        clusterConsumer: ClusterConsumer,
         node: String,
-        generateConsumer: (DataSource) -> Consumer<Data, Meta>
-    ): Consumer<Data, Meta> {
+        generateConsumer: (DataSource) -> Consumer
+    ): Consumer {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
         }
@@ -165,13 +164,13 @@ internal data class ClusterState(
             generateConsumer(dataSource)
         }
 
-        return consumer as Consumer<Data, Meta>
+        return consumer
     }
 
-    fun <Data, Meta : Any> getConsumers(
-        clusterConsumer: ClusterConsumer<*, *>,
-        generateConsumer: (DataSource) -> Consumer<Data, Meta>
-    ): List<Consumer<Data, Meta>> {
+    fun getConsumers(
+        clusterConsumer: ClusterConsumer,
+        generateConsumer: (DataSource) -> Consumer
+    ): List<Consumer> {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
         }
@@ -182,7 +181,7 @@ internal data class ClusterState(
             }
         }
 
-        return consumers as List<Consumer<Data, Meta>>
+        return consumers
     }
 
     companion object {
