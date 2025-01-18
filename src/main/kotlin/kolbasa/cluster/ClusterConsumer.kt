@@ -10,18 +10,17 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
-class ClusterConsumer<Data, Meta : Any>(
+class ClusterConsumer(
     private val cluster: Cluster,
-    private val queue: Queue<Data, Meta>,
     private val consumerOptions: ConsumerOptions = ConsumerOptions()
-) : Consumer<Data, Meta> {
+) : Consumer {
 
-    override fun <D, M : Any> receive(queue: Queue<D, M>, limit: Int, receiveOptions: ReceiveOptions<M>): List<Message<D, M>> {
+    override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         val latestState = cluster.getState()
 
         val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
             val c = ConnectionAwareDatabaseConsumer(consumerOptions, shards)
-            DatabaseConsumer(dataSource, queue, c)
+            DatabaseConsumer(dataSource, c)
         }
 
         // No active consumers at all:
@@ -31,11 +30,11 @@ class ClusterConsumer<Data, Meta : Any>(
             return emptyList()
         }
 
-        return consumer.receive(limit, receiveOptions)
+        return consumer.receive(queue, limit, receiveOptions)
 
     }
 
-    override fun <D, M : Any> delete(queue: Queue<D, M>, messageIds: List<Id>): Int {
+    override fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messageIds: List<Id>): Int {
         val latestState = cluster.getState()
 
         val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
@@ -47,33 +46,23 @@ class ClusterConsumer<Data, Meta : Any>(
                 }
 
                 val consumer = latestState.getConsumer(this, node) { dataSource ->
-                    DatabaseConsumer(dataSource, queue, consumerOptions)
+                    DatabaseConsumer(dataSource, consumerOptions)
                 }
 
-                consumer.delete(ids)
+                consumer.delete(queue, ids)
             }.sum()
 
         if (deleted < messageIds.size) {
             val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
-                DatabaseConsumer(dataSource, queue, consumerOptions)
+                DatabaseConsumer(dataSource, consumerOptions)
             }
 
             consumers.forEach { consumer ->
-                deleted += consumer.delete(messageIds)
+                deleted += consumer.delete(queue, messageIds)
             }
         }
 
         return deleted
     }
 
-
-    // -----------------------------------------------------------------------------------------------------
-
-    override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        return receive(queue, limit, receiveOptions)
-    }
-
-    override fun delete(messageIds: List<Id>): Int {
-        return delete(queue, messageIds)
-    }
 }

@@ -64,10 +64,10 @@ class ProducerConsumerTest : PerformanceTest {
 
         val consumerThreads = (1..Env.pcConsumerThreads).map {
             thread {
-                val consumer = DatabaseConsumer(Env.dataSource, queue)
+                val consumer = DatabaseConsumer(Env.dataSource)
                 while (true) {
-                    val result = consumer.receive(Env.pcConsumerReceiveLimit)
-                    consumer.delete(result)
+                    val result = consumer.receive(queue, Env.pcConsumerReceiveLimit)
+                    consumer.delete(queue, result)
 
                     // Increment
                     consumedRecords.addAndGet(result.size.toLong())

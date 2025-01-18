@@ -26,10 +26,10 @@ class EmptyConsumerTest : PerformanceTest {
 
         val consumerThreads = (1..Env.ecThreads).map {
             thread {
-                val consumer = DatabaseConsumer(Env.dataSource, queue)
+                val consumer = DatabaseConsumer(Env.dataSource)
 
                 while (true) {
-                    consumer.receive()
+                    consumer.receive(queue)
                     consumeCalls.incrementAndGet()
                 }
             }
