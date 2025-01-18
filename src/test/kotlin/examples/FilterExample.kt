@@ -32,7 +32,7 @@ fun main() {
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
     // Create producer and send several messages with meta information
-    val producer = DatabaseProducer(dataSource, queue)
+    val producer = DatabaseProducer(dataSource)
     val messagesToSend = (1..100).map { index ->
         SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
     }
@@ -40,7 +40,7 @@ fun main() {
 
 
     // Create consumer
-    val consumer = DatabaseConsumer(dataSource, queue)
+    val consumer = DatabaseConsumer(dataSource)
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue
     val messages = consumer.receive(queue, 100) {
         // Type-safe DSL to filter messages

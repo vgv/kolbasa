@@ -10,24 +10,21 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
-class DatabaseConsumer<Data, Meta : Any>(
+class DatabaseConsumer(
     private val dataSource: DataSource,
-    private val queue: Queue<Data, Meta>,
     private val peer: ConnectionAwareConsumer
-) : Consumer<Data, Meta> {
+) : Consumer {
 
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        queue: Queue<Data, Meta>,
         consumerOptions: ConsumerOptions = ConsumerOptions()
     ) : this(
         dataSource = dataSource,
-        queue = queue,
         peer = ConnectionAwareDatabaseConsumer(consumerOptions)
     )
 
-    override fun <D, M : Any> receive(queue: Queue<D, M>, limit: Int, receiveOptions: ReceiveOptions<M>): List<Message<D, M>> {
+    override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         // Do we need to read OT data?
         receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
@@ -36,17 +33,8 @@ class DatabaseConsumer<Data, Meta : Any>(
         }
     }
 
-    override fun <D, M : Any> delete(queue: Queue<D, M>, messageIds: List<Id>): Int {
+    override fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messageIds: List<Id>): Int {
         return dataSource.useConnection { peer.delete(it, queue, messageIds) }
     }
 
-    // -----------------------------------------------------------------------------------------------------
-
-    override fun receive(limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
-        return receive(queue, limit, receiveOptions)
-    }
-
-    override fun delete(messageIds: List<Id>): Int {
-        return delete(queue, messageIds)
-    }
 }

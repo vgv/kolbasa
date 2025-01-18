@@ -45,17 +45,17 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_Simple() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val result = producer.send(queue, data)
         assertEquals(0, result.failedMessages)
         assertEquals(1, result.onlySuccessful().size)
         val id = result.onlySuccessful().first().id
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
         // Read message
         run {
-            val message = consumer.receive()
+            val message = consumer.receive(queue)
 
             assertNotNull(message)
             assertEquals(id, message.id)
@@ -65,12 +65,12 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, message.remainingAttempts)
 
             // delete message
-            consumer.delete(message)
+            consumer.delete(queue, message)
         }
 
         // Try to read one more message, but queue is empty
         run {
-            val message = consumer.receive()
+            val message = consumer.receive(queue)
             // queue is empty
             assertNull(message)
         }
@@ -81,9 +81,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data1 = "bugaga-1"
         val data2 = "bugaga-2"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result1 = producer.send(data1)
-        val result2 = producer.send(data2)
+        val producer = DatabaseProducer(dataSource)
+        val result1 = producer.send(queue, data1)
+        val result2 = producer.send(queue, data2)
         assertEquals(0, result1.failedMessages)
         assertEquals(0, result2.failedMessages)
         assertEquals(1, result1.onlySuccessful().size)
@@ -92,10 +92,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val id2 = result2.onlySuccessful().first().id
 
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
-        val message1 = consumer.receive()
-        val message2 = consumer.receive()
+        val message1 = consumer.receive(queue)
+        val message2 = consumer.receive(queue)
 
         // Check first message
         assertNotNull(message1)
@@ -122,10 +122,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage<String, TestMeta>("data_$it")
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val sendResult = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val sendResult = producer.send(queue, data)
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
         val latch = CountDownLatch(1)
 
         val receivedIds = Collections.synchronizedSet(mutableSetOf<Id>())
@@ -134,7 +134,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             thread {
                 // All threads have to start at the same time
                 latch.await()
-                val messages = consumer.receive(items)
+                val messages = consumer.receive(queue, items)
 
                 // Check we read exactly 'items' messages
                 assertEquals(items, messages.size)
@@ -160,20 +160,20 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val data = "bugaga"
         val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val id = producer.send(SendMessage(data = data, messageOptions = MessageOptions(delay = delay))).let { (failedMessages, result) ->
+        val producer = DatabaseProducer(dataSource)
+        val id = producer.send(queue, SendMessage(data = data, messageOptions = MessageOptions(delay = delay))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
 
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
-        var message: Message<String, TestMeta>? = consumer.receive()
+        var message: Message<String, TestMeta>? = consumer.receive(queue)
         while (message == null) {
             TimeUnit.MILLISECONDS.sleep(10)
-            message = consumer.receive()
+            message = consumer.receive(queue)
         }
 
         // Check delay
@@ -195,19 +195,19 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_VisibitilyTimeout() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val result = producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        val result = producer.send(queue, data)
         assertEquals(0, result.failedMessages)
         assertEquals(1, result.onlySuccessful().size)
         val id = result.onlySuccessful().first().id
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
         val delay = Duration.of(1500 + Random.nextLong(0, 1000), ChronoUnit.MILLIS)
         val receiveOptions = ReceiveOptions<TestMeta>(visibilityTimeout = delay)
 
         // Read a message first time
-        val firstMessage = consumer.receive(receiveOptions)
+        val firstMessage = consumer.receive(queue, receiveOptions)
 
         // Check it
         assertNotNull(firstMessage)
@@ -219,10 +219,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertNull(firstMessage.meta)
 
         // Try to read this message again
-        var secondMessage: Message<String, TestMeta>? = consumer.receive(receiveOptions)
+        var secondMessage: Message<String, TestMeta>? = consumer.receive(queue, receiveOptions)
         while (secondMessage == null) {
             TimeUnit.MILLISECONDS.sleep(10)
-            secondMessage = consumer.receive(receiveOptions)
+            secondMessage = consumer.receive(queue, receiveOptions)
         }
 
         // Check that second message has the same ID and DATA, but not the same object
@@ -251,9 +251,9 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     fun testReceive_ReadMetadata() {
         val data = "bugaga"
 
-        val producer = DatabaseProducer(dataSource, queue)
-        val (failedMessages1, result1) = producer.send(SendMessage(data, TestMeta(1)))
-        val (failedMessages2, result2) = producer.send(SendMessage(data, TestMeta(2)))
+        val producer = DatabaseProducer(dataSource)
+        val (failedMessages1, result1) = producer.send(queue, SendMessage(data, TestMeta(1)))
+        val (failedMessages2, result2) = producer.send(queue, SendMessage(data, TestMeta(2)))
         assertEquals(0, failedMessages1)
         assertEquals(0, failedMessages2)
         assertEquals(1, result1.onlySuccessful().size)
@@ -262,10 +262,10 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val id2 = result2.onlySuccessful().first().id
 
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
 
         // Read first message without metadata and check it
-        val withoutMetadata = consumer.receive(ReceiveOptions(readMetadata = false))
+        val withoutMetadata = consumer.receive(queue, ReceiveOptions(readMetadata = false))
         assertNotNull(withoutMetadata)
         assertNull(withoutMetadata.meta)
         assertEquals(id1, withoutMetadata.id)
@@ -274,7 +274,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertTrue(withoutMetadata.createdAt <= withoutMetadata.processingAt, "message=$withoutMetadata")
 
         // Read second message with metadata and check it
-        val withMetadata = consumer.receive(ReceiveOptions(readMetadata = true))
+        val withMetadata = consumer.receive(queue, ReceiveOptions(readMetadata = true))
         assertNotNull(withMetadata)
         assertNotNull(withMetadata.meta) {
             assertEquals(2, it.field)
@@ -293,13 +293,14 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage("bugaga_$index", TestMeta(index))
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
         // messages were sent with natural ordering, TestMeta.field is 1,2,3,4...
         // Try to read them in reverse order
         val messages = consumer.receive(
+            queue,
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
@@ -333,15 +334,16 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             SendMessage("bugaga_$index", TestMeta(index))
         }
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send(data)
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
 
-        val consumer = DatabaseConsumer(dataSource, queue)
+        val consumer = DatabaseConsumer(dataSource)
         // messages have TestMeta.field from 1 till 100
         // Try to read only messages from 10 till 15
         val start = 10
         val end = 15
         val messages = consumer.receive(
+            queue,
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
