@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.cluster.schema.IdSchema
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

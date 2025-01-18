@@ -1,5 +1,6 @@
-package kolbasa.cluster
+package kolbasa.cluster.schema
 
+import kolbasa.cluster.Shard
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const

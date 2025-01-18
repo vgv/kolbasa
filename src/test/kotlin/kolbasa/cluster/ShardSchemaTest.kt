@@ -2,10 +2,11 @@ package kolbasa.cluster
 
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.cluster.ShardSchema.CONSUMER_NODE_COLUMN_NAME
-import kolbasa.cluster.ShardSchema.PRODUCER_NODE_COLUMN_NAME
-import kolbasa.cluster.ShardSchema.SHARD_COLUMN_NAME
-import kolbasa.cluster.ShardSchema.SHARD_TABLE_NAME
+import kolbasa.cluster.schema.ShardSchema
+import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
+import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
+import kolbasa.cluster.schema.ShardSchema.SHARD_COLUMN_NAME
+import kolbasa.cluster.schema.ShardSchema.SHARD_TABLE_NAME
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.Test

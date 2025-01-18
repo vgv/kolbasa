@@ -1,6 +1,8 @@
 package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.cluster.schema.IdSchema
+import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.Test
