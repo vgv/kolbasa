@@ -433,6 +433,8 @@ object Filter {
         return IsNotNullCondition(property.name)
     }
 
+    // -------------------------------------------------------------------------------------------
+
     /**
      * PostgreSQL in operator.
      *
