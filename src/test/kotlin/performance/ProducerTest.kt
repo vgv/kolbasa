@@ -31,14 +31,14 @@ class ProducerTest : PerformanceTest {
 
         val producerThreads = (1..Env.pThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, queue, ProducerOptions(batchSize = Env.pBatchSize))
+                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pBatchSize))
 
                 while (true) {
                     val data = (1..Env.pSendSize).map {
                         SendMessage<ByteArray, Unit>(randomData.random())
                     }
 
-                    val result = producer.send(data)
+                    val result = producer.send(queue, data)
                     if (result.failedMessages > 0) {
                         // Just throw first exception and finish
                         throw result.onlyFailed().first().exception

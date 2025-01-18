@@ -56,14 +56,14 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendSimpleData() {
-        val producer = DatabaseProducer(dataSource, queue)
+        val producer = DatabaseProducer(dataSource)
 
-        val result1 = producer.send("bugaga")
+        val result1 = producer.send(queue, "bugaga")
         assertEquals(0, result1.failedMessages)
         assertEquals(1, result1.onlySuccessful().size)
         val id1 = result1.onlySuccessful().first().id
 
-        val result2 = producer.send("bugaga")
+        val result2 = producer.send(queue, "bugaga")
         assertEquals(0, result2.failedMessages)
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
@@ -79,15 +79,15 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData_WithCustomProducerName() {
         val firstProducerName = "first_producer"
         val secondProducerName = "second_producer"
-        val firstProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = firstProducerName))
-        val secondProducer = DatabaseProducer(dataSource, queue, ProducerOptions(producer = secondProducerName))
+        val firstProducer = DatabaseProducer(dataSource, ProducerOptions(producer = firstProducerName))
+        val secondProducer = DatabaseProducer(dataSource, ProducerOptions(producer = secondProducerName))
 
-        val result1 = firstProducer.send("bugaga")
+        val result1 = firstProducer.send(queue, "bugaga")
         assertEquals(0, result1.failedMessages)
         assertEquals(1, result1.onlySuccessful().size)
         val id1 = result1.onlySuccessful().first().id
 
-        val result2 = secondProducer.send("bugaga")
+        val result2 = secondProducer.send(queue, "bugaga")
         assertEquals(0, result2.failedMessages)
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
@@ -111,15 +111,15 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSendSimpleDataAsSendMessage() {
-        val producer = DatabaseProducer(dataSource, queue)
+        val producer = DatabaseProducer(dataSource)
 
-        val id1 = producer.send(SendMessage("bugaga", TestMeta(1))).let { (failedMessages, result) ->
+        val id1 = producer.send(queue, SendMessage("bugaga", TestMeta(1))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
 
-        val id2 = producer.send(SendMessage("bugaga", TestMeta(2))).let { (failedMessages, result) ->
+        val id2 = producer.send(queue, SendMessage("bugaga", TestMeta(2))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
@@ -136,11 +136,10 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendProhibited() {
         val producer = DatabaseProducer(
             dataSource,
-            queue,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
         )
 
-        val result = producer.send(items)
+        val result = producer.send(queue, items)
 
         assertEquals(items.size, result.failedMessages) // all messages failed
         assertEquals(items, result.gatherFailedMessages())
@@ -159,11 +158,10 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendUntilFirstFailure() {
         val producer = DatabaseProducer(
             dataSource,
-            queue,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
         )
 
-        val result = producer.send(items)
+        val result = producer.send(queue, items)
 
         assertEquals(10, result.failedMessages) // 10 of 15 messages are failed
         assertEquals(second + third, result.gatherFailedMessages())
@@ -190,11 +188,10 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendAsManyAsPossible() {
         val producer = DatabaseProducer(
             dataSource,
-            queue,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         )
 
-        val result = producer.send(items)
+        val result = producer.send(queue, items)
 
         assertEquals(5, result.failedMessages) // 5 of 15 messages are failed
         assertEquals(second, result.gatherFailedMessages())

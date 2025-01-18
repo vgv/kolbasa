@@ -43,9 +43,9 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     @Test
     fun testReceive_JustReceiveTest() {
         // Send N messages
-        val clusterProducer = ClusterProducer(cluster, queue)
+        val clusterProducer = ClusterProducer(cluster)
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
-            clusterProducer.send(message)
+            clusterProducer.send(queue, message)
         }
 
         // Try to receive all messages and test that all messages are received
@@ -57,14 +57,14 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     @Test
     fun testMessagesDistribution_TestOneMigratingShard() {
         // Send N messages randomly to all nodes
-        val clusterProducer = ClusterProducer(cluster, queue)
+        val clusterProducer = ClusterProducer(cluster)
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
             val sendRequest = SendRequest<Int, Unit>(
                 data = listOf(SendMessage(data = message)),
                 sendOptions = SendOptions(shard = message)
             )
 
-            clusterProducer.send(sendRequest)
+            clusterProducer.send(queue, sendRequest)
         }
 
         // change consumer node to 'unknown' for this dataSource

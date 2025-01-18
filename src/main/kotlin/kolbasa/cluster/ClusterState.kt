@@ -79,7 +79,7 @@ internal data class ClusterState(
 
     // -------------------------------------------------------------------------------------------------
 
-    private val producers: ConcurrentMap<ClusterProducer<*, *>, ConcurrentMap<String, Producer<*, *>>> by lazy {
+    private val producers: ConcurrentMap<ClusterProducer, ConcurrentMap<String, Producer>> by lazy {
         ConcurrentHashMap()
     }
 
@@ -93,12 +93,11 @@ internal data class ClusterState(
 
     // -------------------------------------------------------------------------------------------------
 
-
-    fun <Data, Meta : Any> getProducer(
-        clusterProducer: ClusterProducer<*, *>,
+    fun getProducer(
+        clusterProducer: ClusterProducer,
         shard: Int,
-        generateProducer: (DataSource) -> Producer<Data, Meta>
-    ): Producer<Data, Meta> {
+        generateProducer: (DataSource) -> Producer
+    ): Producer {
         val nodeToProducers = producers.computeIfAbsent(clusterProducer) { _ ->
             ConcurrentHashMap()
         }
@@ -121,7 +120,7 @@ internal data class ClusterState(
             generateProducer(dataSource)
         }
 
-        return producer as Producer<Data, Meta>
+        return producer
     }
 
     fun <Data, Meta : Any> getActiveConsumer(

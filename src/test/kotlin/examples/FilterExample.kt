@@ -32,7 +32,7 @@ fun main() {
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
     // Create producer and send several messages with meta information
-    val producer = DatabaseProducer(dataSource, queue)
+    val producer = DatabaseProducer(dataSource)
     val messagesToSend = (1..100).map { index ->
         SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
     }

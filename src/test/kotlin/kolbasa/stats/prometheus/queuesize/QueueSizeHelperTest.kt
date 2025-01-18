@@ -42,10 +42,10 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
         val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send("1")
-        producer.send("2")
-        producer.send("3")
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, "1")
+        producer.send(queue, "2")
+        producer.send(queue, "3")
 
         // Measure table size
         // Even if we have inserted 3 records, the table size is still -1 (or 0 on old PG) because we haven't run vacuum yet
@@ -75,10 +75,10 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
         val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
-        val producer = DatabaseProducer(dataSource, queue)
-        producer.send("1")
-        producer.send("2")
-        producer.send("3")
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, "1")
+        producer.send(queue, "2")
+        producer.send(queue, "3")
 
         // Run vacuum after insert to update stats
         fullVacuum(dataSource, queue.dbTableName)

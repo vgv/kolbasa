@@ -37,18 +37,18 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         val data = "bugaga"
         val messageToSend = SendMessage(data = data, meta = TestMeta(1), messageOptions = MessageOptions(attempts = 1))
 
-        val producer = DatabaseProducer(dataSource, queue)
+        val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource, queue)
 
         // First send – success
-        val id = producer.send(messageToSend).let { (failedMessages, result) ->
+        val id = producer.send(queue, messageToSend).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
 
         // Second produce with the same meta field value should fail...
-        producer.send(messageToSend).let { (failedMessages, result) ->
+        producer.send(queue, messageToSend).let { (failedMessages, result) ->
             assertEquals(1, failedMessages)
             assertEquals(0, result.onlySuccessful().size)
             assertEquals(0, result.onlyDuplicated().size)
@@ -70,7 +70,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         }
 
         // Send message again with success
-        producer.send(messageToSend)
+        producer.send(queue, messageToSend)
 
         // Very dirty, raw check directly in the database that we really have two messages
         // with the same meta field value
