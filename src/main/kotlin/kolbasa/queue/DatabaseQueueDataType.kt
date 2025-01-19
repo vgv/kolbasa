@@ -20,7 +20,7 @@ sealed class DatabaseQueueDataType<Data> {
         val serializer: (Data) -> String,
         val deserializer: (String) -> Data
     ) : DatabaseQueueDataType<Data>() {
-        override val dbColumnType = "text"
+        override val dbColumnType = "varchar"
     }
 
     data class Int<Data>(
