@@ -10,7 +10,7 @@ import javax.sql.DataSource
 internal object ShardSchema {
 
     // q__shard
-    const val SHARD_TABLE_NAME = Const.QUEUE_TABLE_NAME_PREFIX + "_shard"
+    const val SHARD_TABLE_NAME = Const.INTERNAL_KOLBASA_TABLE_PREFIX + "shard"
     const val SHARD_COLUMN_NAME = "shard"
     const val PRODUCER_NODE_COLUMN_NAME = "producer_node"
     const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"

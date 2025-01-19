@@ -24,6 +24,9 @@ internal object Const {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
         "_"
 
+    // q__
+    const val INTERNAL_KOLBASA_TABLE_PREFIX = QUEUE_TABLE_NAME_PREFIX + "_"
+
     const val ID_COLUMN_NAME = "id"
 
     const val USELESS_COUNTER_COLUMN_NAME = "uc"
