@@ -1,5 +1,7 @@
 package kolbasa.schema
 
+import java.sql.Types
+
 data class Schema(
     val all: SchemaStatements,
     val required: SchemaStatements
@@ -34,18 +36,21 @@ internal data class Column(
     val defaultExpression: String?
 )
 
-internal enum class ColumnType(val dbTypes: Set<String>) {
-    SMALLINT(setOf("int2")),
-    INT(setOf("int4")),
-    BIGINT(setOf("int8")),
-    REAL(setOf("float4")),
-    DOUBLE(setOf("float8")),
-    NUMERIC(setOf("numeric")),
-    BOOLEAN(setOf("bool")),
-    TIMESTAMP(setOf("timestamp")),
-    CHAR(setOf("bpchar")),
-    VARCHAR(setOf("varchar")),
-    VARCHAR_ARRAY(setOf("_varchar"));
+internal enum class ColumnType(
+    val dbTypes: Set<String>,
+    val sqlType: Int
+) {
+    SMALLINT(setOf("int2"), Types.SMALLINT),
+    INT(setOf("int4"), Types.INTEGER),
+    BIGINT(setOf("int8"), Types.BIGINT),
+    REAL(setOf("float4"), Types.REAL),
+    DOUBLE(setOf("float8"), Types.DOUBLE),
+    NUMERIC(setOf("numeric"), Types.NUMERIC),
+    BOOLEAN(setOf("bool"), Types.BOOLEAN),
+    TIMESTAMP(setOf("timestamp"), Types.TIMESTAMP),
+    CHAR(setOf("bpchar"), Types.VARCHAR),
+    VARCHAR(setOf("varchar"), Types.VARCHAR),
+    VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY);
 
     companion object {
         fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
