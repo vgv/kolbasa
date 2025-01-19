@@ -29,10 +29,28 @@ internal data class Table(
 
 internal data class Column(
     val name: String,
-    val type: String,
+    val type: ColumnType,
     val nullable: Boolean,
     val defaultExpression: String?
 )
+
+internal enum class ColumnType(val dbTypes: Set<String>) {
+    SMALLINT(setOf("int2")),
+    INT(setOf("int4")),
+    BIGINT(setOf("int8")),
+    REAL(setOf("float4")),
+    DOUBLE(setOf("float8")),
+    NUMERIC(setOf("numeric")),
+    BOOLEAN(setOf("bool")),
+    TIMESTAMP(setOf("timestamp")),
+    CHAR(setOf("bpchar")),
+    VARCHAR(setOf("varchar")),
+    VARCHAR_ARRAY(setOf("_varchar"));
+
+    companion object {
+        fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
+    }
+}
 
 internal data class Index(
     val name: String,

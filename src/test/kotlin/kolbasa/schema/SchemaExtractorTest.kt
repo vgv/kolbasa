@@ -17,8 +17,15 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
                 scheduled_at timestamp default clock_timestamp() + interval '12345 millisecond',
                 attempts int not null default 42,
                 producer varchar(256),
+                meta_string_value varchar(256),
+                meta_long_value bigint,
                 meta_int_value int,
-                meta_long_value bigint
+                meta_short_value smallint,
+                meta_boolean_value boolean,
+                meta_double_value double precision,
+                meta_float_value real,
+                meta_char_value char(1),
+                meta_biginteger_value numeric
             )
         """.trimIndent()
         )
@@ -45,40 +52,103 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         val testTable = assertNotNull(tables[testTableName])
 
         // check columns
-        assertEquals(7, testTable.columns.size, "Found columns: ${testTable.columns}")
+        assertEquals(14, testTable.columns.size, "Found columns: ${testTable.columns}")
 
         // id
         assertNotNull(testTable.findColumn("id")).let { idColumn ->
-            assertEquals("int8", idColumn.type)
+            assertEquals(ColumnType.BIGINT, idColumn.type)
             assertFalse(idColumn.nullable)
         }
 
         // created_at
         assertNotNull(testTable.findColumn("created_at")).let { createdAtColumn ->
-            assertEquals("timestamp", createdAtColumn.type)
+            assertEquals(ColumnType.TIMESTAMP, createdAtColumn.type)
             assertFalse(createdAtColumn.nullable)
             assertNotNull(createdAtColumn.defaultExpression)
         }
 
         // scheduled_at
         assertNotNull(testTable.findColumn("scheduled_at")).let { scheduledAtColumn ->
-            assertEquals("timestamp", scheduledAtColumn.type)
+            assertEquals(ColumnType.TIMESTAMP, scheduledAtColumn.type)
             assertTrue(scheduledAtColumn.nullable)
             assertNotNull(scheduledAtColumn.defaultExpression)
         }
 
         // attempts
         assertNotNull(testTable.findColumn("attempts")).let { attemptsColumn ->
-            assertEquals("int4", attemptsColumn.type)
+            assertEquals(ColumnType.INT, attemptsColumn.type)
             assertFalse(attemptsColumn.nullable)
             assertEquals("42", attemptsColumn.defaultExpression)
         }
 
         // producer
         assertNotNull(testTable.findColumn("producer")).let { producerColumn ->
-            assertEquals("varchar", producerColumn.type)
+            assertEquals(ColumnType.VARCHAR, producerColumn.type)
             assertTrue(producerColumn.nullable)
             assertNull(producerColumn.defaultExpression)
+        }
+
+        // meta_string_value
+        assertNotNull(testTable.findColumn("meta_string_value")).let { metaStringValueColumn ->
+            assertEquals(ColumnType.VARCHAR, metaStringValueColumn.type)
+            assertTrue(metaStringValueColumn.nullable)
+            assertNull(metaStringValueColumn.defaultExpression)
+        }
+
+        // meta_long_value
+        assertNotNull(testTable.findColumn("meta_long_value")).let { metaLongValueColumn ->
+            assertEquals(ColumnType.BIGINT, metaLongValueColumn.type)
+            assertTrue(metaLongValueColumn.nullable)
+            assertNull(metaLongValueColumn.defaultExpression)
+        }
+
+        // meta_int_value
+        assertNotNull(testTable.findColumn("meta_int_value")).let { metaIntValueColumn ->
+            assertEquals(ColumnType.INT, metaIntValueColumn.type)
+            assertTrue(metaIntValueColumn.nullable)
+            assertNull(metaIntValueColumn.defaultExpression)
+        }
+
+        // meta_short_value
+        assertNotNull(testTable.findColumn("meta_short_value")).let { metaShortValueColumn ->
+            assertEquals(ColumnType.SMALLINT, metaShortValueColumn.type)
+            assertTrue(metaShortValueColumn.nullable)
+            assertNull(metaShortValueColumn.defaultExpression)
+        }
+
+        // meta_boolean_value
+        assertNotNull(testTable.findColumn("meta_boolean_value")).let { metaBooleanValueColumn ->
+            assertEquals(ColumnType.BOOLEAN, metaBooleanValueColumn.type)
+            assertTrue(metaBooleanValueColumn.nullable)
+            assertNull(metaBooleanValueColumn.defaultExpression)
+        }
+
+        // meta_double_value
+        assertNotNull(testTable.findColumn("meta_double_value")).let { metaDoubleValueColumn ->
+            assertEquals(ColumnType.DOUBLE, metaDoubleValueColumn.type)
+            assertTrue(metaDoubleValueColumn.nullable)
+            assertNull(metaDoubleValueColumn.defaultExpression)
+        }
+
+        // meta_float_value
+        assertNotNull(testTable.findColumn("meta_float_value")).let { metaFloatValueColumn ->
+            assertEquals(ColumnType.REAL, metaFloatValueColumn.type)
+            assertTrue(metaFloatValueColumn.nullable)
+            assertNull(metaFloatValueColumn.defaultExpression)
+        }
+
+        // meta_char_value
+        assertNotNull(testTable.findColumn("meta_char_value")).let { metaCharValueColumn ->
+            assertEquals(ColumnType.CHAR, metaCharValueColumn.type)
+            assertTrue(metaCharValueColumn.nullable)
+            assertNull(metaCharValueColumn.defaultExpression)
+        }
+
+        // meta_biginteger_value
+        assertNotNull(testTable.findColumn("meta_biginteger_value")).let { metaBigIntegerValueColumn ->
+            assertEquals(ColumnType.NUMERIC, metaBigIntegerValueColumn.type)
+            assertTrue(metaBigIntegerValueColumn.nullable)
+            assertNull(metaBigIntegerValueColumn.defaultExpression)
         }
 
         // Check indexes

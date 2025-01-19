@@ -37,7 +37,10 @@ internal object SchemaExtractor {
             val columnDefault = columnsResultSet.getString("COLUMN_DEF")
             val columnNullable = columnsResultSet.getInt("NULLABLE")
 
-            result += Column(columnName, columnType, columnNullable == 1, columnDefault)
+            val parsedColumnType = requireNotNull(ColumnType.fromDbType(columnType)) {
+                """Unsupported column type "$columnType" for column "$columnName" in table "$tableName"."""
+            }
+            result += Column(columnName, parsedColumnType, columnNullable == 1, columnDefault)
         }
 
         return result
