@@ -11,7 +11,15 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>): Map<Queue<*, *>, Schema> {
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, tableNamePattern = null)
+        val queuesDbNames = queues.map { it.dbTableName }.toSet()
+
+        val existingTables = SchemaExtractor
+            // Find all tables that match the queue name pattern
+            .extractRawSchema(dataSource, tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%")
+            // ... and leave only those that we are interested in
+            .filter { foundTable ->
+                foundTable.key in queuesDbNames
+            }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
