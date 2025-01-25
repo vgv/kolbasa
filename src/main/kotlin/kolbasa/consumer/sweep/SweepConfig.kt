@@ -1,4 +1,4 @@
-package kolbasa
+package kolbasa.consumer.sweep
 
 import kolbasa.queue.Checks
 

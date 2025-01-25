@@ -1,6 +1,7 @@
 package kolbasa
 
 import kolbasa.cluster.ShardStrategy
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig

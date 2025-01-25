@@ -1,6 +1,5 @@
-package kolbasa.consumer
+package kolbasa.consumer.sweep
 
-import kolbasa.SweepConfig
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import org.junit.jupiter.api.Test
