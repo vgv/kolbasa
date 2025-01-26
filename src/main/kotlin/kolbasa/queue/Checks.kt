@@ -1,6 +1,6 @@
 package kolbasa.queue
 
-import kolbasa.SweepConfig
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration

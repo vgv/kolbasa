@@ -1,7 +1,7 @@
-package kolbasa.consumer
+package kolbasa.consumer.sweep
 
 import kolbasa.Kolbasa
-import kolbasa.SweepConfig
+import kolbasa.consumer.ConsumerSchemaHelpers
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.utils.Lock
 import kolbasa.queue.Queue
