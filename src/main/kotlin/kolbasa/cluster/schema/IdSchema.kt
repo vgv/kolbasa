@@ -19,8 +19,8 @@ internal object IdSchema {
     internal const val SERVER_ID_COLUMN_LENGTH = 100
     private const val CREATED_AT_COLUMN_NAME = "created_at"
     // TODO: drop after a few releases
-    //private const val SEND_ENABLED_COLUMN_NAME = "send_enabled"
-    //private const val RECEIVE_ENABLED_COLUMN_NAME = "receive_enabled"
+    private const val SEND_ENABLED_COLUMN_NAME = "send_enabled"
+    private const val RECEIVE_ENABLED_COLUMN_NAME = "receive_enabled"
 
     private const val ACTIVE_STATUS = "active"
 
@@ -55,8 +55,8 @@ internal object IdSchema {
             CREATE_TABLE_STATEMENT,
             INIT_TABLE_STATEMENT,
             // TODO: drop after a few releases
-            //"alter table $NODE_TABLE_NAME drop column if exists $SEND_ENABLED_COLUMN_NAME",
-            //"alter table $NODE_TABLE_NAME drop column if exists $RECEIVE_ENABLED_COLUMN_NAME",
+            "alter table $NODE_TABLE_NAME drop column if exists $SEND_ENABLED_COLUMN_NAME",
+            "alter table $NODE_TABLE_NAME drop column if exists $RECEIVE_ENABLED_COLUMN_NAME",
         )
 
         dataSource.useConnectionWithAutocommit { connection ->
