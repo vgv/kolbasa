@@ -55,12 +55,12 @@ internal object ShardSchema {
         }
     }
 
-    fun fillShardTable(dataSource: DataSource, nodes: List<String>) {
+    fun fillShardTable(dataSource: DataSource, nodes: List<Node>) {
         val shardsPerStatement = 100
         val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
-                "($shard, '$randomNode', '$randomNode')"
+                "($shard, '${randomNode.serverId}', '${randomNode.serverId}')"
             }
 
             """

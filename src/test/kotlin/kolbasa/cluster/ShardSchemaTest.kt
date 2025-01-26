@@ -2,6 +2,7 @@ package kolbasa.cluster
 
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.cluster.schema.Node
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
@@ -18,6 +19,12 @@ import kotlin.test.assertTrue
 
 class ShardSchemaTest : AbstractPostgresqlTest() {
 
+    private val nodes = listOf(
+        Node("node1", null),
+        Node("node2", null),
+        Node("node3", null)
+    )
+
     @Test
     fun testCreateShardTableAndFill_FromEmptyToFull() {
         ShardSchema.createShardTable(dataSource)
@@ -27,7 +34,6 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
         assertTrue(empty.isEmpty())
 
         // Fill shard table (empty -> full)
-        val nodes = listOf("node1", "node2", "node3")
         ShardSchema.fillShardTable(dataSource, nodes)
         val full = ShardSchema.readShards(dataSource)
         checkFullShardsTable(full, nodes)
@@ -35,7 +41,6 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCreateShardTableAndFill_TestShardsOutOfBounds() {
-        val nodes = listOf("node1", "node2", "node3")
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
 
@@ -64,7 +69,6 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCreateShardTableAndFill_FromNotSoEmptyToFull() {
-        val nodes = listOf("node1", "node2", "node3")
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
 
@@ -87,8 +91,16 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
         }
         // check that shards were really deleted
         val notSoFull = ShardSchema.readShards(dataSource)
-        assertEquals(Shard.SHARD_COUNT - shardsToDelete.size, notSoFull.size, "Deleted shards: $shardsToDelete, remaining: ${notSoFull.keys}")
-        assertEquals(0, notSoFull.keys.intersect(shardsToDelete).size, "Deleted shards: $shardsToDelete, remaining: ${notSoFull.keys}")
+        assertEquals(
+            Shard.SHARD_COUNT - shardsToDelete.size,
+            notSoFull.size,
+            "Deleted shards: $shardsToDelete, remaining: ${notSoFull.keys}"
+        )
+        assertEquals(
+            0,
+            notSoFull.keys.intersect(shardsToDelete).size,
+            "Deleted shards: $shardsToDelete, remaining: ${notSoFull.keys}"
+        )
 
         // Fill deleted shards and check that shards table is full again
         ShardSchema.fillShardTable(dataSource, nodes)
@@ -96,7 +108,7 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
         checkFullShardsTable(fullAfterDelete, nodes)
     }
 
-    private fun checkFullShardsTable(shards: Map<Int, Shard>, nodes: List<String>) {
+    private fun checkFullShardsTable(shards: Map<Int, Shard>, nodes: List<Node>) {
         assertEquals(Shard.SHARD_COUNT, shards.size)
 
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { shardNumber ->
@@ -104,8 +116,8 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
             assertEquals(shardNumber, shard.shard, "Shard: $shard")
             assertEquals(shard.producerNode, shard.consumerNode, "Shard: $shard")
             assertNull(shard.nextConsumerNode, "Shard: $shard")
-            assertTrue(nodes.contains(shard.producerNode), "Shard: $shard")
-            assertTrue(nodes.contains(shard.consumerNode), "Shard: $shard")
+            assertTrue(nodes.any { it.serverId == shard.producerNode }, "Shard: $shard")
+            assertTrue(nodes.any { it.serverId == shard.consumerNode}, "Shard: $shard")
         }
     }
 
