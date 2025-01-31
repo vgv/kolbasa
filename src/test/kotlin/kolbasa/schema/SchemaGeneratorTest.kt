@@ -24,7 +24,7 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
 
     @Test
     fun testExtractSchema_CheckStatementsAreEqualIfNoTablesAtAll() {
-        val schema = SchemaGenerator.generateTableSchema(queue, null)
+        val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.LOCAL_RANGE)
 
         assertEquals(schema.all, schema.required)
     }
@@ -39,7 +39,7 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
         assertNotNull(existingTable)
 
         // we don't expect anything in "required", because schema is actual
-        val schema = SchemaGenerator.generateTableSchema(queue, existingTable)
+        val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.LOCAL_RANGE)
         assertTrue(schema.required.isEmpty(), "Required object: ${schema.required}")
     }
 

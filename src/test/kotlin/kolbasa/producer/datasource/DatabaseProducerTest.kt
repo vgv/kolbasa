@@ -11,6 +11,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Unique
 import kolbasa.schema.Const
+import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -68,8 +69,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
 
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -92,8 +93,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
 
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -125,8 +126,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE, id1.localId)
-        assertEquals(Const.MIN_QUEUE_IDENTIFIER_VALUE + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -170,7 +171,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE, it.id.localId)
+                assertEquals(index + IdRange.LOCAL_RANGE.start, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -200,7 +201,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE, it.id.localId)
+                assertEquals(index +IdRange.LOCAL_RANGE.start, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -213,7 +214,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index + 6]).let {
-                assertEquals(index + Const.MIN_QUEUE_IDENTIFIER_VALUE + 8, it.id.localId)
+                assertEquals(index + IdRange.LOCAL_RANGE.start + 8, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }

@@ -8,11 +8,14 @@ import kolbasa.queue.meta.MetaIndexType
 
 internal object SchemaGenerator {
 
-    internal fun generateTableSchema(queue: Queue<*, *>, existingTable: Table?): Schema {
+    internal fun generateTableSchema(queue: Queue<*, *>, existingTable: Table?, idRange: IdRange): Schema {
         val mutableSchema = MutableSchema()
 
         // table
-        forTable(queue, existingTable, mutableSchema)
+        forTable(queue, existingTable, mutableSchema, idRange)
+
+        // table sequence
+        forIdSequence(queue, existingTable, mutableSchema, idRange)
 
         // shard column
         forShard(queue, existingTable, mutableSchema)
@@ -34,11 +37,10 @@ internal object SchemaGenerator {
         )
     }
 
-
-    private fun forTable(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema) {
+    private fun forTable(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema, idRange: IdRange) {
         val createTableStatement = """
             create table if not exists ${queue.dbTableName}(
-                ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${Const.MIN_QUEUE_IDENTIFIER_VALUE} maxvalue ${Const.MAX_QUEUE_IDENTIFIER_VALUE} cycle) primary key,
+                ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${idRange.start} maxvalue ${idRange.end} cycle) primary key,
                 ${Const.USELESS_COUNTER_COLUMN_NAME} int,
                 ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
                 ${Const.SHARD_COLUMN_NAME} int not null,
@@ -57,6 +59,17 @@ internal object SchemaGenerator {
             mutableSchema.requiredTables += createTableStatement
         }
     }
+
+    private fun forIdSequence(
+        queue: Queue<*, *>,
+        existingTable: Table?,
+        mutableSchema: MutableSchema,
+        idRange: IdRange
+    ) {
+        // TODO("Not yet implemented")
+    }
+
+
 
     private fun forShard(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema){
         val hasColumn = existingTable?.findColumn(Const.SHARD_COLUMN_NAME) != null

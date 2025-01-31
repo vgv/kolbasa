@@ -1,18 +1,22 @@
 package kolbasa.schema
 
-import kolbasa.cluster.schema.Node
-
 internal data class IdRange(
     val start: Long,
     val end: Long
 ) {
 
     companion object {
+
         fun generateRange(bucket: Int): IdRange {
-            val start = bucket.toLong() shl Node.BITS_TO_HOLD_ID_VALUE
-            val end = start or Node.VALUE_MASK
+            val longBucket = bucket.toLong()
+
+            val start = longBucket shl Node.BITS_TO_HOLD_ID_VALUE // the smallest possible number for a given bucket
+            val end = start or Node.VALUE_MASK // the biggest possible number for a given bucket
             return IdRange(start, end)
         }
+
+        // Range for non-clustered environment
+        val LOCAL_RANGE = IdRange(0, Long.MAX_VALUE)
     }
 
 }

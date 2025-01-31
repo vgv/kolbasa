@@ -1,11 +1,10 @@
 package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.cluster.schema.IdSchema
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
-import org.junit.jupiter.api.Test
+import kolbasa.schema.IdSchema
 import java.sql.Statement
 import javax.sql.DataSource
 import kotlin.test.*
@@ -17,12 +16,12 @@ class ClusterTest : AbstractPostgresqlTest() {
         val cluster = Cluster(emptyList())
 
         assertFailsWith<IllegalStateException> {
-            cluster.updateState()
+            cluster.initAndScheduleStateUpdate()
         }
     }
 
     @Test
-    fun testInitCluster_IfNotInitialized() {
+    fun testInitCluster_If_State_Not_Initialized() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val cluster = Cluster(dataSources)
 
@@ -38,11 +37,11 @@ class ClusterTest : AbstractPostgresqlTest() {
         val cluster = Cluster(dataSources)
 
         // First initialization
-        cluster.updateState()
+        cluster.updateStateOnce()
         val firstState = cluster.getState()
 
         // Second initialization, check that states are the same
-        cluster.updateState()
+        cluster.updateStateOnce()
         val secondState = cluster.getState()
 
         assertSame(firstState, secondState)
@@ -60,7 +59,7 @@ class ClusterTest : AbstractPostgresqlTest() {
         val cluster = Cluster(dataSources.values.toList())
 
         // First shard table initialization/read
-        cluster.updateState()
+        cluster.updateStateOnce()
         val firstState = cluster.getState()
 
         // ---------------------------------------------------------------------------------------
@@ -89,7 +88,7 @@ class ClusterTest : AbstractPostgresqlTest() {
         // ---------------------------------------------------------------------------------------
 
         // Second shard table read
-        cluster.updateState()
+        cluster.updateStateOnce()
         val secondState = cluster.getState()
 
         assertNotEquals(firstState, secondState)
@@ -108,16 +107,16 @@ class ClusterTest : AbstractPostgresqlTest() {
         val cluster = Cluster(dataSources.values.toList())
 
         // First initialization
-        cluster.updateState()
+        cluster.updateStateOnce()
         val firstShardIDs = dataSources.mapNotNull { (_, dataSource) ->
-            IdSchema.readNodeId(dataSource)
+            IdSchema.readNodeInfo(dataSource)
         }
         assertEquals(dataSources.size, firstShardIDs.size, "Data sources: $dataSources, shardIds: $firstShardIDs")
 
         // Second initialization, check that IDs are the same
-        cluster.updateState()
+        cluster.updateStateOnce()
         val secondShardIDs = dataSources.mapNotNull { (_, dataSource) ->
-            IdSchema.readNodeId(dataSource)
+            IdSchema.readNodeInfo(dataSource)
         }
         assertEquals(dataSources.size, secondShardIDs.size, "Data sources: $dataSources, shardIds: $secondShardIDs")
         assertEquals(firstShardIDs, secondShardIDs)
@@ -132,7 +131,7 @@ class ClusterTest : AbstractPostgresqlTest() {
         )
 
         val cluster = Cluster(dataSources.values.toList())
-        cluster.updateState()
+        cluster.updateStateOnce()
 
         // Number of created shard tables
         val shardTables = findShardTables(dataSources)
@@ -147,11 +146,12 @@ class ClusterTest : AbstractPostgresqlTest() {
         val nodeIdWithShardTable = shardTables.first().nodeId
         val smallestExistingId = dataSources
             .mapNotNull { (_, dataSource) ->
-                IdSchema.readNodeId(dataSource)
+                IdSchema.readNodeInfo(dataSource)
             }
             .minOf { it }
-        assertEquals(smallestExistingId, nodeIdWithShardTable)
+        assertEquals(smallestExistingId.serverId, nodeIdWithShardTable)
     }
+
 
     private fun findShardTables(dataSources: Map<String, DataSource>): List<FoundShardTable> {
         return dataSources
@@ -167,8 +167,8 @@ class ClusterTest : AbstractPostgresqlTest() {
                 """.trimIndent()
 
                 val numberOfTables = dataSource.readInt(sql)
-                val thisNodeId = requireNotNull(IdSchema.readNodeId(dataSource))
-                FoundShardTable(numberOfTables, thisNodeId, schema, dataSource)
+                val thisNodeId = requireNotNull(IdSchema.readNodeInfo(dataSource))
+                FoundShardTable(numberOfTables, thisNodeId.serverId, schema, dataSource)
             }
     }
 

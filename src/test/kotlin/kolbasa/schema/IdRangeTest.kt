@@ -1,6 +1,5 @@
 package kolbasa.schema
 
-import kolbasa.cluster.schema.Node
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -10,7 +9,7 @@ class IdRangeTest {
 
     @Test
     fun testGenerateRange() {
-        val allPossibleBuckets = (Node.MIN_BUCKET..Node.MAX_BUCKET) + Node.BUCKET_FOR_NOT_CLUSTERED_ENVIRONMENT
+        val allPossibleBuckets = (Node.MIN_BUCKET..Node.MAX_BUCKET)
 
         allPossibleBuckets.forEach { bucket ->
             val range = IdRange.generateRange(bucket)
@@ -27,10 +26,10 @@ class IdRangeTest {
 
     @Test
     fun testGenerateRange_No_Intersections() {
-        val allPossibleBuckets = (Node.MIN_BUCKET..Node.MAX_BUCKET) + Node.BUCKET_FOR_NOT_CLUSTERED_ENVIRONMENT
+        val allPossibleBuckets = (Node.MIN_BUCKET..Node.MAX_BUCKET)
 
         val allPossibleRanges = allPossibleBuckets.map(IdRange.Companion::generateRange)
-        for (i in 0 .. allPossibleRanges.size - 2) {
+        for (i in 0..allPossibleRanges.size - 2) {
             val range = allPossibleRanges[i]
 
             for (j in i + 1 until allPossibleRanges.size) {
@@ -39,6 +38,14 @@ class IdRangeTest {
                 assertFalse(range intersect otherRange, "$range vs $otherRange")
             }
         }
+    }
+
+    @Test
+    fun testLocalRange() {
+        val start = 0L
+        val end = Long.MAX_VALUE
+        assertEquals(start, IdRange.LOCAL_RANGE.start)
+        assertEquals(end, IdRange.LOCAL_RANGE.end)
     }
 
     @Test

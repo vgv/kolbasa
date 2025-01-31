@@ -2,7 +2,7 @@ package kolbasa.cluster
 
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.cluster.schema.Node
+import kolbasa.schema.Node
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
@@ -20,9 +20,9 @@ import kotlin.test.assertTrue
 class ShardSchemaTest : AbstractPostgresqlTest() {
 
     private val nodes = listOf(
-        Node("node1", null),
-        Node("node2", null),
-        Node("node3", null)
+        Node("node1", 1),
+        Node("node2", 2),
+        Node("node3", 3)
     )
 
     @Test

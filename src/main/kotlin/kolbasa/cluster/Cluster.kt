@@ -1,18 +1,40 @@
 package kolbasa.cluster
 
-import kolbasa.cluster.schema.IdSchema
+import kolbasa.Kolbasa
+import kolbasa.schema.IdSchema
+import kolbasa.schema.Node
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.queue.Queue
+import kolbasa.schema.SchemaHelpers
+import java.util.*
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
-class Cluster(private val dataSources: () -> List<DataSource>) {
+class Cluster @JvmOverloads constructor(
+    private val dataSources: () -> List<DataSource>,
+    private val queues: List<Queue<*, *>> = emptyList(),
+) {
 
-    constructor(dataSources: List<DataSource>) : this({ dataSources })
+    @JvmOverloads
+    constructor(dataSources: List<DataSource>, queues: List<Queue<*, *>> = emptyList()) : this({ dataSources }, queues)
 
     @Volatile
     private var state: ClusterState = ClusterState.NOT_INITIALIZED
 
+    fun initAndScheduleStateUpdate() {
+        updateStateOnce()
+
+        val (interval, executor) = Kolbasa.clusterStateUpdateConfig
+
+        executor.schedule(
+            { initAndScheduleStateUpdate() },
+            interval.seconds,
+            TimeUnit.SECONDS
+        )
+    }
+
     @Synchronized
-    fun updateState() {
+    fun updateStateOnce() {
         val dataSources = dataSources()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
@@ -20,28 +42,72 @@ class Cluster(private val dataSources: () -> List<DataSource>) {
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
+        dataSources.forEach { dataSource: DataSource ->
+            SchemaHelpers.updateDatabaseSchema(dataSource, queues)
+        }
 
-        val newState = ClusterState(nodes, shards)
+        val newState = ClusterState(nodes.mapKeys { it.key.serverId }, shards)
         if (newState != state) {
             state = newState
         }
     }
 
-    private fun initNodes(dataSources: List<DataSource>): Map<String, DataSource> {
-        return dataSources
+    private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
+        var nodes = readNodes(dataSources)
+        while (remapBucketIdentifiers(nodes)) {
+            nodes = readNodes(dataSources)
+        }
+
+        return nodes
+    }
+
+    private fun readNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
+        val nodes = dataSources
             .associateBy { dataSource ->
                 IdSchema.createAndInitIdTable(dataSource)
-                requireNotNull(IdSchema.readNodeId(dataSource)) {
+                requireNotNull(IdSchema.readNodeInfo(dataSource)) {
                     "Node info is not found, dataSource: $dataSource"
                 }
             }
+            .toSortedMap()
+
+        // Check serverId uniqueness, maybe later I will add some kind of auto-fixing, but not now
+        val uniqueServerIds = nodes.map { it.key.serverId }.toSet()
+        check(uniqueServerIds.size == nodes.size) {
+            "ServerId isn't unique"
+        }
+
+        return nodes
     }
 
-    private fun initShards(nodes: Map<String, DataSource>): Map<Int, Shard> {
-        val sortedNodes = nodes.toSortedMap()
+    private fun remapBucketIdentifiers(nodes: SortedMap<Node, DataSource>): Boolean {
+        val existingBuckets = nodes.keys.map { it.identifiersBucket }.toSet()
+        val assignedBuckets = mutableSetOf<Int>()
+        var nextBucket = Node.MIN_BUCKET
+        var remappedAtLeastOnce = false
 
+        nodes.forEach { (node, dataSource) ->
+            val currentBucket = node.identifiersBucket
+
+            if (currentBucket in assignedBuckets) {
+                while ((nextBucket in assignedBuckets) || (nextBucket in existingBuckets)) {
+                    nextBucket++
+                }
+
+                IdSchema.updateIdentifiersBucket(dataSource, currentBucket, nextBucket)
+                assignedBuckets += nextBucket
+                remappedAtLeastOnce = true
+            } else {
+                assignedBuckets += currentBucket
+            }
+        }
+
+        return remappedAtLeastOnce
+    }
+
+    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<Int, Shard> {
         // First, try to find a node with a 100% initialized shard table, if found, return it
-        for ((_, dataSource) in sortedNodes) {
+        for ((_, dataSource) in nodes) {
             val shards = try {
                 ShardSchema.readShards(dataSource)
             } catch (e: Exception) {
@@ -57,7 +123,7 @@ class Cluster(private val dataSources: () -> List<DataSource>) {
 
         // No fully initialized shard table found, let's create a
         // fully initialized shard table on the node with the smallest id
-        val (_, dataSource) = sortedNodes.entries.first()
+        val (_, dataSource) = nodes.entries.first()
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         return ShardSchema.readShards(dataSource)
