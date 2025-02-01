@@ -7,28 +7,30 @@ import javax.sql.DataSource
 object SchemaHelpers {
 
     /**
-     * Generate all statements needed to create/update database schema, but doesn't execute them
+     * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
     fun generateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>): Map<Queue<*, *>, Schema> {
-        val queuesDbNames = queues.map { it.dbTableName }.toSet()
+        val node = IdSchema.readNodeInfo(dataSource)
+        val idRange = if (node != null) {
+            // This server is a part of a clustered environment, currently or in the past
+            // We can't know for sure, but we have to restrict the range of identifiers
+            IdRange.generateRange(node.identifiersBucket)
+        } else {
+            // This server is not a part of a clustered environment, so, we can use all [0...Long.MAX_VALUE] range
+            IdRange.LOCAL_RANGE
+        }
 
-        val existingTables = SchemaExtractor
-            // Find all tables that match the queue name pattern
-            .extractRawSchema(dataSource, tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%")
-            // ... and leave only those that we are interested in
-            .filter { foundTable ->
-                foundTable.key in queuesDbNames
-            }
+        val existingTables = SchemaExtractor.extractRawSchema(dataSource, tableNamePattern = null)
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
-            SchemaGenerator.generateTableSchema(queue, existingTable)
+            SchemaGenerator.generateTableSchema(queue, existingTable, idRange)
         }
     }
 
     /**
-     * Generate all statements needed to create/update database schema, but doesn't execute them
+     * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
     fun generateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>): Map<Queue<*, *>, Schema> {

@@ -2,7 +2,6 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.Kolbasa
-import kolbasa.cluster.schema.IdSchema
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.DatabaseConsumer
@@ -12,6 +11,7 @@ import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
+import kolbasa.schema.IdSchema
 import kolbasa.schema.SchemaHelpers
 import java.sql.Statement
 import javax.sql.DataSource
@@ -39,7 +39,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         }
 
         cluster = Cluster(dataSources)
-        cluster.updateState()
+        cluster.updateStateOnce()
 
         clusterProducer = ClusterProducer(cluster)
     }
@@ -65,7 +65,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     @Test
     fun testMessagesDistribution_SendOneMessageIfProducerNodeFailed() {
         // change producer node to 'unknown' for this dataSource
-        val id = requireNotNull(IdSchema.readNodeId(dataSource))
+        val id = requireNotNull(IdSchema.readNodeInfo(dataSource))
         findDataSourceWithInitializedShard(dataSources).useStatement { statement: Statement ->
             val sql = """
                        update
@@ -74,12 +74,12 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
                             ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'unknown',
                             ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'unknown'
                        where
-                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '$id'
+                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${id.serverId}'
                    """.trimIndent()
             statement.executeUpdate(sql)
         }
         // re-read cluster state after shards changing
-        cluster.updateState()
+        cluster.updateStateOnce()
 
         // send to random nodes
         val results = (1..messagesToSend).map {
@@ -121,7 +121,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
             statement.executeUpdate(sql)
         }
         // re-read cluster state after shards changing
-        cluster.updateState()
+        cluster.updateStateOnce()
         // check that all producer nodes are NOT THE SAME that really existing nodes
         val allProducerNodes = cluster.getState().shards.values.map { it.producerNode }.toSet()
         val allNodes = cluster.getState().nodes.keys

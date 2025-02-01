@@ -1,9 +1,8 @@
-package kolbasa.cluster.schema
+package kolbasa.schema
 
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.schema.Const
 import java.sql.PreparedStatement
 import java.sql.Statement
 import javax.sql.DataSource
@@ -34,16 +33,16 @@ internal object IdSchema {
                $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
                $SERVER_ID_COLUMN_NAME varchar($SERVER_ID_COLUMN_LENGTH) not null,
                $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp,
-               $IDENTIFIERS_BUCKET_COLUMN_NAME int
+               $IDENTIFIERS_BUCKET_COLUMN_NAME int not null
         )
     """.trimIndent()
 
     private val INIT_TABLE_STATEMENT: String
         get() = """
                 insert into $NODE_TABLE_NAME
-                    ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME)
+                    ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
                 values
-                    ('$ACTIVE_STATUS', '${generateNodeId()}')
+                    ('$ACTIVE_STATUS', '${generateNodeId()}', ${Node.randomBucket()})
                 on conflict do nothing
             """.trimIndent()
 
@@ -62,7 +61,8 @@ internal object IdSchema {
         set
             $IDENTIFIERS_BUCKET_COLUMN_NAME = ?
         where
-            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS'
+            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS' and
+            $IDENTIFIERS_BUCKET_COLUMN_NAME = ?
     """.trimIndent()
 
     fun createAndInitIdTable(dataSource: DataSource) {
@@ -71,6 +71,8 @@ internal object IdSchema {
             INIT_TABLE_STATEMENT,
             // TODO: drop after a few releases
             "alter table $NODE_TABLE_NAME add column if not exists $IDENTIFIERS_BUCKET_COLUMN_NAME int",
+            "update $NODE_TABLE_NAME set $IDENTIFIERS_BUCKET_COLUMN_NAME=${Node.randomBucket()} where $IDENTIFIERS_BUCKET_COLUMN_NAME is null",
+            "alter table $NODE_TABLE_NAME alter $IDENTIFIERS_BUCKET_COLUMN_NAME set not null",
             "alter table $NODE_TABLE_NAME drop column if exists $SEND_ENABLED_COLUMN_NAME",
             "alter table $NODE_TABLE_NAME drop column if exists $RECEIVE_ENABLED_COLUMN_NAME",
         )
@@ -85,38 +87,35 @@ internal object IdSchema {
         }
     }
 
-    fun readNodeInfo(dataSource: DataSource): Node {
-        val node = dataSource.useStatement { statement: Statement ->
-            statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
-                if (resultSet.next()) {
-                    val serverId = resultSet.getString(1)
-                    var identifierBucket: Int? = resultSet.getInt(2)
-                    if (resultSet.wasNull()) {
-                        identifierBucket = null
-                    }
+    fun readNodeInfo(dataSource: DataSource): Node? {
+        try {
+            return dataSource.useStatement { statement: Statement ->
+                statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
+                    if (resultSet.next()) {
+                        val serverId = resultSet.getString(1)
+                        val identifiersBucket: Int = resultSet.getInt(2)
 
-                    Node(serverId, identifierBucket)
-                } else {
-                    null
+                        Node(serverId, identifiersBucket)
+                    } else {
+                        null
+                    }
                 }
             }
-        }
-
-        return requireNotNull(node) {
-            "Node info not found, maybe you forgot to initialize the cluster?"
+        } catch (e: Exception) {
+            // exception doesn't matter
+            return null
         }
     }
 
-    fun updateIdentifiersBucket(dataSource: DataSource, bucket: Int?) {
-        dataSource.usePreparedStatement(UPDATE_NODE_INFO_STATEMENT) { preparedStatement: PreparedStatement ->
-            if (bucket == null) {
-                preparedStatement.setNull(1, java.sql.Types.INTEGER)
-            } else {
-                preparedStatement.setInt(1, bucket)
-            }
+    fun updateIdentifiersBucket(dataSource: DataSource, oldBucket: Int, newBucket: Int): Boolean {
+        val rowsUpdated = dataSource.usePreparedStatement(UPDATE_NODE_INFO_STATEMENT) { preparedStatement: PreparedStatement ->
+            preparedStatement.setInt(1, newBucket)
+            preparedStatement.setInt(2, oldBucket)
 
             preparedStatement.executeUpdate()
         }
+
+        return rowsUpdated > 0
     }
 
     private fun generateNodeId(): String {

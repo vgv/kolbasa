@@ -36,7 +36,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         }
 
         cluster = Cluster(dataSources)
-        cluster.updateState()
+        cluster.updateStateOnce()
 
         clusterConsumer = ClusterConsumer(cluster)
     }
@@ -84,7 +84,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
             statement.executeUpdate(sql)
         }
         // re-read cluster state after shards changing
-        cluster.updateState()
+        cluster.updateStateOnce()
 
 
         // Try to receive as many messages as possible

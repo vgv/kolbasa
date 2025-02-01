@@ -1,5 +1,6 @@
 package kolbasa
 
+import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
@@ -28,4 +29,7 @@ object Kolbasa {
     @Volatile
     var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
 
+    @JvmStatic
+    @Volatile
+    var clusterStateUpdateConfig: ClusterStateUpdateConfig = ClusterStateUpdateConfig()
 }

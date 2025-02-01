@@ -22,9 +22,11 @@ internal data class Shard(
     }
 
     companion object {
+        // 10 bits means that there can be 1024 shards, that is, we can distribute the load across a cluster of 1024 servers
+        const val SHARD_BITS = 10
         const val MIN_SHARD = 0
-        const val MAX_SHARD = 1023
-        const val SHARD_COUNT = MAX_SHARD + 1
+        const val MAX_SHARD = (1 shl SHARD_BITS) - 1  // 1023
+        const val SHARD_COUNT = 1 shl SHARD_BITS      // 1024
 
         fun randomShard(): Int {
             return Random.nextInt(MIN_SHARD, MAX_SHARD + 1)

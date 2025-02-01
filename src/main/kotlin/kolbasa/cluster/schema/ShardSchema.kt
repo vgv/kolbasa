@@ -4,6 +4,8 @@ import kolbasa.cluster.Shard
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
+import kolbasa.schema.IdSchema
+import kolbasa.schema.Node
 import java.sql.Statement
 import javax.sql.DataSource
 
