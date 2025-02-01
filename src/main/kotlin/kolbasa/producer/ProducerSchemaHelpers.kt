@@ -9,6 +9,7 @@ import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
+import java.util.concurrent.ExecutorService
 import kotlin.math.abs
 
 internal object ProducerSchemaHelpers {
@@ -210,5 +211,13 @@ internal object ProducerSchemaHelpers {
         }
 
         return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
+    }
+
+    fun calculateAsyncExecutor(producerOptions: ProducerOptions, defaultExecutor: ExecutorService): ExecutorService {
+        if (producerOptions.asyncExecutor != null) {
+            return producerOptions.asyncExecutor
+        }
+
+        return defaultExecutor
     }
 }

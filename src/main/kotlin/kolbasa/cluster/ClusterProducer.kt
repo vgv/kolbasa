@@ -8,6 +8,7 @@ import kolbasa.producer.SendResult
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
 import kolbasa.queue.Queue
+import java.util.concurrent.CompletableFuture
 
 class ClusterProducer(
     private val cluster: Cluster,
@@ -29,4 +30,16 @@ class ClusterProducer(
         return producer.send(queue, request)
     }
 
+    override fun <Data, Meta : Any> sendAsync(
+        queue: Queue<Data, Meta>,
+        request: SendRequest<Data, Meta>
+    ): CompletableFuture<SendResult<Data, Meta>> {
+        // TODO: make it smarter
+        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
+            producerOptions = producerOptions,
+            defaultExecutor = Kolbasa.asyncExecutor
+        )
+
+        return CompletableFuture.supplyAsync({ send(queue, request) }, executor)
+    }
 }

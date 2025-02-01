@@ -1,6 +1,7 @@
 package kolbasa.producer
 
 import kolbasa.queue.Checks
+import java.util.concurrent.ExecutorService
 
 data class ProducerOptions(
     /**
@@ -43,7 +44,16 @@ data class ProducerOptions(
      */
     val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
 
-    val shard: Int? = null // TODO
+    val shard: Int? = null, // TODO
+
+    /**
+     * Executor used to send messages asynchronously in [Producer][kolbasa.producer.datasource.Producer] sendAsync() methods.
+     *
+     * If you need to customize the executor for a specific [Producer][kolbasa.producer.datasource.Producer], you can
+     * provide your own [ExecutorService]. If you don't provide a custom executor, producer will use the global,
+     * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
+     */
+    val asyncExecutor: ExecutorService? = null,
 ) {
 
     init {
@@ -57,14 +67,16 @@ data class ProducerOptions(
         private var batchSize: Int = DEFAULT_BATCH_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
         private var shard: Int? = null
+        private var asyncExecutor: ExecutorService? = null
 
-        fun producer(producer: String?) = apply { this.producer = producer }
+        fun producer(producer: String) = apply { this.producer = producer }
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
         fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
         fun shard(shard: Int) = apply { this.shard = shard }
+        fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
 
-        fun build() = ProducerOptions(producer, deduplicationMode, batchSize, partialInsert, shard)
+        fun build() = ProducerOptions(producer, deduplicationMode, batchSize, partialInsert, shard, asyncExecutor)
     }
 
     companion object {

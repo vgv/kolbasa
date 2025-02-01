@@ -1,12 +1,14 @@
 package kolbasa.producer.datasource
 
+import kolbasa.Kolbasa
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.producer.ProducerOptions
+import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
-import kolbasa.producer.connection.ConnectionAwareProducer
 import kolbasa.queue.Queue
+import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 
 /**
@@ -14,17 +16,10 @@ import javax.sql.DataSource
  */
 class DatabaseProducer(
     private val dataSource: DataSource,
-    private val peer: ConnectionAwareProducer
+    private val producerOptions: ProducerOptions = ProducerOptions(),
 ) : Producer {
 
-    @JvmOverloads
-    constructor(
-        dataSource: DataSource,
-        producerOptions: ProducerOptions = ProducerOptions(),
-    ) : this(
-        dataSource = dataSource,
-        peer = ConnectionAwareDatabaseProducer(producerOptions)
-    )
+    private val peer = ConnectionAwareDatabaseProducer(producerOptions)
 
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         return queue.queueTracing.makeProducerCall(request) {
@@ -32,5 +27,16 @@ class DatabaseProducer(
         }
     }
 
+    override fun <Data, Meta : Any> sendAsync(
+        queue: Queue<Data, Meta>,
+        request: SendRequest<Data, Meta>
+    ): CompletableFuture<SendResult<Data, Meta>> {
+        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
+            producerOptions = producerOptions,
+            defaultExecutor = Kolbasa.asyncExecutor
+        )
+
+        return CompletableFuture.supplyAsync({ send(queue, request) }, executor)
+    }
 }
 
