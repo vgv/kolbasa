@@ -2,7 +2,8 @@ package kolbasa.schema
 
 internal data class IdRange(
     val start: Long,
-    val end: Long
+    val end: Long,
+    val cache: Long = 1000 // TODO const?
 ) {
 
     companion object {
