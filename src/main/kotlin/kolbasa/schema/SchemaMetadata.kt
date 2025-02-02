@@ -24,6 +24,7 @@ internal data class Table(
     val name: String,
     val columns: Set<Column>,
     val indexes: Set<Index>,
+    val identity: Identity
 ) {
     fun findColumn(name: String): Column? = columns.find { it.name == name }
     fun findIndex(name: String): Index? = indexes.find { it.name == name }
@@ -56,6 +57,16 @@ internal enum class ColumnType(
         fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
     }
 }
+
+internal data class Identity(
+    val name: String,
+    val start: Long,
+    val min: Long,
+    val max: Long,
+    val increment: Long,
+    val cycles: Boolean,
+    val cache: Long
+)
 
 internal data class Index(
     val name: String,

@@ -21,7 +21,7 @@ object SchemaHelpers {
             IdRange.LOCAL_RANGE
         }
 
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, tableNamePattern = null)
+        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]

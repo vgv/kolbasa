@@ -6,13 +6,17 @@ import kotlin.test.*
 
 internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
-    private val testTableName = "test_table"
+    private val testTableName = Const.QUEUE_TABLE_NAME_PREFIX + "test_table"
+    private val minValue = 123.toLong()
+    private val maxValue = 4561123.toLong()
+    private val cacheValue = 42.toLong()
+    private val incrementValue = 34.toLong()
 
     override fun generateTestData(): List<String> {
         val testTable = mutableListOf(
             """
             create table $testTableName(
-                id bigint generated always as identity (cycle) primary key,
+                id bigint generated always as identity (minvalue $minValue maxvalue $maxValue cache $cacheValue increment $incrementValue cycle) primary key,
                 created_at timestamp not null default clock_timestamp(),
                 scheduled_at timestamp default clock_timestamp() + interval '12345 millisecond',
                 attempts int not null default 42,
@@ -45,7 +49,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
     @Test
     fun testExtractRawSchema() {
         // here we have to find objects (tables, indexes etc.) only from 'public' schema
-        val tables = SchemaExtractor.extractRawSchema(dataSource, "${testTableName}%")
+        val tables = SchemaExtractor.extractRawSchema(dataSource, setOf(testTableName))
 
         assertEquals(1, tables.size, "Tables: ${tables.keys}")
 
@@ -54,11 +58,17 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         // check columns
         assertEquals(14, testTable.columns.size, "Found columns: ${testTable.columns}")
 
-        // id
+        // id and identity
         assertNotNull(testTable.findColumn("id")).let { idColumn ->
             assertEquals(ColumnType.BIGINT, idColumn.type)
             assertFalse(idColumn.nullable)
         }
+        assertEquals(minValue, testTable.identity.min)
+        assertEquals(minValue, testTable.identity.start)
+        assertEquals(maxValue, testTable.identity.max)
+        assertEquals(cacheValue, testTable.identity.cache)
+        assertEquals(incrementValue, testTable.identity.increment)
+        assertEquals(true, testTable.identity.cycles)
 
         // created_at
         assertNotNull(testTable.findColumn("created_at")).let { createdAtColumn ->

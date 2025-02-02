@@ -1,14 +1,19 @@
 package kolbasa.schema
 
 import kolbasa.pg.DatabaseExtensions.readInt
+import kolbasa.pg.DatabaseExtensions.readString
 import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.pg.DatabaseExtensions.useStatement
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import javax.sql.DataSource
 
 internal object SchemaExtractor {
 
-    internal fun extractRawSchema(dataSource: DataSource, tableNamePattern: String? = null): Map<String, Table> {
+    internal fun extractRawSchema(dataSource: DataSource, queueNames: Set<String>): Map<String, Table> {
+        // only tables that match the queue name pattern just to reduce the amount of data we need to process
+        val tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%"
+
         return dataSource.useConnection { connection ->
             val databaseMetaData = connection.metaData
 
@@ -16,11 +21,16 @@ internal object SchemaExtractor {
             val tables = mutableMapOf<String, Table>()
             while (tablesResultSet.next()) {
                 val tableName = tablesResultSet.getString("TABLE_NAME")
+                if (tableName !in queueNames) {
+                    // continue only for specific tables
+                    continue
+                }
 
                 val columns = getAllColumns(connection.schema, tableName, databaseMetaData)
                 val indexes = getAllIndexes(connection.schema, tableName, databaseMetaData)
+                val identity = getIdentity(connection, connection.schema, tableName)
 
-                tables[tableName] = Table(tableName, columns, indexes)
+                tables[tableName] = Table(tableName, columns, indexes, identity)
             }
 
             return@useConnection tables
@@ -83,6 +93,55 @@ internal object SchemaExtractor {
         """.trimIndent()
 
         return connection.readInt(query) > 0
+    }
+
+    private fun getIdentity(connection: Connection, schemaName: String?, tableName: String): Identity {
+        val realSchemaName = schemaName ?: "public"
+        val realSchemaNameWithDot = "$realSchemaName."
+
+        val sequenceName = connection
+            .readString("select pg_get_serial_sequence('$realSchemaName.$tableName', '${Const.ID_COLUMN_NAME}')")
+            .removePrefix(realSchemaNameWithDot)
+
+        val seqQeury = """
+            select seqstart,
+                   seqmin,
+                   seqmax,
+                   seqincrement,
+                   seqcycle,
+                   seqcache
+            from pg_catalog.pg_sequence
+            where
+                seqrelid in (
+                    select pg_class.oid from pg_class
+                    left join pg_namespace on (pg_namespace.oid = pg_class.relnamespace)
+                    where
+                        pg_class.relname='$sequenceName' and
+                        pg_namespace.nspname='$realSchemaName'
+                );
+        """.trimIndent()
+
+        val identity = connection.useStatement { statement ->
+            statement.executeQuery(seqQeury).use { resultSet ->
+                if (resultSet.next()) {
+                    Identity(
+                        sequenceName,
+                        start = resultSet.getLong("seqstart"),
+                        min = resultSet.getLong("seqmin"),
+                        max = resultSet.getLong("seqmax"),
+                        increment = resultSet.getLong("seqincrement"),
+                        cycles = resultSet.getBoolean("seqcycle"),
+                        cache = resultSet.getLong("seqcache")
+                    )
+                } else {
+                    null
+                }
+            }
+        }
+
+        return requireNotNull(identity) {
+            "Identity for table $tableName not found"
+        }
     }
 
 }
