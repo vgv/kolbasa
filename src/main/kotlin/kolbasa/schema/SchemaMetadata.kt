@@ -50,7 +50,7 @@ internal enum class ColumnType(
     BOOLEAN(setOf("bool"), Types.BOOLEAN),
     TIMESTAMP(setOf("timestamp"), Types.TIMESTAMP),
     CHAR(setOf("bpchar"), Types.VARCHAR),
-    VARCHAR(setOf("varchar"), Types.VARCHAR),
+    VARCHAR(setOf("varchar", "text"), Types.VARCHAR),
     VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY);
 
     companion object {
