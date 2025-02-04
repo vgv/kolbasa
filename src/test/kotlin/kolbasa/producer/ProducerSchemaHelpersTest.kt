@@ -2,9 +2,11 @@ package kolbasa.producer
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.ShardStrategy
-import org.junit.jupiter.api.Test
+import java.util.concurrent.Executors
 import kotlin.math.abs
+import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ProducerSchemaHelpersTest {
@@ -94,5 +96,24 @@ class ProducerSchemaHelpersTest {
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(producerOptions, sendOptions, shardStrategy)
         assertTrue(effectiveShard in Shard.MIN_SHARD..Shard.MAX_SHARD, "effectiveShard=$effectiveShard")
         assertEquals(abs(-30000 % Shard.SHARD_COUNT), effectiveShard)
+    }
+
+    @Test
+    fun testCalculateAsyncExecutor_IfDefined() {
+        val customExecutor = Executors.newCachedThreadPool()
+        val defaultExecutor = Executors.newCachedThreadPool()
+        val producerOptions = ProducerOptions(asyncExecutor = customExecutor)
+
+        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(producerOptions, defaultExecutor)
+        assertSame(customExecutor, asyncExecutor)
+    }
+
+    @Test
+    fun testCalculateAsyncExecutor_IfNotDefined() {
+        val defaultExecutor = Executors.newCachedThreadPool()
+        val producerOptions = ProducerOptions(asyncExecutor = null)
+
+        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(producerOptions, defaultExecutor)
+        assertSame(defaultExecutor, asyncExecutor)
     }
 }
