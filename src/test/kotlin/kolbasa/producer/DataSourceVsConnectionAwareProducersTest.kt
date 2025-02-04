@@ -15,7 +15,8 @@ class DataSourceVsConnectionAwareProducersTest {
         val connAwareMethods = ConnectionAwareProducer::class.declaredMemberFunctions
         val producerMethods = Producer::class.declaredMemberFunctions
 
-        assertEquals(producerMethods.size, connAwareMethods.size)
+        // We have twice more methods in Producer than in ConnectionAwareProducer because of sendAsync() methods
+        assertEquals(producerMethods.size, connAwareMethods.size * 2)
     }
 
 }
