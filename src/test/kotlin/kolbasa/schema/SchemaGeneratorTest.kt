@@ -35,7 +35,7 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         // extract schema again
-        val existingTable = SchemaExtractor.extractRawSchema(dataSource, queue.dbTableName)[queue.dbTableName]
+        val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(queue.dbTableName))[queue.dbTableName]
         assertNotNull(existingTable)
 
         // we don't expect anything in "required", because schema is actual

@@ -21,15 +21,7 @@ object SchemaHelpers {
             IdRange.LOCAL_RANGE
         }
 
-        val queuesDbNames = queues.map { it.dbTableName }.toSet()
-
-        val existingTables = SchemaExtractor
-            // Find all tables that match the queue name pattern
-            .extractRawSchema(dataSource, tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%")
-            // ... and leave only those that we are interested in
-            .filter { foundTable ->
-                foundTable.key in queuesDbNames
-            }
+        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
