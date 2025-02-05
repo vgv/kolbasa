@@ -15,7 +15,7 @@ internal object SchemaGenerator {
         forTable(queue, existingTable, mutableSchema, idRange)
 
         // table sequence
-        forIdSequence(queue, existingTable, mutableSchema, idRange)
+        forIdentity(existingTable, mutableSchema, idRange)
 
         // shard column
         forShard(queue, existingTable, mutableSchema)
@@ -40,7 +40,7 @@ internal object SchemaGenerator {
     private fun forTable(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema, idRange: IdRange) {
         val createTableStatement = """
             create table if not exists ${queue.dbTableName}(
-                ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${idRange.start} maxvalue ${idRange.end} cycle) primary key,
+                ${Const.ID_COLUMN_NAME} bigint generated always as identity (minvalue ${idRange.start} maxvalue ${idRange.end} cache ${idRange.cache} cycle) primary key,
                 ${Const.USELESS_COUNTER_COLUMN_NAME} int,
                 ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
                 ${Const.SHARD_COLUMN_NAME} int not null,
@@ -60,18 +60,39 @@ internal object SchemaGenerator {
         }
     }
 
-    private fun forIdSequence(
-        queue: Queue<*, *>,
+    private fun forIdentity(
         existingTable: Table?,
         mutableSchema: MutableSchema,
         idRange: IdRange
     ) {
-        // TODO("Not yet implemented")
+        if (existingTable == null) {
+            // If table does not exist, we can't adjust identity column because there is no such column
+            // CREATE TABLE statement will create identity column with the desired settings automatically
+            return
+        }
+
+        val needToAlterIdentity = (existingTable.identity.min != idRange.start) ||
+            (existingTable.identity.max != idRange.end) ||
+            (existingTable.identity.cache != idRange.cache)
+
+        val alterSequenceStatement = """
+                alter sequence ${existingTable.identity.name}
+                restart with ${idRange.start}
+                start with ${idRange.start}
+                minvalue ${idRange.start}
+                maxvalue ${idRange.end}
+                cache ${idRange.cache}
+                cycle
+            """.trimIndent()
+
+        mutableSchema.allTables += alterSequenceStatement
+        if (needToAlterIdentity) {
+            mutableSchema.requiredTables += alterSequenceStatement
+        }
     }
 
 
-
-    private fun forShard(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema){
+    private fun forShard(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema) {
         val hasColumn = existingTable?.findColumn(Const.SHARD_COLUMN_NAME) != null
         val shardColumn = """
             alter table ${queue.dbTableName}

@@ -125,7 +125,7 @@ internal object SchemaExtractor {
             statement.executeQuery(seqQeury).use { resultSet ->
                 if (resultSet.next()) {
                     Identity(
-                        sequenceName,
+                        "$realSchemaName.$sequenceName",
                         start = resultSet.getLong("seqstart"),
                         min = resultSet.getLong("seqmin"),
                         max = resultSet.getLong("seqmax"),
