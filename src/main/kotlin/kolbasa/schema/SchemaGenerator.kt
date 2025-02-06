@@ -1,6 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.cluster.Shard
+import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.MetaField
@@ -13,6 +14,9 @@ internal object SchemaGenerator {
 
         // table
         forTable(queue, existingTable, mutableSchema, idRange)
+
+        // fix type
+        fixType(queue, existingTable, mutableSchema)
 
         // table sequence
         forIdentity(existingTable, mutableSchema, idRange)
@@ -59,6 +63,20 @@ internal object SchemaGenerator {
             mutableSchema.requiredTables += createTableStatement
         }
     }
+
+    private fun fixType(queue: Queue<*, *>, existingTable: Table?, mutableSchema: MutableSchema) {
+        // TODO delete after few releases
+        if (queue.databaseDataType !is DatabaseQueueDataType.Text) {
+            return
+        }
+
+        val alterDataType =
+            "alter table ${queue.dbTableName} alter ${Const.DATA_COLUMN_NAME} type ${queue.databaseDataType.dbColumnType}"
+
+        mutableSchema.allTables += alterDataType
+        mutableSchema.requiredTables += alterDataType
+    }
+
 
     private fun forIdentity(
         existingTable: Table?,
