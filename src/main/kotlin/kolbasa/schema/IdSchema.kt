@@ -22,10 +22,6 @@ internal object IdSchema {
 
     private const val IDENTIFIERS_BUCKET_COLUMN_NAME = "identifiers_bucket"
 
-    // TODO: drop after a few releases
-    private const val SEND_ENABLED_COLUMN_NAME = "send_enabled"
-    private const val RECEIVE_ENABLED_COLUMN_NAME = "receive_enabled"
-
     private const val ACTIVE_STATUS = "active"
 
     private val CREATE_TABLE_STATEMENT = """
@@ -73,8 +69,6 @@ internal object IdSchema {
             "alter table $NODE_TABLE_NAME add column if not exists $IDENTIFIERS_BUCKET_COLUMN_NAME int",
             "update $NODE_TABLE_NAME set $IDENTIFIERS_BUCKET_COLUMN_NAME=${Node.randomBucket()} where $IDENTIFIERS_BUCKET_COLUMN_NAME is null",
             "alter table $NODE_TABLE_NAME alter $IDENTIFIERS_BUCKET_COLUMN_NAME set not null",
-            "alter table $NODE_TABLE_NAME drop column if exists $SEND_ENABLED_COLUMN_NAME",
-            "alter table $NODE_TABLE_NAME drop column if exists $RECEIVE_ENABLED_COLUMN_NAME",
         )
 
         dataSource.useConnectionWithAutocommit { connection ->
