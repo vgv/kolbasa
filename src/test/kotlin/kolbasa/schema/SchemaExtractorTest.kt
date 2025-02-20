@@ -1,62 +1,62 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
+import kolbasa.queue.QueueOptions
+import kolbasa.queue.Unique
 import org.junit.jupiter.api.Test
+import java.math.BigInteger
+import java.time.Duration
 import kotlin.test.*
 
 internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
-    private val testTableName = Const.QUEUE_TABLE_NAME_PREFIX + "test_table"
-    private val minValue = 123.toLong()
-    private val maxValue = 4561123.toLong()
-    private val cacheValue = 42.toLong()
-    private val incrementValue = 34.toLong()
+    private val queueName = "test_queue"
+    private val minValue = 0.toLong()
+    private val maxValue = 9223372036854775807
+    private val cacheValue = 1000.toLong()
+    private val incrementValue = 1.toLong()
 
-    override fun generateTestData(): List<String> {
-        val testTable = mutableListOf(
-            """
-            create table $testTableName(
-                id bigint generated always as identity (minvalue $minValue maxvalue $maxValue cache $cacheValue increment $incrementValue cycle) primary key,
-                created_at timestamp not null default clock_timestamp(),
-                scheduled_at timestamp default clock_timestamp() + interval '12345 millisecond',
-                attempts int not null default 42,
-                producer varchar(256),
-                meta_string_value varchar(256),
-                meta_long_value bigint,
-                meta_int_value int,
-                meta_short_value smallint,
-                meta_boolean_value boolean,
-                meta_double_value double precision,
-                meta_float_value real,
-                meta_char_value char(1),
-                meta_biginteger_value numeric
-            )
-        """.trimIndent()
-        )
-        testTable += "create index if not exists ${testTableName}_scheduled_at on $testTableName(scheduled_at) where scheduled_at is not null"
-        testTable += "create index if not exists ${testTableName}_composite on $testTableName(meta_int_value asc, meta_long_value desc)"
-        testTable += "create unique index if not exists ${testTableName}_meta_int_unq on $testTableName(meta_int_value)"
+    data class SchemaExtractorTestMeta(
+        val stringValue: String,
+        val longValue: Long,
+        @Unique
+        val intValue: Int,
+        val shortValue: Short,
+        val booleanValue: Boolean,
+        val doubleValue: Double,
+        val floatValue: Float,
+        val charValue: Char,
+        val bigIntegerValue: BigInteger
+    )
 
-        return testTable
+    private val testQueue = Queue(
+        queueName,
+        PredefinedDataTypes.String,
+        options = QueueOptions(
+            defaultDelay = Duration.ofMinutes(5),
+            defaultAttempts = 42
+        ),
+        metadata = SchemaExtractorTestMeta::class.java
+    )
+
+    @BeforeTest
+    fun before() {
+        SchemaHelpers.updateDatabaseSchema(dataSource, testQueue)
     }
-
-    // Generate the same tables/indexes in every schema
-    override fun generateTestDataFirstSchema() = generateTestData()
-
-    // Generate the same tables/indexes in every schema
-    override fun generateTestDataSecondSchema() = generateTestData()
 
     @Test
     fun testExtractRawSchema() {
         // here we have to find objects (tables, indexes etc.) only from 'public' schema
-        val tables = SchemaExtractor.extractRawSchema(dataSource, setOf(testTableName))
+        val tables = SchemaExtractor.extractRawSchema(dataSource)
 
         assertEquals(1, tables.size, "Tables: ${tables.keys}")
 
-        val testTable = assertNotNull(tables[testTableName])
+        val testTable = assertNotNull(tables[testQueue.dbTableName])
 
         // check columns
-        assertEquals(14, testTable.columns.size, "Found columns: ${testTable.columns}")
+        assertEquals(20, testTable.columns.size, "Found columns: ${testTable.columns}")
 
         // id and identity
         assertNotNull(testTable.findColumn("id")).let { idColumn ->
@@ -80,12 +80,12 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         // scheduled_at
         assertNotNull(testTable.findColumn("scheduled_at")).let { scheduledAtColumn ->
             assertEquals(ColumnType.TIMESTAMP, scheduledAtColumn.type)
-            assertTrue(scheduledAtColumn.nullable)
+            assertFalse(scheduledAtColumn.nullable)
             assertNotNull(scheduledAtColumn.defaultExpression)
         }
 
         // attempts
-        assertNotNull(testTable.findColumn("attempts")).let { attemptsColumn ->
+        assertNotNull(testTable.findColumn("remaining_attempts")).let { attemptsColumn ->
             assertEquals(ColumnType.INT, attemptsColumn.type)
             assertFalse(attemptsColumn.nullable)
             assertEquals("42", attemptsColumn.defaultExpression)
@@ -149,13 +149,13 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
         // meta_char_value
         assertNotNull(testTable.findColumn("meta_char_value")).let { metaCharValueColumn ->
-            assertEquals(ColumnType.CHAR, metaCharValueColumn.type)
+            assertEquals(ColumnType.VARCHAR, metaCharValueColumn.type)
             assertTrue(metaCharValueColumn.nullable)
             assertNull(metaCharValueColumn.defaultExpression)
         }
 
         // meta_biginteger_value
-        assertNotNull(testTable.findColumn("meta_biginteger_value")).let { metaBigIntegerValueColumn ->
+        assertNotNull(testTable.findColumn("meta_big_integer_value")).let { metaBigIntegerValueColumn ->
             assertEquals(ColumnType.NUMERIC, metaBigIntegerValueColumn.type)
             assertTrue(metaBigIntegerValueColumn.nullable)
             assertNull(metaBigIntegerValueColumn.defaultExpression)
@@ -165,31 +165,19 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         assertEquals(4, testTable.indexes.size, "Indexes: ${testTable.indexes}")
 
         // scheduled_at index
-        assertNotNull(testTable.findIndex("${testTableName}_scheduled_at")).let { scheduledAtIndex ->
+        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_scheduled_at")).let { scheduledAtIndex ->
             assertFalse(scheduledAtIndex.unique)
-            assertEquals("(scheduled_at IS NOT NULL)", scheduledAtIndex.filterCondition)
+            assertNull(scheduledAtIndex.filterCondition)
             assertFalse(scheduledAtIndex.invalid)
             assertEquals(1, scheduledAtIndex.columns.size, "Columns: ${scheduledAtIndex.columns}")
             val scheduledAtColumn = assertNotNull(scheduledAtIndex.columns.find { it.name == "scheduled_at" })
             assertTrue(scheduledAtColumn.asc)
         }
 
-        // composite index
-        assertNotNull(testTable.findIndex("${testTableName}_composite")).let { compositeIndex ->
-            assertFalse(compositeIndex.unique)
-            assertNull(compositeIndex.filterCondition)
-            assertFalse(compositeIndex.invalid)
-            assertEquals(2, compositeIndex.columns.size, "Columns: ${compositeIndex.columns}")
-            val intColumn = assertNotNull(compositeIndex.columns.find { it.name == "meta_int_value" })
-            assertTrue(intColumn.asc)
-            val longColumn = assertNotNull(compositeIndex.columns.find { it.name == "meta_long_value" })
-            assertFalse(longColumn.asc)
-        }
-
-        // _meta_int_unq index
-        assertNotNull(testTable.findIndex("${testTableName}_meta_int_unq")).let { metaFieldIndex ->
+        // meta_int index
+        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_meta_int_value")).let { metaFieldIndex ->
             assertTrue(metaFieldIndex.unique)
-            assertNull(metaFieldIndex.filterCondition)
+            assertEquals("(remaining_attempts > 0)", metaFieldIndex.filterCondition)
             assertFalse(metaFieldIndex.invalid)
             assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
             val intColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_int_value" })
