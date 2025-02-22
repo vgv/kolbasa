@@ -1,8 +1,8 @@
 package kolbasa.schema
 
 internal data class IdRange(
-    val start: Long,
-    val end: Long,
+    val min: Long,
+    val max: Long,
     val cache: Long = 1000 // TODO const?
 ) {
 
