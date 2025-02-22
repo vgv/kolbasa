@@ -17,8 +17,8 @@ class ClusterProducer(
 
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
-            producerOptions = producerOptions,
             sendOptions = request.sendOptions,
+            producerOptions = producerOptions,            
             shardStrategy = Kolbasa.shardStrategy
         )
 
