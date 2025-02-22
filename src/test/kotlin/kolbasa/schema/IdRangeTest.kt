@@ -19,8 +19,8 @@ class IdRangeTest {
             val startString = bucketString + "0".repeat(Node.BITS_TO_HOLD_ID_VALUE)
             val endString = bucketString + "1".repeat(Node.BITS_TO_HOLD_ID_VALUE)
 
-            assertEquals(startString.toLong(2), range.start)
-            assertEquals(endString.toLong(2), range.end)
+            assertEquals(startString.toLong(2), range.min)
+            assertEquals(endString.toLong(2), range.max)
         }
     }
 
@@ -44,8 +44,8 @@ class IdRangeTest {
     fun testLocalRange() {
         val start = 0L
         val end = Long.MAX_VALUE
-        assertEquals(start, IdRange.LOCAL_RANGE.start)
-        assertEquals(end, IdRange.LOCAL_RANGE.end)
+        assertEquals(start, IdRange.LOCAL_RANGE.min)
+        assertEquals(end, IdRange.LOCAL_RANGE.max)
     }
 
     @Test
@@ -60,10 +60,10 @@ class IdRangeTest {
     }
 
     private infix fun IdRange.intersect(other: IdRange): Boolean {
-        if (start <= other.start && other.end <= end) return true
-        if (other.start <= start && end <= other.end) return true
-        if (other.start in start..end) return true
-        if (other.end in start..end) return true
+        if (min <= other.min && other.max <= max) return true
+        if (other.min <= min && max <= other.max) return true
+        if (other.min in min..max) return true
+        if (other.max in min..max) return true
 
         return false
     }

@@ -69,8 +69,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
 
-        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -93,8 +93,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         assertEquals(1, result2.onlySuccessful().size)
         val id2 = result2.onlySuccessful().first().id
 
-        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -126,8 +126,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
-        assertEquals(IdRange.LOCAL_RANGE.start, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.start + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -171,7 +171,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index + IdRange.LOCAL_RANGE.start, it.id.localId)
+                assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -201,7 +201,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index +IdRange.LOCAL_RANGE.start, it.id.localId)
+                assertEquals(index +IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -214,7 +214,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index + 6]).let {
-                assertEquals(index + IdRange.LOCAL_RANGE.start + 8, it.id.localId)
+                assertEquals(index + IdRange.LOCAL_RANGE.min + 8, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
