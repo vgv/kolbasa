@@ -110,7 +110,7 @@ class Cluster @JvmOverloads constructor(
         for ((_, dataSource) in nodes) {
             val shards = try {
                 ShardSchema.readShards(dataSource)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Shard table doesn't exist
                 emptyMap()
             }
