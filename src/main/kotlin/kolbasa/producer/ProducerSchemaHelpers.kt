@@ -201,7 +201,7 @@ internal object ProducerSchemaHelpers {
         }
     }
 
-    fun calculateEffectiveShard(producerOptions: ProducerOptions, sendOptions: SendOptions, shardStrategy: ShardStrategy): Int {
+    fun calculateEffectiveShard(sendOptions: SendOptions, producerOptions: ProducerOptions, shardStrategy: ShardStrategy): Int {
         if (sendOptions.shard != null) {
             return abs(sendOptions.shard % Shard.SHARD_COUNT)
         }
