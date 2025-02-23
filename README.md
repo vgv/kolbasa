@@ -59,7 +59,9 @@ File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourcePro
 url, username and password for your existing PostgreSQL instance.
 
 ### Simple example
-The simplest possible example to send and receive one simple text message: [SimpleExample](src/test/kotlin/examples/SimpleExample.kt)
+The simplest possible example to send and receive one simple text message:
+* [SimpleExample (Kotlin)](src/test/kotlin/examples/SimpleExample.kt)
+* [SimpleExample (Java)](src/test/kotlin/examples/SimpleExample.java)
 
 No filtering, no message deduplication, sharding or other features. Just send and receive one message.
 
