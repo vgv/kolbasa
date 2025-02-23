@@ -14,7 +14,7 @@ import javax.sql.DataSource
 /**
  * Default implementation of [Producer]
  */
-class DatabaseProducer(
+class DatabaseProducer @JvmOverloads constructor(
     private val dataSource: DataSource,
     private val producerOptions: ProducerOptions = ProducerOptions(),
 ) : Producer {
