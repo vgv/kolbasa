@@ -16,8 +16,8 @@ internal object IdSchema {
     const val NODE_TABLE_NAME = Const.INTERNAL_KOLBASA_TABLE_PREFIX + "node"
     private const val STATUS_COLUMN_NAME = "status"
     private const val STATUS_COLUMN_LENGTH = 100
-    private const val SERVER_ID_COLUMN_NAME = "server_id"
-    internal const val SERVER_ID_COLUMN_LENGTH = 100
+    const val SERVER_ID_COLUMN_NAME = "server_id"
+    const val SERVER_ID_COLUMN_LENGTH = 100
     private const val CREATED_AT_COLUMN_NAME = "created_at"
 
     private const val IDENTIFIERS_BUCKET_COLUMN_NAME = "identifiers_bucket"
@@ -95,7 +95,7 @@ internal object IdSchema {
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // exception doesn't matter
             return null
         }
@@ -114,7 +114,7 @@ internal object IdSchema {
 
     private fun generateNodeId(): String {
         val sb = StringBuilder()
-        for (i in 1..NODE_ID_DEFAULT_LENGTH) {
+        (1..NODE_ID_DEFAULT_LENGTH).forEach { i ->
             sb.append(NODE_ID_ALPHABET.random())
         }
         return sb.toString()

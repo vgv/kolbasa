@@ -8,21 +8,25 @@ import javax.sql.DataSource
 internal object ClusterHelper {
 
     fun readNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        return dataSources
-            .associateBy { dataSource ->
-                IdSchema.createAndInitIdTable(dataSource)
-                requireNotNull(IdSchema.readNodeInfo(dataSource)) {
-                    "Node info is not found, dataSource: $dataSource"
-                }
+        val allNodes = dataSources.map { dataSource ->
+            IdSchema.createAndInitIdTable(dataSource)
+            val node = requireNotNull(IdSchema.readNodeInfo(dataSource)) {
+                "Node info is not found, dataSource: $dataSource"
             }
+            node to dataSource
+        }
+
+        // check uniqueness of serverId
+        checkNonUniqueServerIds(allNodes.map { it.first.serverId })
+
+        return allNodes
+            .associate { it }
             .toSortedMap()
     }
 
-    fun checkNonUniqueServerIds(nodes: SortedMap<Node, DataSource>) {
+    private fun checkNonUniqueServerIds(nodeIds: List<String>) {
         // Check serverId uniqueness, maybe later I will add some kind of auto-fixing, but not now
-        val serverIds = nodes.map { it.key.serverId }
-
-        val nonUniqueServerIds = serverIds
+        val nonUniqueServerIds = nodeIds
             .groupBy { it }
             .filterValues { it.size > 1 }
             .keys
