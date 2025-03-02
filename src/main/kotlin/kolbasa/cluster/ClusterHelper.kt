@@ -19,9 +19,7 @@ internal object ClusterHelper {
         // check uniqueness of serverId
         checkNonUniqueServerIds(allNodes.map { it.first.serverId })
 
-        return allNodes
-            .associate { it }
-            .toSortedMap()
+        return allNodes.associateTo(sortedMapOf()) { it }
     }
 
     private fun checkNonUniqueServerIds(nodeIds: List<String>) {
