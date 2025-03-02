@@ -2,7 +2,6 @@ package kolbasa.cluster.migrate
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.Parameter
-import kolbasa.cluster.migrate.utils.HumanReadableDataSource
 import kolbasa.pg.DatabaseExtensions.readString
 import org.postgresql.ds.PGSimpleDataSource
 import javax.sql.DataSource
