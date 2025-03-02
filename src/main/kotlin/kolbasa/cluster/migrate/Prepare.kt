@@ -1,5 +1,6 @@
 package kolbasa.cluster.migrate
 
+import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.migrate.utils.MigrateHelpers
 import kolbasa.cluster.migrate.utils.MigrateHelpers.calculateShardsDiff
 import kolbasa.cluster.schema.ShardSchema
@@ -8,7 +9,7 @@ import javax.sql.DataSource
 import kotlin.system.exitProcess
 
 internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<DataSource>, events: MigrateEvents) {
-    val nodes = MigrateHelpers.readNodes(dataSources)
+    val nodes = ClusterHelper.readNodes(dataSources)
     val (shardDataSource, initialShards) = MigrateHelpers.readShards(nodes)
 
     // Check that target node exists

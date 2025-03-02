@@ -53,28 +53,11 @@ class Cluster @JvmOverloads constructor(
     }
 
     private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        var nodes = readNodes(dataSources)
+        var nodes = ClusterHelper.readNodes(dataSources)
+        ClusterHelper.checkNonUniqueServerIds(nodes)
+
         while (remapBucketIdentifiers(nodes)) {
-            nodes = readNodes(dataSources)
-        }
-
-        return nodes
-    }
-
-    private fun readNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        val nodes = dataSources
-            .associateBy { dataSource ->
-                IdSchema.createAndInitIdTable(dataSource)
-                requireNotNull(IdSchema.readNodeInfo(dataSource)) {
-                    "Node info is not found, dataSource: $dataSource"
-                }
-            }
-            .toSortedMap()
-
-        // Check serverId uniqueness, maybe later I will add some kind of auto-fixing, but not now
-        val uniqueServerIds = nodes.map { it.key.serverId }.toSet()
-        check(uniqueServerIds.size == nodes.size) {
-            "ServerId isn't unique"
+            nodes = ClusterHelper.readNodes(dataSources)
         }
 
         return nodes

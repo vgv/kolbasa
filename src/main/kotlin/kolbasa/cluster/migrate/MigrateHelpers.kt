@@ -2,7 +2,6 @@ package kolbasa.cluster.migrate.utils
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import java.util.*
 import javax.sql.DataSource
@@ -23,18 +22,6 @@ internal data class ShardDiff(
 )
 
 internal object MigrateHelpers {
-
-    fun readNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        val nodes = dataSources
-            .associateBy { dataSource ->
-                requireNotNull(IdSchema.readNodeInfo(dataSource)) {
-                    "Node info not found, dataSource: $dataSource"
-                }
-            }
-            .toSortedMap()
-
-        return nodes
-    }
 
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
         // Try to find a node with a 100% initialized shard table, if found, return it
