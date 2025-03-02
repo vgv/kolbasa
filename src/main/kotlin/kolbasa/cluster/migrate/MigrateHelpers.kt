@@ -1,4 +1,4 @@
-package kolbasa.cluster.migrate.utils
+package kolbasa.cluster.migrate
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema

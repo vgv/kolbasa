@@ -1,7 +1,6 @@
 package kolbasa.cluster.migrate
 
 import kolbasa.cluster.ClusterHelper
-import kolbasa.cluster.migrate.utils.MigrateHelpers
 import kolbasa.schema.Node
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
