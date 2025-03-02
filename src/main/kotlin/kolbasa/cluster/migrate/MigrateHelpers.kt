@@ -64,8 +64,8 @@ internal object MigrateHelpers {
         val difference = mutableListOf<ShardDiff>()
 
         initialShards.forEach { (shardNumber, initialShard) ->
-            val updatedShard =
-                updatedShards[shardNumber] ?: throw IllegalStateException("Can't find updated shard $shardNumber")
+            val updatedShard = updatedShards[shardNumber] ?: throw IllegalStateException("Can't find updated shard $shardNumber")
+
             if (initialShard != updatedShard) {
                 difference += ShardDiff(initialShard, updatedShard)
             }

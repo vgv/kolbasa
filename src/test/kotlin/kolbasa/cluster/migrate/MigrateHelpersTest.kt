@@ -1,0 +1,110 @@
+package kolbasa.cluster.migrate
+
+import kolbasa.AbstractPostgresqlTest
+import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.Shard
+import kolbasa.cluster.migrate.utils.MigrateHelpers
+import kolbasa.cluster.schema.ShardSchema
+import kotlin.IllegalStateException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class MigrateHelpersTest : AbstractPostgresqlTest() {
+
+    @Test
+    fun testReadShards_Success() {
+        // Create shard table on the second node
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        ShardSchema.createShardTable(dataSourceFirstSchema)
+        ShardSchema.fillShardTable(dataSourceFirstSchema, nodes.keys.toList())
+        val expectedShardTable = ShardSchema.readShards(dataSourceFirstSchema)
+
+        // Check that we've found exactly the same shard table
+        val shardInfo = MigrateHelpers.readShards(nodes)
+        assertEquals(expectedShardTable, shardInfo.shards)
+        assertEquals(dataSourceFirstSchema, shardInfo.shardDataSource)
+    }
+
+    @Test
+    fun testReadShards_Failure() {
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+
+        // Without shard table we expect an exception
+        assertFailsWith<IllegalStateException> {
+            MigrateHelpers.readShards(nodes)
+        }
+    }
+
+    @Test
+    fun testSplitNodes_Success() {
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        // Choose any node as a target node
+        val targetNode = nodes.keys.random()
+        val dataSourcesWithoutTargetNode = nodes
+            .filter { (node, _) -> node != targetNode }
+            .values
+            .toList()
+
+        val splitResult = MigrateHelpers.splitNodes(nodes, targetNode.serverId)
+        assertEquals(dataSourcesWithoutTargetNode, splitResult.sourceNodes)
+        assertEquals(nodes[targetNode], splitResult.targetNode)
+    }
+
+    @Test
+    fun testSplitNodes_Failure() {
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+
+        assertFailsWith<IllegalStateException> {
+            MigrateHelpers.splitNodes(nodes, "bugaga-non-existing-target-id-${System.nanoTime()}")
+        }
+    }
+
+    @Test
+    fun testCalculateShardsDiff_SameShards() {
+        val shards = mapOf(
+            1 to Shard(1, "node1", "node1", null),
+            2 to Shard(2, "node2", "node2", null),
+            3 to Shard(3, "node3", "node3", null),
+        )
+
+        val updatedShards = buildMap { putAll(shards) } // to create the copy of the map
+
+        val diff = MigrateHelpers.calculateShardsDiff(shards, updatedShards)
+        assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
+    }
+
+    @Test
+    fun testCalculateShardsDiff_DifferentShards() {
+        val shards = mapOf(
+            1 to Shard(1, "node1", "node1", null),
+            2 to Shard(2, "node2", "node2", null),
+            3 to Shard(3, "node3", "node3", null),
+            4 to Shard(4, "node4", "node4", null),
+            5 to Shard(5, "node5", "node5", null),
+        )
+
+        val randomShardToChange = shards.keys.random()
+        val updatedShards = shards.mapValues { (shardNumber, shard) ->
+            if (shardNumber == randomShardToChange) {
+                shard.copy(
+                    producerNode = "another_node_$shardNumber",
+                    consumerNode = null,
+                    nextConsumerNode = "another_node_$shardNumber",
+                )
+            } else {
+                shard
+            }
+        }
+        val originalShard = shards[randomShardToChange]
+        val updatedShard = updatedShards[randomShardToChange]
+
+
+        val diff = MigrateHelpers.calculateShardsDiff(shards, updatedShards)
+        assertEquals(1, diff.size)
+        assertEquals(originalShard, diff.first().originalShard)
+        assertEquals(updatedShard, diff.first().updatedShard)
+    }
+
+}
