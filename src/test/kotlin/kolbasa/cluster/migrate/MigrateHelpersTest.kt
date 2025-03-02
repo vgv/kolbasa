@@ -3,7 +3,6 @@ package kolbasa.cluster.migrate
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
-import kolbasa.cluster.migrate.utils.MigrateHelpers
 import kolbasa.cluster.schema.ShardSchema
 import kotlin.IllegalStateException
 import kotlin.test.Test

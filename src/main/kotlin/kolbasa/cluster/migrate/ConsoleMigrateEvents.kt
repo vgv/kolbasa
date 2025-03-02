@@ -1,7 +1,6 @@
 package kolbasa.cluster.migrate
 
 import kolbasa.cluster.Shard
-import kolbasa.cluster.migrate.utils.ShardDiff
 import kolbasa.schema.Node
 import kolbasa.schema.Table
 import javax.sql.DataSource

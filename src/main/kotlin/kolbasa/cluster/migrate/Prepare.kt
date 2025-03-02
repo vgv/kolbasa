@@ -1,8 +1,6 @@
 package kolbasa.cluster.migrate
 
 import kolbasa.cluster.ClusterHelper
-import kolbasa.cluster.migrate.utils.MigrateHelpers
-import kolbasa.cluster.migrate.utils.MigrateHelpers.calculateShardsDiff
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import javax.sql.DataSource
@@ -53,7 +51,7 @@ internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<Da
     events.prepareSuccessful(
         shards = shards,
         targetNode = targetNode,
-        shardsDiff = calculateShardsDiff(initialShards, updatedShards)
+        shardsDiff = MigrateHelpers.calculateShardsDiff(initialShards, updatedShards)
     )
 }
 
