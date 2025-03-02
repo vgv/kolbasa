@@ -1,5 +1,6 @@
 package kolbasa.cluster.migrate
 
+import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.migrate.utils.MigrateHelpers
 import kolbasa.schema.Node
 import kolbasa.schema.SchemaExtractor
@@ -11,7 +12,7 @@ import kotlin.collections.component2
 import kotlin.system.exitProcess
 
 internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents) {
-    val nodes = MigrateHelpers.readNodes(dataSources)
+    val nodes = ClusterHelper.readNodes(dataSources)
 
     // tablename => schema
     val schemas = findAndCompareAllSchemas(dataSources, tablesToFind, events)
