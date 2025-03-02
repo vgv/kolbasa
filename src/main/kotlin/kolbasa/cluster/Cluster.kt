@@ -54,7 +54,6 @@ class Cluster @JvmOverloads constructor(
 
     private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
         var nodes = ClusterHelper.readNodes(dataSources)
-        ClusterHelper.checkNonUniqueServerIds(nodes)
 
         while (remapBucketIdentifiers(nodes)) {
             nodes = ClusterHelper.readNodes(dataSources)
