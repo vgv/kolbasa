@@ -13,15 +13,15 @@ nexus = "1.3.0"
 prometheus = "1.3.6"
 opentelemetry = "1.47.0"
 opentelemetry-instrumentation = "2.13.1"
-opentelemetry-instrumentation-incubator = "2.12.0-alpha"
-opentelemetry-semconv = "1.29.0-alpha"
+opentelemetry-instrumentation-incubator = "2.13.1-alpha"
+opentelemetry-semconv = "1.30.0"
 hikaricp = "6.2.1"
 postgresql = "42.7.5"
 jcommander = "1.82"
 
 logback = "1.5.16"
 testcontainers = "1.20.4"
-junit = "5.11.4"
+junit = "5.12.0"
 mockk = "1.13.16"
 
 [libraries]
