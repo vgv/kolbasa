@@ -79,7 +79,7 @@ private fun convertClusterStringToDataSource(cluster: String): List<DataSource> 
     for (node in cluster.split(";")) {
         val urlParts = node.split(",", limit = 3)
         if (urlParts.size < 2) {
-            println("Invalid node format: $node. Correct format: url1,user1,password1;url2;user2;password2 (password is optional)")
+            println("Invalid node format: $node. Correct format: url1,user1,password1;url2,user2,password2... (password is optional)")
             exitProcess(1)
         }
 
