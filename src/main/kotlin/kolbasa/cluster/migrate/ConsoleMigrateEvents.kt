@@ -5,7 +5,7 @@ import kolbasa.schema.Node
 import kolbasa.schema.Table
 import javax.sql.DataSource
 
-internal class ConsoleMigrateEvents : MigrateEvents {
+internal object ConsoleMigrateEvents : MigrateEvents {
 
     override fun prepareMigrateToTheSameShardError(shard: Shard, targetNode: String) {
         println("Error: $shard is already on node '$targetNode', you can't move shard to the same node")

@@ -8,13 +8,12 @@ import java.util.SortedMap
 import javax.sql.DataSource
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.system.exitProcess
 
-internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents) {
+internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents, exitManager: ExitManager) {
     val nodes = ClusterHelper.readNodes(dataSources)
 
     // tablename => schema
-    val schemas = findAndCompareAllSchemas(dataSources, tablesToFind, events)
+    val schemas = findAndCompareAllSchemas(dataSources, tablesToFind, events, exitManager)
 
     // targetnode => shards (which should be migrated to this node)
     val targetsToShards = findTargetNodeAndShards(nodes)
@@ -57,7 +56,8 @@ private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<Str
 private fun findAndCompareAllSchemas(
     dataSources: List<DataSource>,
     tablesToFind: Set<String>?,
-    events: MigrateEvents
+    events: MigrateEvents,
+    exitManager: ExitManager
 ): Map<String, Table> {
     // schemas
     val allSchemas = mutableMapOf<String, MutableList<Pair<DataSource, Table>>>()
@@ -75,7 +75,7 @@ private fun findAndCompareAllSchemas(
                 val secondTable = tables[j]
                 if (!partialEq(firstTable.second, secondTable.second)) {
                     events.migrateInconsistentSchemaError(tableName, firstTable.second, secondTable.second)
-                    exitProcess(1)
+                    exitManager.exitWithError()
                 }
             }
         }
