@@ -30,14 +30,14 @@ version 10 and above.
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.56.0"
+implementation "io.github.vgv:kolbasa:0.60.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.56.0</version>
+    <version>0.60.0</version>
 </dependency>
 ```
 
@@ -59,9 +59,13 @@ File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourcePro
 url, username and password for your existing PostgreSQL instance.
 
 ### Simple example
-The simplest possible example to send and receive one simple text message: [SimpleExample](src/test/kotlin/examples/SimpleExample.kt)
+The simplest possible example to send and receive one simple text message:
+* [SimpleExample (Kotlin)](src/test/kotlin/examples/SimpleExample.kt)
+* [SimpleExample (Java)](src/test/kotlin/examples/SimpleExample.java)
 
 No filtering, no message deduplication, sharding or other features. Just send and receive one message.
+
+`./gradlew example -P name=SimpleExample`
 
 ### Filtering and sorting
 What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and
@@ -72,7 +76,11 @@ filtering and ordering are performed on the queue broker side (PostgreSQL) to ma
 
 For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
+
+`./gradlew example -P name=FilterExample`
 2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
+
+`./gradlew example -P name=FilterAndSortExample`
 
 ### Transaction context
 Imagine that in your application you have a `customer` table containing important information about your customers - name, email
@@ -94,3 +102,5 @@ to the calling code. It works perfectly with plain JDBC or more complex framewor
 [Exposed](https://jetbrains.github.io/Exposed/home.html) etc.
 
 Example: [TransactionContextExample](src/test/kotlin/examples/TransactionContextExample.kt)
+
+`./gradlew example -P name=TransactionContextExample`

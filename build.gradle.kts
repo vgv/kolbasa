@@ -25,6 +25,9 @@ dependencies {
     // PostgreSQL
     implementation(libs.postgresql)
 
+    // JCommander
+    implementation(libs.jcommander)
+
     // Metrics
     compileOnly(libs.prometheus.metrics.core)
 

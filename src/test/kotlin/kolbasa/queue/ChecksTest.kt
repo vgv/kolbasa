@@ -1,6 +1,7 @@
 package kolbasa.queue
 
-import kolbasa.SweepConfig
+import kolbasa.cluster.ClusterStateUpdateConfig
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
@@ -230,6 +231,15 @@ internal class ChecksTest {
             val ulp = Duration.ofNanos(1)
             val aBitSmaller = PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
             Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
+        }
+    }
+
+    @Test
+    fun testCheckClusterStateUpdateInterval() {
+        assertFailsWith<IllegalStateException> {
+            val ulp = Duration.ofNanos(1)
+            val aBitSmaller = ClusterStateUpdateConfig.MIN_INTERVAL - ulp
+            Checks.checkClusterStateUpdateInterval(aBitSmaller)
         }
     }
 

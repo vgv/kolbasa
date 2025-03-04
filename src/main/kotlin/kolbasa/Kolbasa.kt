@@ -1,6 +1,8 @@
 package kolbasa
 
+import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
@@ -29,6 +31,10 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
+
+    @JvmStatic
+    @Volatile
+    var clusterStateUpdateConfig: ClusterStateUpdateConfig = ClusterStateUpdateConfig()
 
     /**
      * Default executor for async operations

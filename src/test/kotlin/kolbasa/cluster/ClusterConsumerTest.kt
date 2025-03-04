@@ -2,6 +2,7 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.Kolbasa
+import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement
@@ -35,7 +36,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         }
 
         cluster = Cluster(dataSources)
-        cluster.updateState()
+        cluster.updateStateOnce()
 
         clusterConsumer = ClusterConsumer(cluster)
     }
@@ -83,7 +84,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
             statement.executeUpdate(sql)
         }
         // re-read cluster state after shards changing
-        cluster.updateState()
+        cluster.updateStateOnce()
 
 
         // Try to receive as many messages as possible

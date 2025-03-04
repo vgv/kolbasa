@@ -1,8 +1,11 @@
-package kolbasa.cluster
+package kolbasa.cluster.schema
 
+import kolbasa.cluster.Shard
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
+import kolbasa.schema.IdSchema
+import kolbasa.schema.Node
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -54,12 +57,12 @@ internal object ShardSchema {
         }
     }
 
-    fun fillShardTable(dataSource: DataSource, nodes: List<String>) {
+    fun fillShardTable(dataSource: DataSource, nodes: List<Node>) {
         val shardsPerStatement = 100
         val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
-                "($shard, '$randomNode', '$randomNode')"
+                "($shard, '${randomNode.serverId}', '${randomNode.serverId}')"
             }
 
             """

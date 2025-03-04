@@ -1,6 +1,7 @@
 package kolbasa.queue
 
-import kolbasa.SweepConfig
+import kolbasa.cluster.ClusterStateUpdateConfig
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
@@ -110,6 +111,12 @@ internal object Checks {
     fun checkCustomQueueSizeMeasureInterval(queueName: String, customDuration: Duration) {
         check(customDuration >= PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL) {
             "Custom queue size measure interval must be greater than or equal to ${PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL} (current: $customDuration, queue=$queueName)"
+        }
+    }
+
+    fun checkClusterStateUpdateInterval(interval: Duration) {
+        check(interval >= ClusterStateUpdateConfig.MIN_INTERVAL) {
+            "Cluster state update interval must be greater than or equal to ${ClusterStateUpdateConfig.MIN_INTERVAL} (current: $interval)"
         }
     }
 
