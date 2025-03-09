@@ -55,7 +55,7 @@ private fun launchPrepare(command: PrepareCommand) {
     val dataSources = convertClusterStringToDataSource(command.cluster)
     checkDataSources(dataSources)
 
-    prepare(command.shards, command.target, dataSources, ConsoleMigrateEvents())
+    prepare(command.shards, command.target, dataSources, ConsoleMigrateEvents, RealExitManager)
 }
 
 private fun launchMove(command: MoveCommand) {
@@ -68,7 +68,7 @@ private fun launchMove(command: MoveCommand) {
         command.tables.toSet()
     }
 
-    migrate(tablesToFind, dataSources, ConsoleMigrateEvents())
+    migrate(tablesToFind, dataSources, ConsoleMigrateEvents, RealExitManager)
 }
 
 
