@@ -21,6 +21,8 @@ class Cluster @JvmOverloads constructor(
     @Volatile
     private var state: ClusterState = ClusterState.NOT_INITIALIZED
 
+    private var schemaUpdated: Boolean = false
+
     fun initAndScheduleStateUpdate() {
         updateStateOnce()
 
@@ -42,9 +44,7 @@ class Cluster @JvmOverloads constructor(
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        dataSources.forEach { dataSource: DataSource ->
-            SchemaHelpers.updateDatabaseSchema(dataSource, queues)
-        }
+        initQueuesSchema(dataSources)
 
         val newState = ClusterState(nodes.mapKeys { it.key.serverId }, shards)
         if (newState != state) {
@@ -110,6 +110,19 @@ class Cluster @JvmOverloads constructor(
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         return ShardSchema.readShards(dataSource)
     }
+
+    private fun initQueuesSchema(dataSources: List<DataSource>) {
+        if (schemaUpdated || queues.isEmpty()) {
+            return
+        }
+
+        dataSources.forEach { dataSource: DataSource ->
+            SchemaHelpers.updateDatabaseSchema(dataSource, queues)
+        }
+
+        schemaUpdated = true
+    }
+
 
     internal fun getState(): ClusterState {
         check(state !== ClusterState.NOT_INITIALIZED) {
