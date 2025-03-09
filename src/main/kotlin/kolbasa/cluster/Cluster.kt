@@ -72,6 +72,8 @@ class Cluster @JvmOverloads constructor(
             val currentBucket = node.identifiersBucket
 
             if (currentBucket in assignedBuckets) {
+                // if we are here, it means that the current bucket is already assigned to another node earlier
+                // we need to remap it to the next available bucket
                 while ((nextBucket in assignedBuckets) || (nextBucket in existingBuckets)) {
                     nextBucket++
                 }
