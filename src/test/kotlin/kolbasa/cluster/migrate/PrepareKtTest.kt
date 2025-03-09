@@ -1,6 +1,5 @@
 package kolbasa.cluster.migrate
 
-import io.mockk.called
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.AbstractPostgresqlTest
@@ -10,6 +9,8 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 class PrepareKtTest : AbstractPostgresqlTest() {
@@ -33,15 +34,13 @@ class PrepareKtTest : AbstractPostgresqlTest() {
             .sorted()
 
         val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-        val exitManager = mockk<ExitManager>(relaxed = true)
 
         // RUN
         prepare(
             shards = shardsToMove,
             targetNode = targetNode.serverId,
             dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-            events = migrateEvents,
-            exitManager = exitManager
+            events = migrateEvents
         )
 
         // CHECK
@@ -79,7 +78,6 @@ class PrepareKtTest : AbstractPostgresqlTest() {
 
         verifySequence {
             migrateEvents.prepareSuccessful(shardsToMove, targetNode.serverId, diffs)
-            exitManager wasNot called
         }
     }
 
@@ -95,22 +93,21 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val shardsToMove = listOf(Random.nextInt(1, 100000), Random.nextInt(1, 100000), Random.nextInt(1, 100000))
 
         val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-        val exitManager = mockk<ExitManager>(relaxed = true)
 
         // RUN
-        prepare(
-            shards = shardsToMove,
-            targetNode = targetNode,
-            dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-            events = migrateEvents,
-            exitManager = exitManager
-        )
+        val exception = assertFailsWith<MigrateException.MigrateToNonExistingNodeException> {
+            prepare(
+                shards = shardsToMove,
+                targetNode = targetNode,
+                dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
+                events = migrateEvents,
+            )
+        }
 
         // CHECK
-        verifySequence {
-            migrateEvents.prepareMigrateToNonExistingNodeError(nodes.keys.toList(), targetNode)
-            exitManager.exitWithError()
-        }
+        assertIs<MigrateException.MigrateToNonExistingNodeException>(exception)
+        assertEquals(nodes.keys.toList(), exception.knownNodes)
+        assertEquals(targetNode, exception.targetNode)
     }
 
     @Test
@@ -132,22 +129,20 @@ class PrepareKtTest : AbstractPostgresqlTest() {
             .sorted()
 
         val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-        val exitManager = mockk<ExitManager>(relaxed = true)
 
         // RUN
-        prepare(
-            shards = shardsToMove,
-            targetNode = targetNode.serverId,
-            dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-            events = migrateEvents,
-            exitManager = exitManager
-        )
+        val exception = assertFailsWith<MigrateException.MigrateToTheSameShardException> {
+            prepare(
+                shards = shardsToMove,
+                targetNode = targetNode.serverId,
+                dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
+                events = migrateEvents
+            )
+        }
 
         // CHECK
-        verifySequence {
-            val shard = requireNotNull(shards[shardsToMove.first()])
-            migrateEvents.prepareMigrateToTheSameShardError(shard, targetNode.serverId)
-            exitManager.exitWithError()
-        }
+        assertIs<MigrateException.MigrateToTheSameShardException>(exception)
+        assertEquals(shards[shardsToMove.first()], exception.shard)
+        assertEquals(targetNode.serverId, exception.targetNode)
     }
 }

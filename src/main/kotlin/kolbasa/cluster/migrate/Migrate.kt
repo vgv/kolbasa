@@ -9,11 +9,11 @@ import javax.sql.DataSource
 import kotlin.collections.component1
 import kotlin.collections.component2
 
-internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents, exitManager: ExitManager) {
+internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents) {
     val nodes = ClusterHelper.readNodes(dataSources)
 
     // tablename => schema
-    val schemas = findAndCompareAllSchemas(dataSources, tablesToFind, events, exitManager)
+    val schemas = findAndCompareAllSchemas(dataSources, tablesToFind)
 
     // targetnode => shards (which should be migrated to this node)
     val targetsToShards = findTargetNodeAndShards(nodes)
@@ -55,9 +55,7 @@ private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<Str
 
 private fun findAndCompareAllSchemas(
     dataSources: List<DataSource>,
-    tablesToFind: Set<String>?,
-    events: MigrateEvents,
-    exitManager: ExitManager
+    tablesToFind: Set<String>?
 ): Map<String, Table> {
     // schemas
     val allSchemas = mutableMapOf<String, MutableList<Pair<DataSource, Table>>>()
@@ -74,8 +72,7 @@ private fun findAndCompareAllSchemas(
             for (j in i + 1..tables.size - 1) {
                 val secondTable = tables[j]
                 if (!partialEq(firstTable.second, secondTable.second)) {
-                    events.migrateInconsistentSchemaError(tableName, firstTable.second, secondTable.second)
-                    exitManager.exitWithError()
+                    throw MigrateException.InconsistentSchemaException(tableName, firstTable.second, secondTable.second)
                 }
             }
         }

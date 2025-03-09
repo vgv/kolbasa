@@ -5,14 +5,13 @@ import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import javax.sql.DataSource
 
-internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<DataSource>, events: MigrateEvents, exitManager: ExitManager) {
+internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<DataSource>, events: MigrateEvents) {
     val nodes = ClusterHelper.readNodes(dataSources)
     val (shardDataSource, initialShards) = MigrateHelpers.readShards(nodes)
 
     // Check that target node exists
     if (nodes.none { (node, _) -> node.serverId == targetNode }) {
-        events.prepareMigrateToNonExistingNodeError(nodes.keys.toList(), targetNode)
-        return exitManager.exitWithError()
+        throw MigrateException.MigrateToNonExistingNodeException(nodes.keys.toList(), targetNode)
     }
 
     // Check that we are not going to migrate shard to the same node where the shard is located right now
@@ -23,8 +22,7 @@ internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<Da
         }.forEach { (_, shard) ->
             // Then, check that we are not going to migrate shard to the same node where the shard is located right now
             if (shard.producerNode == targetNode && shard.consumerNode == targetNode) {
-                events.prepareMigrateToTheSameShardError(shard, targetNode)
-                return exitManager.exitWithError()
+                throw MigrateException.MigrateToTheSameShardException(shard, targetNode)
             }
         }
 
