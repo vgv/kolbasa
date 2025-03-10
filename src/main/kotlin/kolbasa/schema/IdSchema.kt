@@ -64,11 +64,11 @@ internal object IdSchema {
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
-            INIT_TABLE_STATEMENT,
             // TODO: drop after a few releases
             "alter table $NODE_TABLE_NAME add column if not exists $IDENTIFIERS_BUCKET_COLUMN_NAME int",
             "update $NODE_TABLE_NAME set $IDENTIFIERS_BUCKET_COLUMN_NAME=${Node.randomBucket()} where $IDENTIFIERS_BUCKET_COLUMN_NAME is null",
             "alter table $NODE_TABLE_NAME alter $IDENTIFIERS_BUCKET_COLUMN_NAME set not null",
+            INIT_TABLE_STATEMENT,
         )
 
         dataSource.useConnectionWithAutocommit { connection ->
