@@ -33,7 +33,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     private val testQueue = Queue(
         queueName,
-        PredefinedDataTypes.String,
+        PredefinedDataTypes.ByteArray,
         options = QueueOptions(
             defaultDelay = Duration.ofMinutes(5),
             defaultAttempts = 42
@@ -53,7 +53,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
         assertEquals(1, tables.size, "Tables: ${tables.keys}")
 
-        val testTable = assertNotNull(tables[testQueue.dbTableName])
+        val testTable = assertNotNull(tables[testQueue.dbTableName], "Table not found, tables: ${tables.keys}")
 
         // check columns
         assertEquals(20, testTable.columns.size, "Found columns: ${testTable.columns}")
