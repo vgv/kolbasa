@@ -52,7 +52,7 @@ internal enum class ColumnType(
     VARCHAR(setOf("varchar", "text"), Types.VARCHAR),
     VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY),
     BYTEARRAY(setOf("bytea"), Types.BINARY),
-    ;
+    JSONB(setOf("jsonb"), Types.OTHER);
 
     companion object {
         fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
