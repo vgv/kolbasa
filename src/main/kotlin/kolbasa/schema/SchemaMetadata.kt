@@ -50,7 +50,9 @@ internal enum class ColumnType(
     BOOLEAN(setOf("bool"), Types.BOOLEAN),
     TIMESTAMP(setOf("timestamp"), Types.TIMESTAMP),
     VARCHAR(setOf("varchar", "text"), Types.VARCHAR),
-    VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY);
+    VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY),
+    BYTEARRAY(setOf("bytea"), Types.BINARY),
+    ;
 
     companion object {
         fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }

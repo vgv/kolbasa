@@ -179,6 +179,15 @@ internal class MigrateOneTable(
                     insertStatement.setArray(resultSetIndex, value)
                 }
             }
+
+            ColumnType.BYTEARRAY -> {
+                val value = resultSet.getBytes(resultSetIndex)
+                if (resultSet.wasNull()) {
+                    insertStatement.setNull(resultSetIndex, column.type.sqlType)
+                } else {
+                    insertStatement.setBytes(resultSetIndex, value)
+                }
+            }
         }
     }
 
