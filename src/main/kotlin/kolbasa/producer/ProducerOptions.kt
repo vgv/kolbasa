@@ -39,12 +39,33 @@ data class ProducerOptions(
      * Batch size helps you to control how big (or small) has to be a 'failure' chunk. See [PartialInsert] for details.
      */
     val batchSize: Int = DEFAULT_BATCH_SIZE,
+
     /**
      * Partial insert strategy. See [PartialInsert] for details.
      */
     val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
 
-    val shard: Int? = null, // TODO
+    /**
+     * Shard number.
+     *
+     * If you are using Kolbasa Cluster and have multiple PostgreSQL servers, messages will be distributed among these servers
+     * in a non-deterministic, unknown manner. However, in some cases, it may be useful to control how messages are
+     * distributed across the servers. The two most common scenarios are:
+     * 1) Deduplication using unique meta fields. Kolbasa uses unique PostgreSQL indexes for deduplication, but unique indexes
+     *    do not work across multiple database servers. Therefore, messages must be on the same server for this to work correctly.
+     * 2) Enforcing message order when reading. For example, you want to put messages with specific `account_id` and read them
+     *    later in the same order (by another field or just time of sending). You can use filtering by `account_id` and sorting
+     *    by required field (fields), but, if messages are not on the same server, you can't have an order guarantee. To ensure
+     *    correct ordering, you must ensure that messages with the same `account_id` are on the same server.
+     *
+     * To control message persistence on specific servers in the cluster shard field should be used.
+     * Kolbasa guarantees that messages with the same shard value will be stored on the same server. The shard value can be any
+     * integer from [Int.MIN_VALUE] to [Int.MAX_VALUE]. For Kolbasa itself, the specific shard value carries no inherent
+     * meaning — it is arbitrary and determined by your business logic. The only guarantee is that messages with the same shard
+     * will persist on the same server. Messages with different shard values may be stored on the same server or on different
+     * ones, without any guarantee.
+     */
+    val shard: Int? = null,
 
     /**
      * Executor used to send messages asynchronously in [Producer][kolbasa.producer.datasource.Producer] sendAsync() methods.
