@@ -3,6 +3,7 @@ package kolbasa.cluster.migrate
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.*
+import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
@@ -186,6 +187,18 @@ internal class MigrateOneTable(
                     insertStatement.setNull(resultSetIndex, column.type.sqlType)
                 } else {
                     insertStatement.setBytes(resultSetIndex, value)
+                }
+            }
+
+            ColumnType.JSONB -> {
+                val value = resultSet.getString(resultSetIndex)
+                if (resultSet.wasNull()) {
+                    insertStatement.setNull(resultSetIndex, column.type.sqlType)
+                } else {
+                    val jsonObject = PGobject()
+                    jsonObject.type = "jsonb"
+                    jsonObject.value = value
+                    insertStatement.setObject(resultSetIndex, jsonObject)
                 }
             }
         }

@@ -11,7 +11,7 @@ import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.datasource.DatabaseProducer
-import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.SchemaHelpers
@@ -26,7 +26,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
     val migrateBatchSize = 1000
     val shardsToMove = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     val shardsToStay = listOf(10, 11, 12, 13, 14, 15, 16, 17, 18, 19)
-    var sentItems = mutableMapOf<Id, SendMessage<String, TestMeta>>()
+    var sentItems = mutableMapOf<Id, SendMessage<Value, TestMeta>>()
 
     @BeforeTest
     fun before() {
@@ -42,9 +42,9 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
                     shardsToStay.random()
                 }
 
-                SendMessage<String, TestMeta>(data = shard.toString(), meta = randomTestMeta())
+                SendMessage<Value, TestMeta>(data = Value(shard), meta = randomTestMeta())
             }
-            .groupBy { it.data.toInt() }
+            .groupBy { it.data.value }
 
 
         // send messages to the source database
@@ -96,7 +96,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             val messages = consumer.receive(queue, limit = 100, receiveOptions = ReceiveOptions(readMetadata = true))
             messages.forEach { message ->
                 // check that the shard is in the list of shards to move
-                val shard = message.data.toInt()
+                val shard = message.data.value
                 assertTrue(shardsToMove.contains(shard), "Shard $shard should be in the list of shards to move: $shardsToMove")
 
                 // check that the meta fields were moved correctly
@@ -150,9 +150,13 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             val enumField: TestEnum
         )
 
-        internal val queue = Queue(
+        internal data class Value(val value: Int)
+
+        internal val queue = Queue<Value, TestMeta>(
             "test_queue",
-            PredefinedDataTypes.String,
+            DatabaseQueueDataType.Json<Value>(
+                serializer = { "{\"value\": ${it.value}}" },
+                deserializer = { Value(it.removeSurrounding("{\"value\": ", "}").toInt()) }),
             metadata = TestMeta::class.java
         )
 
