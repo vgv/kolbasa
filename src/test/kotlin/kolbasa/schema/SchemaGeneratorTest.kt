@@ -1,8 +1,10 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.queue.*
-import org.junit.jupiter.api.Disabled
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
+import kolbasa.queue.Searchable
+import kolbasa.queue.Unique
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -30,7 +32,6 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
         assertEquals(schema.all, schema.required)
     }
 
-    @Disabled("Disable during schema migration")
     @Test
     fun testExtractSchema_CheckRequiredStatementsAreEmptyIfSchemaIsActual() {
         // update database schema
