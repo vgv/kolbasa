@@ -18,7 +18,10 @@ data class SendOptions(
      */
     val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
 
-    val shard: Int? = null // TODO
+    /**
+     * @see [ProducerOptions.shard]
+     */
+    val shard: Int? = null
 ) {
 
     init {
