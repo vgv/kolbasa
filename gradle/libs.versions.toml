@@ -19,7 +19,7 @@ hikaricp = "6.2.1"
 postgresql = "42.7.5"
 jcommander = "1.82"
 
-logback = "1.5.17"
+logback = "1.5.18"
 testcontainers = "1.20.4"
 junit = "5.12.1"
 mockk = "1.13.17"
