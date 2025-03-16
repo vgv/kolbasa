@@ -53,11 +53,15 @@ object SchemaHelpers {
      * making the correct data migration for each of the above cases
      */
     @JvmStatic
-    fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>) {
-        generateDatabaseSchema(dataSource, queues).forEach { (_, schema) ->
+    fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>): Map<Queue<*, *>, Schema> {
+        val schemas = generateDatabaseSchema(dataSource, queues)
+
+        schemas.forEach { (_, schema) ->
             // we execute only required statements
             executeSchemaStatements(dataSource, schema.required)
         }
+
+        return schemas
     }
 
     /**
@@ -66,8 +70,8 @@ object SchemaHelpers {
      * See [updateDatabaseSchema] for more details
      */
     @JvmStatic
-    fun updateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>) {
-        updateDatabaseSchema(dataSource, queues.toList())
+    fun updateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>): Map<Queue<*, *>, Schema> {
+        return updateDatabaseSchema(dataSource, queues.toList())
     }
 
     private fun executeSchemaStatements(dataSource: DataSource, statements: SchemaStatements) {

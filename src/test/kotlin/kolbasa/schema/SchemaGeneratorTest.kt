@@ -7,10 +7,11 @@ import kolbasa.queue.Searchable
 import kolbasa.queue.Unique
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class SchemaGeneratorTest: AbstractPostgresqlTest() {
+class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
     data class TestMeta(
         @Searchable
@@ -35,7 +36,9 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
     @Test
     fun testExtractSchema_CheckRequiredStatementsAreEmptyIfSchemaIsActual() {
         // update database schema
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        val newSchemas = SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        val newTable = assertNotNull(newSchemas[queue], "schemas: $newSchemas")
+        assertFalse(newTable.required.isEmpty())
 
         // extract schema again
         val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(queue.dbTableName))[queue.dbTableName]
