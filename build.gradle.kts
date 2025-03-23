@@ -173,11 +173,6 @@ publishing {
             groupId = "io.github.vgv"
             artifactId = "kolbasa"
             version = project.sanitizeVersion()
-            println("-----------------------------------")
-            println("Project version: ${project.version}")
-            println("Github ref: ${settingsProvider.githubHeadRef}")
-            println("Sanitized: $version")
-            println("-----------------------------------")
             versionMapping {
                 usage("java-api") {
                     fromResolutionOf("runtimeClasspath")
@@ -244,6 +239,7 @@ fun Project.sanitizeVersion(): String {
             // GitHub pull request
             // githubHeadRef contains branch name, but branch name can have '/',
             // for example 'dependabot/gradle/com.netflix.nebula.release-20.2.0'
+            // Maven Central doesn't allow '/' in artifact version, so we replace it with '-'
             val branchName = githubHeadRef.replace('/', '-')
             version.replace(Regex("-dev\\.\\d+\\+[a-f0-9]+$"), "-dev+$branchName-SNAPSHOT")
         } else {
