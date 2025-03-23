@@ -173,6 +173,9 @@ publishing {
             groupId = "io.github.vgv"
             artifactId = "kolbasa"
             version = project.sanitizeVersion()
+            println("-----------------------------------")
+            println("Version: $version")
+            println("-----------------------------------")
             versionMapping {
                 usage("java-api") {
                     fromResolutionOf("runtimeClasspath")
