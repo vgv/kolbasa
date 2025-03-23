@@ -174,7 +174,8 @@ publishing {
             artifactId = "kolbasa"
             version = project.sanitizeVersion()
             println("-----------------------------------")
-            println("Version: $version")
+            println("Project version: ${project.version}")
+            println("Sanitized: $version")
             println("-----------------------------------")
             versionMapping {
                 usage("java-api") {
