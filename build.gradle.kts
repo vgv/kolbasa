@@ -241,9 +241,11 @@ fun Project.sanitizeVersion(): String {
     return if (project.isSnapshotVersion()) {
         val githubHeadRef = settingsProvider.githubHeadRef
         if (githubHeadRef != null) {
-            // github pull request
-            version
-                .replace(Regex("-dev\\.\\d+\\+[a-f0-9]+$"), "-dev+$githubHeadRef-SNAPSHOT")
+            // GitHub pull request
+            // githubHeadRef contains branch name, but branch name can have '/',
+            // for example 'dependabot/gradle/com.netflix.nebula.release-20.2.0'
+            val branchName = githubHeadRef.replace('/', '-')
+            version.replace(Regex("-dev\\.\\d+\\+[a-f0-9]+$"), "-dev+$branchName-SNAPSHOT")
         } else {
             // local branch
             version
