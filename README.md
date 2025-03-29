@@ -102,6 +102,25 @@ Example: [DeduplicationExample](src/test/kotlin/examples/DeduplicationExample.kt
 `./gradlew example -P name=DeduplicationExample`
 
 
+### Send delay
+By default, any message is available for receiving immediately after sending, but it often happens that the delivery of a
+message needs to be delayed for some time.
+
+Kolbasa has this option.
+
+When sending a message, you can specify an arbitrary delay (seconds, hours, days) and the message will "appear" for consumers
+no earlier than this delay expires.
+
+For example, your service has a "Delete account" button, but you start the actual data deletion only after 30 days, thereby
+giving the client the opportunity to change their mind. In this case, you can send the message "DELETE CLIENT #123456789" to a
+queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
+become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
+
+Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
+
+`./gradlew example -P name=SendDelayExample`
+
+
 ### Transaction context
 Imagine that in your application you have a `customer` table containing important information about your customers - name, email
 and some big and complex additional data that takes a long time to calculate. To calculate this data, you need to read a lot from
