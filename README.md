@@ -78,6 +78,7 @@ For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
 
 `./gradlew example -P name=FilterExample`
+
 2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
 
 `./gradlew example -P name=FilterAndSortExample`
