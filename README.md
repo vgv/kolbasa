@@ -116,6 +116,8 @@ giving the client the opportunity to change their mind. In this case, you can se
 queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
 become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
 
+![Send delay](src/test/kotlin/examples/send_delay.png)
+
 Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
 
 `./gradlew example -P name=SendDelayExample`
