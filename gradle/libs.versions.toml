@@ -20,7 +20,7 @@ postgresql = "42.7.5"
 jcommander = "1.82"
 
 logback = "1.5.18"
-testcontainers = "1.20.4"
+testcontainers = "1.21.0"
 junit = "5.12.2"
 mockk = "1.14.0"
 
