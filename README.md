@@ -116,11 +116,49 @@ giving the client the opportunity to change their mind. In this case, you can se
 queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
 become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
 
-![Send delay](src/test/kotlin/examples/send_delay.png)
+![Send delay](src/test/kotlin/examples/img/send_delay.png)
 
 Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
 
 `./gradlew example -P name=SendDelayExample`
+
+
+### Partial insert and batching
+Imagine you want to send 10,000 messages with a single `Producer.send()` call, but among those 10,000 messages there is one
+invalid message that cannot be sent, for example due to uniqueness constraints.
+
+So, there will definitely be a send error, but if only one message out of 10,000 causes an error, there are several different
+options for handling this situation:
+
+1) Cancel sending all 10,000 messages
+2) Send messages up to the invalid one, and do not send any messages after the invalid one. This mode is useful if you want to
+preserve causal ordering
+3) Send as many messages as possible, skipping only the invalid one. This is useful if the messages are not related to each other
+in any way, and you just want to send as many messages as possible to the queue
+
+However, Kolbasa does not send all messages to the queue one by one, this is very bad for performance. The library sends
+messages to the queue in [batches](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
+boundary of these batches, so if a specific batch contains a invalid message, the entire batch will be discarded.
+
+The easiest way to show the difference between these approaches is with pictures.
+In the example below, we send 6 messages with `batchSize=2` and one poison message. It turns out, three batches, one of
+which (the second) contains an incorrect message.
+
+Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
+
+`PartialInsert.PROHIBITED`
+![Prohibited](src/test/kotlin/examples/img/partial_insert_prohibited.png)
+
+`PartialInsert.UNTIL_FIRST_FAILURE`
+![Until first failure](src/test/kotlin/examples/img/partial_insert_until_first_failure.png)
+
+`PartialInsert.INSERT_AS_MANY_AS_POSSIBLE`
+![As manu as possible](src/test/kotlin/examples/img/partial_insert_as_many_as_possible.png)
+
+
+Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
+
+`./gradlew example -P name=PartialInsertExample`
 
 
 ### Transaction context
