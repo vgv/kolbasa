@@ -47,7 +47,7 @@ class NativeSqlConditionTest {
             @Searchable val stringValue: String
         )
 
-        val queue = Queue(
+        val queue = Queue.of(
             "test_queue",
             databaseDataType = PredefinedDataTypes.ByteArray,
             metadata = TestMeta::class.java

@@ -77,10 +77,9 @@ class ProducerTest : PerformanceTest {
     }
 
     companion object {
-        private val queue = Queue<ByteArray, Unit>(
+        private val queue = Queue.of(
             name = "producer_test",
-            databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = null
+            databaseDataType = PredefinedDataTypes.ByteArray
         )
     }
 }

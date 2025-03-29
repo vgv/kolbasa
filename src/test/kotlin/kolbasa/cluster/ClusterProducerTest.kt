@@ -21,10 +21,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
 
     private val messagesToSend = 1_000
 
-    private val queue = Queue<Int, Unit>(
-        name = "test",
-        databaseDataType = PredefinedDataTypes.Int
-    )
+    private val queue = Queue.of("test", PredefinedDataTypes.Int)
 
     private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
@@ -229,7 +226,7 @@ fun findDataSourceWithInitializedShard(dataSources: List<DataSource>): DataSourc
     dataSources.forEach { ds ->
         val shards = try {
             ShardSchema.readShards(ds)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Shard table doesn't exist
             emptyMap()
         }

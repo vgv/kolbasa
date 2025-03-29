@@ -16,7 +16,7 @@ fun main() {
     )
 
     // Define queue with name `test_queue`, varchar type as data storage and metadata
-    val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()

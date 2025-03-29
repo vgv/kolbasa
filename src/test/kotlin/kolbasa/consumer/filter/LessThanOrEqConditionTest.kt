@@ -15,7 +15,7 @@ internal class LessThanOrEqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val lteExpression = LessThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val sql = lteExpression.toSqlClause(queue)
@@ -24,7 +24,7 @@ internal class LessThanOrEqConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val lteExpression = LessThanOrEqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

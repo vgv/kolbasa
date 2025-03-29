@@ -12,7 +12,7 @@ class SweepHelperTest {
 
     @Test
     fun testCheckPeriod_IfAlwaysOn() {
-        val queue = Queue("test", PredefinedDataTypes.String, metadata = Unit::class.java)
+        val queue = Queue.of("test", PredefinedDataTypes.String)
         val iterations = 1_000_000
 
         // Always false, if probability=0
@@ -24,7 +24,7 @@ class SweepHelperTest {
     @ParameterizedTest
     @ValueSource(ints = [3, 5, 13, 25, 143, 567, 34523])
     fun testCheckPeriod(period: Int) {
-        val queue = Queue("test_$period", PredefinedDataTypes.String, metadata = Unit::class.java)
+        val queue = Queue.of("test_$period", PredefinedDataTypes.String, metadata = Unit::class.java)
 
         // Restart iterations, find next period
         while (!SweepHelper.checkPeriod(queue, period)) {

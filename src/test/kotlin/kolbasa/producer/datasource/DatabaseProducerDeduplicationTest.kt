@@ -21,7 +21,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
     internal data class TestMeta(@Searchable @Unique val field: Int)
 
-    private val queue = Queue(
+    private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
         metadata = TestMeta::class.java

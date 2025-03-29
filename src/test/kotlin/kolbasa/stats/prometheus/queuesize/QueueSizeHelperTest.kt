@@ -16,7 +16,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_TableNotExists() {
-        val queue = Queue<String, Unit>("not_real_queue", PredefinedDataTypes.String)
+        val queue = Queue.of("not_real_queue", PredefinedDataTypes.String)
 
         // Measure table size
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
@@ -25,7 +25,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_EmptyTableWithoutVacuum() {
-        val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
+        val queue = Queue.of("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         // Measure table size
@@ -39,7 +39,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_FullTableWithoutVacuum() {
-        val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
+        val queue = Queue.of("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         val producer = DatabaseProducer(dataSource)
@@ -59,7 +59,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_EmptyTableWithVacuum() {
-        val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
+        val queue = Queue.of("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         // Run vacuum to update stats
@@ -72,7 +72,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
 
     @Test
     fun testCalculateQueueLength_FullTableWithVacuum() {
-        val queue = Queue<String, Unit>("real_queue", PredefinedDataTypes.String)
+        val queue = Queue.of("real_queue", PredefinedDataTypes.String)
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
         val producer = DatabaseProducer(dataSource)

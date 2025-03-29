@@ -14,7 +14,7 @@ internal class IsNotNullConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val isNotNullExpression = IsNotNullCondition<TestMeta>(TestMeta::intValue.name)
 
         val sql = isNotNullExpression.toSqlClause(queue)
@@ -23,7 +23,7 @@ internal class IsNotNullConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val isNotNullExpression = IsNotNullCondition<TestMeta>(TestMeta::intValue.name)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
