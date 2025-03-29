@@ -109,8 +109,8 @@ internal object IdSchema {
     }
 
     private fun generateNodeId(): String {
-        val sb = StringBuilder()
-        (1..NODE_ID_DEFAULT_LENGTH).forEach { i ->
+        val sb = StringBuilder(NODE_ID_DEFAULT_LENGTH)
+        (1..NODE_ID_DEFAULT_LENGTH).forEach { _ ->
             sb.append(NODE_ID_ALPHABET.random())
         }
         return sb.toString()
