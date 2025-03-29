@@ -23,10 +23,12 @@ fun main() {
     // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
+    // -------------------------------------------------------------------------------------------
     // Create producer and send simple message
     val producer = DatabaseProducer(dataSource)
     producer.send(queue, "Test message")
 
+    // -------------------------------------------------------------------------------------------
     // Create consumer, try to read message from the queue, process it and delete
     val consumer = DatabaseConsumer(dataSource)
     consumer.receive(queue)?.let { message ->

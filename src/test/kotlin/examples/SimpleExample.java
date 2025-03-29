@@ -24,10 +24,12 @@ class SimpleExample {
         // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
         SchemaHelpers.updateDatabaseSchema(dataSource, queue);
 
+        // -------------------------------------------------------------------------------------------
         // Create producer and send simple message
         var producer = new DatabaseProducer(dataSource);
         producer.send(queue, "Test message");
 
+        // -------------------------------------------------------------------------------------------
         // Create consumer, try to read message from the queue, process it and delete
         var consumer = new DatabaseConsumer(dataSource);
 
