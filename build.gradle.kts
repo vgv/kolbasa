@@ -68,13 +68,13 @@ tasks.withType<KotlinCompile> {
 }
 
 // Performance tests
-task<JavaExec>("performance") {
+tasks.register<JavaExec>("performance") {
     mainClass = "performance.MainKt"
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 
 // Examples
-task<JavaExec>("example") {
+tasks.register<JavaExec>("example") {
     val propertyName = "name"
     val propertyValue = project.providers.gradleProperty(propertyName)
     val exampleName = if (propertyValue.isPresent) {
