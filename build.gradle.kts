@@ -68,13 +68,13 @@ tasks.withType<KotlinCompile> {
 }
 
 // Performance tests
-task<JavaExec>("performance") {
+tasks.register<JavaExec>("performance") {
     mainClass = "performance.MainKt"
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 
 // Examples
-task<JavaExec>("example") {
+tasks.register<JavaExec>("example") {
     val propertyName = "name"
     val propertyValue = project.providers.gradleProperty(propertyName)
     val exampleName = if (propertyValue.isPresent) {
@@ -125,7 +125,7 @@ tasks {
             dependsOn(named("publishToSonatype").get())
         }
 
-        named("closeAndReleaseStagingRepository").get().apply {
+        named("closeAndReleaseStagingRepositories").get().apply {
             dependsOn(named("final").get())
         }
     }
