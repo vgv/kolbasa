@@ -175,6 +175,7 @@ publishing {
             version = project.sanitizeVersion()
             println("-----------------------------------")
             println("Project version: ${project.version}")
+            println("Github ref: ${settingsProvider.githubHeadRef}")
             println("Sanitized: $version")
             println("-----------------------------------")
             versionMapping {
