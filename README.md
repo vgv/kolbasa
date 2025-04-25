@@ -83,6 +83,25 @@ For simplicity, this example is broken into two parts:
 
 `./gradlew example -P name=FilterAndSortExample`
 
+### Deduplication
+Kolbasa has the ability to use deduplication when sending messages to the queue.
+
+There are two different modes ([DeduplicationMode](src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `ERROR` and `IGNORE_DUPLICATES`
+
+The `ERROR` mode is the default. If you try to send a message with an existing unique key, the operation will fail and,
+depending on the [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, only part of the messages (or none)
+will be sent. In business code, you can handle this error and, for example, write to log, postpone sending the message or change
+the unique key. Since this mode is trivial, in this example we will consider the second option, the more interesting `IGNORE_DUPLICATES` mode.
+
+The `IGNORE_DUPLICATES` mode allows you to simply silently ignore uniqueness errors and add to the queue only those messages that
+are not already in the queue. For example, you send 100 messages, 5 of which are duplicates of existing messages in the queue.
+In this case, only 95 messages will be added to the queue and no errors will occur.
+
+Example: [DeduplicationExample](src/test/kotlin/examples/DeduplicationExample.kt)
+
+`./gradlew example -P name=DeduplicationExample`
+
+
 ### Transaction context
 Imagine that in your application you have a `customer` table containing important information about your customers - name, email
 and some big and complex additional data that takes a long time to calculate. To calculate this data, you need to read a lot from
