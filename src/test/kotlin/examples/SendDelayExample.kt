@@ -1,10 +1,13 @@
 package examples
 
 import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.producer.MessageOptions
+import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import java.time.Duration
 
 fun main() {
     // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
@@ -25,14 +28,27 @@ fun main() {
 
     // -------------------------------------------------------------------------------------------
     // Create producer and send simple message
+    val seconds = 5L
+    println("Send a message with a $seconds-second initial delay")
     val producer = DatabaseProducer(dataSource)
-    producer.send(queue, "Test message")
+    val sendMessage = SendMessage<String, Unit>(
+        data = "Test message",
+        messageOptions = MessageOptions(delay = Duration.ofSeconds(seconds))
+    )
+    producer.send(queue, sendMessage)
 
     // -------------------------------------------------------------------------------------------
     // Create consumer, try to read message from the queue, process it and delete
     val consumer = DatabaseConsumer(dataSource)
-    consumer.receive(queue)?.let { message ->
-        println(message.data)
-        consumer.delete(queue, message)
-    }
+    do {
+        val message = consumer.receive(queue)
+        if (message == null) {
+            // Sleep for 1 second before next attempt
+            println("Message not found, waiting...")
+            Thread.sleep(1000)
+        } else {
+            println("Message received: $message")
+            consumer.delete(queue, message)
+        }
+    } while (message == null)
 }

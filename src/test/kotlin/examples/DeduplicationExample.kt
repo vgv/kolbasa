@@ -1,28 +1,26 @@
 package examples
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.consumer.ReceiveOptions
-import kolbasa.consumer.filter.Filter.eq
-import kolbasa.consumer.filter.Filter.lessEq
-import kolbasa.consumer.filter.Filter.or
-import kolbasa.consumer.order.Order.Companion.desc
-import kolbasa.producer.datasource.DatabaseProducer
+import kolbasa.producer.DeduplicationMode
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendOptions
+import kolbasa.producer.SendRequest
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
+import kolbasa.queue.Unique
 import kolbasa.schema.SchemaHelpers
 
 fun main() {
     // User-defined class to store meta-information
     data class Metadata(
-        @Searchable val userId: Int,
-        @Searchable val priority: Int
+        @Unique val userId: Int
     )
 
     // Define queue with name `test_queue`, varchar type as data storage and metadata
     val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
 
+    // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
 
     // Update PostgreSQL schema
@@ -36,27 +34,43 @@ fun main() {
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
     // -------------------------------------------------------------------------------------------
-    // Create producer and send several messages with meta information
+    // Create producer and send 10 messages with meta information with duplicated userId field.
+    // By default, the deduplication mode is set to ERROR, so, if you try to send a message with the existing
+    // userId, an exception will be thrown.
+    // However, depending on your task, it may be useful to simply ignore these errors and insert only those messages
+    // where there are no duplicates. There is a mode of operation for this IGNORE_DUPLICATES
+    // Here we will use this mode and create 10 messages with only 5 unique userId values and make sure that send() call
+    // does not throw an exception.
     val producer = DatabaseProducer(dataSource)
-    val messagesToSend = (1..100).map { index ->
-        SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
+    val messagesToSend = (1..10).map { index ->
+        val userId = index % 5
+        SendMessage("Message $index, userId=$userId", Metadata(userId))
     }
-    producer.send(queue, messagesToSend)
+    producer.send(
+        queue = queue,
+        request = SendRequest<String, Metadata>(
+            data = messagesToSend,
+            sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+        )
+    )
+
+    println("------------------------------------------------------")
+    println("Sent messages (${messagesToSend.size}): ")
+    messagesToSend.forEach { message ->
+        println("  $message")
+    }
 
 
     // -------------------------------------------------------------------------------------------
     // Create consumer
     val consumer = DatabaseConsumer(dataSource)
-
-    // Try to read 100 messages with (userId<=10 or userId=78) from the queue and sort them by priority desc
-    val receiveOptions = ReceiveOptions(
-        readMetadata = true,
-        order = Metadata::priority.desc(),
-        filter = (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
-    )
-    val messages = consumer.receive(queue, limit = 100, receiveOptions)
-    messages.forEach {
-        println(it)
+    // Read all messages from the queue
+    // Expected result: only 5 messages with unique userId values
+    val messages = consumer.receive(queue, 100)
+    println("------------------------------------------------------")
+    println("Received messages (${messages.size}): ")
+    messages.forEach { message ->
+        println("  $message")
     }
     // Delete all messages after processing
     consumer.delete(queue, messages)
