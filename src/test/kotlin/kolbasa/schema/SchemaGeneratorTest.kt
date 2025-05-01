@@ -23,7 +23,7 @@ class SchemaGeneratorTest: AbstractPostgresqlTest() {
         val third: String
     )
 
-    private val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = TestMeta::class.java)
+    private val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = TestMeta::class.java)
 
     @Test
     fun testExtractSchema_CheckStatementsAreEqualIfNoTablesAtAll() {

@@ -30,7 +30,7 @@ import kotlin.test.*
 
 class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
-    private val queue = Queue(
+    private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
         metadata = TestMeta::class.java
