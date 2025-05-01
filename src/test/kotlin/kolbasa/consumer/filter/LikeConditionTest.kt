@@ -15,7 +15,7 @@ internal class LikeConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val likeExpression = LikeCondition<TestMeta>(TestMeta::stringValue.name, "123%")
 
         val sql = likeExpression.toSqlClause(queue)
@@ -24,7 +24,7 @@ internal class LikeConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val likeExpression = LikeCondition<TestMeta>(TestMeta::stringValue.name, "123%")
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

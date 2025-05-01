@@ -82,5 +82,22 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
             is OpenTelemetryConfig.Config -> OpenTelemetryQueueTracing(name, config)
         }
     }
+
+    companion object {
+
+        @JvmStatic
+        fun <Data> of(name: String, databaseDataType: DatabaseQueueDataType<Data>): Queue<Data, Unit> {
+            return Queue(name, databaseDataType, metadata = Unit::class.java, options = null)
+        }
+
+        @JvmStatic
+        fun <Data, Meta : Any> of(
+            name: String,
+            databaseDataType: DatabaseQueueDataType<Data>,
+            metadata: Class<Meta>
+        ): Queue<Data, Meta> {
+            return Queue(name, databaseDataType, metadata = metadata, options = null)
+        }
+    }
 }
 

@@ -15,7 +15,7 @@ internal class InConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val inExpression = InCondition<TestMeta, Int>(TestMeta::intValue.name, listOf(123))
 
         val sql = inExpression.toSqlClause(queue)
@@ -24,7 +24,7 @@ internal class InConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val inExpression = InCondition<TestMeta, Int>(TestMeta::intValue.name, listOf(123))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

@@ -15,11 +15,11 @@ fun main() {
 
     // Define three queues to demonstrate different PartialInsert modes
     val queueProhibited =
-        Queue("test_queue_prohibited", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_prohibited", PredefinedDataTypes.String, metadata = Metadata::class.java)
     val queueUntilFirstFailure =
-        Queue("test_queue_until_first_failure", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_until_first_failure", PredefinedDataTypes.String, metadata = Metadata::class.java)
     val queueAsManyAsPossible =
-        Queue("test_queue_as_many_as_possible", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_as_many_as_possible", PredefinedDataTypes.String, metadata = Metadata::class.java)
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()

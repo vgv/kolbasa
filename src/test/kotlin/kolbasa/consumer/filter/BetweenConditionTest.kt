@@ -15,7 +15,7 @@ internal class BetweenConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val betweenExpression = BetweenCondition<TestMeta, Int>(TestMeta::intValue.name, Pair(10, 20))
 
         val sql = betweenExpression.toSqlClause(queue)
@@ -24,7 +24,7 @@ internal class BetweenConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val betweenExpression = BetweenCondition<TestMeta, Int>(TestMeta::intValue.name, Pair(10, 20))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

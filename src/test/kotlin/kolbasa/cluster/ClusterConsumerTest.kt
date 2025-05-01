@@ -18,10 +18,7 @@ import kotlin.test.*
 
 class ClusterConsumerTest : AbstractPostgresqlTest() {
 
-    private val queue = Queue<Int, Unit>(
-        name = "test",
-        databaseDataType = PredefinedDataTypes.Int
-    )
+    private val queue = Queue.of("test", PredefinedDataTypes.Int)
 
     private val dataSources by lazy { listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema) }
     private lateinit var cluster: Cluster
