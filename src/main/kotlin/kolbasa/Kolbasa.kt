@@ -46,8 +46,10 @@ object Kolbasa {
      *    For cases when you know exactly your use case, for example, one producer for a cluster of PostgreSQL servers,
      *    each containing a few physical disks, you can configure the required parallelism accordingly.
      *
-     * If you want to use a custom executor for a specific [Producer][kolbasa.producer.datasource.Producer], please look at
-     * [ProducerOptions.asyncExecutor][kolbasa.producer.ProducerOptions.asyncExecutor]
+     * If you want to use a custom executor for a specific [Producer][kolbasa.producer.datasource.Producer] or
+     * [Mutator][kolbasa.mutator.datasource.Mutator], please look at
+     * [ProducerOptions.asyncExecutor][kolbasa.producer.ProducerOptions.asyncExecutor] or
+     * [MutatorOptions.asyncExecutor][kolbasa.mutator.MutatorOptions.asyncExecutor]
      */
     @JvmStatic
     @Volatile
