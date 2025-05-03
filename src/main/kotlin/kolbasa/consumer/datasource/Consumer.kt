@@ -23,7 +23,7 @@ import kolbasa.queue.Queue
  * completely hides database handling and transaction management from the user.
  *
  * If you require a consumer working in context of already opened transaction,
- * please look at [ConnectionAwareConsumer][kolbasa.consumer.connection.ConnectionAwareConsumer].
+ * see [ConnectionAwareConsumer][kolbasa.consumer.connection.ConnectionAwareConsumer].
  */
 interface Consumer {
 

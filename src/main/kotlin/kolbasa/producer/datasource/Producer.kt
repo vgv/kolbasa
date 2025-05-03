@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture
  * completely hides database handling and transaction management from the user.
  *
  * If you require a producer working in context of already opened transaction,
- * please look at [ConnectionAwareProducer][kolbasa.producer.connection.ConnectionAwareProducer].
+ * see [ConnectionAwareProducer][kolbasa.producer.connection.ConnectionAwareProducer].
  */
 interface Producer {
 
