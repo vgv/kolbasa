@@ -47,7 +47,7 @@ interface ConnectionAwareProducer {
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending message
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message to send
      * @returns [SendResult] with the list of failed messages and the list of successful messages
@@ -62,7 +62,7 @@ interface ConnectionAwareProducer {
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending message
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
@@ -82,7 +82,7 @@ interface ConnectionAwareProducer {
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending messages
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
@@ -103,7 +103,7 @@ interface ConnectionAwareProducer {
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending messages
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
