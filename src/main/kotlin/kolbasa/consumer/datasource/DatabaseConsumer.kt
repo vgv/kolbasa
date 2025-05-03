@@ -10,6 +10,9 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
+/**
+ * Default implementation of [Consumer]
+ */
 class DatabaseConsumer(
     private val dataSource: DataSource,
     private val peer: ConnectionAwareConsumer
