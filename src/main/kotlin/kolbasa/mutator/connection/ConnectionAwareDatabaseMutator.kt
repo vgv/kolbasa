@@ -8,6 +8,7 @@ import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
+import kolbasa.queue.Checks
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import java.sql.Connection
@@ -23,6 +24,8 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         if (messages.isEmpty() || mutations.isEmpty()) {
             return MutateResult()
         }
+
+        Checks.checkMutations(mutations)
 
         val clauses = mutations.map { mutation ->
             when (mutation) {
