@@ -9,7 +9,9 @@ import java.util.concurrent.CompletableFuture
 /**
  * Base interface for all producers
  *
- * Producers are used to send messages to the queues.
+ * Producers are used to send messages to queues. The producer does not know and in no way controls the retrieval
+ * of messages from the queue by consumers. Messages can be read by one consumer, ten, or none, and good design implies
+ * that this in no way affects the work of the producer. Its only task is to send messages to the queue as quickly as possible.
  *
  * This is a basic interface, implementations of which may behave differently.
  *
