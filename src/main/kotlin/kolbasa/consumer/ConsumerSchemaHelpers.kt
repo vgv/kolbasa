@@ -28,6 +28,7 @@ internal object ConsumerSchemaHelpers {
             Const.SHARD_COLUMN_NAME,
             Const.CREATED_AT_COLUMN_NAME,
             Const.PROCESSING_AT_COLUMN_NAME,
+            Const.SCHEDULED_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
@@ -92,8 +93,8 @@ internal object ConsumerSchemaHelpers {
             updated as (
                 update ${queue.dbTableName}
                 set
-                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
                     ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 where ${Const.ID_COLUMN_NAME} in (select ${Const.ID_COLUMN_NAME} from id_to_update)
@@ -136,6 +137,7 @@ internal object ConsumerSchemaHelpers {
         val shard = resultSet.getInt(columnIndex++)
         val createdAt = resultSet.getTimestamp(columnIndex++).time
         val processingAt = resultSet.getTimestamp(columnIndex++).time
+        val scheduledAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
 
         val data = when (queue.databaseDataType) {
@@ -195,7 +197,15 @@ internal object ConsumerSchemaHelpers {
             null
         }
 
-        val message = Message(Id(localId, shard), createdAt, processingAt, attempts, data, meta)
+        val message = Message(
+            id = Id(localId, shard),
+            createdAt = createdAt,
+            processingAt = processingAt,
+            scheduledAt = scheduledAt,
+            remainingAttempts = attempts,
+            data = data,
+            meta = meta
+        )
         message.openTelemetryData = otData
 
         return message
