@@ -123,7 +123,7 @@ internal object Checks {
     }
 
     fun checkMutations(mutations: List<Mutation>) {
-        val map = mutations.groupBy { mutation ->
+        val mutationsByField = mutations.groupBy { mutation ->
             when (mutation) {
                 is MutationField.RemainingAttemptField -> MutationField.RemainingAttemptField::class
                 is MutationField.ScheduledAtField -> MutationField.ScheduledAtField::class
@@ -131,9 +131,9 @@ internal object Checks {
             }
         }
 
-        map.forEach { klass, mutations ->
-            check(mutations.size == 1) {
-                "Can't mutate one field more than once: $mutations"
+        mutationsByField.forEach { _, fieldMutations ->
+            check(fieldMutations.size == 1) {
+                "Can't mutate one field more than once: $fieldMutations"
             }
         }
     }
