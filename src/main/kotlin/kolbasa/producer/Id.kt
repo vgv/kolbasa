@@ -1,8 +1,5 @@
 package kolbasa.producer
 
-import kolbasa.cluster.Shard
-import kolbasa.schema.Const
-
 /**
  * Full record id
  *
