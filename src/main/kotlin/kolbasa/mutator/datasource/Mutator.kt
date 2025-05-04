@@ -6,6 +6,20 @@ import kolbasa.queue.Queue
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Base interface for all mutators
+ *
+ * Mutators are used to change existing messages in the queues, for example, adjust visibility timeout, remaining attempts etc.
+ *
+ * This is a basic interface, implementations of which may behave differently.
+ *
+ * Kolbasa provides a default, high-performance implementation [DatabaseMutator], which uses just plain JDBC and
+ * [DataSource][javax.sql.DataSource] and doesn't require any additional dependencies. This default, provided implementation
+ * completely hides database handling and transaction management from the user.
+ *
+ * If you require a mutator working in context of already opened transaction, see
+ * [ConnectionAwareMutator][kolbasa.mutator.connection.ConnectionAwareMutator].
+ */
 interface Mutator {
 
     fun <Data, Meta : Any> addRemainingAttempts(
