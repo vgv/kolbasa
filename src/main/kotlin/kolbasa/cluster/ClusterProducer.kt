@@ -18,7 +18,7 @@ class ClusterProducer(
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
             sendOptions = request.sendOptions,
-            producerOptions = producerOptions,            
+            producerOptions = producerOptions,
             shardStrategy = Kolbasa.shardStrategy
         )
 
@@ -36,7 +36,7 @@ class ClusterProducer(
     ): CompletableFuture<SendResult<Data, Meta>> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            producerOptions = producerOptions,
+            customExecutor = producerOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

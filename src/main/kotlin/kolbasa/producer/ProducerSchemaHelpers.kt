@@ -213,9 +213,9 @@ internal object ProducerSchemaHelpers {
         return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
     }
 
-    fun calculateAsyncExecutor(producerOptions: ProducerOptions, defaultExecutor: ExecutorService): ExecutorService {
-        if (producerOptions.asyncExecutor != null) {
-            return producerOptions.asyncExecutor
+    fun calculateAsyncExecutor(customExecutor: ExecutorService?, defaultExecutor: ExecutorService): ExecutorService {
+        if (customExecutor != null) {
+            return customExecutor
         }
 
         return defaultExecutor

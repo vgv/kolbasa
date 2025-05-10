@@ -102,18 +102,16 @@ class ProducerSchemaHelpersTest {
     fun testCalculateAsyncExecutor_IfDefined() {
         val customExecutor = Executors.newCachedThreadPool()
         val defaultExecutor = Executors.newCachedThreadPool()
-        val producerOptions = ProducerOptions(asyncExecutor = customExecutor)
 
-        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(producerOptions, defaultExecutor)
+        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(customExecutor, defaultExecutor)
         assertSame(customExecutor, asyncExecutor)
     }
 
     @Test
     fun testCalculateAsyncExecutor_IfNotDefined() {
         val defaultExecutor = Executors.newCachedThreadPool()
-        val producerOptions = ProducerOptions(asyncExecutor = null)
 
-        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(producerOptions, defaultExecutor)
+        val asyncExecutor = ProducerSchemaHelpers.calculateAsyncExecutor(null, defaultExecutor)
         assertSame(defaultExecutor, asyncExecutor)
     }
 }
