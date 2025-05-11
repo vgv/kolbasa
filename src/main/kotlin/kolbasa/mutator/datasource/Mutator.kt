@@ -1,5 +1,7 @@
 package kolbasa.mutator.datasource
 
+import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.*
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
@@ -24,46 +26,57 @@ interface Mutator {
 
     fun <Data, Meta : Any> addRemainingAttempts(
         queue: Queue<Data, Meta>,
-        message: Id,
-        delta: Int
+        delta: Int,
+        message: Id
     ): MutateResult {
-        return mutate(queue, listOf(message), listOf(AddRemainingAttempts(delta)))
+        return mutate(queue, listOf(AddRemainingAttempts(delta)), listOf(message))
     }
 
     fun <Data, Meta : Any> setRemainingAttempts(
         queue: Queue<Data, Meta>,
-        message: Id,
-        newValue: Int
+        newValue: Int,
+        message: Id
     ): MutateResult {
-        return mutate(queue, listOf(message), listOf(SetRemainingAttempts(newValue)))
+        return mutate(queue, listOf(SetRemainingAttempts(newValue)), listOf(message))
     }
 
     fun <Data, Meta : Any> addScheduledAt(
         queue: Queue<Data, Meta>,
-        message: Id,
-        delta: Duration
+        delta: Duration,
+        message: Id
     ): MutateResult {
-        return mutate(queue, listOf(message), listOf(AddScheduledAt(delta)))
+        return mutate(queue, listOf(AddScheduledAt(delta)), listOf(message))
     }
 
     fun <Data, Meta : Any> setScheduledAt(
         queue: Queue<Data, Meta>,
-        message: Id,
-        newValue: Duration
+        newValue: Duration,
+        message: Id
     ): MutateResult {
-        return mutate(queue, listOf(message), listOf(SetScheduledAt(newValue)))
+        return mutate(queue, listOf(SetScheduledAt(newValue)), listOf(message))
     }
 
     fun <Data, Meta : Any> mutate(
         queue: Queue<Data, Meta>,
-        messages: List<Id>,
         mutations: List<Mutation>,
+        messages: List<Id>,
+    ): MutateResult
+
+    fun <Data, Meta : Any> mutate(
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
     ): MutateResult
 
     fun <Data, Meta : Any> mutateAsync(
         queue: Queue<Data, Meta>,
-        messages: List<Id>,
         mutations: List<Mutation>,
+        messages: List<Id>,
     ): CompletableFuture<MutateResult>
 
+    fun <Data, Meta : Any> mutateAsync(
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
+    ): CompletableFuture<MutateResult>
 }

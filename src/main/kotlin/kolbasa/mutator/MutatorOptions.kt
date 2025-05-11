@@ -3,6 +3,8 @@ package kolbasa.mutator
 import java.util.concurrent.ExecutorService
 
 data class MutatorOptions(
+    val maxMutatedRowsKeepInMemory: Int = DEFAULT_MAX_MUTATED_ROWS_KEEP_IN_MEMORY,
+
     /**
      * Executor used to mutate messages asynchronously in [mutateAsync()][kolbasa.mutator.datasource.Mutator.mutateAsync]  methods.
      *
@@ -11,4 +13,10 @@ data class MutatorOptions(
      * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
      */
     val asyncExecutor: ExecutorService? = null,
-)
+) {
+
+    companion object {
+        const val DEFAULT_MAX_MUTATED_ROWS_KEEP_IN_MEMORY = 10_000
+    }
+
+}
