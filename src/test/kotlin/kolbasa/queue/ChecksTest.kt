@@ -2,6 +2,10 @@ package kolbasa.queue
 
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
+import kolbasa.mutator.AddRemainingAttempts
+import kolbasa.mutator.AddScheduledAt
+import kolbasa.mutator.SetRemainingAttempts
+import kolbasa.mutator.SetScheduledAt
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
@@ -45,6 +49,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckAttempts_AttemptsNotSetWorks() {
         // check DELAY_NOT_SET works
@@ -68,6 +74,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckProducerName() {
         Checks.checkProducerName(null)
@@ -79,6 +87,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testBatchSize_ZeroOrNegativeFails() {
         assertFailsWith<IllegalStateException> {
@@ -88,6 +98,8 @@ internal class ChecksTest {
             Checks.checkBatchSize(-1)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
 
     @Test
     fun testCheckConsumerName() {
@@ -99,6 +111,8 @@ internal class ChecksTest {
             Checks.checkConsumerName(longValue)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
 
     @Test
     fun testCheckVisibilityTimeout_VisibilityTimeoutNotSetWorks() {
@@ -132,6 +146,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckQueueName_IfEmpty() {
         assertFailsWith<IllegalStateException> {
@@ -161,6 +177,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckMetaFieldName_IfEmpty() {
         assertFailsWith<IllegalStateException> {
@@ -183,6 +201,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckSweepMaxRows_LessThanMin() {
         assertFailsWith<IllegalStateException> {
@@ -196,6 +216,8 @@ internal class ChecksTest {
             Checks.checkSweepMaxRows(SweepConfig.MAX_SWEEP_ROWS + 1)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
 
     @Test
     fun testCheckSweepMaxIterations_LessThanMin() {
@@ -211,6 +233,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckSweepPeriod_LessThanMin() {
         assertFailsWith<IllegalStateException> {
@@ -225,6 +249,8 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckCustomQueueSizeMeasureInterval() {
         assertFailsWith<IllegalStateException> {
@@ -233,6 +259,8 @@ internal class ChecksTest {
             Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
         }
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
 
     @Test
     fun testCheckClusterStateUpdateInterval() {
@@ -243,4 +271,37 @@ internal class ChecksTest {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+    @Test
+    fun testCheckMutations_Ok() {
+        // One mutation
+        Checks.checkMutations(listOf(AddRemainingAttempts(1)))
+
+        // Two mutations
+        Checks.checkMutations(listOf(AddRemainingAttempts(1), AddScheduledAt(Duration.ZERO)))
+    }
+
+    @Test
+    fun testCheckMutations_Error() {
+        // Only remaining_attempts field mutations
+        assertFailsWith<IllegalStateException> {
+            Checks.checkMutations(listOf(AddRemainingAttempts(1), SetRemainingAttempts(2)))
+        }
+
+        // Only scheduled_at field mutations
+        assertFailsWith<IllegalStateException> {
+            Checks.checkMutations(listOf(AddScheduledAt(Duration.ZERO), SetScheduledAt(Duration.ZERO)))
+        }
+
+        // More than one field
+        assertFailsWith<IllegalStateException> {
+            Checks.checkMutations(
+                listOf(
+                    AddScheduledAt(Duration.ZERO),
+                    SetScheduledAt(Duration.ZERO),
+                    AddRemainingAttempts(1)
+                )
+            )
+        }
+    }
 }
