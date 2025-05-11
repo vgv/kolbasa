@@ -16,8 +16,11 @@ internal data class IdRange(
             return IdRange(start, end)
         }
 
+        const val MIN_ID = 0.toLong()
+        const val MAX_ID = Long.MAX_VALUE
+
         // Range for non-clustered environment
-        val LOCAL_RANGE = IdRange(0, Long.MAX_VALUE)
+        val LOCAL_RANGE = IdRange(MIN_ID, MAX_ID)
     }
 
 }
