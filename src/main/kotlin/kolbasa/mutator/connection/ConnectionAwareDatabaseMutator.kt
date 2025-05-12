@@ -2,6 +2,7 @@ package kolbasa.mutator.connection
 
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
+import kolbasa.mutator.MessageResult
 import kolbasa.mutator.MutateResult
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.SetRemainingAttempts
@@ -22,28 +23,68 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         mutations: List<Mutation>
     ): MutateResult {
         if (messages.isEmpty() || mutations.isEmpty()) {
-            return MutateResult()
+            return MutateResult(mutatedMessages = 0, emptyList())
         }
 
         Checks.checkMutations(mutations)
 
+        val query = generateMutateQuery(queue, messages, mutations)
+
+        val mutateResult = mutableMapOf<Id, MessageResult>()
+        connection.useStatement { statement ->
+            statement.executeQuery(query).use { resultSet ->
+                while (resultSet.next()) {
+                    val localId = resultSet.getLong(1)
+                    val shard = resultSet.getInt(2)
+                    val scheduledAt = resultSet.getTimestamp(3).time
+                    val remainingAttempts = resultSet.getInt(4)
+
+                    val id = Id(localId, shard)
+                    mutateResult[id] = MessageResult.Mutated(id, scheduledAt, remainingAttempts)
+                }
+            }
+        }
+
+        // combine result using the same order
+        var mutatedMessages = 0
+        val a = messages.map { id ->
+            val result = mutateResult[id]
+            if (result != null) {
+                mutatedMessages++
+                result
+            } else {
+                MessageResult.NotFound(id)
+            }
+        }
+
+        return MutateResult(mutatedMessages = mutatedMessages, a)
+    }
+
+    private fun generateMutateQuery(
+        queue: Queue<*, *>,
+        messages: List<Id>,
+        mutations: List<Mutation>
+    ): String {
         val clauses = mutations.map { mutation ->
             when (mutation) {
                 is AddRemainingAttempts -> {
-                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} = ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} + ${mutation.delta}"
+                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME} + ${mutation.delta}"
                 }
 
                 is SetRemainingAttempts -> {
-                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} = ${mutation.newValue}"
+                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${mutation.newValue}"
                 }
 
                 is AddScheduledAt -> {
                     val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                    "$scheduledAt = $scheduledAt + interval '${mutation.delta.toMillis()} millisecond'"
+                    val millis = mutation.delta.toMillis()
+                    "${scheduledAt}=${scheduledAt} + interval '$millis millisecond'"
                 }
 
                 is SetScheduledAt -> {
-                    "${Const.SCHEDULED_AT_COLUMN_NAME} = clock_timestamp() + interval '${mutation.newValue.toMillis()} millisecond'"
+                    val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
+                    val millis = mutation.newValue.toMillis()
+                    "${scheduledAt}=clock_timestamp() + interval '$millis millisecond'"
                 }
             }
         }
@@ -52,18 +93,17 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
             "(${message.localId},${message.shard})"
         }
 
-        val sql = """
+        return """
             update ${queue.dbTableName}
             set
                 ${clauses.joinToString(separator = ",")}
             where
                 (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idsList
+            returning
+                ${Const.ID_COLUMN_NAME},
+                ${Const.SHARD_COLUMN_NAME},
+                ${Const.SCHEDULED_AT_COLUMN_NAME},
+                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
         """.trimIndent()
-
-        val rows = connection.useStatement { statement ->
-            statement.executeUpdate(sql)
-        }
-
-        return MutateResult()
     }
 }

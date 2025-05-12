@@ -12,6 +12,9 @@ import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 
+/**
+ * Default implementation of [Mutator]
+ */
 class DatabaseMutator(
     private val dataSource: DataSource,
     private val mutatorOptions: MutatorOptions = MutatorOptions()
