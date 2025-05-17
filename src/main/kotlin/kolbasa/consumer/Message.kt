@@ -16,6 +16,10 @@ data class Message<Data, Meta>(
      */
     val processingAt: Long,
     /**
+     * Timestamp when this message will be available to receive again, e.g. visibility timeout
+     */
+    val scheduledAt: Long,
+    /**
      * How many attempts we have to process this message
      */
     val remainingAttempts: Int,
