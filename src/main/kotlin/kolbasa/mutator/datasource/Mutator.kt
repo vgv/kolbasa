@@ -129,9 +129,20 @@ interface Mutator {
     ): CompletableFuture<MutateResult>
 
     /**
-     * Mutates messages in the queue that match the filter condition
+     * Mutates messages in the queue that match the custom filter condition
      *
-     * Mutates all messages in one `queue` by applying `mutations` to every message that match the `filter` condition
+     * Mutates all messages in one `queue` by applying `mutations` to every message that match the custom `filter` condition
+     *
+     * Filters can be specified using nice Kotlin lambda syntax as follows:
+     * ```
+     * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
+     * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
+     *     // Type-safe DSL to filter messages
+     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     * }
+     * ```
+     *
+     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param queue queue from which to mutate a message
      * @param mutations mutations to apply to the `messages`
@@ -145,9 +156,20 @@ interface Mutator {
     ): MutateResult
 
     /**
-     * Mutates messages in the queue that match the filter condition asynchronously
+     * Mutates messages in the queue that match the custom filter condition
      *
-     * Mutates all messages in one `queue` by applying `mutations` to every message that match the `filter` condition
+     * Mutates all messages in one `queue` by applying `mutations` to every message that match the custom `filter` condition
+     *
+     * Filters can be specified using nice Kotlin lambda syntax as follows:
+     * ```
+     * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
+     * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
+     *     // Type-safe DSL to filter messages
+     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     * }
+     * ```
+     *
+     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param queue queue from which to mutate a message
      * @param mutations mutations to apply to the `messages`
