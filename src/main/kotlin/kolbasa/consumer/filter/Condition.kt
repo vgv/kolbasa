@@ -2,13 +2,14 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
 abstract class Condition<Meta : Any> {
 
-    abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
+    internal abstract fun internalToSqlClause(queue: Queue<*, Meta>): String
 
-    abstract fun internalFillPreparedQuery(
+    internal abstract fun internalFillPreparedQuery(
         queue: Queue<*, Meta>,
         preparedStatement: PreparedStatement,
         columnIndex: ColumnIndex
@@ -56,7 +57,3 @@ abstract class Condition<Meta : Any> {
 
 }
 
-class ColumnIndex {
-    private var index: Int = 1
-    fun nextIndex() = index++
-}

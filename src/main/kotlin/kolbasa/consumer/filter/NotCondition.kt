@@ -1,6 +1,7 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
 internal data class NotCondition<Meta : Any>(val condition: Condition<Meta>) : Condition<Meta>() {

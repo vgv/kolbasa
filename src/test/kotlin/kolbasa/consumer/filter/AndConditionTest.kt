@@ -4,6 +4,7 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.queue.Queue
+import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 

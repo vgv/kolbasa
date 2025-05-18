@@ -1,6 +1,7 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
 internal class OrCondition<Meta : Any>(first: Condition<Meta>, second: Condition<Meta>) : Condition<Meta>() {

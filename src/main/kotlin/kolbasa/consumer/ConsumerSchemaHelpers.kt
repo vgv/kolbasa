@@ -1,13 +1,13 @@
 package kolbasa.consumer
 
 import kolbasa.cluster.Shards
-import kolbasa.consumer.filter.ColumnIndex
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.ColumnIndex
 import kolbasa.utils.Helpers
 import java.sql.PreparedStatement
 import java.sql.ResultSet

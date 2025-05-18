@@ -2,6 +2,7 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
 internal abstract class AbstractOneValueCondition<Meta : Any, T>(
