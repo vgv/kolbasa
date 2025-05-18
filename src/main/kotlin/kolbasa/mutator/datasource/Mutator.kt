@@ -24,6 +24,16 @@ import java.util.concurrent.CompletableFuture
  */
 interface Mutator {
 
+    /**
+     * Mutates one message in the queue
+     *
+     * Adds (or subtracts, if negative) `delta` to the current remaining attempts of the `message`
+     *
+     * @param queue queue from which to mutate a message
+     * @param delta the value to add/subtract from the current remaining attempts of the message
+     * @param message message identifier
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
     fun <Data, Meta : Any> addRemainingAttempts(
         queue: Queue<Data, Meta>,
         delta: Int,
@@ -32,6 +42,16 @@ interface Mutator {
         return mutate(queue, listOf(AddRemainingAttempts(delta)), listOf(message))
     }
 
+    /**
+     * Mutates one message in the queue
+     *
+     * Sets `newValue` as the new remaining attempts of the `message`
+     *
+     * @param queue queue from which to mutate a message
+     * @param newValue the value to set as the current remaining attempts of the message
+     * @param message message identifier
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
     fun <Data, Meta : Any> setRemainingAttempts(
         queue: Queue<Data, Meta>,
         newValue: Int,
@@ -40,6 +60,16 @@ interface Mutator {
         return mutate(queue, listOf(SetRemainingAttempts(newValue)), listOf(message))
     }
 
+    /**
+     * Mutates one message in the queue
+     *
+     * Adds (or subtracts, if negative) `delta` to the current visibility timeout  of the `message`
+     *
+     * @param queue queue from which to mutate a message
+     * @param delta the value to add/subtract from the current visibility timeout of the message
+     * @param message message identifier
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
     fun <Data, Meta : Any> addScheduledAt(
         queue: Queue<Data, Meta>,
         delta: Duration,
@@ -48,6 +78,16 @@ interface Mutator {
         return mutate(queue, listOf(AddScheduledAt(delta)), listOf(message))
     }
 
+    /**
+     * Mutates one message in the queue
+     *
+     * Sets `newValue` as the new visibility timeout of the `message` from the current time, e.g. `now() + newValue`
+     *
+     * @param queue queue from which to mutate a message
+     * @param newValue the value to set as the current remaining attempts of the message
+     * @param message message identifier
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
     fun <Data, Meta : Any> setScheduledAt(
         queue: Queue<Data, Meta>,
         newValue: Duration,
@@ -56,24 +96,64 @@ interface Mutator {
         return mutate(queue, listOf(SetScheduledAt(newValue)), listOf(message))
     }
 
+    /**
+     * Mutates messages list in the queue
+     *
+     * Mutates all `messages` in one `queue` by applying `mutations` to every message
+     *
+     * @param queue queue from which to mutate a message
+     * @param mutations mutations to apply to the `messages`
+     * @param messages messages identifiers
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
     fun <Data, Meta : Any> mutate(
         queue: Queue<Data, Meta>,
         mutations: List<Mutation>,
         messages: List<Id>,
     ): MutateResult
 
-    fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
-        mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
-    ): MutateResult
-
+    /**
+     * Mutates messages list in the queue asynchronously
+     *
+     * Mutates all `messages` in one `queue` by applying `mutations` to every message
+     *
+     * @param queue queue from which to mutate a message
+     * @param mutations mutations to apply to the `messages`
+     * @param messages messages identifiers
+     * @return [CompletableFuture] of the [MutateResult]
+     */
     fun <Data, Meta : Any> mutateAsync(
         queue: Queue<Data, Meta>,
         mutations: List<Mutation>,
         messages: List<Id>,
     ): CompletableFuture<MutateResult>
 
+    /**
+     * Mutates messages in the queue that match the filter condition
+     *
+     * Mutates all messages in one `queue` by applying `mutations` to every message that match the `filter` condition
+     *
+     * @param queue queue from which to mutate a message
+     * @param mutations mutations to apply to the `messages`
+     * @param filter custom, user-defined filter to mutate only specific messages in the queue
+     * @return [MutateResult] with the information about mutate result (success/failure)
+     */
+    fun <Data, Meta : Any> mutate(
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
+    ): MutateResult
+
+    /**
+     * Mutates messages in the queue that match the filter condition asynchronously
+     *
+     * Mutates all messages in one `queue` by applying `mutations` to every message that match the `filter` condition
+     *
+     * @param queue queue from which to mutate a message
+     * @param mutations mutations to apply to the `messages`
+     * @param filter custom, user-defined filter to mutate only specific messages in the queue
+     * @return [CompletableFuture] of the [MutateResult]
+     */
     fun <Data, Meta : Any> mutateAsync(
         queue: Queue<Data, Meta>,
         mutations: List<Mutation>,

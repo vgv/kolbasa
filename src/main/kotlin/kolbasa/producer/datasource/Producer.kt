@@ -40,7 +40,7 @@ interface Producer {
      *
      * @param queue queue to send the message to
      * @param data message to send
-     * @return [CompletableFuture] with the list of failed messages and the list of successful messages
+     * @return [CompletableFuture] of the [SendResult]
      */
     fun <Data, Meta : Any> sendAsync(queue: Queue<Data, Meta>, data: Data): CompletableFuture<SendResult<Data, Meta>> {
         return sendAsync(queue, SendMessage(data = data))
@@ -62,7 +62,7 @@ interface Producer {
      *
      * @param queue queue to send the message to
      * @param message data, metadata (if any) and options (if any) to send
-     * @return [CompletableFuture] with the list of failed messages and the list of successful messages
+     * @return [CompletableFuture] of the [SendResult]
      */
     fun <Data, Meta : Any> sendAsync(
         queue: Queue<Data, Meta>,
@@ -91,7 +91,7 @@ interface Producer {
      *
      * @param queue queue to send the message to
      * @param messages list of messages, metadata (if any) and options (if any) to send
-     * @return [CompletableFuture] with the list of failed messages and the list of successful messages
+     * @return [CompletableFuture] of the [SendResult]
      */
     fun <Data, Meta : Any> sendAsync(
         queue: Queue<Data, Meta>,
@@ -120,7 +120,7 @@ interface Producer {
      *
      * @param queue queue to send the message to
      * @param request list of messages, metadata (if any) and options (if any) to send
-     * @return [CompletableFuture] with the list of failed messages and the list of successful messages
+     * @return [CompletableFuture] of the [SendResult]
      */
     fun <Data, Meta : Any> sendAsync(
         queue: Queue<Data, Meta>,
