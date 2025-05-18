@@ -9,7 +9,12 @@ data class MutateResult(
     val mutatedMessages: Int,
 
     /**
-     * Result of mutating each message
+     * Marker that the result list are too large and only the first N results were stored in the [messages] list
+     */
+    val truncated: Boolean,
+
+    /**
+     * Result of mutating each message or only the first N messages if there are too many mutated messages
      */
     val messages: List<MessageResult>
 
@@ -57,7 +62,7 @@ sealed class MessageResult {
          */
         val id: Id,
         /**
-         * New visibility timeout TODO
+         * New visibility timeout
          */
         val scheduledAt: Long,
         /**
@@ -66,8 +71,13 @@ sealed class MessageResult {
         val remainingAttempts: Int
     ) : MessageResult()
 
+    /**
+     * Result of unsuccessful mutating of one message
+     */
     data class NotFound(
+        /**
+         * Identifier of the message we would like to mutate but didn't find
+         */
         val id: Id
     ) : MessageResult()
-
 }
