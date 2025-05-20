@@ -6,6 +6,7 @@ import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.ServerId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -15,7 +16,8 @@ import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer internal constructor(
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val shards: Shards = Shards.ALL_SHARDS
+    private val serverId: ServerId = "",
+    private val shards: Shards = Shards.ALL_SHARDS,
 ) : ConnectionAwareConsumer {
 
     override fun <Data, Meta : Any> receive(
@@ -40,11 +42,13 @@ class ConnectionAwareDatabaseConsumer internal constructor(
     ): List<Message<Data, Meta>> {
         // delete expired messages before next read
         if (SweepHelper.needSweep(queue)) {
-            SweepHelper.sweep(connection, queue, limit)
+            SweepHelper.sweep(serverId, connection, queue, limit)
         }
 
+        val metrics = queue.getQueueMetrics(serverId)
+
         // read
-        val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
+        val approxBytesCounter = BytesCounter(metrics.usePreciseStringSize())
 
         val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(
             queue, consumerOptions, shards, receiveOptions, limit
@@ -69,7 +73,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
-        queue.queueMetrics.consumerReceiveMetrics(
+        metrics.consumerReceiveMetrics(
             receivedRows = result.size,
             executionNanos = execution.durationNanos,
             approxBytes = approxBytesCounter.get(),
@@ -95,7 +99,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
 
         // Prometheus
-        queue.queueMetrics.consumerDeleteMetrics(removedRows, execution.durationNanos)
+        queue.getQueueMetrics(serverId).consumerDeleteMetrics(removedRows, execution.durationNanos)
 
         return removedRows
     }

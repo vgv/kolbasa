@@ -18,13 +18,13 @@ class ClusterProducer(
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
             sendOptions = request.sendOptions,
-            producerOptions = producerOptions,            
+            producerOptions = producerOptions,
             shardStrategy = Kolbasa.shardStrategy
         )
 
         val currentState = cluster.getState()
-        val producer = currentState.getProducer(this, request.effectiveShard) { dataSource ->
-            DatabaseProducer(dataSource, producerOptions)
+        val producer = currentState.getProducer(this, request.effectiveShard) { dataSource, serverId ->
+            DatabaseProducer(dataSource, serverId, producerOptions)
         }
 
         return producer.send(queue, request)

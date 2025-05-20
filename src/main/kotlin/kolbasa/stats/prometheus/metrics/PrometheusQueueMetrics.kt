@@ -4,6 +4,7 @@ import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import io.prometheus.metrics.core.datapoints.GaugeDataPoint
 import kolbasa.producer.PartialInsert
+import kolbasa.schema.ServerId
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.metrics.Extensions.incInt
 import kolbasa.stats.prometheus.metrics.Extensions.incLong
@@ -12,7 +13,8 @@ import kolbasa.stats.prometheus.queuesize.QueueSizeCache
 
 internal class PrometheusQueueMetrics(
     private val queueName: String,
-    private val prometheusConfig: PrometheusConfig.Config
+    private val serverId: ServerId,
+    private val prometheusConfig: PrometheusConfig.Config,
 ) : QueueMetrics {
 
     override fun usePreciseStringSize(): Boolean {
@@ -59,50 +61,51 @@ internal class PrometheusQueueMetrics(
         // We use internal caching to prevent too frequent calls to the database
         val queueSizeMeasureInterval = prometheusConfig.customQueueSizeMeasureInterval[queueName]
             ?: PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        val queueSize = QueueSizeCache.get(queueName, serverId, queueSizeMeasureInterval, queueSizeCalcFunc)
         producerQueueSizeGauge.set(queueSize.toDouble())
     }
 
     private val producerSendCounterProhibited: CounterDataPoint =
-        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
+        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.PROHIBITED.name, serverId)
     private val producerSendCounterUntilFirstFailure: CounterDataPoint =
-        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
+        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, serverId)
     private val producerSendCounterInsertAsManyAsPossible: CounterDataPoint =
-        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+        prometheusConfig.producerSendCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, serverId)
 
     private val producerSendRowsCounterProhibited: CounterDataPoint =
-        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
+        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name, serverId)
     private val producerSendRowsCounterUntilFirstFailure: CounterDataPoint =
-        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
+        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, serverId)
     private val producerSendRowsCounterInsertAsManyAsPossible: CounterDataPoint =
-        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+        prometheusConfig.producerSendRowsCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, serverId)
 
     private val producerSendFailedRowsCounterProhibited: CounterDataPoint =
-        prometheusConfig.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
+        prometheusConfig.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.PROHIBITED.name, serverId)
     private val producerSendFailedRowsCounterUntilFirstFailure: CounterDataPoint =
-        prometheusConfig.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
+        prometheusConfig.producerSendFailedRowsCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, serverId)
     private val producerSendFailedRowsCounterInsertAsManyAsPossible: CounterDataPoint =
         prometheusConfig.producerSendFailedRowsCounter.labelValues(
             queueName,
-            PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name
+            PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name,
+            serverId
         )
 
     private val producerSendDurationProhibited: DistributionDataPoint =
-        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.PROHIBITED.name)
+        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.PROHIBITED.name, serverId)
     private val producerSendDurationUntilFirstFailure: DistributionDataPoint =
-        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
+        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, serverId)
     private val producerSendDurationInsertAsManyAsPossible: DistributionDataPoint =
-        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+        prometheusConfig.producerSendDuration.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, serverId)
 
     private val producerSendBytesCounterProhibited: CounterDataPoint =
-        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.PROHIBITED.name)
+        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.PROHIBITED.name, serverId)
     private val producerSendBytesCounterUntilFirstFailure: CounterDataPoint =
-        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name)
+        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, serverId)
     private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint =
-        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name)
+        prometheusConfig.producerSendBytesCounter.labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, serverId)
 
     private val producerQueueSizeGauge: GaugeDataPoint =
-        prometheusConfig.producerQueueSizeGauge.labelValues(queueName)
+        prometheusConfig.producerQueueSizeGauge.labelValues(queueName, serverId)
 
 
     // ------------------------------------------------------------------------------
@@ -122,7 +125,7 @@ internal class PrometheusQueueMetrics(
         // We use internal caching to prevent too frequent calls to the database
         val queueSizeMeasureInterval = prometheusConfig.customQueueSizeMeasureInterval[queueName]
             ?: PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        val queueSize = QueueSizeCache.get(queueName, serverId, queueSizeMeasureInterval, queueSizeCalcFunc)
         consumerQueueSizeGauge.set(queueSize.toDouble())
     }
 
@@ -133,21 +136,21 @@ internal class PrometheusQueueMetrics(
     }
 
     private val consumerReceiveCounter: CounterDataPoint =
-        prometheusConfig.consumerReceiveCounter.labelValues(queueName)
+        prometheusConfig.consumerReceiveCounter.labelValues(queueName, serverId)
     private val consumerReceiveBytesCounter: CounterDataPoint =
-        prometheusConfig.consumerReceiveBytesCounter.labelValues(queueName)
+        prometheusConfig.consumerReceiveBytesCounter.labelValues(queueName, serverId)
     private val consumerReceiveRowsCounter: CounterDataPoint =
-        prometheusConfig.consumerReceiveRowsCounter.labelValues(queueName)
+        prometheusConfig.consumerReceiveRowsCounter.labelValues(queueName, serverId)
     private val consumerReceiveDuration: DistributionDataPoint =
-        prometheusConfig.consumerReceiveDuration.labelValues(queueName)
+        prometheusConfig.consumerReceiveDuration.labelValues(queueName, serverId)
     private val consumerDeleteCounter: CounterDataPoint =
-        prometheusConfig.consumerDeleteCounter.labelValues(queueName)
+        prometheusConfig.consumerDeleteCounter.labelValues(queueName, serverId)
     private val consumerDeleteRowsCounter: CounterDataPoint =
-        prometheusConfig.consumerDeleteRowsCounter.labelValues(queueName)
+        prometheusConfig.consumerDeleteRowsCounter.labelValues(queueName, serverId)
     private val consumerDeleteDuration: DistributionDataPoint =
-        prometheusConfig.consumerDeleteDuration.labelValues(queueName)
+        prometheusConfig.consumerDeleteDuration.labelValues(queueName, serverId)
     private val consumerQueueSizeGauge: GaugeDataPoint =
-        prometheusConfig.consumerQueueSizeGauge.labelValues(queueName)
+        prometheusConfig.consumerQueueSizeGauge.labelValues(queueName, serverId)
 
     // ------------------------------------------------------------------------------
     // Sweep
@@ -159,12 +162,12 @@ internal class PrometheusQueueMetrics(
     }
 
     private val sweepCounter: CounterDataPoint =
-        prometheusConfig.sweepCounter.labelValues(queueName)
+        prometheusConfig.sweepCounter.labelValues(queueName, serverId)
     private val sweepIterationsCounter: CounterDataPoint =
-        prometheusConfig.sweepIterationsCounter.labelValues(queueName)
+        prometheusConfig.sweepIterationsCounter.labelValues(queueName, serverId)
     private val sweepRowsRemovedCounter: CounterDataPoint =
-        prometheusConfig.sweepRowsRemovedCounter.labelValues(queueName)
+        prometheusConfig.sweepRowsRemovedCounter.labelValues(queueName, serverId)
     private val sweepDuration: DistributionDataPoint =
-        prometheusConfig.sweepDuration.labelValues(queueName)
+        prometheusConfig.sweepDuration.labelValues(queueName, serverId)
 
 }

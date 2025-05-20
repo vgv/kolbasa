@@ -8,6 +8,7 @@ import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.ServerId
 import javax.sql.DataSource
 
 class DatabaseConsumer(
@@ -18,10 +19,11 @@ class DatabaseConsumer(
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        consumerOptions: ConsumerOptions = ConsumerOptions()
+        serverId: ServerId = "",
+        consumerOptions: ConsumerOptions = ConsumerOptions(),
     ) : this(
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseConsumer(consumerOptions)
+        peer = ConnectionAwareDatabaseConsumer(consumerOptions, serverId)
     )
 
     override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
