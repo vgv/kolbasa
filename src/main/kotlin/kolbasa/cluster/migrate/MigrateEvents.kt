@@ -1,10 +1,11 @@
 package kolbasa.cluster.migrate
 
+import kolbasa.schema.ServerId
 import javax.sql.DataSource
 
 internal interface MigrateEvents {
 
-    fun prepareSuccessful(shards: List<Int>, targetNode: String, shardsDiff: List<ShardDiff>)
+    fun prepareSuccessful(shards: List<Int>, targetNode: ServerId, shardsDiff: List<ShardDiff>)
 
     fun migrateStart(tableName: String, from: DataSource, to: DataSource)
     fun migrateEnd(tableName: String, from: DataSource, to: DataSource, migratedRows: Int)

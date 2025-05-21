@@ -3,6 +3,7 @@ package kolbasa.queue
 import kolbasa.Kolbasa
 import kolbasa.queue.meta.MetaClass
 import kolbasa.schema.Const
+import kolbasa.schema.ServerId
 import kolbasa.stats.opentelemetry.EmptyQueueTracing
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
@@ -11,6 +12,8 @@ import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.metrics.EmptyQueueMetrics
 import kolbasa.stats.prometheus.metrics.PrometheusQueueMetrics
 import kolbasa.stats.prometheus.metrics.QueueMetrics
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     /**
@@ -60,15 +63,19 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
 
     internal val metadataDescription: MetaClass<Meta>? = metadata?.let { MetaClass.of(metadata) }
 
-    internal val queueMetrics: QueueMetrics by lazy {
-        when (val config = Kolbasa.prometheusConfig) {
-            // No Prometheus config - no metrics collection
-            is PrometheusConfig.None -> EmptyQueueMetrics
+    private val metrics: ConcurrentMap<ServerId, QueueMetrics> = ConcurrentHashMap()
 
+    internal fun getQueueMetrics(serverId: ServerId): QueueMetrics {
+        return when (val config = Kolbasa.prometheusConfig) {
             // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
             // and cache it in the queue object to avoid excessive allocations.
             // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
-            is PrometheusConfig.Config -> PrometheusQueueMetrics(name, config)
+            is PrometheusConfig.Config -> metrics.computeIfAbsent(serverId) {
+                PrometheusQueueMetrics(name, serverId, config)
+            }
+
+            // No Prometheus config - no metrics collection
+            is PrometheusConfig.None -> EmptyQueueMetrics
         }
     }
 

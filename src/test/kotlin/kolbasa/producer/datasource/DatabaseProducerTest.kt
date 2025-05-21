@@ -80,8 +80,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData_WithCustomProducerName() {
         val firstProducerName = "first_producer"
         val secondProducerName = "second_producer"
-        val firstProducer = DatabaseProducer(dataSource, ProducerOptions(producer = firstProducerName))
-        val secondProducer = DatabaseProducer(dataSource, ProducerOptions(producer = secondProducerName))
+        val firstProducer = DatabaseProducer(dataSource, producerOptions = ProducerOptions(producer = firstProducerName))
+        val secondProducer = DatabaseProducer(dataSource, producerOptions = ProducerOptions(producer = secondProducerName))
 
         val result1 = firstProducer.send(queue, "bugaga")
         assertEquals(0, result1.failedMessages)
@@ -137,7 +137,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendProhibited() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
+            producerOptions = ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
         )
 
         val result = producer.send(queue, items)
@@ -159,7 +159,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendUntilFirstFailure() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
+            producerOptions = ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
         )
 
         val result = producer.send(queue, items)
@@ -189,7 +189,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendAsManyAsPossible() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
+            producerOptions = ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         )
 
         val result = producer.send(queue, items)

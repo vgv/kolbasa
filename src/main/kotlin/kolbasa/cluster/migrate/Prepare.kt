@@ -3,9 +3,10 @@ package kolbasa.cluster.migrate
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
+import kolbasa.schema.ServerId
 import javax.sql.DataSource
 
-internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<DataSource>, events: MigrateEvents) {
+internal fun prepare(shards: List<Int>, targetNode: ServerId, dataSources: List<DataSource>, events: MigrateEvents) {
     val nodes = ClusterHelper.readNodes(dataSources)
     val (shardDataSource, initialShards) = MigrateHelpers.readShards(nodes)
 

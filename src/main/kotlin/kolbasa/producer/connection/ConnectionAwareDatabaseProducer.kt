@@ -4,6 +4,8 @@ import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
+import kolbasa.schema.EMPTY_SERVER_ID
+import kolbasa.schema.ServerId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -15,6 +17,7 @@ import java.sql.Connection
  * Default implementation of [ConnectionAwareProducer]
  */
 class ConnectionAwareDatabaseProducer(
+    private val serverId: ServerId = EMPTY_SERVER_ID,
     private val producerOptions: ProducerOptions = ProducerOptions()
 ) : ConnectionAwareProducer {
 
@@ -23,7 +26,8 @@ class ConnectionAwareDatabaseProducer(
         queue: Queue<Data, Meta>,
         request: SendRequest<Data, Meta>
     ): SendResult<Data, Meta> {
-        val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
+        val metrics = queue.getQueueMetrics(serverId)
+        val approxStatsBytes = BytesCounter(metrics.usePreciseStringSize())
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
@@ -37,7 +41,7 @@ class ConnectionAwareDatabaseProducer(
         }
 
         // Prometheus
-        queue.queueMetrics.producerSendMetrics(
+        metrics.producerSendMetrics(
             partialInsert,
             allMessages = request.data.size,
             failedMessages = result.failedMessages,

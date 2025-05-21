@@ -8,6 +8,7 @@ import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.ServerId
 import javax.sql.DataSource
 
 class ClusterConsumer(
@@ -18,8 +19,8 @@ class ClusterConsumer(
     override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         val latestState = cluster.getState()
 
-        val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
-            val c = ConnectionAwareDatabaseConsumer(consumerOptions, shards)
+        val consumer = latestState.getActiveConsumer(this) { dataSource, serverId, shards ->
+            val c = ConnectionAwareDatabaseConsumer(consumerOptions, serverId, shards)
             DatabaseConsumer(dataSource, c)
         }
 
@@ -46,15 +47,15 @@ class ClusterConsumer(
                 }
 
                 val consumer = latestState.getConsumer(this, node) { dataSource ->
-                    DatabaseConsumer(dataSource, consumerOptions)
+                    DatabaseConsumer(dataSource, node, consumerOptions)
                 }
 
                 consumer.delete(queue, ids)
             }.sum()
 
         if (deleted < messageIds.size) {
-            val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
-                DatabaseConsumer(dataSource, consumerOptions)
+            val consumers = latestState.getConsumers(this) { dataSource: DataSource, serverId: ServerId ->
+                DatabaseConsumer(dataSource, serverId, consumerOptions)
             }
 
             consumers.forEach { consumer ->

@@ -1,12 +1,13 @@
 package kolbasa.cluster
 
+import kolbasa.schema.ServerId
 import kotlin.random.Random
 
 internal data class Shard(
     val shard: Int,
-    val producerNode: String,
-    val consumerNode: String?,
-    val nextConsumerNode: String?
+    val producerNode: ServerId,
+    val consumerNode: ServerId?,
+    val nextConsumerNode: ServerId?
 ) {
 
     init {

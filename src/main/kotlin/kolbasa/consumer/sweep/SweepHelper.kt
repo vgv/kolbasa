@@ -5,6 +5,7 @@ import kolbasa.consumer.ConsumerSchemaHelpers
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.utils.Lock
 import kolbasa.queue.Queue
+import kolbasa.schema.ServerId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.TimeHelper
@@ -40,14 +41,14 @@ object SweepHelper {
      * @return how many expired messages were removed or -1 if sweep didn't run due to
      * concurrent sweep for the queue at the same time by another consumer
      */
-    fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
+    fun sweep(serverId: ServerId, connection: Connection, queue: Queue<*, *>, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Choose max rows value to sweep
         val rowsToSweep = max(limit, sweepConfig.maxRows)
 
         val removedRows = Lock.tryRunExclusive(queue.name) {
-            rawSweep(connection, queue, rowsToSweep, sweepConfig.maxIterations)
+            rawSweep(serverId, connection, queue, rowsToSweep, sweepConfig.maxIterations)
         }
 
         return removedRows ?: -1
@@ -69,7 +70,7 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int): Int {
+    private fun rawSweep(serverId: ServerId, connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int): Int {
         var totalRows = 0
         var iterations = 0
 
@@ -83,7 +84,7 @@ object SweepHelper {
         }
 
         // Prometheus
-        queue.queueMetrics.sweepMetrics(iterations, totalRows, execution.durationNanos)
+        queue.getQueueMetrics(serverId).sweepMetrics(iterations, totalRows, execution.durationNanos)
 
         return totalRows
     }
