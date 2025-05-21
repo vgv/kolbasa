@@ -6,6 +6,7 @@ import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.EMPTY_SERVER_ID
 import kolbasa.schema.ServerId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
@@ -16,7 +17,7 @@ import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer internal constructor(
     private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val serverId: ServerId = "",
+    private val serverId: ServerId = EMPTY_SERVER_ID,
     private val shards: Shards = Shards.ALL_SHARDS,
 ) : ConnectionAwareConsumer {
 

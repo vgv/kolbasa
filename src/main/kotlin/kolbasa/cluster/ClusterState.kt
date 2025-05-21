@@ -153,15 +153,15 @@ internal data class ClusterState(
 
     fun getConsumer(
         clusterConsumer: ClusterConsumer,
-        node: String,
+        serverId: ServerId,
         generateConsumer: (DataSource) -> Consumer
     ): Consumer {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
         }
 
-        val consumer = nodesToConsumers.computeIfAbsent(node) { _ ->
-            val dataSource = nodes[node] ?: throw IllegalStateException("Node $node not found")
+        val consumer = nodesToConsumers.computeIfAbsent(serverId) { _ ->
+            val dataSource = nodes[serverId] ?: throw IllegalStateException("Node $serverId not found")
             generateConsumer(dataSource)
         }
 

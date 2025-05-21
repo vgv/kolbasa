@@ -1,5 +1,6 @@
 package kolbasa.stats.prometheus.queuesize
 
+import kolbasa.schema.ServerId
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -11,7 +12,7 @@ internal object QueueSizeCache {
     private val locks = ConcurrentHashMap<String, Lock>()
     private val caches: ConcurrentMap<String, CachedValue> = ConcurrentHashMap()
 
-    fun get(queueName: String, serverId: String, maxInterval: Duration, valueCalculationFunc: () -> Long): Long {
+    fun get(queueName: String, serverId: ServerId, maxInterval: Duration, valueCalculationFunc: () -> Long): Long {
         val key = "$queueName-$serverId"
 
         val cachedValue = caches[key]

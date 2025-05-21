@@ -44,7 +44,7 @@ internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, 
 private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<ServerId, List<Int>> {
     val (_, shards) = MigrateHelpers.readShards(nodes)
 
-    val targetsToShards = mutableMapOf<String, MutableList<Int>>()
+    val targetsToShards = mutableMapOf<ServerId, MutableList<Int>>()
     shards.values.forEach { shard ->
         if (shard.nextConsumerNode != null) {
             targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard)

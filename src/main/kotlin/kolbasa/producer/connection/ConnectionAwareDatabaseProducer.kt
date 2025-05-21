@@ -4,6 +4,7 @@ import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
+import kolbasa.schema.EMPTY_SERVER_ID
 import kolbasa.schema.ServerId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
@@ -16,7 +17,7 @@ import java.sql.Connection
  * Default implementation of [ConnectionAwareProducer]
  */
 class ConnectionAwareDatabaseProducer(
-    private val serverId: ServerId = "",
+    private val serverId: ServerId = EMPTY_SERVER_ID,
     private val producerOptions: ProducerOptions = ProducerOptions()
 ) : ConnectionAwareProducer {
 

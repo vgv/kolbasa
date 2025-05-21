@@ -6,7 +6,12 @@ import kotlin.random.Random
 /**
  * Type alias for server id for better readability
  */
-internal typealias ServerId = String
+typealias ServerId = String
+
+/**
+ * Default value for server id, used when we don't know the server id
+ */
+const val EMPTY_SERVER_ID = ""
 
 internal data class Node(
     val serverId: ServerId,
