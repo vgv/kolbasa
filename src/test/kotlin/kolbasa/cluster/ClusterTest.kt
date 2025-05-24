@@ -149,7 +149,7 @@ class ClusterTest : AbstractPostgresqlTest() {
                 IdSchema.readNodeInfo(dataSource)
             }
             .minOf { it }
-        assertEquals(smallestExistingId.serverId, nodeIdWithShardTable)
+        assertEquals(smallestExistingId.id, nodeIdWithShardTable)
     }
 
 
@@ -168,7 +168,7 @@ class ClusterTest : AbstractPostgresqlTest() {
 
                 val numberOfTables = dataSource.readInt(sql)
                 val thisNodeId = requireNotNull(IdSchema.readNodeInfo(dataSource))
-                FoundShardTable(numberOfTables, thisNodeId.serverId, schema, dataSource)
+                FoundShardTable(numberOfTables, thisNodeId.id, schema, dataSource)
             }
     }
 

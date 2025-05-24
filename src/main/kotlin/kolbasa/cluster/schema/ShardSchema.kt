@@ -62,7 +62,7 @@ internal object ShardSchema {
         val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
-                "($shard, '${randomNode.serverId}', '${randomNode.serverId}')"
+                "($shard, '${randomNode.id}', '${randomNode.id}')"
             }
 
             """

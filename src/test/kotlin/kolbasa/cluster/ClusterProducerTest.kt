@@ -71,7 +71,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
                             ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'unknown',
                             ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'unknown'
                        where
-                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${id.serverId}'
+                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${id.id}'
                    """.trimIndent()
             statement.executeUpdate(sql)
         }

@@ -27,7 +27,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val targetNode = nodes.keys.filterNot { it == sourceNode }.random()
 
         val shardsToMove = shards
-            .filterValues { it.producerNode == sourceNode.serverId }
+            .filterValues { it.producerNode == sourceNode.id }
             .keys
             .shuffled()
             .take(Random.nextInt(2, 10))  // choose a few shards to move
@@ -38,7 +38,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         // RUN
         prepare(
             shards = shardsToMove,
-            targetNode = targetNode.serverId,
+            targetNode = targetNode.id,
             dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
             events = migrateEvents
         )
@@ -58,9 +58,9 @@ class PrepareKtTest : AbstractPostgresqlTest() {
                     val consumerNode = resultSet.getString(2)
                     val nextConsumerNode = resultSet.getString(3)
 
-                    assertEquals(targetNode.serverId, producerNode)
+                    assertEquals(targetNode.id, producerNode)
                     assertNull(consumerNode)
-                    assertEquals(targetNode.serverId, nextConsumerNode)
+                    assertEquals(targetNode.id, nextConsumerNode)
                 }
             }
         }
@@ -69,15 +69,15 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val diffs = shardsToMove.map { shardNumber ->
             val originalShard = requireNotNull(shards[shardNumber])
             val updatedShard = originalShard.copy(
-                producerNode = targetNode.serverId,
+                producerNode = targetNode.id,
                 consumerNode = null,
-                nextConsumerNode = targetNode.serverId
+                nextConsumerNode = targetNode.id
             )
             ShardDiff(originalShard, updatedShard)
         }
 
         verifySequence {
-            migrateEvents.prepareSuccessful(shardsToMove, targetNode.serverId, diffs)
+            migrateEvents.prepareSuccessful(shardsToMove, targetNode.id, diffs)
         }
     }
 
@@ -122,7 +122,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val targetNode = nodes.keys.filterNot { it == sourceNode }.random()
 
         val shardsToMove = shards
-            .filterValues { it.producerNode == targetNode.serverId } // move shards that are already on the target node
+            .filterValues { it.producerNode == targetNode.id } // move shards that are already on the target node
             .keys
             .shuffled()
             .take(Random.nextInt(2, 10))  // choose a few shards to move
@@ -134,7 +134,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val exception = assertFailsWith<MigrateException.MigrateToTheSameShardException> {
             prepare(
                 shards = shardsToMove,
-                targetNode = targetNode.serverId,
+                targetNode = targetNode.id,
                 dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
                 events = migrateEvents
             )
@@ -143,6 +143,6 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         // CHECK
         assertIs<MigrateException.MigrateToTheSameShardException>(exception)
         assertEquals(shards[shardsToMove.first()], exception.shard)
-        assertEquals(targetNode.serverId, exception.targetNode)
+        assertEquals(targetNode.id, exception.targetNode)
     }
 }

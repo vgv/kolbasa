@@ -46,7 +46,7 @@ class Cluster @JvmOverloads constructor(
         val shards = initShards(nodes)
         initQueuesSchema(dataSources)
 
-        val newState = ClusterState(nodes.mapKeys { it.key.serverId }, shards)
+        val newState = ClusterState(nodes.mapKeys { it.key.id }, shards)
         if (newState != state) {
             state = newState
         }

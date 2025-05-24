@@ -4,12 +4,12 @@ import kolbasa.cluster.Shard
 import kotlin.random.Random
 
 internal data class Node(
-    val serverId: String,
+    val id: String,
     val identifiersBucket: Int
 ) : Comparable<Node> {
 
     override fun compareTo(other: Node): Int {
-        return this.serverId.compareTo(other.serverId)
+        return this.id.compareTo(other.id)
     }
 
     companion object {

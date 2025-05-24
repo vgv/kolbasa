@@ -116,8 +116,8 @@ class ShardSchemaTest : AbstractPostgresqlTest() {
             assertEquals(shardNumber, shard.shard, "Shard: $shard")
             assertEquals(shard.producerNode, shard.consumerNode, "Shard: $shard")
             assertNull(shard.nextConsumerNode, "Shard: $shard")
-            assertTrue(nodes.any { it.serverId == shard.producerNode }, "Shard: $shard")
-            assertTrue(nodes.any { it.serverId == shard.consumerNode}, "Shard: $shard")
+            assertTrue(nodes.any { it.id == shard.producerNode }, "Shard: $shard")
+            assertTrue(nodes.any { it.id == shard.consumerNode}, "Shard: $shard")
         }
     }
 

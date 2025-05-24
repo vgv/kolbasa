@@ -46,7 +46,7 @@ internal object MigrateHelpers {
         val sourceNodes = mutableListOf<DataSource>()
         var targetNode: DataSource? = null
         for ((node, dataSource) in nodes) {
-            if (node.serverId == targetNodeId) {
+            if (node.id == targetNodeId) {
                 targetNode = dataSource
             } else {
                 sourceNodes += dataSource

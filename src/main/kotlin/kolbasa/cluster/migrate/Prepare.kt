@@ -10,7 +10,7 @@ internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<Da
     val (shardDataSource, initialShards) = MigrateHelpers.readShards(nodes)
 
     // Check that target node exists
-    if (nodes.none { (node, _) -> node.serverId == targetNode }) {
+    if (nodes.none { (node, _) -> node.id == targetNode }) {
         throw MigrateException.MigrateToNonExistingNodeException(nodes.keys.toList(), targetNode)
     }
 
