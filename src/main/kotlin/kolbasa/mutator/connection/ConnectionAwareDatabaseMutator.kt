@@ -1,5 +1,7 @@
 package kolbasa.mutator.connection
 
+import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.MessageResult
@@ -19,8 +21,8 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
     override fun <Data, Meta : Any> mutate(
         connection: Connection,
         queue: Queue<Data, Meta>,
-        messages: List<Id>,
-        mutations: List<Mutation>
+        mutations: List<Mutation>,
+        messages: List<Id>
     ): MutateResult {
         if (messages.isEmpty() || mutations.isEmpty()) {
             return MutateResult(mutatedMessages = 0, emptyList())
@@ -58,6 +60,15 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         }
 
         return MutateResult(mutatedMessages = mutatedMessages, a)
+    }
+
+    override fun <Data, Meta : Any> mutate(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
+    ): MutateResult {
+        TODO("Not yet implemented")
     }
 
     private fun generateMutateQuery(

@@ -1,6 +1,8 @@
 package kolbasa.mutator.datasource
 
 import kolbasa.Kolbasa
+import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.MutateResult
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutatorOptions
@@ -24,24 +26,47 @@ class DatabaseMutator(
 
     override fun <Data, Meta : Any> mutate(
         queue: Queue<Data, Meta>,
-        messages: List<Id>,
-        mutations: List<Mutation>
+        mutations: List<Mutation>,
+        messages: List<Id>
     ): MutateResult {
         return dataSource.useConnection { connection ->
-            peer.mutate(connection, queue, messages, mutations)
+            peer.mutate(connection, queue, mutations, messages)
+        }
+    }
+
+    override fun <Data, Meta : Any> mutate(
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
+    ): MutateResult {
+        return dataSource.useConnection { connection ->
+            peer.mutate(connection, queue, mutations, filter)
         }
     }
 
     override fun <Data, Meta : Any> mutateAsync(
         queue: Queue<Data, Meta>,
-        messages: List<Id>,
-        mutations: List<Mutation>
+        mutations: List<Mutation>,
+        messages: List<Id>
     ): CompletableFuture<MutateResult> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
             customExecutor = mutatorOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
-        return CompletableFuture.supplyAsync({ mutate(queue, messages, mutations) }, executor)
+        return CompletableFuture.supplyAsync({ mutate(queue, mutations, messages) }, executor)
+    }
+
+    override fun <Data, Meta : Any> mutateAsync(
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition<Meta>
+    ): CompletableFuture<MutateResult> {
+        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
+            customExecutor = mutatorOptions.asyncExecutor,
+            defaultExecutor = Kolbasa.asyncExecutor
+        )
+
+        return CompletableFuture.supplyAsync({ mutate(queue, mutations, filter) }, executor)
     }
 }
