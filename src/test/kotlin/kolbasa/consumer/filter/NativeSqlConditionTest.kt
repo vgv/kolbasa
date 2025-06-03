@@ -5,6 +5,7 @@ import io.mockk.mockk
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
+import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 import kotlin.test.assertEquals
