@@ -22,7 +22,7 @@ class DatabaseMutator(
     private val mutatorOptions: MutatorOptions = MutatorOptions()
 ) : Mutator {
 
-    private val peer = ConnectionAwareDatabaseMutator()
+    private val peer = ConnectionAwareDatabaseMutator(mutatorOptions)
 
     override fun <Data, Meta : Any> mutate(
         queue: Queue<Data, Meta>,

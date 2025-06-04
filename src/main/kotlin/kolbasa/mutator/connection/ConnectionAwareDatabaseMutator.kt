@@ -2,21 +2,19 @@ package kolbasa.mutator.connection
 
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
-import kolbasa.mutator.AddRemainingAttempts
-import kolbasa.mutator.AddScheduledAt
-import kolbasa.mutator.MessageResult
-import kolbasa.mutator.MutateResult
-import kolbasa.mutator.Mutation
-import kolbasa.mutator.SetRemainingAttempts
-import kolbasa.mutator.SetScheduledAt
+import kolbasa.mutator.*
+import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
+import kolbasa.schema.IdRange
+import kolbasa.utils.ColumnIndex
 import java.sql.Connection
 
-class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
+class ConnectionAwareDatabaseMutator(
+    private val mutatorOptions: MutatorOptions = MutatorOptions()
+) : ConnectionAwareMutator {
 
     override fun <Data, Meta : Any> mutate(
         connection: Connection,
@@ -25,12 +23,12 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         messages: List<Id>
     ): MutateResult {
         if (messages.isEmpty() || mutations.isEmpty()) {
-            return MutateResult(mutatedMessages = 0, emptyList())
+            return MutateResult(mutatedMessages = 0, truncated = false, emptyList())
         }
 
         Checks.checkMutations(mutations)
 
-        val query = generateMutateQuery(queue, messages, mutations)
+        val query = MutatorSchemaHelpers.generateListMutateQuery(queue, mutations, messages)
 
         val mutateResult = mutableMapOf<Id, MessageResult>()
         connection.useStatement { statement ->
@@ -48,18 +46,18 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         }
 
         // combine result using the same order
-        var mutatedMessages = 0
-        val a = messages.map { id ->
+        var mutatedMessagesCount = 0
+        val mutatedMessages = messages.map { id ->
             val result = mutateResult[id]
             if (result != null) {
-                mutatedMessages++
+                mutatedMessagesCount++
                 result
             } else {
                 MessageResult.NotFound(id)
             }
         }
 
-        return MutateResult(mutatedMessages = mutatedMessages, a)
+        return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = false, messages = mutatedMessages)
     }
 
     override fun <Data, Meta : Any> mutate(
@@ -68,53 +66,51 @@ class ConnectionAwareDatabaseMutator : ConnectionAwareMutator {
         mutations: List<Mutation>,
         filter: Filter.() -> Condition<Meta>
     ): MutateResult {
-        TODO("Not yet implemented")
-    }
+        if (mutations.isEmpty()) {
+            return MutateResult(mutatedMessages = 0, truncated = false, emptyList())
+        }
 
-    private fun generateMutateQuery(
-        queue: Queue<*, *>,
-        messages: List<Id>,
-        mutations: List<Mutation>
-    ): String {
-        val clauses = mutations.map { mutation ->
-            when (mutation) {
-                is AddRemainingAttempts -> {
-                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME} + ${mutation.delta}"
-                }
+        Checks.checkMutations(mutations)
 
-                is SetRemainingAttempts -> {
-                    "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${mutation.newValue}"
-                }
+        val condition = filter(Filter)
+        val query = MutatorSchemaHelpers.generateFilterQuery(queue, mutations, condition)
 
-                is AddScheduledAt -> {
-                    val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                    val millis = mutation.delta.toMillis()
-                    "${scheduledAt}=${scheduledAt} + interval '$millis millisecond'"
-                }
+        var mutatedMessagesCount = 0
+        var truncated = false
+        var lastMessageId = IdRange.MIN_ID - 1
+        var lastIterationRecords: Long
+        val mutatedMessages = mutableListOf<MessageResult>()
+        do {
+            lastIterationRecords = 0
 
-                is SetScheduledAt -> {
-                    val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                    val millis = mutation.newValue.toMillis()
-                    "${scheduledAt}=clock_timestamp() + interval '$millis millisecond'"
+            connection.usePreparedStatement(query) { preparedStatement ->
+                val columnIndex = ColumnIndex()
+                preparedStatement.setLong(columnIndex.nextIndex(), lastMessageId)
+                condition.fillPreparedQuery(queue, preparedStatement, columnIndex)
+                preparedStatement.executeQuery().use { resultSet ->
+                    while (resultSet.next()) {
+                        val localId = resultSet.getLong(1)
+                        val shard = resultSet.getInt(2)
+                        val scheduledAt = resultSet.getTimestamp(3).time
+                        val remainingAttempts = resultSet.getInt(4)
+
+                        mutatedMessagesCount++
+                        lastIterationRecords++
+                        lastMessageId = localId
+
+                        if (mutatedMessagesCount <= mutatorOptions.maxMutatedRowsKeepInMemory) {
+                            val id = Id(localId, shard)
+                            mutatedMessages += MessageResult.Mutated(id, scheduledAt, remainingAttempts)
+                            if (mutatedMessagesCount == mutatorOptions.maxMutatedRowsKeepInMemory) {
+                                truncated = true
+                            }
+                        }
+                    }
                 }
             }
-        }
+        } while (lastMessageId < IdRange.MAX_ID && lastIterationRecords > 0)
 
-        val idsList = messages.joinToString(separator = ",", prefix = "(", postfix = ")") { message ->
-            "(${message.localId},${message.shard})"
-        }
-
-        return """
-            update ${queue.dbTableName}
-            set
-                ${clauses.joinToString(separator = ",")}
-            where
-                (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idsList
-            returning
-                ${Const.ID_COLUMN_NAME},
-                ${Const.SHARD_COLUMN_NAME},
-                ${Const.SCHEDULED_AT_COLUMN_NAME},
-                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
-        """.trimIndent()
+        return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = truncated, mutatedMessages)
     }
+
 }
