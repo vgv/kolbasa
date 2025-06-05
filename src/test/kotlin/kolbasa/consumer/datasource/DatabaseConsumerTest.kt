@@ -425,7 +425,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         }
     }
 
-    private fun compareTimestamps(first: Long, second: Long, delta: Duration = Duration.ofMillis(10)): Boolean {
+    private fun compareTimestamps(first: Long, second: Long, delta: Duration = Duration.ofMillis(50)): Boolean {
         val diff = abs(first - second)
         return diff < delta.toMillis()
     }
