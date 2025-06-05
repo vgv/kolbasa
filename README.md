@@ -78,9 +78,88 @@ For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
 
 `./gradlew example -P name=FilterExample`
+
 2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
 
 `./gradlew example -P name=FilterAndSortExample`
+
+### Deduplication
+Kolbasa has the ability to use deduplication when sending messages to the queue.
+
+There are two different modes ([DeduplicationMode](src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `ERROR` and `IGNORE_DUPLICATES`
+
+The `ERROR` mode is the default. If you try to send a message with an existing unique key, the operation will fail and,
+depending on the [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, only part of the messages (or none)
+will be sent. In business code, you can handle this error and, for example, write to log, postpone sending the message or change
+the unique key. Since this mode is trivial, in this example we will consider the second option, the more interesting `IGNORE_DUPLICATES` mode.
+
+The `IGNORE_DUPLICATES` mode allows you to simply silently ignore uniqueness errors and add to the queue only those messages that
+are not already in the queue. For example, you send 100 messages, 5 of which are duplicates of existing messages in the queue.
+In this case, only 95 messages will be added to the queue and no errors will occur.
+
+Example: [DeduplicationExample](src/test/kotlin/examples/DeduplicationExample.kt)
+
+`./gradlew example -P name=DeduplicationExample`
+
+
+### Send delay
+By default, any message is available for receiving immediately after sending, but it often happens that the delivery of a
+message needs to be delayed for some time.
+
+Kolbasa has this option.
+
+When sending a message, you can specify an arbitrary delay (seconds, hours, days) and the message will "appear" for consumers
+no earlier than this delay expires.
+
+For example, your service has a "Delete account" button, but you start the actual data deletion only after 30 days, thereby
+giving the client the opportunity to change their mind. In this case, you can send the message "DELETE CLIENT #123456789" to a
+queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
+become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
+
+![Send delay](src/test/kotlin/examples/img/send_delay.png)
+
+Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
+
+`./gradlew example -P name=SendDelayExample`
+
+
+### Partial insert and batching
+Imagine you want to send 10,000 messages with a single `Producer.send()` call, but among those 10,000 messages there is one
+invalid message that cannot be sent, for example due to uniqueness constraints.
+
+So, there will definitely be a send error, but if only one message out of 10,000 causes an error, there are several different
+options for handling this situation:
+
+1) Cancel sending all 10,000 messages
+2) Send messages up to the invalid one, and do not send any messages after the invalid one. This mode is useful if you want to
+preserve causal ordering
+3) Send as many messages as possible, skipping only the invalid one. This is useful if the messages are not related to each other
+in any way, and you just want to send as many messages as possible to the queue
+
+However, Kolbasa does not send all messages to the queue one by one, this is very bad for performance. The library sends
+messages to the queue in [batches](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
+boundary of these batches, so if a specific batch contains a invalid message, the entire batch will be discarded.
+
+The easiest way to show the difference between these approaches is with pictures.
+In the example below, we send 6 messages with `batchSize=2` and one poison message. It turns out, three batches, one of
+which (the second) contains an incorrect message.
+
+Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
+
+`PartialInsert.PROHIBITED`
+![Prohibited](src/test/kotlin/examples/img/partial_insert_prohibited.png)
+
+`PartialInsert.UNTIL_FIRST_FAILURE`
+![Until first failure](src/test/kotlin/examples/img/partial_insert_until_first_failure.png)
+
+`PartialInsert.INSERT_AS_MANY_AS_POSSIBLE`
+![As manu as possible](src/test/kotlin/examples/img/partial_insert_as_many_as_possible.png)
+
+
+Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
+
+`./gradlew example -P name=PartialInsertExample`
+
 
 ### Transaction context
 Imagine that in your application you have a `customer` table containing important information about your customers - name, email

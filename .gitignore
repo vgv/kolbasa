@@ -7,3 +7,6 @@
 
 # Local development
 /src/test/kotlin/local/
+
+# OSX
+.DS_Store

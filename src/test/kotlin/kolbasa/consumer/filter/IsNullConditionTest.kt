@@ -6,6 +6,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
 import kolbasa.queue.meta.MetaHelpers
+import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
@@ -14,7 +15,7 @@ internal class IsNullConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val isNullExpression = IsNullCondition<TestMeta>(TestMeta::intValue.name)
 
         val sql = isNullExpression.toSqlClause(queue)
@@ -23,7 +24,7 @@ internal class IsNullConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val isNullExpression = IsNullCondition<TestMeta>(TestMeta::intValue.name)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

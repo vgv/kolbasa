@@ -7,6 +7,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
 import kolbasa.queue.meta.MetaHelpers
+import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
@@ -15,7 +16,7 @@ internal class InConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val inExpression = InCondition<TestMeta, Int>(TestMeta::intValue.name, listOf(123))
 
         val sql = inExpression.toSqlClause(queue)
@@ -24,7 +25,7 @@ internal class InConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
+        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
         val inExpression = InCondition<TestMeta, Int>(TestMeta::intValue.name, listOf(123))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)

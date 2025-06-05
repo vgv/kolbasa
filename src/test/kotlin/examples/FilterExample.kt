@@ -16,7 +16,7 @@ fun main() {
     )
 
     // Define queue with name `test_queue`, varchar type as data storage and metadata
-    val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -31,6 +31,7 @@ fun main() {
     // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
+    // -------------------------------------------------------------------------------------------
     // Create producer and send several messages with meta information
     val producer = DatabaseProducer(dataSource)
     val messagesToSend = (1..100).map { index ->
@@ -39,6 +40,7 @@ fun main() {
     producer.send(queue, messagesToSend)
 
 
+    // -------------------------------------------------------------------------------------------
     // Create consumer
     val consumer = DatabaseConsumer(dataSource)
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue

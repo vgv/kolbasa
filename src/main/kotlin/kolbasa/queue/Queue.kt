@@ -20,6 +20,7 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
      * queue with name `customer_mail` will have table name `q_customer_mail`.
      */
     val name: String,
+
     /**
      * Database data type for queue messages (jsonb, bytea, int, bigint etc.).
      *
@@ -30,12 +31,15 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
      * it's safe to choose [PredefinedDataTypes.ByteArray] since it's the most data and serialization agnostic format.
      */
     val databaseDataType: DatabaseQueueDataType<Data>,
+
     /**
      * Global queue options.
+     *
      * Producers, consumers, send request and even particular message options can override global queue options. Read more
      * details in [QueueOptions]
      */
     val options: QueueOptions? = null,
+
     /**
      * Metadata class for queue.
      *
@@ -76,6 +80,29 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
             // Performance optimization: create all opentelemetry stuff for the queue (instrumenter, setters etc.)
             // and cache it to avoid excessive allocations.
             is OpenTelemetryConfig.Config -> OpenTelemetryQueueTracing(name, config)
+        }
+    }
+
+    companion object {
+
+        /**
+         * Creates a new queue with the given name and database data type.
+         */
+        @JvmStatic
+        fun <Data> of(name: String, databaseDataType: DatabaseQueueDataType<Data>): Queue<Data, Unit> {
+            return Queue(name, databaseDataType, metadata = Unit::class.java, options = null)
+        }
+
+        /**
+         * Creates a new queue with the given name, database data type and metadata class.
+         */
+        @JvmStatic
+        fun <Data, Meta : Any> of(
+            name: String,
+            databaseDataType: DatabaseQueueDataType<Data>,
+            metadata: Class<Meta>
+        ): Queue<Data, Meta> {
+            return Queue(name, databaseDataType, metadata = metadata, options = null)
         }
     }
 }

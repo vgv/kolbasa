@@ -9,7 +9,7 @@ import kolbasa.schema.SchemaHelpers;
 class SimpleExample {
     public static void main(String[] args) {
         // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
-        var queue = new Queue<>("test_queue", PredefinedDataTypes.getString(), null, Void.class);
+        var queue = Queue.of("test_queue", PredefinedDataTypes.getString());
 
         // Valid datasource from DI, static factory etc.
         var dataSource = ExamplesDataSourceProvider.INSTANCE.getDataSource();
@@ -24,10 +24,12 @@ class SimpleExample {
         // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
         SchemaHelpers.updateDatabaseSchema(dataSource, queue);
 
+        // -------------------------------------------------------------------------------------------
         // Create producer and send simple message
         var producer = new DatabaseProducer(dataSource);
         producer.send(queue, "Test message");
 
+        // -------------------------------------------------------------------------------------------
         // Create consumer, try to read message from the queue, process it and delete
         var consumer = new DatabaseConsumer(dataSource);
 

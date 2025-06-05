@@ -8,7 +8,7 @@ import kolbasa.schema.SchemaHelpers
 
 fun main() {
     // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
-    val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Unit::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String)
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -23,10 +23,12 @@ fun main() {
     // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
     SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
+    // -------------------------------------------------------------------------------------------
     // Create producer and send simple message
     val producer = DatabaseProducer(dataSource)
     producer.send(queue, "Test message")
 
+    // -------------------------------------------------------------------------------------------
     // Create consumer, try to read message from the queue, process it and delete
     val consumer = DatabaseConsumer(dataSource)
     consumer.receive(queue)?.let { message ->

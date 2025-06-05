@@ -9,7 +9,9 @@ import java.util.concurrent.CompletableFuture
 /**
  * Base interface for all producers
  *
- * Producers are used to send messages to the queues.
+ * Producers are used to send messages to queues. The producer does not know and in no way controls the retrieval
+ * of messages from the queue by consumers. Messages can be read by one consumer, ten, or none, and good design implies
+ * that this in no way affects the work of the producer. Its only task is to send messages to the queue as quickly as possible.
  *
  * This is a basic interface, implementations of which may behave differently.
  *
@@ -18,12 +20,12 @@ import java.util.concurrent.CompletableFuture
  * completely hides database handling and transaction management from the user.
  *
  * If you require a producer working in context of already opened transaction,
- * please look at [ConnectionAwareProducer][kolbasa.producer.connection.ConnectionAwareProducer].
+ * see [ConnectionAwareProducer][kolbasa.producer.connection.ConnectionAwareProducer].
  */
 interface Producer {
 
     /**
-     * Just to send one message without metadata and another options
+     * Sends one message without metadata and another options
      *
      * @param queue queue to send the message to
      * @param data message to send
@@ -34,7 +36,7 @@ interface Producer {
     }
 
     /**
-     * Just to send one message without metadata and another options asynchronously
+     * Sends one message without metadata and another options asynchronously
      *
      * @param queue queue to send the message to
      * @param data message to send
@@ -45,7 +47,7 @@ interface Producer {
     }
 
     /**
-     * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
+     * Sends one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
      * @param queue queue to send the message to
      * @param message data, metadata (if any) and options (if any) to send
@@ -56,7 +58,7 @@ interface Producer {
     }
 
     /**
-     * Send one message with optional metadata and [kolbasa.producer.MessageOptions] asynchronously
+     * Sends one message with optional metadata and [kolbasa.producer.MessageOptions] asynchronously
      *
      * @param queue queue to send the message to
      * @param message data, metadata (if any) and options (if any) to send
@@ -83,7 +85,7 @@ interface Producer {
     }
 
     /**
-     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message asynchronously
+     * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message asynchronously
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
@@ -99,7 +101,7 @@ interface Producer {
     }
 
     /**
-     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
+     * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
      * custom [kolbasa.producer.SendOptions]
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
@@ -111,7 +113,7 @@ interface Producer {
     fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta>
 
     /**
-     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
+     * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
      * custom [kolbasa.producer.SendOptions] asynchronously
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.

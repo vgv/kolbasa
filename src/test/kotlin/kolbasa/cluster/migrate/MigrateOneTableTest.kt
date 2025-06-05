@@ -152,7 +152,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
 
         internal data class Value(val value: Int)
 
-        internal val queue = Queue<Value, TestMeta>(
+        internal val queue = Queue.of(
             "test_queue",
             DatabaseQueueDataType.Json<Value>(
                 serializer = { "{\"value\": ${it.value}}" },

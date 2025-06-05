@@ -42,15 +42,15 @@ class IdRangeTest {
 
     @Test
     fun testLocalRange() {
-        val start = 0L
-        val end = Long.MAX_VALUE
+        val start = IdRange.MIN_ID
+        val end = IdRange.MAX_ID
         assertEquals(start, IdRange.LOCAL_RANGE.min)
         assertEquals(end, IdRange.LOCAL_RANGE.max)
     }
 
     @Test
     fun testIntersect() {
-        // Just small test to test the test intersect method :)
+        // Just small test to test the intersect method for tests :)
         assertTrue(IdRange(1, 10) intersect IdRange(5, 7))
         assertTrue(IdRange(1, 10) intersect IdRange(0, 20))
         assertTrue(IdRange(1, 10) intersect IdRange(0, 5))

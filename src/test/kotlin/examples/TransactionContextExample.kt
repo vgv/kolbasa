@@ -11,7 +11,7 @@ import java.sql.Statement
 
 fun main() {
     // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
-    val queue = Queue("test_queue", PredefinedDataTypes.String, metadata = Unit::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String)
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -39,7 +39,7 @@ fun main() {
         statement.execute(sql)
     }
 
-    // PRODUCER
+    // -------------------------------------------------------------------------------------------
     // Create producer and send simple message using the same transaction with business query
     val producer = ConnectionAwareDatabaseProducer()
     dataSource.useConnection { connection ->
@@ -56,7 +56,7 @@ fun main() {
         println("The user has been inserted and the message has been sent to the queue")
     }
 
-    // CONSUMER
+    // -------------------------------------------------------------------------------------------
     // Create consumer and try to read message from the queue, process it and delete
     val consumer = ConnectionAwareDatabaseConsumer()
     dataSource.useConnection { connection ->
