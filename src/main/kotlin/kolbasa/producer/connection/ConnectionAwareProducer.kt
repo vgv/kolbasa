@@ -34,17 +34,20 @@ import java.sql.Connection
  * When Hibernate commits transaction (explicitly or, for example, when you use `@Transactional` annotation), message
  * in the queue will be committed too.
  *
+ * The same ideas work for consumers or mutators too – you can build completely transactional pipeline just by connecting
+ * a few producers/consumers/mutators into one "chain" using the same connection and work inside one active transaction.
+ *
  * Kolbasa provides a default, high-performance implementation of [ConnectionAwareProducer]
- * (see class [ConnectionAwareDatabaseProducer]), which uses just plain JDBC and doesn't require any additional dependencies.
+ * (see [ConnectionAwareDatabaseProducer]), which uses just plain JDBC and doesn't require any additional dependencies.
  */
 interface ConnectionAwareProducer {
 
     /**
-     * Just to send one message without metadata and another options
+     * Sends one message without metadata and another options
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending message
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message to send
      * @returns [SendResult] with the list of failed messages and the list of successful messages
@@ -55,11 +58,11 @@ interface ConnectionAwareProducer {
 
 
     /**
-     * Send one message with optional metadata and [kolbasa.producer.MessageOptions]
+     * Sends one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending message
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
@@ -73,13 +76,13 @@ interface ConnectionAwareProducer {
     }
 
     /**
-     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
+     * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending messages
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
@@ -93,14 +96,14 @@ interface ConnectionAwareProducer {
     }
 
     /**
-     * Send many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
+     * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message
      * and custom [kolbasa.producer.SendOptions]
      *
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
      * @param Data type of the message
      * @param Meta type of the metadata
-     * @param connection JDBC connection to use for sending messages
+     * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages

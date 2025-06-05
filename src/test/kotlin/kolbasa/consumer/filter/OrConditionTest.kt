@@ -2,6 +2,7 @@ package kolbasa.consumer.filter
 
 import io.mockk.*
 import kolbasa.queue.Queue
+import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 import kotlin.test.assertEquals

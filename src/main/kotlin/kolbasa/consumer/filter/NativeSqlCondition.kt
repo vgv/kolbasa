@@ -1,6 +1,7 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 import java.text.MessageFormat
 

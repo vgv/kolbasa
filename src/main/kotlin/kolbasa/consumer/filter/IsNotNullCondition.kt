@@ -2,6 +2,7 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
+import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
 internal data class IsNotNullCondition<Meta : Any>(private val fieldName: String) : Condition<Meta>() {

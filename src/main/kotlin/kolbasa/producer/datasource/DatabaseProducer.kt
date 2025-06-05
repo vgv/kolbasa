@@ -32,7 +32,7 @@ class DatabaseProducer @JvmOverloads constructor(
         request: SendRequest<Data, Meta>
     ): CompletableFuture<SendResult<Data, Meta>> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            producerOptions = producerOptions,
+            customExecutor = producerOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
