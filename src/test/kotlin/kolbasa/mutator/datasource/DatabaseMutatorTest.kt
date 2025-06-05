@@ -131,6 +131,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         val expectedMutatedIds = sentMessages
             .filter {
                 val meta = requireNotNull(it.message.meta)
+                // Same expression as above
                 meta.field <= 67 || meta.field == 99
             }
             .map { it.id }
@@ -210,6 +211,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         val expectedMutatedIds = sentMessages
             .filter {
                 val meta = requireNotNull(it.message.meta)
+                // Same expression as above
                 meta.field <= 67 || meta.field == 99
             }
             .map { it.id }

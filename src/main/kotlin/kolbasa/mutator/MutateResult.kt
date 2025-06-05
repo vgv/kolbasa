@@ -3,13 +3,16 @@ package kolbasa.mutator
 import kolbasa.producer.Id
 
 data class MutateResult(
+
     /**
      * Number of successfully mutated messages
      */
     val mutatedMessages: Int,
 
     /**
-     * Marker that the result list are too large and only the first N results were stored in the [messages] list
+     * Marker that the result list are too large and only the first N results were stored in the [messages] list.
+     *
+     * See [kolbasa.mutator.MutatorOptions.maxMutatedRowsKeepInMemory] for details
      */
     val truncated: Boolean,
 
@@ -17,7 +20,6 @@ data class MutateResult(
      * Result of mutating each message or only the first N messages if there are too many mutated messages
      */
     val messages: List<MessageResult>
-
 ) {
 
     /**
