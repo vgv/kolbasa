@@ -2,6 +2,7 @@ package kolbasa.mutator.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.mutator.AddRemainingAttempts
+import kolbasa.mutator.MutatorOptions
 import kolbasa.pg.DatabaseExtensions.readIntList
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
@@ -11,9 +12,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 
 class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
@@ -61,6 +60,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         val mutations = listOf(AddRemainingAttempts(attemptsDelta))
         val mutateResult = mutator.mutate(queue, mutations, firstIds)
 
+        assertFalse(mutateResult.truncated)
         assertEquals(data1.size, mutateResult.mutatedMessages)
         assertEquals(firstIds, mutateResult.onlyMutated().map { it.id })
         val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()
@@ -136,8 +136,88 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
             .map { it.id }
 
 
+        assertFalse(mutateResult.truncated)
         assertEquals(expectedMutatedIds.size, mutateResult.mutatedMessages)
         assertEquals(expectedMutatedIds, mutateResult.onlyMutated().map { it.id })
+        val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()
+        assertEquals(listOf(attempts + attemptsDelta), uniqueNewAttempts)
+
+        // Second direct database check
+        // let's check expectedMutatedIds list with changed remainingAttempts field
+        run {
+            val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
+                "(${id.localId}, ${id.shard})"
+            }
+            val query = """
+                select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
+                from ${queue.dbTableName}
+                where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idList
+            """
+
+            val list = dataSource.readIntList(query)
+            assertEquals(1, list.size)
+            // changed attempts, old+delta
+            assertEquals(attempts + attemptsDelta, list.first())
+        }
+
+        // let's check everything except expectedMutatedIds list
+        // no changes expected
+        run {
+            val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
+                "(${id.localId}, ${id.shard})"
+            }
+            val query = """
+                select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
+                from ${queue.dbTableName}
+                where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) not in $idList
+            """
+
+            val list = dataSource.readIntList(query)
+            assertEquals(1, list.size)
+            // old attempts, no changes
+            assertEquals(attempts, list.first())
+        }
+    }
+
+    @Test
+    fun testSimpleMutate_Filter_TruncatedResponse() {
+        val maxMutated = 20
+        val attempts = 123
+        val attemptsDelta = 456
+
+        val producer = DatabaseProducer(dataSource)
+        val data = (1..100).map {
+            val meta = TestMeta(it)
+            SendMessage(it.toString(), meta, MessageOptions(attempts = attempts))
+        }
+
+        val sentMessages = producer.send(queue, data).onlySuccessful()
+
+        // Direct database check
+        dataSource.readIntList("select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} from ${queue.dbTableName}").also { list ->
+            assertEquals(1, list.size)
+            assertEquals(attempts, list.first())
+        }
+
+        // Ok, mutate some messages (by filter) and then check
+        val mutatorOptions = MutatorOptions(maxMutatedRowsKeepInMemory = maxMutated)
+        val mutator = DatabaseMutator(dataSource, mutatorOptions)
+        val mutations = listOf(AddRemainingAttempts(attemptsDelta))
+        val mutateResult = mutator.mutate(queue, mutations) {
+            (TestMeta::field lessEq 67) or (TestMeta::field eq 99)
+        }
+
+        val expectedMutatedIds = sentMessages
+            .filter {
+                val meta = requireNotNull(it.message.meta)
+                meta.field <= 67 || meta.field == 99
+            }
+            .map { it.id }
+
+
+        assertTrue(mutateResult.truncated)
+        assertEquals(expectedMutatedIds.size, mutateResult.mutatedMessages)
+        assertEquals(expectedMutatedIds.take(maxMutated), mutateResult.onlyMutated().map { it.id })
         val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()
         assertEquals(listOf(attempts + attemptsDelta), uniqueNewAttempts)
 
