@@ -53,7 +53,7 @@ internal object MutatorSchemaHelpers {
                 ${Const.ID_COLUMN_NAME} in (
                     select ${Const.ID_COLUMN_NAME}
                     from ${queue.dbTableName}
-                    where ${Const.ID_COLUMN_NAME} > ? and $query
+                    where ${Const.ID_COLUMN_NAME} > ? and ($query)
                     order by ${Const.ID_COLUMN_NAME}
                     limit $MUTATE_BATCH_SIZE
                  )
