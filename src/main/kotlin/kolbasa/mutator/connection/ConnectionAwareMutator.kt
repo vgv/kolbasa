@@ -8,6 +8,65 @@ import kolbasa.queue.Queue
 import java.sql.Connection
 import java.time.Duration
 
+/**
+ * Base interface for all mutators that must work in context of already opened transaction.
+ *
+ * Mutators are used to change existing messages in the queues, for example, adjust visibility timeout, remaining attempts etc.
+ *
+ * Sometimes it is useful to mutate messages in context of already opened and externally managed transaction.
+ *
+ * For example, if you are using Hibernate, Exposed, Spring JDBC Template or another framework (even plain JDBC), you may
+ * want to mutate messages in a queue and update the database in a single transaction.
+ *
+ * For example, you have a pending order for which you need to regularly check the payment status in a
+ * third-party system. You receive a message from the `check_order_status` queue, check the order status and, if the
+ * status is the same, you want to mark the time of the last check of the order in the `sale` table and, if the number
+ * of attempts is over, just add a little more. If the order is paid, then just delete the message from the queue
+ * because the task is completed, everything is processed.
+ *
+ * If the transaction will be rolled back, the message will not be deleted from the `check_order_status` queue and
+ * your `sale` table won't be updated, allowing you to retry the entire operation later.
+ * Otherwise, both operations will be committed.
+ *
+ * You don't need to handle this manually, this connection aware mutator will do it for you. All you need - provide
+ * current active JDBC connection to every `mutate` method.
+ *
+ * In case of Hibernate, it may look like this
+ * ```
+ * session.doWork { connection ->
+ *    consumer.receive(queue)?.let { message ->
+ *       val orderIsPaid = << request to 3rd-party system >>
+ *       if (!orderIsPaid) {
+ *          // Update the business entity inside the same transaction
+ *          sale.status = 'UNPAID'
+ *          sale.lastChecked = LocalDateTime.now()
+ *          session.update(sale)
+ *
+ *          // add remaining attempts to prolongate message life inside the same transaction
+ *          if (message.remainingAttempts == 0) {
+ *             mutator.addRemainingAttempts(connection, queue, 10, message.id)
+ *          }
+ *       } else {
+ *          // Update the business entity inside the same transaction
+ *          sale.status = 'PAID'
+ *          session.update(sale)
+ *
+ *          // order is paid, let's delete the processed message inside the same transaction
+ *          consumer.delete(connection, queue, message)
+ *       }
+ *    }
+ * }
+ * ```
+ *
+ * When Hibernate commits transaction (explicitly or, for example, when you use `@Transactional` annotation), your business
+ * entity changes and message mutation will be commited at the same time.
+ *
+ * The same ideas work for producers or consumers too – you can build completely transactional pipeline just by connecting
+ * a few producers/consumers/mutators into one "chain" using the same connection and work inside one active transaction.
+ *
+ * Kolbasa provides a default, high-performance implementation of [ConnectionAwareMutator]
+ * (see [ConnectionAwareDatabaseMutator]), which uses just plain JDBC and doesn't require any additional dependencies.
+ */
 interface ConnectionAwareMutator {
 
     /**
