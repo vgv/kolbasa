@@ -3,8 +3,18 @@ package kolbasa.schema
 import kolbasa.cluster.Shard
 import kotlin.random.Random
 
+/**
+ * Type alias for server id for better readability
+ */
+typealias ServerId = String
+
+/**
+ * Default value for server id, used when we don't know the server id
+ */
+const val EMPTY_SERVER_ID = ""
+
 internal data class Node(
-    val serverId: String,
+    val serverId: ServerId,
     val identifiersBucket: Int
 ) : Comparable<Node> {
 
