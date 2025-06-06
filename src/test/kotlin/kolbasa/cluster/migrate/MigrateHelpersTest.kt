@@ -46,7 +46,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
             .values
             .toList()
 
-        val splitResult = MigrateHelpers.splitNodes(nodes, targetNode.serverId)
+        val splitResult = MigrateHelpers.splitNodes(nodes, targetNode.id)
         assertEquals(dataSourcesWithoutTargetNode, splitResult.sourceNodes)
         assertEquals(nodes[targetNode], splitResult.targetNode)
     }

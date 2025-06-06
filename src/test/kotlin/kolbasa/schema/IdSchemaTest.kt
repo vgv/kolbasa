@@ -60,7 +60,7 @@ class IdSchemaTest : AbstractPostgresqlTest() {
         // Check
         val again = IdSchema.readNodeInfo(dataSource)
         assertNotNull(again)
-        assertEquals(id.serverId, again.serverId)
+        assertEquals(id.id, again.id)
         assertEquals(newBucketValue, again.identifiersBucket)
     }
 
