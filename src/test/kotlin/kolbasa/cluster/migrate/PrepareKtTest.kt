@@ -6,6 +6,7 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.schema.NodeId
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,9 +59,9 @@ class PrepareKtTest : AbstractPostgresqlTest() {
                     val consumerNode = resultSet.getString(2)
                     val nextConsumerNode = resultSet.getString(3)
 
-                    assertEquals(targetNode.id, producerNode)
+                    assertEquals(targetNode.id.id, producerNode)
                     assertNull(consumerNode)
-                    assertEquals(targetNode.id, nextConsumerNode)
+                    assertEquals(targetNode.id.id, nextConsumerNode)
                 }
             }
         }
@@ -88,7 +89,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
 
-        val targetNode = "this-node-identifier-does-not-exist-${System.nanoTime()}"
+        val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
 
         val shardsToMove = listOf(Random.nextInt(1, 100000), Random.nextInt(1, 100000), Random.nextInt(1, 100000))
 

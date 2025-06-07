@@ -10,6 +10,7 @@ import kolbasa.cluster.schema.ShardSchema.SHARD_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.SHARD_TABLE_NAME
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Test
 import java.sql.Statement
 import kotlin.random.Random
@@ -20,9 +21,9 @@ import kotlin.test.assertTrue
 class ShardSchemaTest : AbstractPostgresqlTest() {
 
     private val nodes = listOf(
-        Node("node1", 1),
-        Node("node2", 2),
-        Node("node3", 3)
+        Node(NodeId("node1"), 1),
+        Node(NodeId("node2"), 2),
+        Node(NodeId("node3"), 3)
     )
 
     @Test

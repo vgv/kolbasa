@@ -6,6 +6,7 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -62,7 +63,8 @@ internal object ShardSchema {
         val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
-                "($shard, '${randomNode.id}', '${randomNode.id}')"
+                val randomNodeStringId: String = randomNode.id.id
+                "($shard, '$randomNodeStringId', '$randomNodeStringId')"
             }
 
             """
@@ -85,13 +87,17 @@ internal object ShardSchema {
         dataSource.useStatement { statement: Statement ->
             statement.executeQuery(READ_SHARD_TABLE_STATEMENT).use { resultSet ->
                 while (resultSet.next()) {
-                    val shard = Shard(
-                        shard = resultSet.getInt(SHARD_COLUMN_NAME),
-                        producerNode = resultSet.getString(PRODUCER_NODE_COLUMN_NAME),
-                        consumerNode = resultSet.getString(CONSUMER_NODE_COLUMN_NAME),
-                        nextConsumerNode = resultSet.getString(NEXT_CONSUMER_NODE_COLUMN_NAME)
+                    val shard = resultSet.getInt(SHARD_COLUMN_NAME)
+                    val producerNode = NodeId(resultSet.getString(PRODUCER_NODE_COLUMN_NAME))
+                    val consumerNode = resultSet.getString(CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }
+                    val nextConsumerNode = resultSet.getString(NEXT_CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }
+
+                    shards[shard] = Shard(
+                        shard = shard,
+                        producerNode = producerNode,
+                        consumerNode = consumerNode,
+                        nextConsumerNode = nextConsumerNode
                     )
-                    shards[shard.shard] = shard
                 }
             }
         }

@@ -2,12 +2,13 @@ package kolbasa.cluster
 
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.datasource.Producer
+import kolbasa.schema.NodeId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.sql.DataSource
 
 internal data class ClusterState(
-    val nodes: Map<String, DataSource>,
+    val nodes: Map<NodeId, DataSource>,
     val shards: Map<Int, Shard>
 ) {
 
@@ -31,7 +32,7 @@ internal data class ClusterState(
     }
 
     // List of nodes that have active consumers or, in other words, nodes from which we can read data
-    private val activeConsumerNodes: List<String> by lazy {
+    private val activeConsumerNodes: List<NodeId> by lazy {
         // Collect all known consumer nodes from shard table.
         // Shard table can contain references to nodes that are not in the cluster, but at this step
         // we don't care about it, because we will check the availability of nodes later.
@@ -52,7 +53,7 @@ internal data class ClusterState(
     // For example, we had 100 shards on one node, but one shard started migrating to another node. In this case, we
     // will have 99 shards on this particular node
     // node -> shard[]
-    private val activeConsumerNodesToShards: Map<String, Shards> by lazy {
+    private val activeConsumerNodesToShards: Map<NodeId, Shards> by lazy {
         activeConsumerNodes.associateWith { node ->
             // Collect all shards that are assigned to this node right now
             val thisNodeShards = shards
@@ -66,8 +67,8 @@ internal data class ClusterState(
 
     // Map of active shards to active consumer nodes
     // shard -> node
-    private val activeConsumerShardsToNodes: Map<Int, String> by lazy {
-        val result = hashMapOf<Int, String>()
+    private val activeConsumerShardsToNodes: Map<Int, NodeId> by lazy {
+        val result = hashMapOf<Int, NodeId>()
         activeConsumerNodesToShards.forEach { (node, shards) ->
             shards.shards.forEach { shard ->
                 result[shard] = node
@@ -79,15 +80,15 @@ internal data class ClusterState(
 
     // -------------------------------------------------------------------------------------------------
 
-    private val producers: ConcurrentMap<ClusterProducer, ConcurrentMap<String, Producer>> by lazy {
+    private val producers: ConcurrentMap<ClusterProducer, ConcurrentMap<NodeId, Producer>> by lazy {
         ConcurrentHashMap()
     }
 
-    private val activeConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<String, Consumer>> by lazy {
+    private val activeConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<NodeId, Consumer>> by lazy {
         ConcurrentHashMap()
     }
 
-    private val allConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<String, Consumer>> by lazy {
+    private val allConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<NodeId, Consumer>> by lazy {
         ConcurrentHashMap()
     }
 
@@ -143,7 +144,7 @@ internal data class ClusterState(
         return consumer
     }
 
-    fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> Int): Map<String?, List<T>> {
+    fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> Int): Map<NodeId?, List<T>> {
         return list.groupBy { item ->
             val shard = shardFunc(item)
             activeConsumerShardsToNodes[shard]
@@ -152,7 +153,7 @@ internal data class ClusterState(
 
     fun getConsumer(
         clusterConsumer: ClusterConsumer,
-        node: String,
+        node: NodeId,
         generateConsumer: (DataSource) -> Consumer
     ): Consumer {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->

@@ -2,6 +2,7 @@ package kolbasa.cluster
 
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import java.util.SortedMap
 import javax.sql.DataSource
 
@@ -22,7 +23,7 @@ internal object ClusterHelper {
         return allNodes.associateTo(sortedMapOf()) { it }
     }
 
-    private fun checkNonUniqueServerIds(nodeIds: List<String>) {
+    private fun checkNonUniqueServerIds(nodeIds: List<NodeId>) {
         // Check serverId uniqueness, maybe later I will add some kind of auto-fixing, but not now
         val nonUniqueServerIds = nodeIds
             .groupBy { it }

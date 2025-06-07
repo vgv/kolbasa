@@ -4,7 +4,7 @@ import kolbasa.cluster.Shard
 import kotlin.random.Random
 
 internal data class Node(
-    val id: String,
+    val id: NodeId,
     val identifiersBucket: Int
 ) : Comparable<Node> {
 
