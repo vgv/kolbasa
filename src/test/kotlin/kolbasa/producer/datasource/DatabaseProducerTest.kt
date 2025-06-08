@@ -2,6 +2,7 @@ package kolbasa.producer.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
+import kolbasa.producer.MessageOptions
 import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
@@ -15,6 +16,7 @@ import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -201,7 +203,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
-                assertEquals(index +IdRange.LOCAL_RANGE.min, it.id.localId)
+                assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -221,6 +223,23 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         // check database
         assertEquals(10, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+    }
+
+    @Test
+    fun testSendSimpleData_CheckDuration() {
+        val producer = DatabaseProducer(dataSource)
+        val delay = Duration.ofHours(24 * 365 * 1000) // approx. 1000 years
+
+        val result = producer.send(
+            queue,
+            SendMessage("bugaga", messageOptions = MessageOptions(delay = delay))
+        )
+        assertEquals(0, result.failedMessages, "Result: $result")
+        assertEquals(1, result.onlySuccessful().size)
+
+        // check database
+        // TODO: check created_at and scheduled_at and compare it with 1000 years duration above
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
 }
