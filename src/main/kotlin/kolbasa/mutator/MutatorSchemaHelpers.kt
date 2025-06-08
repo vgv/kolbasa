@@ -4,6 +4,7 @@ import kolbasa.consumer.filter.Condition
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
+import kolbasa.utils.TimeHelper
 
 internal object MutatorSchemaHelpers {
 
@@ -77,14 +78,12 @@ internal object MutatorSchemaHelpers {
 
             is AddScheduledAt -> {
                 val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                val millis = mutation.delta.toMillis()
-                "${scheduledAt}=${scheduledAt} + interval '$millis millisecond'"
+                "${scheduledAt}=${scheduledAt} + ${TimeHelper.generatePostgreSQLInterval(mutation.delta)}"
             }
 
             is SetScheduledAt -> {
                 val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                val millis = mutation.newValue.toMillis()
-                "${scheduledAt}=clock_timestamp() + interval '$millis millisecond'"
+                "${scheduledAt}=clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(mutation.newValue)}"
             }
         }
     }
