@@ -111,7 +111,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
 
     @Test
-    fun testSendSimpleDataAsSendMessage() {
+    fun testSendSimpleData_AsSendMessage() {
         val producer = DatabaseProducer(dataSource)
 
         val id1 = producer.send(queue, SendMessage("bugaga", TestMeta(1))).let { (failedMessages, result) ->
@@ -134,7 +134,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSendProhibited() {
+    fun testSend_Prohibited() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
@@ -156,7 +156,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSendUntilFirstFailure() {
+    fun testSend_UntilFirstFailure() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
@@ -186,7 +186,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSendAsManyAsPossible() {
+    fun testSend_AsManyAsPossible() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
