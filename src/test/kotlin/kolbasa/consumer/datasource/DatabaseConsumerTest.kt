@@ -285,6 +285,38 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
     }
 
     @Test
+    fun testReceive_CheckDurationBiggerThanMaxInt() {
+        val data = "bugaga"
+
+        val producer = DatabaseProducer(dataSource)
+        val result = producer.send(queue, data)
+        assertEquals(0, result.failedMessages)
+        assertEquals(1, result.onlySuccessful().size)
+        val id = result.onlySuccessful().first().id
+
+        val consumer = DatabaseConsumer(dataSource)
+
+        val delay = Duration.ofHours(24 * 365 * 1000) // approx. 1000 years
+        val receiveOptions = ReceiveOptions<TestMeta>(visibilityTimeout = delay)
+
+        // Read a message, it will update scheduled_at field
+        val firstMessage = consumer.receive(queue, receiveOptions)
+
+        // Check it
+        assertNotNull(firstMessage)
+        assertEquals(id, firstMessage.id)
+        assertEquals(data, firstMessage.data)
+        assertNotSame(data, firstMessage.data)
+        assertTrue(firstMessage.createdAt <= firstMessage.processingAt, "message=$firstMessage")
+        assertTrue("message=$firstMessage") {
+            val visibilityTimeoutMillis = delay.toMillis()
+            compareTimestamps(firstMessage.processingAt + visibilityTimeoutMillis, firstMessage.scheduledAt)
+        }
+        assertEquals(QueueOptions.DEFAULT_ATTEMPTS - 1, firstMessage.remainingAttempts)
+        assertNull(firstMessage.meta)
+    }
+
+    @Test
     fun testReceive_ReadMetadata() {
         val data = "bugaga"
 

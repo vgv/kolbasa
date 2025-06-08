@@ -9,6 +9,7 @@ import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.ColumnIndex
 import kolbasa.utils.Helpers
+import kolbasa.utils.TimeHelper
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
@@ -94,7 +95,7 @@ internal object ConsumerSchemaHelpers {
                 update ${queue.dbTableName}
                 set
                     ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
-                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + interval '${visibilityTimeout.toMillis()} millisecond',
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 where ${Const.ID_COLUMN_NAME} in (select ${Const.ID_COLUMN_NAME} from id_to_update)
