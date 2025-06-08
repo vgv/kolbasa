@@ -226,7 +226,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSendSimpleData_CheckDuration() {
+    fun testSendSimpleData_CheckDurationBiggerThanMaxInt() {
         val producer = DatabaseProducer(dataSource)
         val delay = Duration.ofHours(24 * 365 * 1000) // approx. 1000 years
 
