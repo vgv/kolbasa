@@ -14,8 +14,6 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.Searchable
 import kolbasa.schema.SchemaHelpers
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
@@ -38,7 +36,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         metadata = TestMeta::class.java
     )
 
-    @BeforeEach
+    @BeforeTest
     fun before() {
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
     }
