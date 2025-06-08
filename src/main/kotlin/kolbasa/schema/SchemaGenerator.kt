@@ -5,6 +5,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
+import kolbasa.utils.TimeHelper
 
 internal object SchemaGenerator {
 
@@ -140,7 +141,7 @@ internal object SchemaGenerator {
             val alterStatement = """
                     alter table ${queue.dbTableName}
                     alter ${Const.SCHEDULED_AT_COLUMN_NAME}
-                    set default clock_timestamp() + interval '${queue.options.defaultDelay.toMillis()} millisecond'
+                    set default clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(queue.options.defaultDelay)}
                 """.trimIndent()
 
             mutableSchema.allTables += alterStatement
