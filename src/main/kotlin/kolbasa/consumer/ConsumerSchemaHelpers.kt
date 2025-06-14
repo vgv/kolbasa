@@ -217,10 +217,15 @@ internal object ConsumerSchemaHelpers {
             "ID list must not be empty"
         }
 
-        val idsList = ids.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
+        val idsList = ids.joinToString(separator = ",") { id ->
             "(${id.localId},${id.shard})"
         }
-        return "delete from ${queue.dbTableName} where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idsList"
+
+        return """
+            with ids_as_values(${Const.ID_COLUMN_NAME},${Const.SHARD_COLUMN_NAME}) as (values $idsList)
+            delete from ${queue.dbTableName}
+            where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in (table ids_as_values)
+        """
     }
 
     fun generateDeleteExpiredMessagesQuery(queue: Queue<*, *>, limit: Int): String {
