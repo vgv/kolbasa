@@ -4,6 +4,7 @@ import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -14,9 +15,16 @@ import java.sql.Connection
 /**
  * Default implementation of [ConnectionAwareProducer]
  */
-class ConnectionAwareDatabaseProducer(
-    private val producerOptions: ProducerOptions = ProducerOptions()
+class ConnectionAwareDatabaseProducer internal constructor(
+    internal val nodeId: NodeId,
+    internal val producerOptions: ProducerOptions
 ) : ConnectionAwareProducer {
+
+    @JvmOverloads
+    constructor(producerOptions: ProducerOptions = ProducerOptions()) : this(
+        nodeId = NodeId.EMPTY_NODE_ID,
+        producerOptions = producerOptions
+    )
 
     override fun <Data, Meta : Any> send(
         connection: Connection,
@@ -38,6 +46,7 @@ class ConnectionAwareDatabaseProducer(
 
         // Prometheus
         queue.queueMetrics.producerSendMetrics(
+            nodeId,
             partialInsert,
             allMessages = request.data.size,
             failedMessages = result.failedMessages,

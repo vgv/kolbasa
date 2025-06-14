@@ -97,7 +97,7 @@ internal data class ClusterState(
     fun getProducer(
         clusterProducer: ClusterProducer,
         shard: Int,
-        generateProducer: (DataSource) -> Producer
+        generateProducer: (NodeId, DataSource) -> Producer
     ): Producer {
         val nodeToProducers = producers.computeIfAbsent(clusterProducer) { _ ->
             ConcurrentHashMap()
@@ -118,7 +118,7 @@ internal data class ClusterState(
                 dataSourcesWithActiveProducers.randomOrNull() ?: nodes.values.random()
             }
 
-            generateProducer(dataSource)
+            generateProducer(node, dataSource)
         }
 
         return producer
@@ -126,7 +126,7 @@ internal data class ClusterState(
 
     fun getActiveConsumer(
         clusterConsumer: ClusterConsumer,
-        generateConsumer: (DataSource, Shards) -> Consumer
+        generateConsumer: (NodeId, DataSource, Shards) -> Consumer
     ): Consumer? {
         val nodesToConsumers = activeConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
@@ -138,7 +138,7 @@ internal data class ClusterState(
             val dataSource = nodes[randomNode] ?: throw IllegalStateException("Node $randomNode not found")
             val shards =
                 activeConsumerNodesToShards[randomNode] ?: throw IllegalStateException("Shards for node $randomNode not found")
-            generateConsumer(dataSource, shards)
+            generateConsumer(randomNode, dataSource, shards)
         }
 
         return consumer
@@ -154,7 +154,7 @@ internal data class ClusterState(
     fun getConsumer(
         clusterConsumer: ClusterConsumer,
         node: NodeId,
-        generateConsumer: (DataSource) -> Consumer
+        generateConsumer: (NodeId, DataSource) -> Consumer
     ): Consumer {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
@@ -162,7 +162,7 @@ internal data class ClusterState(
 
         val consumer = nodesToConsumers.computeIfAbsent(node) { _ ->
             val dataSource = nodes[node] ?: throw IllegalStateException("Node $node not found")
-            generateConsumer(dataSource)
+            generateConsumer(node, dataSource)
         }
 
         return consumer
@@ -170,7 +170,7 @@ internal data class ClusterState(
 
     fun getConsumers(
         clusterConsumer: ClusterConsumer,
-        generateConsumer: (DataSource) -> Consumer
+        generateConsumer: (NodeId, DataSource) -> Consumer
     ): List<Consumer> {
         val nodesToConsumers = allConsumers.computeIfAbsent(clusterConsumer) { _ ->
             ConcurrentHashMap()
@@ -178,7 +178,7 @@ internal data class ClusterState(
 
         val consumers = nodes.map { (node, dataSource) ->
             nodesToConsumers.computeIfAbsent(node) { _ ->
-                generateConsumer(dataSource)
+                generateConsumer(node, dataSource)
             }
         }
 
