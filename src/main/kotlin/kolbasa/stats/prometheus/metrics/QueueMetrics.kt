@@ -16,14 +16,14 @@ internal interface QueueMetrics {
     )
 
     fun consumerReceiveMetrics(
-        receivedRows: Int,
+        receivedMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
         queueSizeCalcFunc: () -> Long
     )
 
-    fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long)
+    fun consumerDeleteMetrics(removedMessages: Int, executionNanos: Long)
 
-    fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long)
+    fun sweepMetrics(iterations: Int, removedMessages: Int, executionNanos: Long)
 
 }

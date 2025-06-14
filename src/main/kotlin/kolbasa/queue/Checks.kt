@@ -92,9 +92,9 @@ internal object Checks {
         }
     }
 
-    fun checkSweepMaxRows(rows: Int) {
-        check(rows in SweepConfig.MIN_SWEEP_ROWS..SweepConfig.MAX_SWEEP_ROWS) {
-            "Sweep max rows must be in the [${SweepConfig.MIN_SWEEP_ROWS}..${SweepConfig.MAX_SWEEP_ROWS}] range"
+    fun checkSweepMaxMessages(messages: Int) {
+        check(messages in SweepConfig.MIN_SWEEP_MESSAGES..SweepConfig.MAX_SWEEP_MESSAGES) {
+            "Sweep max messages must be in the [${SweepConfig.MIN_SWEEP_MESSAGES}..${SweepConfig.MAX_SWEEP_MESSAGES}] range"
         }
     }
 

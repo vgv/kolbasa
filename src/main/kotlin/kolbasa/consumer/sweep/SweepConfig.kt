@@ -10,9 +10,9 @@ data class SweepConfig(
     val enabled: Boolean = true,
 
     /**
-     * Max rows to delete at each iteration
+     * Max messages to delete at each iteration
      */
-    val maxRows: Int = DEFAULT_SWEEP_ROWS,
+    val maxMessages: Int = DEFAULT_SWEEP_MESSAGES,
 
     /**
      * Max cleanup iterations at each sweep
@@ -30,34 +30,34 @@ data class SweepConfig(
 ) {
 
     init {
-        Checks.checkSweepMaxRows(maxRows)
+        Checks.checkSweepMaxMessages(maxMessages)
         Checks.checkSweepMaxIterations(maxIterations)
         Checks.checkSweepPeriod(period)
     }
 
     class Builder internal constructor() {
         private var enabled: Boolean = true
-        private var maxRows: Int = DEFAULT_SWEEP_ROWS
+        private var maxMessages: Int = DEFAULT_SWEEP_MESSAGES
         private var maxIterations: Int = DEFAULT_SWEEP_ITERATIONS
         private var period: Int = DEFAULT_SWEEP_PERIOD
 
         fun enabled() = apply { this.enabled = true }
         fun disabled() = apply { this.enabled = false }
-        fun maxRows(maxRows: Int) = apply { this.maxRows = maxRows }
+        fun maxMessages(maxMessages: Int) = apply { this.maxMessages = maxMessages }
         fun maxIterations(maxIterations: Int) = apply { this.maxIterations = maxIterations }
         fun period(period: Int) = apply { this.period = period }
 
-        fun build() = SweepConfig(enabled, maxRows, maxIterations, period)
+        fun build() = SweepConfig(enabled, maxMessages, maxIterations, period)
     }
 
     companion object {
 
         /**
-         * How many rows to delete at each iteration during sweep
+         * How many messages to delete at each iteration during sweep
          */
-        const val MIN_SWEEP_ROWS = 100
-        const val DEFAULT_SWEEP_ROWS = 1_000
-        const val MAX_SWEEP_ROWS = 100_000
+        const val MIN_SWEEP_MESSAGES = 100
+        const val DEFAULT_SWEEP_MESSAGES = 1_000
+        const val MAX_SWEEP_MESSAGES = 100_000
 
         /**
          * How many iterations at each sweep

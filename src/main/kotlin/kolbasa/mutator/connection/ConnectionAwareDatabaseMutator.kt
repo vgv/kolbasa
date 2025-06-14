@@ -98,10 +98,10 @@ class ConnectionAwareDatabaseMutator(
                         lastIterationRecords++
                         lastMessageId = localId
 
-                        if (mutatedMessagesCount <= mutatorOptions.maxMutatedRowsKeepInMemory) {
+                        if (mutatedMessagesCount <= mutatorOptions.maxMutatedMessagesKeepInMemory) {
                             val id = Id(localId, shard)
                             mutatedMessages += MessageResult.Mutated(id, scheduledAt, remainingAttempts)
-                            if (mutatedMessagesCount == mutatorOptions.maxMutatedRowsKeepInMemory) {
+                            if (mutatedMessagesCount == mutatorOptions.maxMutatedMessagesKeepInMemory) {
                                 truncated = true
                             }
                         }

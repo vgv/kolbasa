@@ -204,7 +204,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         }
 
         // Ok, mutate some messages (by filter) and then check
-        val mutatorOptions = MutatorOptions(maxMutatedRowsKeepInMemory = maxMutated)
+        val mutatorOptions = MutatorOptions(maxMutatedMessagesKeepInMemory = maxMutated)
         val mutator = DatabaseMutator(dataSource, mutatorOptions)
         val mutations = listOf(AddRemainingAttempts(attemptsDelta))
         val mutateResult = mutator.mutate(queue, mutations) {

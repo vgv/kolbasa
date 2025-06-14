@@ -17,16 +17,16 @@ internal object EmptyQueueMetrics : QueueMetrics {
     }
 
     override fun consumerReceiveMetrics(
-        receivedRows: Int,
+        receivedMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
         queueSizeCalcFunc: () -> Long
     ) {
     }
 
-    override fun consumerDeleteMetrics(removedRows: Int, executionNanos: Long) {
+    override fun consumerDeleteMetrics(removedMessages: Int, executionNanos: Long) {
     }
 
-    override fun sweepMetrics(iterations: Int, removedRows: Int, executionNanos: Long) {
+    override fun sweepMetrics(iterations: Int, removedMessages: Int, executionNanos: Long) {
     }
 }
