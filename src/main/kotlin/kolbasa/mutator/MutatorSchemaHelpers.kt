@@ -19,16 +19,18 @@ internal object MutatorSchemaHelpers {
 
         val mutatedFields = generateMutateExpressions(mutations)
 
-        val idsList = messages.joinToString(separator = ",", prefix = "(", postfix = ")") { message ->
+        val idsList = messages.joinToString(separator = ",") { message ->
             "(${message.localId},${message.shard})"
         }
 
         return """
+            with
+                ids_as_values(${Const.ID_COLUMN_NAME},${Const.SHARD_COLUMN_NAME}) as (values $idsList)
             update ${queue.dbTableName}
             set
                 ${mutatedFields.joinToString(separator = ",")}
             where
-                (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in $idsList
+                (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in (table ids_as_values)
             returning
                 ${Const.ID_COLUMN_NAME},
                 ${Const.SHARD_COLUMN_NAME},
