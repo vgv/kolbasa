@@ -11,21 +11,21 @@ internal object QueueSizeCache {
     private val locks = ConcurrentHashMap<String, Lock>()
     private val caches: ConcurrentMap<String, CachedValue> = ConcurrentHashMap()
 
-    fun get(queueName: String, maxInterval: Duration, valueCalculationFunc: () -> Long): Long {
-        val cachedValue = caches[queueName]
+    fun get(cacheKey: String, maxInterval: Duration, valueCalculationFunc: () -> Long): Long {
+        val cachedValue = caches[cacheKey]
         if (cachedValue != null && cachedValue.isStillValid(maxInterval)) {
             return cachedValue.value
         }
 
         // Ok, it's time to renew the cache
-        val lock = locks.computeIfAbsent(queueName) {
+        val lock = locks.computeIfAbsent(cacheKey) {
             ReentrantLock()
         }
 
         return if (lock.tryLock()) {
             try {
                 val realValue = valueCalculationFunc()
-                caches[queueName] = CachedValue(realValue)
+                caches[cacheKey] = CachedValue(realValue)
                 realValue
             } finally {
                 lock.unlock()
