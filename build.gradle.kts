@@ -216,8 +216,8 @@ nexusPublishing {
         sonatype {
             useStaging.set(!project.isSnapshotVersion())
             packageGroup.set("io.github.vgv")
-            username.set(settingsProvider.sonatypeUsername)
-            password.set(settingsProvider.sonatypePassword)
+            username = settingsProvider.sonatypeUsername
+            password = settingsProvider.sonatypePassword
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
