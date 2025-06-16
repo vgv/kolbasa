@@ -3,13 +3,14 @@ package kolbasa.cluster.migrate
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.Parameter
 import kolbasa.pg.DatabaseExtensions.readString
+import kolbasa.schema.ServerId
 import org.postgresql.ds.PGSimpleDataSource
 import javax.sql.DataSource
 import kotlin.system.exitProcess
 
 internal class PrepareCommand {
     @Parameter(names = ["-target"], required = true, description = "Shard to prepare")
-    lateinit var target: String
+    lateinit var target: ServerId
 
     @Parameter(
         names = ["-shard", "-shards"],

@@ -8,6 +8,8 @@ import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.Queue
+import kolbasa.schema.EMPTY_SERVER_ID
+import kolbasa.schema.ServerId
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 
@@ -16,10 +18,11 @@ import javax.sql.DataSource
  */
 class DatabaseProducer @JvmOverloads constructor(
     private val dataSource: DataSource,
+    serverId: ServerId = EMPTY_SERVER_ID,
     private val producerOptions: ProducerOptions = ProducerOptions(),
 ) : Producer {
 
-    private val peer = ConnectionAwareDatabaseProducer(producerOptions)
+    private val peer = ConnectionAwareDatabaseProducer(serverId, producerOptions)
 
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         return queue.queueTracing.makeProducerCall(request) {

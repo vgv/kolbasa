@@ -23,8 +23,8 @@ class ClusterProducer(
         )
 
         val currentState = cluster.getState()
-        val producer = currentState.getProducer(this, request.effectiveShard) { dataSource ->
-            DatabaseProducer(dataSource, producerOptions)
+        val producer = currentState.getProducer(this, request.effectiveShard) { dataSource, serverId ->
+            DatabaseProducer(dataSource, serverId, producerOptions)
         }
 
         return producer.send(queue, request)

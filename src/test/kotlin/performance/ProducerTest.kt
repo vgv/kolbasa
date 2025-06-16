@@ -31,7 +31,7 @@ class ProducerTest : PerformanceTest {
 
         val producerThreads = (1..Env.pThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pBatchSize))
+                val producer = DatabaseProducer(Env.dataSource, producerOptions = ProducerOptions(batchSize = Env.pBatchSize))
 
                 while (true) {
                     val data = (1..Env.pSendSize).map {

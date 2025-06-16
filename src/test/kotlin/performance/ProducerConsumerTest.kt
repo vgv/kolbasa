@@ -37,7 +37,7 @@ class ProducerConsumerTest : PerformanceTest {
 
         val producerThreads = (1..Env.pcProducerThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pcBatchSize))
+                val producer = DatabaseProducer(Env.dataSource, producerOptions = ProducerOptions(batchSize = Env.pcBatchSize))
                 while (true) {
                     val produced = producedRecords.get()
                     val consumed = consumedRecords.get()
