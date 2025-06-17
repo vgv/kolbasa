@@ -17,7 +17,7 @@ internal object ClusterHelper {
         }
 
         // check uniqueness of serverId
-        checkNonUniqueServerIds(allNodes.map { it.first.serverId })
+        checkNonUniqueServerIds(allNodes.map { it.first.id })
 
         return allNodes.associateTo(sortedMapOf()) { it }
     }
