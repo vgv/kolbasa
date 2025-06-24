@@ -62,7 +62,8 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     @Test
     fun testMessagesDistribution_SendOneMessageIfProducerNodeFailed() {
         // change producer node to 'unknown' for this dataSource
-        val id = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        val node = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        val stringId: String = node.id.id
         findDataSourceWithInitializedShard(dataSources).useStatement { statement: Statement ->
             val sql = """
                        update
@@ -71,7 +72,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
                             ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'unknown',
                             ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'unknown'
                        where
-                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${id.id}'
+                            ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '$stringId'
                    """.trimIndent()
             statement.executeUpdate(sql)
         }

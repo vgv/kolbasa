@@ -82,15 +82,15 @@ internal object IdSchema {
         }
     }
 
-    fun readNodeInfo(dataSource: DataSource): Node? {
+    fun  readNodeInfo(dataSource: DataSource): Node? {
         try {
             return dataSource.useStatement { statement: Statement ->
                 statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
                     if (resultSet.next()) {
-                        val serverId = resultSet.getString(1)
+                        val nodeId = resultSet.getString(1)
                         val identifiersBucket: Int = resultSet.getInt(2)
 
-                        Node(serverId, identifiersBucket)
+                        Node(NodeId(nodeId), identifiersBucket)
                     } else {
                         null
                     }

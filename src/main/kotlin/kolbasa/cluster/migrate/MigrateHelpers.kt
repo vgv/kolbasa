@@ -3,6 +3,7 @@ package kolbasa.cluster.migrate
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import java.util.*
 import javax.sql.DataSource
 
@@ -42,7 +43,7 @@ internal object MigrateHelpers {
         throw IllegalStateException("Initialized shard table not found")
     }
 
-    fun splitNodes(nodes: SortedMap<Node, DataSource>, targetNodeId: String): SourceAndTargetNodes {
+    fun splitNodes(nodes: SortedMap<Node, DataSource>, targetNodeId: NodeId): SourceAndTargetNodes {
         val sourceNodes = mutableListOf<DataSource>()
         var targetNode: DataSource? = null
         for ((node, dataSource) in nodes) {

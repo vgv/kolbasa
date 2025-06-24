@@ -1,5 +1,6 @@
 package kolbasa.cluster.migrate
 
+import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 internal object ConsoleMigrateEvents : MigrateEvents {
@@ -12,10 +13,10 @@ internal object ConsoleMigrateEvents : MigrateEvents {
 //        println("Error: Node '$targetNode' not found, known nodes: $knownNodes")
 //    }
 
-    override fun prepareSuccessful(shards: List<Int>, targetNode: String, shardsDiff: List<ShardDiff>) {
+    override fun prepareSuccessful(shards: List<Int>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {
         println("Prepare")
         println("Shards: $shards")
-        println("Target node: $targetNode")
+        println("Target node: ${targetNode.id}")
         println("Shards to move (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
             println("\t${diff.originalShard} => ${diff.updatedShard}")

@@ -8,9 +8,9 @@ class NodeTest {
 
     @Test
     fun testNodeClassIsComparable() {
-        val smaller = Node("a", 1)
-        val bigger = Node("b", 2)
-        val other = Node("b", 3)
+        val smaller = Node(NodeId("a"), 1)
+        val bigger = Node(NodeId("b"), 2)
+        val other = Node(NodeId("b"), 3)
 
         assertTrue(smaller < bigger, "Smaller: $smaller, bigger: $bigger")
         assertTrue(smaller < other, "Smaller: $smaller, bigger: $bigger")
