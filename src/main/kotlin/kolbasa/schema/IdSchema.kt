@@ -68,7 +68,7 @@ internal object IdSchema {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
             "alter table $NODE_TABLE_NAME add column if not exists $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH)",
-            "update $NODE_TABLE_NAME set $ID_COLUMN_NAME=$SERVER_ID_COLUMN_NAME where $ID_COLUMN_NAME <> $SERVER_ID_COLUMN_NAME",
+            "update $NODE_TABLE_NAME set $ID_COLUMN_NAME=$SERVER_ID_COLUMN_NAME where ($ID_COLUMN_NAME <> $SERVER_ID_COLUMN_NAME) or ($ID_COLUMN_NAME is null)",
             INIT_TABLE_STATEMENT,
         )
 
@@ -82,15 +82,15 @@ internal object IdSchema {
         }
     }
 
-    fun readNodeInfo(dataSource: DataSource): Node? {
+    fun  readNodeInfo(dataSource: DataSource): Node? {
         try {
             return dataSource.useStatement { statement: Statement ->
                 statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
                     if (resultSet.next()) {
-                        val serverId = resultSet.getString(1)
+                        val nodeId = resultSet.getString(1)
                         val identifiersBucket: Int = resultSet.getInt(2)
 
-                        Node(serverId, identifiersBucket)
+                        Node(NodeId(nodeId), identifiersBucket)
                     } else {
                         null
                     }

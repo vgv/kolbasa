@@ -83,14 +83,49 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
         }
     }
 
+    class Builder<Data> internal constructor(
+        private val name: String,
+        private val databaseDataType: DatabaseQueueDataType<Data>,
+    ) {
+        private var options: QueueOptions? = null
+
+        fun options(options: QueueOptions) = apply { this.options = options }
+        fun <Meta : Any> metadata(metadata: Class<Meta>): BuilderWithMeta<Data, Meta> {
+            // switch to another builder
+            val builderWithMeta = BuilderWithMeta<Data, Meta>(name, databaseDataType)
+            builderWithMeta.metadata(metadata)
+            this.options?.let { currentOptions ->
+                builderWithMeta.options(currentOptions)
+            }
+            return builderWithMeta
+        }
+
+        fun build(): Queue<Data, Unit> = Queue(name, databaseDataType, options, metadata = null)
+    }
+
+    class BuilderWithMeta<Data, Meta : Any> internal constructor(
+        private val name: String,
+        private val databaseDataType: DatabaseQueueDataType<Data>,
+    ) {
+        private var options: QueueOptions? = null
+        private var metadata: Class<Meta>? = null
+
+        fun options(options: QueueOptions) = apply { this.options = options }
+        fun metadata(metadata: Class<Meta>) = apply { this.metadata = metadata }
+
+        fun build(): Queue<Data, Meta> = Queue(name, databaseDataType, options, metadata)
+    }
+
     companion object {
+        @JvmStatic
+        fun <Data> builder(name: String, databaseDataType: DatabaseQueueDataType<Data>) = Builder(name, databaseDataType)
 
         /**
          * Creates a new queue with the given name and database data type.
          */
         @JvmStatic
         fun <Data> of(name: String, databaseDataType: DatabaseQueueDataType<Data>): Queue<Data, Unit> {
-            return Queue(name, databaseDataType, metadata = Unit::class.java, options = null)
+            return builder(name, databaseDataType).build()
         }
 
         /**
@@ -102,7 +137,9 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
             databaseDataType: DatabaseQueueDataType<Data>,
             metadata: Class<Meta>
         ): Queue<Data, Meta> {
-            return Queue(name, databaseDataType, metadata = metadata, options = null)
+            return builder(name, databaseDataType)
+                .metadata(metadata)
+                .build()
         }
     }
 }

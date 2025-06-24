@@ -5,6 +5,7 @@ import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.IdSchema
+import kolbasa.schema.NodeId
 import java.sql.Statement
 import javax.sql.DataSource
 import kotlin.test.*
@@ -65,9 +66,9 @@ class ClusterTest : AbstractPostgresqlTest() {
         // ---------------------------------------------------------------------------------------
         // Make shard changes
         val shardToChange = Shard.randomShard()
-        val currentProducerConsumerName = requireNotNull(firstState.shards[shardToChange]?.producerNode)
-        val newProducerConsumerName = (firstState.nodes.keys - currentProducerConsumerName).random()
-        assertNotEquals(currentProducerConsumerName, newProducerConsumerName)
+        val currentProducerConsumerNode = requireNotNull(firstState.shards[shardToChange]?.producerNode)
+        val newProducerConsumerNode = (firstState.nodes.keys - currentProducerConsumerNode).random()
+        assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
 
         val shardTables = findShardTables(dataSources).filter { foundShardTable ->
             foundShardTable.numberOfTables > 0
@@ -78,8 +79,8 @@ class ClusterTest : AbstractPostgresqlTest() {
                 update
                     ${ShardSchema.SHARD_TABLE_NAME}
                 set
-                    ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '$newProducerConsumerName',
-                    ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '$newProducerConsumerName'
+                    ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}',
+                    ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}'
                 where
                     ${ShardSchema.SHARD_COLUMN_NAME} = $shardToChange
             """.trimIndent()
@@ -92,8 +93,8 @@ class ClusterTest : AbstractPostgresqlTest() {
         val secondState = cluster.getState()
 
         assertNotEquals(firstState, secondState)
-        assertEquals(secondState.shards[shardToChange]?.producerNode, newProducerConsumerName)
-        assertEquals(secondState.shards[shardToChange]?.consumerNode, newProducerConsumerName)
+        assertEquals(secondState.shards[shardToChange]?.producerNode, newProducerConsumerNode)
+        assertEquals(secondState.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
     }
 
     @Test
@@ -174,7 +175,7 @@ class ClusterTest : AbstractPostgresqlTest() {
 
     private data class FoundShardTable(
         val numberOfTables: Int,
-        val nodeId: String,
+        val nodeId: NodeId,
         val schema: String,
         val datasource: DataSource
     )

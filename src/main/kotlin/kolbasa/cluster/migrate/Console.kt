@@ -3,13 +3,14 @@ package kolbasa.cluster.migrate
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.Parameter
 import kolbasa.pg.DatabaseExtensions.readString
+import kolbasa.schema.NodeId
 import org.postgresql.ds.PGSimpleDataSource
 import javax.sql.DataSource
 import kotlin.system.exitProcess
 
 internal class PrepareCommand {
     @Parameter(names = ["-target"], required = true, description = "Shard to prepare")
-    lateinit var target: String
+    lateinit var targetNode: String
 
     @Parameter(
         names = ["-shard", "-shards"],
@@ -54,8 +55,9 @@ fun main(args: Array<String>) {
 private fun launchPrepare(command: PrepareCommand) {
     val dataSources = convertClusterStringToDataSource(command.cluster)
     checkDataSources(dataSources)
+    val targetNodeId = NodeId(command.targetNode)
 
-    prepare(command.shards, command.target, dataSources, ConsoleMigrateEvents)
+    prepare(command.shards, targetNodeId, dataSources, ConsoleMigrateEvents)
 }
 
 private fun launchMove(command: MoveCommand) {

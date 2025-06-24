@@ -3,9 +3,10 @@ package kolbasa.cluster.migrate
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
+import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
-internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<DataSource>, events: MigrateEvents) {
+internal fun prepare(shards: List<Int>, targetNode: NodeId, dataSources: List<DataSource>, events: MigrateEvents) {
     val nodes = ClusterHelper.readNodes(dataSources)
     val (shardDataSource, initialShards) = MigrateHelpers.readShards(nodes)
 
@@ -38,8 +39,8 @@ internal fun prepare(shards: List<Int>, targetNode: String, dataSources: List<Da
         """.trimIndent()
 
     shardDataSource.usePreparedStatement(query) { ps ->
-        ps.setString(1, targetNode)
-        ps.setString(2, targetNode)
+        ps.setString(1, targetNode.id)
+        ps.setString(2, targetNode.id)
         ps.executeUpdate()
     }
 

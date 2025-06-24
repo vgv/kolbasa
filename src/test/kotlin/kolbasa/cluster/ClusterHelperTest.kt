@@ -36,8 +36,9 @@ class ClusterHelperTest : AbstractPostgresqlTest() {
 
         // Make one of the nodes have the same serverId as another node
         val first = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        val stringId: String = first.id.id
         dataSourceFirstSchema.useStatement() { statement ->
-            statement.executeUpdate("update ${IdSchema.NODE_TABLE_NAME} set ${IdSchema.SERVER_ID_COLUMN_NAME} = '${first.id}'")
+            statement.executeUpdate("update ${IdSchema.NODE_TABLE_NAME} set ${IdSchema.SERVER_ID_COLUMN_NAME} = '$stringId'")
         }
 
         // Check again, expect an exception

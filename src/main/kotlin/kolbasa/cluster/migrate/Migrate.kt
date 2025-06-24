@@ -2,6 +2,7 @@ package kolbasa.cluster.migrate
 
 import kolbasa.cluster.ClusterHelper
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
 import java.util.SortedMap
@@ -40,10 +41,10 @@ internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, 
     }
 }
 
-private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<String, List<Int>> {
+private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<Int>> {
     val (_, shards) = MigrateHelpers.readShards(nodes)
 
-    val targetsToShards = mutableMapOf<String, MutableList<Int>>()
+    val targetsToShards = mutableMapOf<NodeId, MutableList<Int>>()
     shards.values.forEach { shard ->
         if (shard.nextConsumerNode != null) {
             targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard)
