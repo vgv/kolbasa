@@ -2,7 +2,9 @@ package kolbasa.mutator.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.mutator.AddRemainingAttempts
+import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.SetScheduledAt
 import kolbasa.pg.DatabaseExtensions.readIntList
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
@@ -12,6 +14,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.Searchable
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
+import java.time.Duration
 import kotlin.test.*
 
 class DatabaseMutatorTest : AbstractPostgresqlTest() {
@@ -259,5 +262,40 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
             assertEquals(attempts, list.first())
         }
     }
+
+    @Test
+    fun testMutate_CheckDurationBiggerThanMaxInt() {
+        val duration = Duration.ofHours(24 * 365 * 1000) // approx. 1000 years
+
+        val producer = DatabaseProducer(dataSource)
+        val data = (1..100).map {
+            SendMessage<String, TestMeta>(it.toString(), meta = null)
+        }
+
+        // Id list to mutate
+        val ids = producer.send(queue, data).onlySuccessful().map { it.id }
+
+        // Ok, mutate messages and then check
+        run {
+            val mutator = DatabaseMutator(dataSource)
+            val mutations = listOf(AddScheduledAt(delta = duration))
+            val mutateResult = mutator.mutate(queue, mutations, ids)
+
+            assertFalse(mutateResult.truncated)
+            assertEquals(data.size, mutateResult.mutatedMessages)
+            assertEquals(ids, mutateResult.onlyMutated().map { it.id })
+        }
+
+        run {
+            val mutator = DatabaseMutator(dataSource)
+            val mutations = listOf(SetScheduledAt(newValue = duration))
+            val mutateResult = mutator.mutate(queue, mutations, ids)
+
+            assertFalse(mutateResult.truncated)
+            assertEquals(data.size, mutateResult.mutatedMessages)
+            assertEquals(ids, mutateResult.onlyMutated().map { it.id })
+        }
+    }
+
 
 }
