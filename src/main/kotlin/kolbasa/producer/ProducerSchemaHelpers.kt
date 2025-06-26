@@ -7,6 +7,7 @@ import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.TimeHelper
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.util.concurrent.ExecutorService
@@ -28,7 +29,7 @@ internal object ProducerSchemaHelpers {
         request.data.forEachIndexed { index, item ->
             val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
             values[index] += if (delay != null) {
-                "clock_timestamp() + interval '${delay.toMillis()} millisecond'"
+                "clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(delay)}"
             } else {
                 "clock_timestamp()"
             }
