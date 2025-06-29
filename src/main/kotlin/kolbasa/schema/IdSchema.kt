@@ -37,13 +37,16 @@ internal object IdSchema {
     """.trimIndent()
 
     private val INIT_TABLE_STATEMENT: String
-        get() = """
-                insert into $NODE_TABLE_NAME
-                    ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
-                values
-                    ('$ACTIVE_STATUS', '${generateNodeId()}', ${Node.randomBucket()})
-                on conflict do nothing
-            """.trimIndent()
+        get() {
+            val randomNodeID = generateNodeId()
+            return """
+                    insert into $NODE_TABLE_NAME
+                        ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+                    values
+                        ('$ACTIVE_STATUS', '$randomNodeID', '$randomNodeID', ${Node.randomBucket()})
+                    on conflict do nothing
+                """.trimIndent()
+        }
 
     private val SELECT_NODE_INFO_STATEMENT = """
         select
