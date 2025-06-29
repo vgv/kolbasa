@@ -70,7 +70,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
 
         // Prometheus
         queue.queueMetrics.consumerReceiveMetrics(
-            receivedRows = result.size,
+            receivedMessages = result.size,
             executionNanos = execution.durationNanos,
             approxBytes = approxBytesCounter.get(),
             queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
@@ -85,18 +85,18 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        val (execution, removedRows) = TimeHelper.measure {
+        val (execution, removedMessages) = TimeHelper.measure {
             connection.useStatement { statement ->
                 statement.executeUpdate(deleteQuery)
             }
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedMessages)
 
         // Prometheus
-        queue.queueMetrics.consumerDeleteMetrics(removedRows, execution.durationNanos)
+        queue.queueMetrics.consumerDeleteMetrics(removedMessages, execution.durationNanos)
 
-        return removedRows
+        return removedMessages
     }
 }

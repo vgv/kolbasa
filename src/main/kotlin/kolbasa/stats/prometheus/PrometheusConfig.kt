@@ -49,15 +49,15 @@ sealed class PrometheusConfig {
             .labelNames("queue", "partial_insert_type")
             .register(registry)
 
-        internal val producerSendRowsCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send_rows")
-            .help("Amount of all (successful and failed) rows sent by producer send() calls")
+        internal val producerSendMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send_messages")
+            .help("Amount of all (successful and failed) messages sent by producer send() calls")
             .labelNames("queue", "partial_insert_type")
             .register(registry)
 
-        internal val producerSendFailedRowsCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send_rows_failed")
-            .help("Amount of failed rows sent by producer send() calls")
+        internal val producerSendFailedMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_producer_send_messages_failed")
+            .help("Amount of failed messages sent by producer send() calls")
             .labelNames("queue", "partial_insert_type")
             .register(registry)
 
@@ -96,9 +96,9 @@ sealed class PrometheusConfig {
             .labelNames("queue")
             .register(registry)
 
-        internal val consumerReceiveRowsCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_receive_rows")
-            .help("Amount of rows received by consumer receive() calls")
+        internal val consumerReceiveMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_receive_messages")
+            .help("Amount of messages received by consumer receive() calls")
             .labelNames("queue")
             .register(registry)
 
@@ -117,9 +117,9 @@ sealed class PrometheusConfig {
             .labelNames("queue")
             .register(registry)
 
-        internal val consumerDeleteRowsCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_delete_rows")
-            .help("Amount of rows removed by consumer delete() calls")
+        internal val consumerDeleteMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_delete_messages")
+            .help("Amount of messages removed by consumer delete() calls")
             .labelNames("queue")
             .register(registry)
 
@@ -151,9 +151,9 @@ sealed class PrometheusConfig {
             .labelNames("queue")
             .register(registry)
 
-        internal val sweepRowsRemovedCounter: Counter = Counter.builder()
-            .name("kolbasa_sweep_removed_rows")
-            .help("Number of rows removed by sweep")
+        internal val sweepMessagesRemovedCounter: Counter = Counter.builder()
+            .name("kolbasa_sweep_removed_messages")
+            .help("Number of messages removed by sweep")
             .labelNames("queue")
             .register(registry)
 

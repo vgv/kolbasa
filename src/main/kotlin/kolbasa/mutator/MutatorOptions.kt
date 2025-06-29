@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutorService
 
 data class MutatorOptions(
     /**
-     * How many mutated rows to keep in [MutateResult.messages] list
+     * How many mutated messages to keep in [MutateResult.messages] list
      *
      * If you mutate queue by providing identifiers to mutate, you always know how many
      * results you will have - the same number as identifiers list. However, if you mutate
@@ -14,13 +14,13 @@ data class MutatorOptions(
      * If a queue contains billions of messages, and all of them are affected by a filter condition, it's
      * impossible to return all of those billions of messages as a result.
      *
-     * This field controls how many mutated rows will be returned as a result. If there are more mutated
-     * records than [maxMutatedRowsKeepInMemory], [MutateResult.messages] will contain first [maxMutatedRowsKeepInMemory]
+     * This field controls how many mutated messages will be returned as a result. If there are more mutated
+     * records than [maxMutatedMessagesKeepInMemory], [MutateResult.messages] will contain first [maxMutatedMessagesKeepInMemory]
      * from the result and field [MutateResult.truncated] will be true.
      *
-     * Default value is [kolbasa.mutator.MutatorOptions.DEFAULT_MAX_MUTATED_ROWS_KEEP_IN_MEMORY]
+     * Default value is [kolbasa.mutator.MutatorOptions.DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY]
      */
-    val maxMutatedRowsKeepInMemory: Int = DEFAULT_MAX_MUTATED_ROWS_KEEP_IN_MEMORY,
+    val maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY,
 
     /**
      * Executor used to mutate messages asynchronously in [mutateAsync()][kolbasa.mutator.datasource.Mutator.mutateAsync]  methods.
@@ -33,7 +33,7 @@ data class MutatorOptions(
 ) {
 
     internal companion object {
-        const val DEFAULT_MAX_MUTATED_ROWS_KEEP_IN_MEMORY = 10_000
+        const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 10_000
     }
 
 }
