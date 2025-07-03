@@ -5,6 +5,7 @@ import kolbasa.consumer.ConsumerSchemaHelpers
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.utils.Lock
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.TimeHelper
@@ -41,13 +42,17 @@ object SweepHelper {
      *         concurrent sweep for the queue at the same time by another consumer
      */
     fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
+        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
+    }
+
+    internal fun sweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Calculate how much messages to sweep
         val messagesToSweep = max(limit, sweepConfig.maxMessages)
 
         val removedMessages = Lock.tryRunExclusive(queue.name) {
-            rawSweep(connection, queue, messagesToSweep, sweepConfig.maxIterations)
+            rawSweep(connection, queue, nodeId, messagesToSweep, sweepConfig.maxIterations)
         }
 
         return removedMessages ?: -1
@@ -69,7 +74,7 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxMessages: Int, maxIterations: Int): Int {
+    private fun rawSweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, maxMessages: Int, maxIterations: Int): Int {
         var totalMessages = 0
         var iterations = 0
 
@@ -83,7 +88,12 @@ object SweepHelper {
         }
 
         // Prometheus
-        queue.queueMetrics.sweepMetrics(iterations, totalMessages, execution.durationNanos)
+        queue.queueMetrics.sweepMetrics(
+            nodeId = nodeId,
+            iterations = iterations,
+            removedMessages = totalMessages,
+            executionNanos = execution.durationNanos
+        )
 
         return totalMessages
     }

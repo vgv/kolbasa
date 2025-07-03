@@ -1,12 +1,14 @@
 package kolbasa.stats.prometheus.metrics
 
 import kolbasa.producer.PartialInsert
+import kolbasa.schema.NodeId
 
 internal interface QueueMetrics {
 
     fun usePreciseStringSize(): Boolean
 
     fun producerSendMetrics(
+        nodeId: NodeId,
         partialInsert: PartialInsert,
         allMessages: Int,
         failedMessages: Int,
@@ -16,14 +18,24 @@ internal interface QueueMetrics {
     )
 
     fun consumerReceiveMetrics(
+        nodeId: NodeId,
         receivedMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
         queueSizeCalcFunc: () -> Long
     )
 
-    fun consumerDeleteMetrics(removedMessages: Int, executionNanos: Long)
+    fun consumerDeleteMetrics(
+        nodeId: NodeId,
+        removedMessages: Int,
+        executionNanos: Long
+    )
 
-    fun sweepMetrics(iterations: Int, removedMessages: Int, executionNanos: Long)
+    fun sweepMetrics(
+        nodeId: NodeId,
+        iterations: Int,
+        removedMessages: Int,
+        executionNanos: Long
+    )
 
 }

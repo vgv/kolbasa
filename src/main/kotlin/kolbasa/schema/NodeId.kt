@@ -5,4 +5,8 @@ package kolbasa.schema
  */
 internal data class NodeId(val id: String) : Comparable<NodeId> {
     override fun compareTo(other: NodeId): Int = id.compareTo(other.id)
+
+    companion object {
+        val EMPTY_NODE_ID = NodeId("")
+    }
 }
