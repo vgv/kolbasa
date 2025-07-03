@@ -107,6 +107,8 @@ internal class ProducerQueueMetrics(
     private val prometheusConfig: PrometheusConfig.Config
 ) {
 
+    private val queueSizeCacheKey = "${queueName}-${nodeId.id}"
+
     fun producerSendMetrics(
         partialInsert: PartialInsert,
         allMessages: Int,
@@ -145,7 +147,7 @@ internal class ProducerQueueMetrics(
         // We use internal caching to prevent too frequent calls to the database
         val queueSizeMeasureInterval = prometheusConfig.customQueueSizeMeasureInterval[queueName]
             ?: PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        val queueSize = QueueSizeCache.get(queueSizeCacheKey, queueSizeMeasureInterval, queueSizeCalcFunc)
         producerQueueSizeGauge.set(queueSize.toDouble())
     }
 
@@ -197,6 +199,8 @@ internal class ConsumerQueueMetrics(
     private val prometheusConfig: PrometheusConfig.Config
 ) {
 
+    private val queueSizeCacheKey = "${queueName}-${nodeId.id}"
+
     fun consumerReceiveMetrics(
         receivedMessages: Int,
         executionNanos: Long,
@@ -212,7 +216,7 @@ internal class ConsumerQueueMetrics(
         // We use internal caching to prevent too frequent calls to the database
         val queueSizeMeasureInterval = prometheusConfig.customQueueSizeMeasureInterval[queueName]
             ?: PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL
-        val queueSize = QueueSizeCache.get(queueName, queueSizeMeasureInterval, queueSizeCalcFunc)
+        val queueSize = QueueSizeCache.get(queueSizeCacheKey, queueSizeMeasureInterval, queueSizeCalcFunc)
         consumerQueueSizeGauge.set(queueSize.toDouble())
     }
 
