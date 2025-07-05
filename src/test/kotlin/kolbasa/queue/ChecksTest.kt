@@ -204,16 +204,16 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckSweepMaxRows_LessThanMin() {
+    fun testCheckSweepMaxMessages_LessThanMin() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxRows(SweepConfig.MIN_SWEEP_ROWS - 1)
+            Checks.checkSweepMaxMessages(SweepConfig.MIN_SWEEP_MESSAGES - 1)
         }
     }
 
     @Test
-    fun testCheckSweepMaxRows_MoreThanMax() {
+    fun testCheckSweepMaxMessages_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxRows(SweepConfig.MAX_SWEEP_ROWS + 1)
+            Checks.checkSweepMaxMessages(SweepConfig.MAX_SWEEP_MESSAGES + 1)
         }
     }
 

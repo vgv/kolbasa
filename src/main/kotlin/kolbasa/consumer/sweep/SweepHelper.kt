@@ -5,6 +5,7 @@ import kolbasa.consumer.ConsumerSchemaHelpers
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.utils.Lock
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.TimeHelper
@@ -34,23 +35,27 @@ object SweepHelper {
     /**
      * Run sweep for a particular queue
      *
-     * A total of SweepConfig.maxIterations will be made. Every iteration will try to remove the
-     * maximum value from SweepConfig.maxRows or limit, whichever is greater.
+     * A total of [SweepConfig.maxIterations] will be made. Every iteration will try to remove the
+     * maximum value from [SweepConfig.maxMessages] or `limit`, whichever is greater.
      *
      * @return how many expired messages were removed or -1 if sweep didn't run due to
-     * concurrent sweep for the queue at the same time by another consumer
+     *         concurrent sweep for the queue at the same time by another consumer
      */
     fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
+        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
+    }
+
+    internal fun sweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
-        // Choose max rows value to sweep
-        val rowsToSweep = max(limit, sweepConfig.maxRows)
+        // Calculate how much messages to sweep
+        val messagesToSweep = max(limit, sweepConfig.maxMessages)
 
-        val removedRows = Lock.tryRunExclusive(queue.name) {
-            rawSweep(connection, queue, rowsToSweep, sweepConfig.maxIterations)
+        val removedMessages = Lock.tryRunExclusive(queue.name) {
+            rawSweep(connection, queue, nodeId, messagesToSweep, sweepConfig.maxIterations)
         }
 
-        return removedRows ?: -1
+        return removedMessages ?: -1
     }
 
     internal fun checkPeriod(queue: Queue<*, *>, period: Int): Boolean {
@@ -69,38 +74,43 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*, *>, maxRows: Int, maxIterations: Int): Int {
-        var totalRows = 0
+    private fun rawSweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, maxMessages: Int, maxIterations: Int): Int {
+        var totalMessages = 0
         var iterations = 0
 
-        // loop while we have rows to delete or iteration < maxIterations
+        // loop while we have messages to delete or iteration < maxIterations
         val (execution, _) = TimeHelper.measure {
             do {
-                val removedRows = rawSweepOneIteration(connection, queue, maxRows)
-                totalRows += removedRows
+                val removedMessages = rawSweepOneIteration(connection, queue, maxMessages)
+                totalMessages += removedMessages
                 iterations++
-            } while (iterations < maxIterations && removedRows == maxRows)
+            } while (iterations < maxIterations && removedMessages == maxMessages)
         }
 
         // Prometheus
-        queue.queueMetrics.sweepMetrics(iterations, totalRows, execution.durationNanos)
+        queue.queueMetrics.sweepMetrics(
+            nodeId = nodeId,
+            iterations = iterations,
+            removedMessages = totalMessages,
+            executionNanos = execution.durationNanos
+        )
 
-        return totalRows
+        return totalMessages
     }
 
-    private fun rawSweepOneIteration(connection: Connection, queue: Queue<*, *>, maxRows: Int): Int {
-        val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxRows)
+    private fun rawSweepOneIteration(connection: Connection, queue: Queue<*, *>, maxMessages: Int): Int {
+        val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxMessages)
 
-        val (execution, removedRows) = TimeHelper.measure {
+        val (execution, removedMessages) = TimeHelper.measure {
             connection.useStatement { statement ->
                 statement.executeUpdate(deleteQuery)
             }
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedRows)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.SWEEP, deleteQuery, execution, removedMessages)
 
-        return removedRows
+        return removedMessages
     }
 
     // Queue name => Sweep period counter

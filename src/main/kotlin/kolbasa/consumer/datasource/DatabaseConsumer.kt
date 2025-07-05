@@ -13,7 +13,7 @@ import javax.sql.DataSource
 /**
  * Default implementation of [Consumer]
  */
-class DatabaseConsumer(
+class DatabaseConsumer internal constructor(
     private val dataSource: DataSource,
     private val peer: ConnectionAwareConsumer
 ) : Consumer {

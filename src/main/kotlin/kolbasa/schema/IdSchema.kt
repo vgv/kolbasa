@@ -29,7 +29,7 @@ internal object IdSchema {
     private val CREATE_TABLE_STATEMENT = """
         create table if not exists $NODE_TABLE_NAME(
                $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
-               $SERVER_ID_COLUMN_NAME varchar($SERVER_ID_COLUMN_LENGTH) not null,
+               $SERVER_ID_COLUMN_NAME varchar($SERVER_ID_COLUMN_LENGTH),
                $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH),
                $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp,
                $IDENTIFIERS_BUCKET_COLUMN_NAME int not null
@@ -37,13 +37,16 @@ internal object IdSchema {
     """.trimIndent()
 
     private val INIT_TABLE_STATEMENT: String
-        get() = """
-                insert into $NODE_TABLE_NAME
-                    ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
-                values
-                    ('$ACTIVE_STATUS', '${generateNodeId()}', ${Node.randomBucket()})
-                on conflict do nothing
-            """.trimIndent()
+        get() {
+            val randomNodeID = generateNodeId()
+            return """
+                    insert into $NODE_TABLE_NAME
+                        ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+                    values
+                        ('$ACTIVE_STATUS', '$randomNodeID', '$randomNodeID', ${Node.randomBucket()})
+                    on conflict do nothing
+                """.trimIndent()
+        }
 
     private val SELECT_NODE_INFO_STATEMENT = """
         select
@@ -67,6 +70,7 @@ internal object IdSchema {
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
+            "alter table $NODE_TABLE_NAME alter $SERVER_ID_COLUMN_NAME drop not null",
             "alter table $NODE_TABLE_NAME add column if not exists $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH)",
             "update $NODE_TABLE_NAME set $ID_COLUMN_NAME=$SERVER_ID_COLUMN_NAME where ($ID_COLUMN_NAME <> $SERVER_ID_COLUMN_NAME) or ($ID_COLUMN_NAME is null)",
             INIT_TABLE_STATEMENT,

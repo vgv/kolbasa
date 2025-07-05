@@ -18,8 +18,8 @@ class ClusterConsumer(
     override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
         val latestState = cluster.getState()
 
-        val consumer = latestState.getActiveConsumer(this) { dataSource, shards ->
-            val c = ConnectionAwareDatabaseConsumer(consumerOptions, shards)
+        val consumer = latestState.getActiveConsumer(this) { nodeId, dataSource, shards ->
+            val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, shards)
             DatabaseConsumer(dataSource, c)
         }
 
@@ -45,16 +45,18 @@ class ClusterConsumer(
                     return@map 0
                 }
 
-                val consumer = latestState.getConsumer(this, node) { dataSource ->
-                    DatabaseConsumer(dataSource, consumerOptions)
+                val consumer = latestState.getConsumer(this, node) { nodeId, dataSource ->
+                    val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                    DatabaseConsumer(dataSource, c)
                 }
 
                 consumer.delete(queue, ids)
             }.sum()
 
         if (deleted < messageIds.size) {
-            val consumers = latestState.getConsumers(this) { dataSource: DataSource ->
-                DatabaseConsumer(dataSource, consumerOptions)
+            val consumers = latestState.getConsumers(this) { nodeId, dataSource: DataSource ->
+                val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                DatabaseConsumer(dataSource, c)
             }
 
             consumers.forEach { consumer ->

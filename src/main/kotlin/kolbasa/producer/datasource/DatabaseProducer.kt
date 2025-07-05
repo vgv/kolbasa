@@ -7,6 +7,7 @@ import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
+import kolbasa.producer.connection.ConnectionAwareProducer
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
@@ -14,12 +15,19 @@ import javax.sql.DataSource
 /**
  * Default implementation of [Producer]
  */
-class DatabaseProducer @JvmOverloads constructor(
+class DatabaseProducer internal constructor(
     private val dataSource: DataSource,
-    private val producerOptions: ProducerOptions = ProducerOptions(),
-) : Producer {
+    private val peer: ConnectionAwareProducer
+): Producer {
 
-    private val peer = ConnectionAwareDatabaseProducer(producerOptions)
+    @JvmOverloads
+    constructor(
+        dataSource: DataSource,
+        producerOptions: ProducerOptions = ProducerOptions()
+    ) : this(
+        dataSource = dataSource,
+        peer = ConnectionAwareDatabaseProducer(producerOptions)
+    )
 
     override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
         return queue.queueTracing.makeProducerCall(request) {
@@ -32,7 +40,8 @@ class DatabaseProducer @JvmOverloads constructor(
         request: SendRequest<Data, Meta>
     ): CompletableFuture<SendResult<Data, Meta>> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = producerOptions.asyncExecutor,
+            // make it better somehow
+            customExecutor = (peer as? ConnectionAwareDatabaseProducer)?.producerOptions?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

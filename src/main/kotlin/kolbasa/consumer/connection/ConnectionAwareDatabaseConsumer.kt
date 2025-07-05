@@ -6,6 +6,7 @@ import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
@@ -14,9 +15,17 @@ import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
 class ConnectionAwareDatabaseConsumer internal constructor(
-    private val consumerOptions: ConsumerOptions = ConsumerOptions(),
-    private val shards: Shards = Shards.ALL_SHARDS
+    private val nodeId: NodeId,
+    private val consumerOptions: ConsumerOptions,
+    private val shards: Shards
 ) : ConnectionAwareConsumer {
+
+    @JvmOverloads
+    constructor(consumerOptions: ConsumerOptions = ConsumerOptions()) : this(
+        nodeId = NodeId.EMPTY_NODE_ID,
+        consumerOptions = consumerOptions,
+        shards = Shards.ALL_SHARDS
+    )
 
     override fun <Data, Meta : Any> receive(
         connection: Connection,
@@ -40,7 +49,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
     ): List<Message<Data, Meta>> {
         // delete expired messages before next read
         if (SweepHelper.needSweep(queue)) {
-            SweepHelper.sweep(connection, queue, limit)
+            SweepHelper.sweep(connection, queue, nodeId, limit)
         }
 
         // read
@@ -70,7 +79,8 @@ class ConnectionAwareDatabaseConsumer internal constructor(
 
         // Prometheus
         queue.queueMetrics.consumerReceiveMetrics(
-            receivedRows = result.size,
+            nodeId = nodeId,
+            receivedMessages = result.size,
             executionNanos = execution.durationNanos,
             approxBytes = approxBytesCounter.get(),
             queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
@@ -85,18 +95,22 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
-        val (execution, removedRows) = TimeHelper.measure {
+        val (execution, removedMessages) = TimeHelper.measure {
             connection.useStatement { statement ->
                 statement.executeUpdate(deleteQuery)
             }
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedRows)
+        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedMessages)
 
         // Prometheus
-        queue.queueMetrics.consumerDeleteMetrics(removedRows, execution.durationNanos)
+        queue.queueMetrics.consumerDeleteMetrics(
+            nodeId = nodeId,
+            removedMessages = removedMessages,
+            executionNanos = execution.durationNanos
+        )
 
-        return removedRows
+        return removedMessages
     }
 }

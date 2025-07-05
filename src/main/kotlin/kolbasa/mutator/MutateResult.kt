@@ -12,7 +12,7 @@ data class MutateResult(
     /**
      * Marker that the result list are too large and only the first N results were stored in the [messages] list.
      *
-     * See [kolbasa.mutator.MutatorOptions.maxMutatedRowsKeepInMemory] for details
+     * See [kolbasa.mutator.MutatorOptions.maxMutatedMessagesKeepInMemory] for details
      */
     val truncated: Boolean,
 
