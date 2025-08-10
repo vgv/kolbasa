@@ -11,7 +11,7 @@ nebula = "20.2.0"
 nexus = "2.0.0"
 
 prometheus = "1.4.1"
-opentelemetry = "1.53.0"
+opentelemetry = "1.54.0"
 opentelemetry-instrumentation = "2.19.0"
 opentelemetry-instrumentation-incubator = "2.19.0-alpha"
 opentelemetry-semconv = "1.37.0"
