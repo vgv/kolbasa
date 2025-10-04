@@ -11,6 +11,10 @@ import java.time.Duration
 internal object Checks {
 
     fun checkDelay(delay: Duration) {
+        // We need some marker to check that delay is set by user
+        // If it isn't set, we don't need to check it at all, because internal
+        // default value has a special meaning and is always valid
+        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
         if (delay === QueueOptions.DELAY_NOT_SET) return
 
         check(!delay.isNegative) {
@@ -49,6 +53,10 @@ internal object Checks {
     }
 
     fun checkVisibilityTimeout(visibilityTimeout: Duration) {
+        // We need some marker to check that visibilityTimeout is set by user
+        // If it isn't set, we don't need to check it at all, because internal
+        // default value has a special meaning and is always valid
+        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
         if (visibilityTimeout === QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) return
 
         check(!visibilityTimeout.isNegative) {
@@ -131,7 +139,7 @@ internal object Checks {
             }
         }
 
-        mutationsByField.forEach { _, fieldMutations ->
+        mutationsByField.forEach { (_, fieldMutations) ->
             check(fieldMutations.size == 1) {
                 "Can't mutate one field more than once: $fieldMutations"
             }
