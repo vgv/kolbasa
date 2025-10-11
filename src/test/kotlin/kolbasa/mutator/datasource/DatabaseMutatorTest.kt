@@ -1,6 +1,7 @@
 package kolbasa.mutator.datasource
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.MutatorOptions
@@ -107,6 +108,9 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSimpleMutate_Filter() {
+        // Make database dirty
+        createGarbage()
+
         val attempts = 123
         val attemptsDelta = 456
 
@@ -142,7 +146,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         assertFalse(mutateResult.truncated)
         assertEquals(expectedMutatedIds.size, mutateResult.mutatedMessages)
-        assertEquals(expectedMutatedIds, mutateResult.onlyMutated().map { it.id })
+        assertEquals(expectedMutatedIds.toSet(), mutateResult.onlyMutated().map { it.id }.toSet())
         val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()
         assertEquals(listOf(attempts + attemptsDelta), uniqueNewAttempts)
 
@@ -185,6 +189,9 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
     @Test
     fun testSimpleMutate_Filter_TruncatedResponse() {
+        // Make database dirty
+        createGarbage()
+
         val maxMutated = 20
         val attempts = 123
         val attemptsDelta = 456
@@ -199,6 +206,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         // Direct database check
         dataSource.readIntList("select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} from ${queue.dbTableName}").also { list ->
+            // Check all messages have the same attempts
             assertEquals(1, list.size)
             assertEquals(attempts, list.first())
         }
@@ -219,10 +227,13 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
             }
             .map { it.id }
 
-
         assertTrue(mutateResult.truncated)
         assertEquals(expectedMutatedIds.size, mutateResult.mutatedMessages)
-        assertEquals(expectedMutatedIds.take(maxMutated), mutateResult.onlyMutated().map { it.id })
+        // Since response is truncated, we can check only that all returned ids are from expectedMutatedIds list
+        assertTrue("expected: $expectedMutatedIds, mutated: $mutateResult") {
+            expectedMutatedIds.containsAll(mutateResult.onlyMutated().map { it.id })
+        }
+
         val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()
         assertEquals(listOf(attempts + attemptsDelta), uniqueNewAttempts)
 
@@ -265,6 +276,8 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
     @Test
     fun testMutate_CheckDurationBiggerThanMaxInt() {
+        createGarbage()
+
         val duration = Duration.ofHours(24 * 365 * 1000) // approx. 1000 years
 
         val producer = DatabaseProducer(dataSource)
@@ -297,5 +310,21 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         }
     }
 
+    private fun createGarbage() {
+        // We have to insert and delete a lot of messages to make sure that table is fragmented enough for testing
+        // Numbers here are just experimental, but they work to generate "enough" garbage
+        val producer = DatabaseProducer(dataSource)
+        val consumer = DatabaseConsumer(dataSource)
+
+        (1..100).forEach { _ ->
+            val data = (1..1000).map {
+                SendMessage("${System.nanoTime()}_${it}", meta = TestMeta(it))
+            }
+
+            val ids = producer.send(queue, data).onlySuccessful().map { it.id }
+
+            consumer.delete(queue, ids)
+        }
+    }
 
 }

@@ -90,15 +90,18 @@ class ConnectionAwareDatabaseMutator(
                 preparedStatement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
                         val localId = resultSet.getLong(1)
-                        val shard = resultSet.getInt(2)
-                        val scheduledAt = resultSet.getTimestamp(3).time
-                        val remainingAttempts = resultSet.getInt(4)
 
                         mutatedMessagesCount++
                         lastIterationRecords++
-                        lastMessageId = localId
+                        if (lastMessageId < localId) {
+                            lastMessageId = localId
+                        }
 
                         if (mutatedMessagesCount <= mutatorOptions.maxMutatedMessagesKeepInMemory) {
+                            val shard = resultSet.getInt(2)
+                            val scheduledAt = resultSet.getTimestamp(3).time
+                            val remainingAttempts = resultSet.getInt(4)
+
                             val id = Id(localId, shard)
                             mutatedMessages += MessageResult.Mutated(id, scheduledAt, remainingAttempts)
                             if (mutatedMessagesCount == mutatorOptions.maxMutatedMessagesKeepInMemory) {
