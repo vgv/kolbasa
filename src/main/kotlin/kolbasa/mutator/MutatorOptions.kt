@@ -33,7 +33,7 @@ data class MutatorOptions(
 ) {
 
     internal companion object {
-        const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 10_000
+        const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 100
     }
 
 }
