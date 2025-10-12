@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.consumer.datasource.Consumer
+import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.datasource.Producer
 import kolbasa.schema.NodeId
 import java.util.concurrent.ConcurrentHashMap
@@ -89,6 +90,10 @@ internal data class ClusterState(
     }
 
     private val allConsumers: ConcurrentMap<ClusterConsumer, ConcurrentMap<NodeId, Consumer>> by lazy {
+        ConcurrentHashMap()
+    }
+
+    private val allMutators: ConcurrentMap<ClusterMutator, ConcurrentMap<NodeId, Mutator>> by lazy {
         ConcurrentHashMap()
     }
 
@@ -183,6 +188,40 @@ internal data class ClusterState(
         }
 
         return consumers
+    }
+
+    fun getMutator(
+        clusterMutator: ClusterMutator,
+        node: NodeId,
+        generateMutator: (NodeId, DataSource) -> Mutator
+    ): Mutator {
+        val nodesToMutators = allMutators.computeIfAbsent(clusterMutator) { _ ->
+            ConcurrentHashMap()
+        }
+
+        val mutator = nodesToMutators.computeIfAbsent(node) { _ ->
+            val dataSource = nodes[node] ?: throw IllegalStateException("Node $node not found")
+            generateMutator(node, dataSource)
+        }
+
+        return mutator
+    }
+
+    fun getMutators(
+        clusterMutator: ClusterMutator,
+        generateMutator: (NodeId, DataSource) -> Mutator
+    ): List<Mutator> {
+        val nodesToMutators = allMutators.computeIfAbsent(clusterMutator) { _ ->
+            ConcurrentHashMap()
+        }
+
+        val mutators = nodes.map { (node, dataSource) ->
+            nodesToMutators.computeIfAbsent(node) { _ ->
+                generateMutator(node, dataSource)
+            }
+        }
+
+        return mutators
     }
 
     companion object {
