@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutorService
 
 data class MutatorOptions(
     /**
-     * How many mutated messages to keep in [MutateResult.messages] list
+     * How many mutated messages to keep in [MutateResult.messages] list when using a filter condition
      *
      * If you mutate queue by providing identifiers to mutate, you always know how many
      * results you will have - the same number as identifiers list. However, if you mutate
