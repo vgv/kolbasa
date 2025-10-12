@@ -50,7 +50,7 @@ internal object IdSchema {
 
     private val SELECT_NODE_INFO_STATEMENT = """
         select
-            $SERVER_ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME
+            $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME
         from
             $NODE_TABLE_NAME
         where
@@ -72,7 +72,6 @@ internal object IdSchema {
             CREATE_TABLE_STATEMENT,
             "alter table $NODE_TABLE_NAME alter $SERVER_ID_COLUMN_NAME drop not null",
             "alter table $NODE_TABLE_NAME add column if not exists $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH)",
-            "update $NODE_TABLE_NAME set $ID_COLUMN_NAME=$SERVER_ID_COLUMN_NAME where ($ID_COLUMN_NAME <> $SERVER_ID_COLUMN_NAME) or ($ID_COLUMN_NAME is null)",
             INIT_TABLE_STATEMENT,
         )
 

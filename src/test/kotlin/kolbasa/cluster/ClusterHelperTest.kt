@@ -38,7 +38,7 @@ class ClusterHelperTest : AbstractPostgresqlTest() {
         val first = requireNotNull(IdSchema.readNodeInfo(dataSource))
         val stringId: String = first.id.id
         dataSourceFirstSchema.useStatement() { statement ->
-            statement.executeUpdate("update ${IdSchema.NODE_TABLE_NAME} set ${IdSchema.SERVER_ID_COLUMN_NAME} = '$stringId'")
+            statement.executeUpdate("update ${IdSchema.NODE_TABLE_NAME} set ${IdSchema.ID_COLUMN_NAME} = '$stringId'")
         }
 
         // Check again, expect an exception
