@@ -27,9 +27,9 @@ internal object EmptyQueueMetrics : QueueMetrics {
     ) {
     }
 
-    override fun consumerDeleteMetrics(nodeId: NodeId, removedMessages: Int, executionNanos: Long) {
-    }
+    override fun consumerDeleteMetrics(nodeId: NodeId, removedMessages: Int, executionNanos: Long) {}
 
-    override fun sweepMetrics(nodeId: NodeId, iterations: Int, removedMessages: Int, executionNanos: Long) {
-    }
+    override fun sweepMetrics(nodeId: NodeId, iterations: Int, removedMessages: Int, executionNanos: Long) {}
+
+    override fun mutatorMetrics(nodeId: NodeId, iterations: Int, mutatedMessages: Int, executionNanos: Long, byId: Boolean) {}
 }

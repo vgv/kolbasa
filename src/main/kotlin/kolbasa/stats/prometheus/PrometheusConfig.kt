@@ -165,6 +165,34 @@ sealed class PrometheusConfig {
             .classicUpperBounds(*Const.histogramBuckets())
             .register(registry)
 
+        // ----------------------------------------------------------------------------
+        // Mutator metrics
+        internal val mutatorMutateCounter: Counter = Counter.builder()
+            .name("kolbasa_mutator_mutate")
+            .help("Number of mutates")
+            .labelNames("queue", "node_id", "type")
+            .register(registry)
+
+        internal val mutatorMutateIterationsCounter: Counter = Counter.builder()
+            .name("kolbasa_mutator_mutate_iterations")
+            .help("Number of mutate iterations (every mutate can have multiple iterations)")
+            .labelNames("queue", "node_id", "type")
+            .register(registry)
+
+        internal val mutatorMutateMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_mutator_mutated_messages")
+            .help("Number of mutated messages")
+            .labelNames("queue", "node_id", "type")
+            .register(registry)
+
+        internal val mutatorMutateDuration: Histogram = Histogram.builder()
+            .name("kolbasa_mutator_mutate_duration_seconds")
+            .help("Mutate duration")
+            .labelNames("queue", "node_id", "type")
+            .classicOnly()
+            .classicUpperBounds(*Const.histogramBuckets())
+            .register(registry)
+
         init {
             customQueueSizeMeasureInterval.forEach { (queueName, customInterval) ->
                 Checks.checkCustomQueueSizeMeasureInterval(queueName, customInterval)

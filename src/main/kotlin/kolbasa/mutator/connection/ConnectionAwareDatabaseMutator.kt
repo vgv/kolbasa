@@ -9,12 +9,23 @@ import kolbasa.producer.Id
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue
 import kolbasa.schema.IdRange
+import kolbasa.schema.NodeId
+import kolbasa.stats.sql.SqlDumpHelper
+import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.ColumnIndex
+import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
-class ConnectionAwareDatabaseMutator(
-    private val mutatorOptions: MutatorOptions = MutatorOptions()
+class ConnectionAwareDatabaseMutator internal constructor(
+    internal val nodeId: NodeId,
+    internal val mutatorOptions: MutatorOptions = MutatorOptions()
 ) : ConnectionAwareMutator {
+
+    @JvmOverloads
+    constructor(mutatorOptions: MutatorOptions = MutatorOptions()) : this(
+        nodeId = NodeId.EMPTY_NODE_ID,
+        mutatorOptions = mutatorOptions
+    )
 
     override fun <Data, Meta : Any> mutate(
         connection: Connection,
@@ -28,22 +39,7 @@ class ConnectionAwareDatabaseMutator(
 
         Checks.checkMutations(mutations)
 
-        val query = MutatorSchemaHelpers.generateListMutateQuery(queue, mutations, messages)
-
-        val mutateResult = mutableMapOf<Id, MessageResult>()
-        connection.useStatement { statement ->
-            statement.executeQuery(query).use { resultSet ->
-                while (resultSet.next()) {
-                    val localId = resultSet.getLong(1)
-                    val shard = resultSet.getInt(2)
-                    val scheduledAt = resultSet.getTimestamp(3).time
-                    val remainingAttempts = resultSet.getInt(4)
-
-                    val id = Id(localId, shard)
-                    mutateResult[id] = MessageResult.Mutated(id, scheduledAt, remainingAttempts)
-                }
-            }
-        }
+        val mutateResult = internalMutateById(connection, queue, mutations, messages)
 
         // combine result using the same order
         var mutatedMessagesCount = 0
@@ -116,4 +112,48 @@ class ConnectionAwareDatabaseMutator(
         return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = truncated, mutatedMessages)
     }
 
+    private fun <Data, Meta : Any> internalMutateById(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        messages: List<Id>
+    ): Map<Id, MessageResult> {
+        val query = MutatorSchemaHelpers.generateListMutateQuery(queue, mutations, messages)
+
+        val (execution, mutateResult) = TimeHelper.measure {
+            connection.useStatement { statement ->
+                statement.executeQuery(query).use { resultSet ->
+                    val mutateResult = mutableMapOf<Id, MessageResult>()
+
+                    while (resultSet.next()) {
+                        val localId = resultSet.getLong(1)
+                        val shard = resultSet.getInt(2)
+                        val scheduledAt = resultSet.getTimestamp(3).time
+                        val remainingAttempts = resultSet.getInt(4)
+
+                        val id = Id(localId, shard)
+                        mutateResult[id] = MessageResult.Mutated(id, scheduledAt, remainingAttempts)
+                    }
+
+                    mutateResult
+                }
+            }
+        }
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_ID, query, execution, mutateResult.size)
+
+        // Prometheus
+        queue.queueMetrics.mutatorMetrics(
+            nodeId,
+            iterations = 1,
+            mutatedMessages = mutateResult.size,
+            executionNanos = execution.durationNanos,
+            byId = true
+        )
+
+        return mutateResult
+    }
+
 }
+

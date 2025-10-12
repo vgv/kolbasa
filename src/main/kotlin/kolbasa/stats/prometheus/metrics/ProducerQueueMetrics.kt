@@ -21,6 +21,7 @@ internal class PrometheusQueueMetrics(
     private val producer: ConcurrentMap<NodeId, ProducerQueueMetrics> = ConcurrentHashMap()
     private val consumer: ConcurrentMap<NodeId, ConsumerQueueMetrics> = ConcurrentHashMap()
     private val sweep: ConcurrentMap<NodeId, SweepQueueMetrics> = ConcurrentHashMap()
+    private val mutator: ConcurrentMap<NodeId, MutatorQueueMetrics> = ConcurrentHashMap()
 
     override fun usePreciseStringSize(): Boolean {
         return prometheusConfig.preciseStringSize
@@ -97,6 +98,25 @@ internal class PrometheusQueueMetrics(
             iterations = iterations,
             removedMessages = removedMessages,
             executionNanos = executionNanos
+        )
+    }
+
+    override fun mutatorMetrics(
+        nodeId: NodeId,
+        iterations: Int,
+        mutatedMessages: Int,
+        executionNanos: Long,
+        byId: Boolean
+    ) {
+        val mutatorQueueMetrics = mutator.computeIfAbsent(nodeId) { _ ->
+            MutatorQueueMetrics(queueName, nodeId, prometheusConfig)
+        }
+
+        mutatorQueueMetrics.mutatorMetrics(
+            iterations = iterations,
+            mutatedMessages = mutatedMessages,
+            executionNanos = executionNanos,
+            byId = byId
         )
     }
 }
@@ -266,4 +286,48 @@ internal class SweepQueueMetrics(
         .labelValues(queueName, nodeId.id)
     private val sweepDuration: DistributionDataPoint = prometheusConfig.sweepDuration
         .labelValues(queueName, nodeId.id)
+}
+
+internal class MutatorQueueMetrics(
+    queueName: String,
+    nodeId: NodeId,
+    prometheusConfig: PrometheusConfig.Config
+) {
+
+    fun mutatorMetrics(iterations: Int, mutatedMessages: Int, executionNanos: Long, byId: Boolean) {
+        if (byId) {
+            mutatorMutateCounterById.inc()
+            mutatorMutateIterationsCounterById.incInt(iterations)
+            mutatorMutateMessagesCounterById.incInt(mutatedMessages)
+            mutatorMutateDurationById.observeNanos(executionNanos)
+        } else {
+            mutatorMutateCounterByFilter.inc()
+            mutatorMutateIterationsCounterByFilter.incInt(iterations)
+            mutatorMutateMessagesCounterByFilter.incInt(mutatedMessages)
+            mutatorMutateDurationByFilter.observeNanos(executionNanos)
+        }
+    }
+
+    private val mutatorMutateCounterById: CounterDataPoint = prometheusConfig.mutatorMutateCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
+    private val mutatorMutateIterationsCounterById: CounterDataPoint = prometheusConfig.mutatorMutateIterationsCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
+    private val mutatorMutateMessagesCounterById: CounterDataPoint = prometheusConfig.mutatorMutateMessagesCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
+    private val mutatorMutateDurationById: DistributionDataPoint = prometheusConfig.mutatorMutateDuration
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
+
+    private val mutatorMutateCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
+    private val mutatorMutateIterationsCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateIterationsCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
+    private val mutatorMutateMessagesCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateMessagesCounter
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
+    private val mutatorMutateDurationByFilter: DistributionDataPoint = prometheusConfig.mutatorMutateDuration
+        .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
+
+    private companion object {
+        const val MUTATOR_TYPE_BY_ID = "by_id"
+        const val MUTATOR_TYPE_BY_FILTER = "by_filter"
+    }
 }

@@ -54,5 +54,7 @@ enum class StatementKind {
     PRODUCER_INSERT,
     CONSUMER_SELECT,
     CONSUMER_DELETE,
-    SWEEP
+    SWEEP,
+    MUTATE_BY_ID,
+    MUTATE_BY_FILTER
 }

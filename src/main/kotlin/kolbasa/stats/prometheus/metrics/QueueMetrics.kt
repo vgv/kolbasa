@@ -38,4 +38,11 @@ internal interface QueueMetrics {
         executionNanos: Long
     )
 
+    fun mutatorMetrics(
+        nodeId: NodeId,
+        iterations: Int,
+        mutatedMessages: Int,
+        executionNanos: Long,
+        byId: Boolean
+    )
 }

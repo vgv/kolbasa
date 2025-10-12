@@ -7,6 +7,7 @@ import kolbasa.mutator.MessageResult
 import kolbasa.mutator.MutateResult
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.Id
@@ -31,8 +32,9 @@ class ClusterMutator(
         val mutatedMessagesResult = mutableListOf<MessageResult>()
         byNodes.forEach { (node, ids) ->
             if (node != null) {
-                val mutator = latestState.getMutator(this, node) { _, dataSource ->
-                    DatabaseMutator(dataSource, mutatorOptions)
+                val mutator = latestState.getMutator(this, node) { nodeId, dataSource ->
+                    val peer = ConnectionAwareDatabaseMutator(nodeId, mutatorOptions)
+                    DatabaseMutator(dataSource, peer)
                 }
 
                 val oneMutateResult = mutator.mutate(queue, mutations, ids)
@@ -56,8 +58,9 @@ class ClusterMutator(
     ): MutateResult {
         val latestState = cluster.getState()
 
-        val allMutators = latestState.getMutators(this) { _, dataSource ->
-            DatabaseMutator(dataSource, mutatorOptions)
+        val allMutators = latestState.getMutators(this) { nodeId, dataSource ->
+            val peer = ConnectionAwareDatabaseMutator(nodeId, mutatorOptions)
+            DatabaseMutator(dataSource, peer)
         }
 
         var mutatedMessagesCount = 0
