@@ -38,12 +38,11 @@ internal object IdSchema {
 
     private val INIT_TABLE_STATEMENT: String
         get() {
-            val randomNodeID = generateNodeId()
             return """
                     insert into $NODE_TABLE_NAME
-                        ($STATUS_COLUMN_NAME, $SERVER_ID_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+                        ($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
                     values
-                        ('$ACTIVE_STATUS', '$randomNodeID', '$randomNodeID', ${Node.randomBucket()})
+                        ('$ACTIVE_STATUS', '${generateNodeId()}', ${Node.randomBucket()})
                     on conflict do nothing
                 """.trimIndent()
         }
@@ -70,7 +69,6 @@ internal object IdSchema {
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
-            "alter table $NODE_TABLE_NAME alter $SERVER_ID_COLUMN_NAME drop not null",
             "alter table $NODE_TABLE_NAME add column if not exists $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH)",
             INIT_TABLE_STATEMENT,
         )
