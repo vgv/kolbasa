@@ -23,6 +23,9 @@ sealed class ShardStrategy {
     }
 
     data class ThreadLocalWithInterval(val interval: Duration = Duration.ofMinutes(15)) : ShardStrategy() {
+
+        private val intervalMillis = interval.toMillis()
+
         private val storage = object : java.lang.ThreadLocal<Pair<Long, Int>>() {
             override fun initialValue(): Pair<Long, Int> = generateNewPair()
         }
@@ -30,7 +33,7 @@ sealed class ShardStrategy {
         override fun getShard(): Int {
             val (created, shard) = storage.get()
 
-            if ((System.currentTimeMillis() - created) < interval.toMillis()) {
+            if ((System.currentTimeMillis() - created) < intervalMillis) {
                 return shard
             } else {
                 val newPair = generateNewPair()
