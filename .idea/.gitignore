@@ -4,3 +4,6 @@
 
 # GitHub Copilot persisted chat sessions
 /copilot/chatSessions
+
+# Augment Code
+/AugmentWebviewStateStore.xml
