@@ -84,8 +84,8 @@ class ConnectionAwareDatabaseMutator internal constructor(
                     queue,
                     mutations,
                     condition,
-                    lastMessageId,
-                    !truncated
+                    lastKnownId = lastMessageId,
+                    returnFullResponse = !truncated
                 )
 
                 lastMessageId = maxSeenId
