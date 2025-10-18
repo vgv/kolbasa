@@ -31,22 +31,24 @@ internal object MutatorSchemaHelpers {
                 ${mutatedFields.joinToString(separator = ",")}
             where
                 (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in (table ids_as_values)
-            returning
-                ${Const.ID_COLUMN_NAME},
-                ${Const.SHARD_COLUMN_NAME},
-                ${Const.SCHEDULED_AT_COLUMN_NAME},
-                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
-        """
+            returning $ALL_FIELDS"""
     }
 
     fun <Meta : Any> generateFilterQuery(
         queue: Queue<*, Meta>,
         mutations: List<Mutation>,
-        condition: Condition<Meta>
+        condition: Condition<Meta>,
+        lastKnownId: Long,
+        returnAllFields: Boolean
     ): String {
         val clauses = generateMutateExpressions(mutations)
         // meta_field_1 = ? and meta_field_2 > ? and ...
         val query = condition.toSqlClause(queue)
+        val fields = if (returnAllFields) {
+            ALL_FIELDS
+        } else {
+            REDUCED_FIELDS
+        }
 
         return """
             update ${queue.dbTableName}
@@ -56,19 +58,14 @@ internal object MutatorSchemaHelpers {
                 ${Const.ID_COLUMN_NAME} in (
                     select ${Const.ID_COLUMN_NAME}
                     from ${queue.dbTableName}
-                    where ${Const.ID_COLUMN_NAME} > ? and ($query)
+                    where (${Const.ID_COLUMN_NAME} > $lastKnownId) and ($query)
                     order by ${Const.ID_COLUMN_NAME}
                     limit $MUTATE_BATCH_SIZE
                  )
-            returning
-                ${Const.ID_COLUMN_NAME},
-                ${Const.SHARD_COLUMN_NAME},
-                ${Const.SCHEDULED_AT_COLUMN_NAME},
-                ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
-            """
+            returning $fields"""
     }
 
-    fun generateMutateExpression(mutation: Mutation): String {
+    private fun generateMutateExpression(mutation: Mutation): String {
         return when (mutation) {
             is AddRemainingAttempts -> {
                 "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME} + ${mutation.delta}"
@@ -90,10 +87,15 @@ internal object MutatorSchemaHelpers {
         }
     }
 
-    fun generateMutateExpressions(mutations: List<Mutation>): List<String> {
+    private fun generateMutateExpressions(mutations: List<Mutation>): List<String> {
         return mutations.map(::generateMutateExpression)
     }
 
+    private const val REDUCED_FIELDS =
+        Const.ID_COLUMN_NAME
+
+    private const val ALL_FIELDS =
+        "${Const.ID_COLUMN_NAME},${Const.SHARD_COLUMN_NAME},${Const.SCHEDULED_AT_COLUMN_NAME},${Const.REMAINING_ATTEMPTS_COLUMN_NAME}"
 
     private const val MUTATE_BATCH_SIZE = 10_000
 }

@@ -15,6 +15,8 @@ import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.ColumnIndex
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
+import java.sql.ResultSet
+import kotlin.math.min
 
 class ConnectionAwareDatabaseMutator internal constructor(
     internal val nodeId: NodeId,
@@ -69,45 +71,47 @@ class ConnectionAwareDatabaseMutator internal constructor(
         Checks.checkMutations(mutations)
 
         val condition = filter(Filter)
-        val query = MutatorSchemaHelpers.generateFilterQuery(queue, mutations, condition)
 
         var mutatedMessagesCount = 0
+        var iterations = 0
         var truncated = false
         var lastMessageId = IdRange.MIN_ID - 1
-        var lastIterationRecords: Long
         val mutatedMessages = mutableListOf<MessageResult>()
-        do {
-            lastIterationRecords = 0
+        val (execution, _) = TimeHelper.measure {
+            do {
+                val (maxSeenId, processedMessagesCount, processedMessages) = internalMutateByFilterOneIteration(
+                    connection,
+                    queue,
+                    mutations,
+                    condition,
+                    lastMessageId,
+                    !truncated
+                )
 
-            connection.usePreparedStatement(query) { preparedStatement ->
-                val columnIndex = ColumnIndex()
-                preparedStatement.setLong(columnIndex.nextIndex(), lastMessageId)
-                condition.fillPreparedQuery(queue, preparedStatement, columnIndex)
-                preparedStatement.executeQuery().use { resultSet ->
-                    while (resultSet.next()) {
-                        val localId = resultSet.getLong(1)
+                lastMessageId = maxSeenId
+                mutatedMessagesCount += processedMessagesCount
+                iterations++
 
-                        mutatedMessagesCount++
-                        lastIterationRecords++
-                        if (lastMessageId < localId) {
-                            lastMessageId = localId
-                        }
-
-                        if (mutatedMessagesCount <= mutatorOptions.maxMutatedMessagesKeepInMemory) {
-                            val shard = resultSet.getInt(2)
-                            val scheduledAt = resultSet.getTimestamp(3).time
-                            val remainingAttempts = resultSet.getInt(4)
-
-                            val id = Id(localId, shard)
-                            mutatedMessages += MessageResult.Mutated(id, scheduledAt, remainingAttempts)
-                            if (mutatedMessagesCount == mutatorOptions.maxMutatedMessagesKeepInMemory) {
-                                truncated = true
-                            }
-                        }
-                    }
+                // copy processed messages
+                val currentSize = mutatedMessages.size
+                val maxSize = mutatorOptions.maxMutatedMessagesKeepInMemory
+                if (currentSize < maxSize) {
+                    val needToCopy = maxSize - currentSize
+                    mutatedMessages += processedMessages.subList(0, min(processedMessages.size, needToCopy))
                 }
-            }
-        } while (lastMessageId < IdRange.MAX_ID && lastIterationRecords > 0)
+
+                truncated = mutatedMessages.size >= mutatorOptions.maxMutatedMessagesKeepInMemory
+            } while (processedMessagesCount > 0 && lastMessageId < IdRange.MAX_ID)
+        }
+
+        // Prometheus
+        queue.queueMetrics.mutatorMetrics(
+            nodeId,
+            iterations = iterations,
+            mutatedMessages = mutatedMessagesCount,
+            executionNanos = execution.durationNanos,
+            byId = false
+        )
 
         return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = truncated, mutatedMessages)
     }
@@ -126,13 +130,8 @@ class ConnectionAwareDatabaseMutator internal constructor(
                     val mutateResult = mutableMapOf<Id, MessageResult>()
 
                     while (resultSet.next()) {
-                        val localId = resultSet.getLong(1)
-                        val shard = resultSet.getInt(2)
-                        val scheduledAt = resultSet.getTimestamp(3).time
-                        val remainingAttempts = resultSet.getInt(4)
-
-                        val id = Id(localId, shard)
-                        mutateResult[id] = MessageResult.Mutated(id, scheduledAt, remainingAttempts)
+                        val mutatedMessage = readAllFields(resultSet)
+                        mutateResult[mutatedMessage.id] = mutatedMessage
                     }
 
                     mutateResult
@@ -154,6 +153,71 @@ class ConnectionAwareDatabaseMutator internal constructor(
 
         return mutateResult
     }
+
+    private fun <Data, Meta : Any> internalMutateByFilterOneIteration(
+        connection: Connection,
+        queue: Queue<Data, Meta>,
+        mutations: List<Mutation>,
+        condition: Condition<Meta>,
+        lastKnownId: Long,
+        returnFullResponse: Boolean
+    ): Res {
+        val query = MutatorSchemaHelpers.generateFilterQuery(queue, mutations, condition, lastKnownId, returnFullResponse)
+
+        var maxSeenId = lastKnownId
+        var processedMessagesCount = 0
+        val processedMessages = mutableListOf<MessageResult>()
+
+        val (execution, _) = TimeHelper.measure {
+            connection.usePreparedStatement(query) { preparedStatement ->
+                val columnIndex = ColumnIndex()
+                condition.fillPreparedQuery(queue, preparedStatement, columnIndex)
+                preparedStatement.executeQuery().use { resultSet ->
+                    while (resultSet.next()) {
+                        val localId = if (returnFullResponse) {
+                            val mutatedMessage = readAllFields(resultSet)
+                            processedMessages += mutatedMessage
+                            mutatedMessage.id.localId
+                        } else {
+                            readReducedFields(resultSet)
+                        }
+
+                        if (maxSeenId < localId) {
+                            maxSeenId = localId
+                        }
+
+                        processedMessagesCount++
+                    }
+                }
+            }
+        }
+
+        // SQL Dump
+        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_FILTER, query, execution, processedMessagesCount)
+
+        return Res(maxSeenId, processedMessagesCount, processedMessages)
+    }
+
+    private fun readReducedFields(resultSet: ResultSet): Long {
+        return resultSet.getLong(1)
+    }
+
+    private fun readAllFields(resultSet: ResultSet): MessageResult.Mutated {
+        val localId = resultSet.getLong(1)
+        val shard = resultSet.getInt(2)
+        val scheduledAt = resultSet.getTimestamp(3).time
+        val remainingAttempts = resultSet.getInt(4)
+
+        val id = Id(localId, shard)
+        return MessageResult.Mutated(id, scheduledAt, remainingAttempts)
+    }
+
+    private data class Res(
+        val maxSeenId: Long,
+        val processedMessagesCount: Int,
+        val processedMessages: List<MessageResult>
+    )
+
 
 }
 
