@@ -16,9 +16,9 @@ data class SqlDumpConfig(
      * Two things to remember:
      * 1) This library doesn't do any synchronization around this writer. All threads just use this 'writer' instance
      * without synchronization. If your 'writer' implementation isn't thread-safe – please, take care of that yourself.
-     * 2) 'flush' is called after every query dumped. If you need to dump a lot of queries it can cause performance
+     * 2) 'flush' is called after EVERY query dumped. If you need to dump a lot of queries it can cause performance
      * degradation. In this case, you need to implement a more sophisticated Writer with custom 'flush' behaviour (like
-     * internal buffering and do real flush at every 1000th invocation or something like this)
+     * internal buffering and do real flush at every 100th invocation or something like this)
      */
     val writer: Writer = Writer.nullWriter(),
 
