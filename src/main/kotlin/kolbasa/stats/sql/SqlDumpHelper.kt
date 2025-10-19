@@ -36,6 +36,7 @@ internal object SqlDumpHelper {
             append("Date: ").append(formatStartTime(execution)).appendLine()
             append("Duration: ").append(durationMillis(execution)).append("ms").appendLine()
             append("Rows: ").append(affectedRows).appendLine()
+            append("Kind: ").append(kind).appendLine()
             appendLine(query)
         }
 
