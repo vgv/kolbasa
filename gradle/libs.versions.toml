@@ -10,7 +10,7 @@ kotlin = "2.2.21"
 nebula = "20.2.0"
 nexus = "2.0.0"
 
-prometheus = "1.4.1"
+prometheus = "1.4.2"
 opentelemetry = "1.55.0"
 opentelemetry-instrumentation = "2.21.0"
 opentelemetry-instrumentation-incubator = "2.21.0-alpha"
