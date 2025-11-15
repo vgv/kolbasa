@@ -35,7 +35,7 @@ class ProducerTest : PerformanceTest {
 
                 while (true) {
                     val data = (1..Env.pSendSize).map {
-                        SendMessage<ByteArray, Unit>(randomData.random())
+                        SendMessage<ByteArray>(randomData.random())
                     }
 
                     val result = producer.send(queue, data)

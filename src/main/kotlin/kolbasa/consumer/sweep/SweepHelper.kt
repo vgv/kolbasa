@@ -16,7 +16,7 @@ import kotlin.math.max
 
 object SweepHelper {
 
-    fun needSweep(queue: Queue<*, *>): Boolean {
+    fun needSweep(queue: Queue<*>): Boolean {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Sweep is disabled at all, stop all other checks
@@ -41,11 +41,11 @@ object SweepHelper {
      * @return how many expired messages were removed or -1 if sweep didn't run due to
      *         concurrent sweep for the queue at the same time by another consumer
      */
-    fun sweep(connection: Connection, queue: Queue<*, *>, limit: Int): Int {
+    fun sweep(connection: Connection, queue: Queue<*>, limit: Int): Int {
         return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
     }
 
-    internal fun sweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, limit: Int): Int {
+    internal fun sweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, limit: Int): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Calculate how much messages to sweep
@@ -58,7 +58,7 @@ object SweepHelper {
         return removedMessages ?: -1
     }
 
-    internal fun checkPeriod(queue: Queue<*, *>, period: Int): Boolean {
+    internal fun checkPeriod(queue: Queue<*>, period: Int): Boolean {
         // If we have to launch sweep at every consume, there is no reason to do any calculations
         if (period == SweepConfig.EVERYTIME_SWEEP_PERIOD) {
             return true
@@ -74,7 +74,7 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*, *>, nodeId: NodeId, maxMessages: Int, maxIterations: Int): Int {
+    private fun rawSweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, maxMessages: Int, maxIterations: Int): Int {
         var totalMessages = 0
         var iterations = 0
 
@@ -98,7 +98,7 @@ object SweepHelper {
         return totalMessages
     }
 
-    private fun rawSweepOneIteration(connection: Connection, queue: Queue<*, *>, maxMessages: Int): Int {
+    private fun rawSweepOneIteration(connection: Connection, queue: Queue<*>, maxMessages: Int): Int {
         val deleteQuery = ConsumerSchemaHelpers.generateDeleteExpiredMessagesQuery(queue, maxMessages)
 
         val (execution, removedMessages) = TimeHelper.measure {

@@ -1,13 +1,8 @@
 package kolbasa.queue.meta
 
 import kolbasa.schema.Const
-import java.beans.Introspector
-import java.lang.reflect.Constructor
-import java.math.BigDecimal
-import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.staticFunctions
 import kotlin.reflect.full.valueParameters
 
@@ -20,6 +15,22 @@ internal object MetaHelpers {
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
         // add 'meta_' prefix
         return Const.META_FIELD_NAME_PREFIX + snakeCaseName
+    }
+
+    fun defineIndexType(searchable: FieldOption): MetaIndexType {
+        return when (searchable) {
+            FieldOption.UNIQUE_SEARCHABLE -> {
+                MetaIndexType.UNIQUE_INDEX
+            }
+
+            FieldOption.SEARCHABLE -> {
+                MetaIndexType.JUST_INDEX
+            }
+
+            FieldOption.NONE -> {
+                MetaIndexType.NO_INDEX
+            }
+        }
     }
 
     fun findEnumValueOfFunction(kClass: KClass<*>): KFunction<*>? {
@@ -37,44 +48,11 @@ internal object MetaHelpers {
         }
     }
 
-    fun <R> enumerateTypes(
-        type: KClass<*>,
-        string: () -> R,
-        long: () -> R,
-        int: () -> R,
-        short: () -> R,
-        byte: () -> R,
-        boolean: () -> R,
-        double: () -> R,
-        float: () -> R,
-        char: () -> R,
-        biginteger: () -> R,
-        bigdecimal: () -> R,
-        enum: () -> R
-    ): R {
-        return when {
-            type == String::class -> string()
-            type == Long::class -> long()
-            type == Int::class -> int()
-            type == Short::class -> short()
-            type == Byte::class -> byte()
-            type == Boolean::class -> boolean()
-            type == Double::class -> double()
-            type == Float::class -> float()
-            type == Char::class -> char()
-            type == BigInteger::class -> biginteger()
-            type == BigDecimal::class -> bigdecimal()
-            type.isSubclassOf(Enum::class) -> enum()
-            else -> error("Type $type not supported")
-        }
-    }
-
-    fun <T> findCanonicalRecordConstructor(recordClass: Class<T>): Constructor<T> {
-        val componentTypes = recordClass.recordComponents
-            .map { rc -> rc.type }
-            .toTypedArray()
-
-        return recordClass.getDeclaredConstructor(*componentTypes)
-    }
-
 }
+
+internal enum class MetaIndexType {
+    NO_INDEX,
+    JUST_INDEX,
+    UNIQUE_INDEX
+}
+

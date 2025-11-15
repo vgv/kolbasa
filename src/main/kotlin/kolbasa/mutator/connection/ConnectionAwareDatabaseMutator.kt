@@ -29,9 +29,9 @@ class ConnectionAwareDatabaseMutator internal constructor(
         mutatorOptions = mutatorOptions
     )
 
-    override fun <Data, Meta : Any> mutate(
+    override fun <Data> mutate(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
@@ -58,11 +58,11 @@ class ConnectionAwareDatabaseMutator internal constructor(
         return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = false, messages = mutatedMessages)
     }
 
-    override fun <Data, Meta : Any> mutate(
+    override fun <Data> mutate(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): MutateResult {
         if (mutations.isEmpty()) {
             return MutateResult(mutatedMessages = 0, truncated = false, emptyList())
@@ -116,9 +116,9 @@ class ConnectionAwareDatabaseMutator internal constructor(
         return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = truncated, mutatedMessages)
     }
 
-    private fun <Data, Meta : Any> internalMutateById(
+    private fun <Data> internalMutateById(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): Map<Id, MessageResult> {
@@ -154,11 +154,11 @@ class ConnectionAwareDatabaseMutator internal constructor(
         return mutateResult
     }
 
-    private fun <Data, Meta : Any> internalMutateByFilterOneIteration(
+    private fun <Data> internalMutateByFilterOneIteration(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        condition: Condition<Meta>,
+        condition: Condition,
         lastKnownId: Long,
         returnFullResponse: Boolean
     ): Res {

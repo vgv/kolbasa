@@ -1,7 +1,7 @@
 package kolbasa.queue
 
 import kolbasa.Kolbasa
-import kolbasa.queue.meta.MetaClass
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.stats.opentelemetry.EmptyQueueTracing
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
@@ -12,7 +12,7 @@ import kolbasa.stats.prometheus.metrics.EmptyQueueMetrics
 import kolbasa.stats.prometheus.metrics.PrometheusQueueMetrics
 import kolbasa.stats.prometheus.metrics.QueueMetrics
 
-data class Queue<Data, Meta : Any> @JvmOverloads constructor(
+data class Queue<Data> @JvmOverloads constructor(
     /**
      * Queue name. Must be unique.
      *
@@ -33,23 +33,21 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     val databaseDataType: DatabaseQueueDataType<Data>,
 
     /**
-     * Global queue options.
+     * Queue options.
      *
-     * Producers, consumers, send request and even particular message options can override global queue options. Read more
+     * Producers, consumers, send request and even particular message options can override queue options. Read more
      * details in [QueueOptions]
      */
     val options: QueueOptions? = null,
 
     /**
-     * Metadata class for queue.
+     * Metadata for a queue.
      *
      * Metadata is a set of fields that will be stored in the database along with the message. Each message has
-     * its own metadata values. Metadata is not required and can be null.
+     * its own metadata values. Metadata is not required and can be empty.
      * It's useful if you want to filter messages by some fields or sort by them.
-     *
-     * Now Kolbasa supports only Kotlin data classes, Java Record classes and Java Beans as metadata class.
      */
-    val metadata: Class<Meta>? = null
+    val metadata: Metadata = Metadata.EMPTY
 ) {
 
     init {
@@ -57,8 +55,6 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
     }
 
     internal val dbTableName = Const.QUEUE_TABLE_NAME_PREFIX + name
-
-    internal val metadataDescription: MetaClass<Meta>? = metadata?.let { MetaClass.of(metadata) }
 
     internal val queueMetrics: QueueMetrics by lazy {
         when (val config = Kolbasa.prometheusConfig) {
@@ -72,7 +68,7 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
         }
     }
 
-    internal val queueTracing: QueueTracing<Data, Meta> by lazy {
+    internal val queueTracing: QueueTracing<Data> by lazy {
         when (val config = Kolbasa.openTelemetryConfig) {
             // No OpenTelemetry config - no OT data collection/propagation
             is OpenTelemetryConfig.None -> EmptyQueueTracing()
@@ -88,32 +84,12 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
         private val databaseDataType: DatabaseQueueDataType<Data>,
     ) {
         private var options: QueueOptions? = null
+        private var metadata: Metadata = Metadata.EMPTY
 
         fun options(options: QueueOptions) = apply { this.options = options }
-        fun <Meta : Any> metadata(metadata: Class<Meta>): BuilderWithMeta<Data, Meta> {
-            // switch to another builder
-            val builderWithMeta = BuilderWithMeta<Data, Meta>(name, databaseDataType)
-            builderWithMeta.metadata(metadata)
-            this.options?.let { currentOptions ->
-                builderWithMeta.options(currentOptions)
-            }
-            return builderWithMeta
-        }
+        fun metadata(metadata: Metadata) = apply { this.metadata = metadata }
 
-        fun build(): Queue<Data, Unit> = Queue(name, databaseDataType, options, metadata = null)
-    }
-
-    class BuilderWithMeta<Data, Meta : Any> internal constructor(
-        private val name: String,
-        private val databaseDataType: DatabaseQueueDataType<Data>,
-    ) {
-        private var options: QueueOptions? = null
-        private var metadata: Class<Meta>? = null
-
-        fun options(options: QueueOptions) = apply { this.options = options }
-        fun metadata(metadata: Class<Meta>) = apply { this.metadata = metadata }
-
-        fun build(): Queue<Data, Meta> = Queue(name, databaseDataType, options, metadata)
+        fun build(): Queue<Data> = Queue(name, databaseDataType, options, metadata)
     }
 
     companion object {
@@ -124,7 +100,7 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
          * Creates a new queue with the given name and database data type.
          */
         @JvmStatic
-        fun <Data> of(name: String, databaseDataType: DatabaseQueueDataType<Data>): Queue<Data, Unit> {
+        fun <Data> of(name: String, databaseDataType: DatabaseQueueDataType<Data>): Queue<Data> {
             return builder(name, databaseDataType).build()
         }
 
@@ -132,11 +108,11 @@ data class Queue<Data, Meta : Any> @JvmOverloads constructor(
          * Creates a new queue with the given name, database data type and metadata class.
          */
         @JvmStatic
-        fun <Data, Meta : Any> of(
+        fun <Data> of(
             name: String,
             databaseDataType: DatabaseQueueDataType<Data>,
-            metadata: Class<Meta>
-        ): Queue<Data, Meta> {
+            metadata: Metadata
+        ): Queue<Data> {
             return builder(name, databaseDataType)
                 .metadata(metadata)
                 .build()

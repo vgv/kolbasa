@@ -31,7 +31,7 @@ interface Producer {
      * @param data message to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, data: Data): SendResult<Data, Meta> {
+    fun <Data> send(queue: Queue<Data>, data: Data): SendResult<Data> {
         return send(queue, SendMessage(data = data))
     }
 
@@ -42,7 +42,7 @@ interface Producer {
      * @param data message to send
      * @return [CompletableFuture] of the [SendResult]
      */
-    fun <Data, Meta : Any> sendAsync(queue: Queue<Data, Meta>, data: Data): CompletableFuture<SendResult<Data, Meta>> {
+    fun <Data> sendAsync(queue: Queue<Data>, data: Data): CompletableFuture<SendResult<Data>> {
         return sendAsync(queue, SendMessage(data = data))
     }
 
@@ -53,7 +53,7 @@ interface Producer {
      * @param message data, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, message: SendMessage<Data, Meta>): SendResult<Data, Meta> {
+    fun <Data> send(queue: Queue<Data>, message: SendMessage<Data>): SendResult<Data> {
         return send(queue, listOf(message))
     }
 
@@ -64,10 +64,10 @@ interface Producer {
      * @param message data, metadata (if any) and options (if any) to send
      * @return [CompletableFuture] of the [SendResult]
      */
-    fun <Data, Meta : Any> sendAsync(
-        queue: Queue<Data, Meta>,
-        message: SendMessage<Data, Meta>
-    ): CompletableFuture<SendResult<Data, Meta>> {
+    fun <Data> sendAsync(
+        queue: Queue<Data>,
+        message: SendMessage<Data>
+    ): CompletableFuture<SendResult<Data>> {
         return sendAsync(queue, listOf(message))
     }
 
@@ -80,7 +80,7 @@ interface Producer {
      * @param messages list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, messages: List<SendMessage<Data, Meta>>): SendResult<Data, Meta> {
+    fun <Data> send(queue: Queue<Data>, messages: List<SendMessage<Data>>): SendResult<Data> {
         return send(queue, SendRequest(data = messages))
     }
 
@@ -93,10 +93,10 @@ interface Producer {
      * @param messages list of messages, metadata (if any) and options (if any) to send
      * @return [CompletableFuture] of the [SendResult]
      */
-    fun <Data, Meta : Any> sendAsync(
-        queue: Queue<Data, Meta>,
-        messages: List<SendMessage<Data, Meta>>
-    ): CompletableFuture<SendResult<Data, Meta>> {
+    fun <Data> sendAsync(
+        queue: Queue<Data>,
+        messages: List<SendMessage<Data>>
+    ): CompletableFuture<SendResult<Data>> {
         return sendAsync(queue, SendRequest(data = messages))
     }
 
@@ -110,7 +110,7 @@ interface Producer {
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta>
+    fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data>
 
     /**
      * Sends many messages with optional metadata and [kolbasa.producer.MessageOptions] defined for every message and
@@ -122,9 +122,9 @@ interface Producer {
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [CompletableFuture] of the [SendResult]
      */
-    fun <Data, Meta : Any> sendAsync(
-        queue: Queue<Data, Meta>,
-        request: SendRequest<Data, Meta>
-    ): CompletableFuture<SendResult<Data, Meta>>
+    fun <Data> sendAsync(
+        queue: Queue<Data>,
+        request: SendRequest<Data>
+    ): CompletableFuture<SendResult<Data>>
 
 }

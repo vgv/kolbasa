@@ -4,6 +4,8 @@ import kolbasa.cluster.Shards
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.MetaValue
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
@@ -16,11 +18,11 @@ import java.sql.Types
 
 internal object ConsumerSchemaHelpers {
 
-    fun <Meta : Any> generateSelectPreparedQuery(
-        queue: Queue<*, Meta>,
+    fun generateSelectPreparedQuery(
+        queue: Queue<*>,
         consumerOptions: ConsumerOptions,
         shards: Shards,
-        receiveOptions: ReceiveOptions<Meta>,
+        receiveOptions: ReceiveOptions,
         limit: Int
     ): String {
         // Columns to read from database
@@ -35,7 +37,7 @@ internal object ConsumerSchemaHelpers {
         )
         // if we need metadata - we need to read these fields
         if (receiveOptions.readMetadata) {
-            queue.metadataDescription?.fields?.forEach { metaField ->
+            queue.metadata.fields.forEach { metaField ->
                 dataColumns += metaField.dbColumnName
             }
         }
@@ -69,7 +71,7 @@ internal object ConsumerSchemaHelpers {
         // custom ordering clauses first, if any
         receiveOptions.order?.forEach { order ->
             orderByClauses += order.dbOrderClause
-            sortColumns += order.dbColumnName
+            sortColumns += order.field.dbColumnName
         }
         // after custom clauses – standard
         orderByClauses += Const.SCHEDULED_AT_COLUMN_NAME
@@ -107,10 +109,10 @@ internal object ConsumerSchemaHelpers {
         """.trimIndent()
     }
 
-    fun <Meta : Any> fillSelectPreparedQuery(
-        queue: Queue<*, Meta>,
+    fun fillSelectPreparedQuery(
+        queue: Queue<*>,
         consumerOptions: ConsumerOptions,
-        receiveOptions: ReceiveOptions<Meta>,
+        receiveOptions: ReceiveOptions,
         preparedStatement: PreparedStatement
     ) {
         val columnIndex = ColumnIndex()
@@ -126,12 +128,12 @@ internal object ConsumerSchemaHelpers {
         }
     }
 
-    fun <Data, Meta : Any> read(
-        queue: Queue<Data, Meta>,
-        receiveOptions: ReceiveOptions<Meta>,
+    fun <Data> read(
+        queue: Queue<Data>,
+        receiveOptions: ReceiveOptions,
         resultSet: ResultSet,
         approxBytesCounter: BytesCounter
-    ): Message<Data, Meta> {
+    ): Message<Data> {
         var columnIndex = 1
 
         val localId = resultSet.getLong(columnIndex++)
@@ -171,22 +173,19 @@ internal object ConsumerSchemaHelpers {
             }
         }
 
-        val meta = if (receiveOptions.readMetadata && queue.metadataDescription != null) {
-            var atLeastOneValueIsNotNull = false
+        val meta = if (receiveOptions.readMetadata && queue.metadata.fields.isNotEmpty()) {
+            val metaValues = mutableListOf<MetaValue<*>>()
 
-            val metaValues = Array(queue.metadataDescription.fields.size) { index ->
-                val field = queue.metadataDescription.fields[index]
-                val fieldValue = field.readResultSet(resultSet, columnIndex++)
-                if (fieldValue != null) atLeastOneValueIsNotNull = true
-                return@Array fieldValue
+            queue.metadata.fields.forEach { metaField ->
+                val metaValue = metaField.readValue(resultSet, columnIndex++)
+                if (metaValue != null) {
+                    metaValues += metaValue
+                }
             }
 
-            if (atLeastOneValueIsNotNull)
-                queue.metadataDescription.createInstance(metaValues)
-            else
-                null
+            MetaValues.of(metaValues)
         } else {
-            null
+            MetaValues.EMPTY
         }
 
         val otData = if (receiveOptions.readOpenTelemetryData) {
@@ -212,7 +211,7 @@ internal object ConsumerSchemaHelpers {
         return message
     }
 
-    fun generateDeleteQuery(queue: Queue<*, *>, ids: List<Id>): String {
+    fun generateDeleteQuery(queue: Queue<*>, ids: List<Id>): String {
         check(ids.isNotEmpty()) {
             "ID list must not be empty"
         }
@@ -228,7 +227,7 @@ internal object ConsumerSchemaHelpers {
         """
     }
 
-    fun generateDeleteExpiredMessagesQuery(queue: Queue<*, *>, limit: Int): String {
+    fun generateDeleteExpiredMessagesQuery(queue: Queue<*>, limit: Int): String {
         return """
             delete from
                 ${queue.dbTableName}

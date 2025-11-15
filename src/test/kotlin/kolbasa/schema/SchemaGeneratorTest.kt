@@ -3,27 +3,23 @@ package kolbasa.schema
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class SchemaGeneratorTest: AbstractPostgresqlTest() {
+class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
-    data class TestMeta(
-        @Searchable
-        val first: Int,
+    private val FIRST = MetaField.int("first", FieldOption.SEARCHABLE)
+    private val SECOND = MetaField.long("second", FieldOption.UNIQUE_SEARCHABLE)
+    private val THIRD = MetaField.string("third")
 
-        @Searchable
-        @Unique
-        val second: Long,
-
-        val third: String
+    private val queue = Queue.of(
+        "test_queue",
+        PredefinedDataTypes.String,
+        metadata = Metadata.of(FIRST, SECOND, THIRD)
     )
-
-    private val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = TestMeta::class.java)
 
     @Test
     fun testExtractSchema_CheckStatementsAreEqualIfNoTablesAtAll() {

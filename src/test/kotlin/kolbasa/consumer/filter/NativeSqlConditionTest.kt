@@ -4,7 +4,9 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.Metadata
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
@@ -13,9 +15,9 @@ import kotlin.test.assertEquals
 class NativeSqlConditionTest {
     @Test
     fun testToSql() {
-        val nativeExpression = NativeSqlCondition<TestMeta>(
+        val nativeExpression = NativeSqlCondition(
             sqlPattern = "({0} like ''a%'') or ({0} like ''b%'') and {1} is null and {2} is null",
-            fieldNames = listOf(TestMeta::stringValue.name, TestMeta::intValue.name, TestMeta::stringValue.name)
+            fields = arrayOf(STRING_VALUE, INT_VALUE, STRING_VALUE)
         )
 
         val sql = nativeExpression.toSqlClause(queue)
@@ -27,9 +29,9 @@ class NativeSqlConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val nativeExpression = NativeSqlCondition<TestMeta>(
+        val nativeExpression = NativeSqlCondition(
             sqlPattern = "{0} is null",
-            fieldNames = listOf(TestMeta::stringValue.name)
+            fields = arrayOf(STRING_VALUE)
         )
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -43,15 +45,13 @@ class NativeSqlConditionTest {
     }
 
     companion object {
-        data class TestMeta(
-            @Searchable val intValue: Int,
-            @Searchable val stringValue: String
-        )
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
+        private val STRING_VALUE = MetaField.string("string_value", FieldOption.SEARCHABLE)
 
         val queue = Queue.of(
             "test_queue",
             databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = TestMeta::class.java
+            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
         )
     }
 }

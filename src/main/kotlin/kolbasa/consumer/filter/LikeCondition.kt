@@ -1,7 +1,9 @@
 package kolbasa.consumer.filter
 
-internal class LikeCondition<Meta : Any>(fieldName: String, value: String) :
-    AbstractOneValueCondition<Meta, String>(fieldName, value) {
+import kolbasa.queue.meta.MetaField
+
+internal class LikeCondition(field: MetaField<String>, value: String) :
+    AbstractOneValueCondition<String>(field, value) {
 
     override val operator = "like"
 

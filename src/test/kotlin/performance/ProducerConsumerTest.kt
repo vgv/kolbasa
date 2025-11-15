@@ -46,7 +46,7 @@ class ProducerConsumerTest : PerformanceTest {
                         TimeUnit.MILLISECONDS.sleep(100)
                     } else {
                         val data = (1..Env.pcSendSize).map {
-                            SendMessage<ByteArray, Unit>(randomData.random())
+                            SendMessage(randomData.random())
                         }
 
                         val result = producer.send(queue, data)

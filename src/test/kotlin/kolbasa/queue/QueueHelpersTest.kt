@@ -139,7 +139,7 @@ internal class QueueHelpersTest {
         run {
             val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
             val options = QueueOptions(defaultVisibilityTimeout = timeout)
-            val receiveOptions = ReceiveOptions<Any>()
+            val receiveOptions = ReceiveOptions()
             assertEquals(timeout, QueueHelpers.calculateVisibilityTimeout(options, null, receiveOptions))
         }
 
@@ -149,7 +149,7 @@ internal class QueueHelpersTest {
             val receiveTimeout = Duration.ofMillis(Random.nextLong(30_000, 1_000_000_000))
             val options = QueueOptions(defaultVisibilityTimeout = timeout)
             val consumerOptions = ConsumerOptions(visibilityTimeout = consumerTimeout)
-            val receiveOptions = ReceiveOptions<Any>(visibilityTimeout = receiveTimeout)
+            val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
             assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
                 options,
                 consumerOptions,
@@ -160,7 +160,7 @@ internal class QueueHelpersTest {
         run {
             val receiveTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val options = QueueOptions()
-            val receiveOptions = ReceiveOptions<Any>(visibilityTimeout = receiveTimeout)
+            val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
             assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
                 options,
                 null,
@@ -170,7 +170,7 @@ internal class QueueHelpersTest {
 
         run {
             val receiveTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val receiveOptions = ReceiveOptions<Any>(visibilityTimeout = receiveTimeout)
+            val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
             assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(null, null, receiveOptions))
         }
     }

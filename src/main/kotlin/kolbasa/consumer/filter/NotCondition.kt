@@ -4,14 +4,14 @@ import kolbasa.queue.Queue
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal data class NotCondition<Meta : Any>(val condition: Condition<Meta>) : Condition<Meta>() {
+internal data class NotCondition(val condition: Condition) : Condition() {
 
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
+    override fun internalToSqlClause(queue: Queue<*>): String {
         return "not (${condition.toSqlClause(queue)})"
     }
 
     override fun internalFillPreparedQuery(
-        queue: Queue<*, Meta>,
+        queue: Queue<*>,
         preparedStatement: PreparedStatement,
         columnIndex: ColumnIndex
     ) {

@@ -8,17 +8,17 @@ import kolbasa.producer.SendRequest
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-fun main() {
-    // User-defined class to store meta-information
-    data class Metadata(
-        @Unique val userId: Int
-    )
+private val USER_ID = MetaField.int("user_id", FieldOption.UNIQUE_SEARCHABLE)
 
+fun main() {
     // Define queue with name `test_queue`, varchar type as data storage and metadata
-    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata.of(USER_ID))
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -44,11 +44,11 @@ fun main() {
     val producer = DatabaseProducer(dataSource)
     val messagesToSend = (1..10).map { index ->
         val userId = index % 5
-        SendMessage("Message $index, userId=$userId", Metadata(userId))
+        SendMessage("Message $index, userId=$userId", MetaValues.of(USER_ID.value(userId)))
     }
     producer.send(
         queue = queue,
-        request = SendRequest<String, Metadata>(
+        request = SendRequest(
             data = messagesToSend,
             sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
         )

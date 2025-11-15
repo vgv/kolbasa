@@ -5,54 +5,54 @@ import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 
-internal class SendRequestAttributesGetter<Data, Meta : Any>(private val queueName: String) :
-    MessagingAttributesGetter<SendRequest<Data, Meta>, SendResult<Data, Meta>> {
+internal class SendRequestAttributesGetter<Data>(private val queueName: String) :
+    MessagingAttributesGetter<SendRequest<Data>, SendResult<Data>> {
 
-    override fun getSystem(request: SendRequest<Data, Meta>?): String {
+    override fun getSystem(request: SendRequest<Data>?): String {
         return "kolbasa"
     }
 
-    override fun getDestination(request: SendRequest<Data, Meta>?): String {
+    override fun getDestination(request: SendRequest<Data>?): String {
         return queueName
     }
 
-    override fun isTemporaryDestination(request: SendRequest<Data, Meta>?): Boolean {
+    override fun isTemporaryDestination(request: SendRequest<Data>?): Boolean {
         return false
     }
 
-    override fun getConversationId(request: SendRequest<Data, Meta>?): String? {
+    override fun getConversationId(request: SendRequest<Data>?): String? {
         return null
     }
 
-    override fun getMessageId(request: SendRequest<Data, Meta>?, response: SendResult<Data, Meta>?): String? {
+    override fun getMessageId(request: SendRequest<Data>?, response: SendResult<Data>?): String? {
         return null
     }
 
-    override fun getMessageHeader(request: SendRequest<Data, Meta>?, name: String?): MutableList<String> {
+    override fun getMessageHeader(request: SendRequest<Data>?, name: String?): MutableList<String> {
         return super.getMessageHeader(request, name)
     }
 
-    override fun getDestinationTemplate(request: SendRequest<Data, Meta>?): String? {
+    override fun getDestinationTemplate(request: SendRequest<Data>?): String? {
         return null
     }
 
-    override fun isAnonymousDestination(request: SendRequest<Data, Meta>?): Boolean {
+    override fun isAnonymousDestination(request: SendRequest<Data>?): Boolean {
         return false
     }
 
-    override fun getMessageBodySize(request: SendRequest<Data, Meta>?): Long? {
+    override fun getMessageBodySize(request: SendRequest<Data>?): Long? {
         return null
     }
 
-    override fun getMessageEnvelopeSize(request: SendRequest<Data, Meta>?): Long? {
+    override fun getMessageEnvelopeSize(request: SendRequest<Data>?): Long? {
         return null
     }
 
-    override fun getClientId(request: SendRequest<Data, Meta>?): String? {
+    override fun getClientId(request: SendRequest<Data>?): String? {
         return null
     }
 
-    override fun getBatchMessageCount(request: SendRequest<Data, Meta>, response: SendResult<Data, Meta>?): Long? {
+    override fun getBatchMessageCount(request: SendRequest<Data>, response: SendResult<Data>?): Long? {
         return if (request.data.size > 1) {
             request.data.size.toLong()
         } else {
@@ -61,26 +61,26 @@ internal class SendRequestAttributesGetter<Data, Meta : Any>(private val queueNa
     }
 }
 
-internal class ConsumerResponseAttributesGetter<Data, Meta : Any>(private val queueName: String) :
-    MessagingAttributesGetter<List<Message<Data, Meta>>, Unit> {
+internal class ConsumerResponseAttributesGetter<Data>(private val queueName: String) :
+    MessagingAttributesGetter<List<Message<Data>>, Unit> {
 
-    override fun getSystem(request: List<Message<Data, Meta>>?): String {
+    override fun getSystem(request: List<Message<Data>>?): String {
         return "kolbasa"
     }
 
-    override fun getDestination(request: List<Message<Data, Meta>>?): String {
+    override fun getDestination(request: List<Message<Data>>?): String {
         return queueName
     }
 
-    override fun isTemporaryDestination(request: List<Message<Data, Meta>>?): Boolean {
+    override fun isTemporaryDestination(request: List<Message<Data>>?): Boolean {
         return false
     }
 
-    override fun getConversationId(request: List<Message<Data, Meta>>?): String? {
+    override fun getConversationId(request: List<Message<Data>>?): String? {
         return null
     }
 
-    override fun getMessageId(request: List<Message<Data, Meta>>, response: Unit?): String? {
+    override fun getMessageId(request: List<Message<Data>>, response: Unit?): String? {
         return if (request.size == 1) {
             request[0].id.toString()
         } else {
@@ -88,7 +88,7 @@ internal class ConsumerResponseAttributesGetter<Data, Meta : Any>(private val qu
         }
     }
 
-    override fun getMessageHeader(request: List<Message<Data, Meta>>?, name: String?): List<String> {
+    override fun getMessageHeader(request: List<Message<Data>>?, name: String?): List<String> {
         if (request == null || name == null) {
             return emptyList()
         }
@@ -96,27 +96,27 @@ internal class ConsumerResponseAttributesGetter<Data, Meta : Any>(private val qu
         return request.mapNotNull { it.openTelemetryData?.get(name) }
     }
 
-    override fun getDestinationTemplate(request: List<Message<Data, Meta>>?): String? {
+    override fun getDestinationTemplate(request: List<Message<Data>>?): String? {
         return null
     }
 
-    override fun isAnonymousDestination(request: List<Message<Data, Meta>>?): Boolean {
+    override fun isAnonymousDestination(request: List<Message<Data>>?): Boolean {
         return false
     }
 
-    override fun getMessageBodySize(request: List<Message<Data, Meta>>?): Long? {
+    override fun getMessageBodySize(request: List<Message<Data>>?): Long? {
         return null
     }
 
-    override fun getMessageEnvelopeSize(request: List<Message<Data, Meta>>?): Long? {
+    override fun getMessageEnvelopeSize(request: List<Message<Data>>?): Long? {
         return null
     }
 
-    override fun getClientId(request: List<Message<Data, Meta>>?): String? {
+    override fun getClientId(request: List<Message<Data>>?): String? {
         return null
     }
 
-    override fun getBatchMessageCount(request: List<Message<Data, Meta>>, response: Unit?): Long? {
+    override fun getBatchMessageCount(request: List<Message<Data>>, response: Unit?): Long? {
         return if (request.size > 1) {
             return request.size.toLong()
         } else {

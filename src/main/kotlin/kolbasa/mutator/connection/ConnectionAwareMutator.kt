@@ -80,9 +80,9 @@ interface ConnectionAwareMutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> addRemainingAttempts(
+    fun <Data> addRemainingAttempts(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         delta: Int,
         message: Id
     ): MutateResult {
@@ -100,9 +100,9 @@ interface ConnectionAwareMutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> setRemainingAttempts(
+    fun <Data> setRemainingAttempts(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         newValue: Int,
         message: Id
     ): MutateResult {
@@ -120,9 +120,9 @@ interface ConnectionAwareMutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> addScheduledAt(
+    fun <Data> addScheduledAt(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         delta: Duration,
         message: Id
     ): MutateResult {
@@ -140,9 +140,9 @@ interface ConnectionAwareMutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> setScheduledAt(
+    fun <Data> setScheduledAt(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         newValue: Duration,
         message: Id
     ): MutateResult {
@@ -160,9 +160,9 @@ interface ConnectionAwareMutator {
      * @param messages messages identifiers
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> mutate(
+    fun <Data> mutate(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult
@@ -189,11 +189,11 @@ interface ConnectionAwareMutator {
      * @param filter custom, user-defined filter to mutate only specific messages in the queue
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> mutate(
+    fun <Data> mutate(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): MutateResult
 
 }

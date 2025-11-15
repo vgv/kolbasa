@@ -31,7 +31,7 @@ fun main() {
     val seconds = 5L
     println("Send a message with a $seconds-second initial delay")
     val producer = DatabaseProducer(dataSource)
-    val sendMessage = SendMessage<String, Unit>(
+    val sendMessage = SendMessage(
         data = "Test message",
         messageOptions = MessageOptions(delay = Duration.ofSeconds(seconds))
     )

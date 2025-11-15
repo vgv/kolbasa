@@ -7,11 +7,11 @@ class SendResultTest {
 
     @Test
     fun test_OnlyFunctions() {
-        val first = SendMessage("1", null, null)
-        val second1 = SendMessage("2-1", null, null)
-        val second2 = SendMessage("2-2", null, null)
-        val third = SendMessage("3", null, null)
-        val fourth = SendMessage("4", null, null)
+        val first = SendMessage("1")
+        val second1 = SendMessage("2-1")
+        val second2 = SendMessage("2-2")
+        val third = SendMessage("3")
+        val fourth = SendMessage("4")
 
         val firstResult = MessageResult.Success(Id(1, 1), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))
@@ -30,10 +30,10 @@ class SendResultTest {
 
     @Test
     fun testGatherFailedMessages() {
-        val first = SendMessage("1", null, null)
-        val second1 = SendMessage("2-1", null, null)
-        val second2 = SendMessage("2-2", null, null)
-        val third = SendMessage("3", null, null)
+        val first = SendMessage("1")
+        val second1 = SendMessage("2-1")
+        val second2 = SendMessage("2-2")
+        val third = SendMessage("3")
 
         val firstResult = MessageResult.Success(Id(1, 1), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))

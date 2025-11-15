@@ -5,23 +5,17 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class InCondition<Meta : Any, T>(
-    private val fieldName: String,
+internal class InCondition<T>(
+    private val field: MetaField<T>,
     private val values: Collection<T>
-) : Condition<Meta>() {
+) : Condition() {
 
-    private lateinit var field: MetaField<Meta>
-
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
-        if (!::field.isInitialized) {
-            field = findField(fieldName)
-        }
-
+    override fun internalToSqlClause(queue: Queue<*>): String {
         return "${field.dbColumnName} = ANY (?)"
     }
 
     override fun internalFillPreparedQuery(
-        queue: Queue<*, Meta>,
+        queue: Queue<*>,
         preparedStatement: PreparedStatement,
         columnIndex: ColumnIndex
     ) {

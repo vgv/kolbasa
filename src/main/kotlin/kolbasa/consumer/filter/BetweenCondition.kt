@@ -5,22 +5,16 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class BetweenCondition<Meta : Any, T>(
-    private val fieldName: String,
+internal class BetweenCondition<T>(
+    private val field: MetaField<T>,
     private val value: Pair<T, T>
-) : Condition<Meta>() {
+) : Condition() {
 
-    private lateinit var field: MetaField<Meta>
-
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
-        if (!::field.isInitialized) {
-            field = findField(fieldName)
-        }
-
+    override fun internalToSqlClause(queue: Queue<*>): String {
         return "${field.dbColumnName} between ? and ?"
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), value.first)
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), value.second)
     }

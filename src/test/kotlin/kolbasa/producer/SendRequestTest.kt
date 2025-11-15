@@ -9,7 +9,7 @@ class SendRequestTest {
     @Test
     fun testChunked() {
         val messages = (1..100).map { index ->
-            SendMessage<Int, Unit>(index)
+            SendMessage(index)
         }
 
         val sendRequest = SendRequest(messages, SendOptions())
@@ -26,7 +26,7 @@ class SendRequestTest {
     @Test
     fun testChunked_CheckOptimized() {
         val messages = (1..100).map { index ->
-            SendMessage<Int, Unit>(index)
+            SendMessage(index)
         }
         val sendOptions = SendOptions()
 

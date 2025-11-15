@@ -12,11 +12,11 @@ import javax.sql.DataSource
 
 class Cluster @JvmOverloads constructor(
     private val dataSources: () -> List<DataSource>,
-    private val queues: List<Queue<*, *>> = emptyList(),
+    private val queues: List<Queue<*>> = emptyList(),
 ) {
 
     @JvmOverloads
-    constructor(dataSources: List<DataSource>, queues: List<Queue<*, *>> = emptyList()) : this({ dataSources }, queues)
+    constructor(dataSources: List<DataSource>, queues: List<Queue<*>> = emptyList()) : this({ dataSources }, queues)
 
     @Volatile
     private var state: ClusterState = ClusterState.NOT_INITIALIZED

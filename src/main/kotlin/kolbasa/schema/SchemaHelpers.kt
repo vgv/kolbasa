@@ -10,7 +10,7 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>): Map<Queue<*, *>, Schema> {
+    fun generateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
         val node = IdSchema.readNodeInfo(dataSource)
         val idRange = if (node != null) {
             // This server is a part of a clustered environment, currently or in the past
@@ -33,7 +33,7 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>): Map<Queue<*, *>, Schema> {
+    fun generateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*>): Map<Queue<*>, Schema> {
         return generateDatabaseSchema(dataSource, queues.toList())
     }
 
@@ -53,7 +53,7 @@ object SchemaHelpers {
      * making the correct data migration for each of the above cases
      */
     @JvmStatic
-    fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*, *>>) {
+    fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*>>) {
         generateDatabaseSchema(dataSource, queues).forEach { (_, schema) ->
             // we execute only required statements
             executeSchemaStatements(dataSource, schema.required)
@@ -66,7 +66,7 @@ object SchemaHelpers {
      * See [updateDatabaseSchema] for more details
      */
     @JvmStatic
-    fun updateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*, *>) {
+    fun updateDatabaseSchema(dataSource: DataSource, vararg queues: Queue<*>) {
         updateDatabaseSchema(dataSource, queues.toList())
     }
 
