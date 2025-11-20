@@ -15,6 +15,7 @@ import kolbasa.consumer.filter.Filter.or
 import kolbasa.consumer.filter.Filter.isNull
 import kolbasa.consumer.filter.Filter.nativeSql
 import kolbasa.consumer.filter.Filter.not
+import kolbasa.queue.meta.MetaField
 import org.junit.jupiter.api.Test
 import kotlin.test.assertIs
 
@@ -22,78 +23,78 @@ internal class FilterTest {
 
     @Test
     fun testEq() {
-        assertIs<EqCondition<*, *>>(TestMeta::strValue eq "local")
+        assertIs<EqCondition<*>>(STR_FIELD eq "local")
     }
 
     @Test
     fun testNeq() {
-        assertIs<NeqCondition<*, *>>(TestMeta::strValue neq "local")
+        assertIs<NeqCondition<*>>(STR_FIELD neq "local")
     }
 
     @Test
     fun testGreater() {
-        assertIs<GreaterThanCondition<*, *>>(TestMeta::strValue greater "local")
+        assertIs<GreaterThanCondition<*>>(STR_FIELD greater "local")
     }
 
     @Test
     fun testGreaterEq() {
-        assertIs<GreaterThanOrEqCondition<*, *>>(TestMeta::strValue greaterEq "local")
+        assertIs<GreaterThanOrEqCondition< *>>(STR_FIELD greaterEq "local")
     }
 
     @Test
     fun testLess() {
-        assertIs<LessThanCondition<*, *>>(TestMeta::strValue less "local")
+        assertIs<LessThanCondition<*>>(STR_FIELD less "local")
     }
 
     @Test
     fun testLessEq() {
-        assertIs<LessThanOrEqCondition<*, *>>(TestMeta::strValue lessEq "local")
+        assertIs<LessThanOrEqCondition<*>>(STR_FIELD lessEq "local")
     }
 
     @Test
     fun testBetween() {
-        assertIs<BetweenCondition<*, *>>(TestMeta::strValue between Pair("a", "b"))
+        assertIs<BetweenCondition<*>>(STR_FIELD between Pair("a", "b"))
     }
 
     @Test
     fun testLike() {
-        assertIs<LikeCondition<*>>(TestMeta::strValue like "asd")
+        assertIs<LikeCondition>(STR_FIELD like "asd")
     }
 
     @Test
     fun testAnd() {
-        assertIs<AndCondition<*>>((TestMeta::strValue eq "123") and (TestMeta::strValue neq "2234"))
+        assertIs<AndCondition>((STR_FIELD eq "123") and (STR_FIELD neq "2234"))
     }
 
     @Test
     fun testOr() {
-        assertIs<OrCondition<*>>((TestMeta::strValue eq "123") or (TestMeta::strValue neq "2234"))
+        assertIs<OrCondition>((STR_FIELD eq "123") or (STR_FIELD neq "2234"))
     }
 
     @Test
     fun testIsNull() {
-        assertIs<IsNullCondition<*>>(isNull(TestMeta::strValue))
+        assertIs<IsNullCondition>(isNull(STR_FIELD))
     }
 
     @Test
     fun testIsNotNull() {
-        assertIs<IsNotNullCondition<*>>(isNotNull(TestMeta::strValue))
+        assertIs<IsNotNullCondition>(isNotNull(STR_FIELD))
     }
 
     @Test
     fun testNot() {
-        assertIs<NotCondition<*>>(not(TestMeta::strValue eq "123"))
+        assertIs<NotCondition>(not(STR_FIELD eq "123"))
     }
 
     @Test
     fun testIn() {
-        assertIs<InCondition<*, *>>(TestMeta::strValue `in` listOf("local"))
+        assertIs<InCondition<*>>(STR_FIELD `in` listOf("local"))
     }
 
     @Test
     fun testNativeSql() {
-        assertIs<NativeSqlCondition<*>>(nativeSql("{0} like '%asd%'", TestMeta::strValue))
+        assertIs<NativeSqlCondition>(nativeSql("{0} like '%asd%'", STR_FIELD))
     }
 }
 
-private data class TestMeta(val strValue: String?)
+private val STR_FIELD = MetaField.string("str_value")

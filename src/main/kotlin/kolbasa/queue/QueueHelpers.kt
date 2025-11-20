@@ -32,7 +32,7 @@ internal object QueueHelpers {
     fun calculateVisibilityTimeout(
         queueOptions: QueueOptions?,
         consumerOptions: ConsumerOptions?,
-        receiveOptions: ReceiveOptions<*>?
+        receiveOptions: ReceiveOptions?
     ): Duration {
         var timeout = queueOptions?.defaultVisibilityTimeout ?: QueueOptions.DEFAULT_VISIBILITY_TIMEOUT
 

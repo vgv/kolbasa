@@ -1,18 +1,23 @@
 package kolbasa.queue
 
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.Metadata
 import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class QueueTest {
 
+    private val USER_ID = MetaField.int("user_id")
+    private val NAME = MetaField.string("name")
+
     @Test
     fun testBuilders_WithoutMetadata_WithoutOptions() {
-        val actual = Queue<String, Unit>(
+        val actual = Queue(
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
             options = null,
-            metadata = null
+            metadata = Metadata.EMPTY
         )
 
         val expectedBuilder = Queue.builder("1", PredefinedDataTypes.String).build()
@@ -28,13 +33,13 @@ class QueueTest {
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
             options = null,
-            metadata = TestMeta::class.java
+            metadata = Metadata.of(USER_ID, NAME)
         )
 
         val expectedBuilder = Queue.builder("1", PredefinedDataTypes.String)
-            .metadata(TestMeta::class.java)
+            .metadata(Metadata.of(USER_ID, NAME))
             .build()
-        val expectedOf = Queue.of("1", PredefinedDataTypes.String, TestMeta::class.java)
+        val expectedOf = Queue.of("1", PredefinedDataTypes.String, Metadata.of(USER_ID, NAME))
 
         assertEquals(expectedBuilder, actual)
         assertEquals(expectedOf, actual)
@@ -42,11 +47,11 @@ class QueueTest {
 
     @Test
     fun testBuilders_WithOptions() {
-        val actual = Queue<String, Unit>(
+        val actual = Queue(
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
             options = QueueOptions(Duration.ofSeconds(10), 42, Duration.ofHours(2)),
-            metadata = null
+            metadata = Metadata.EMPTY
         )
 
         val expected = Queue.builder("1", PredefinedDataTypes.String)
@@ -62,11 +67,11 @@ class QueueTest {
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
             options = QueueOptions(Duration.ofSeconds(10), 42, Duration.ofHours(2)),
-            metadata = TestMeta::class.java
+            metadata = Metadata.of(USER_ID, NAME)
         )
 
         val expected = Queue.builder("1", PredefinedDataTypes.String)
-            .metadata(TestMeta::class.java)
+            .metadata(Metadata.of(USER_ID, NAME))
             .options(QueueOptions(Duration.ofSeconds(10), 42, Duration.ofHours(2)))
             .build()
 
@@ -74,5 +79,3 @@ class QueueTest {
     }
 
 }
-
-private class TestMeta(val userId: Int, val name: String)

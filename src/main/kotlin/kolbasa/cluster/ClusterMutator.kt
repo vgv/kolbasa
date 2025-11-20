@@ -20,8 +20,8 @@ class ClusterMutator(
     private val mutatorOptions: MutatorOptions = MutatorOptions()
 ) : Mutator {
 
-    override fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
@@ -51,10 +51,10 @@ class ClusterMutator(
         )
     }
 
-    override fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): MutateResult {
         val latestState = cluster.getState()
 
@@ -88,8 +88,8 @@ class ClusterMutator(
         )
     }
 
-    override fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
@@ -102,10 +102,10 @@ class ClusterMutator(
         return CompletableFuture.supplyAsync({ mutate(queue, mutations, messages) }, executor)
     }
 
-    override fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(

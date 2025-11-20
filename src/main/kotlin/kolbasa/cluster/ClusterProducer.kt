@@ -16,7 +16,7 @@ class ClusterProducer(
     private val producerOptions: ProducerOptions = ProducerOptions()
 ) : Producer {
 
-    override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+    override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
             sendOptions = request.sendOptions,
             producerOptions = producerOptions,
@@ -32,10 +32,7 @@ class ClusterProducer(
         return producer.send(queue, request)
     }
 
-    override fun <Data, Meta : Any> sendAsync(
-        queue: Queue<Data, Meta>,
-        request: SendRequest<Data, Meta>
-    ): CompletableFuture<SendResult<Data, Meta>> {
+    override fun <Data> sendAsync(queue: Queue<Data>, request: SendRequest<Data>): CompletableFuture<SendResult<Data>> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
             customExecutor = producerOptions.asyncExecutor,

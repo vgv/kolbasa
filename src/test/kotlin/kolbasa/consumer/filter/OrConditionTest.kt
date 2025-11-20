@@ -1,6 +1,8 @@
 package kolbasa.consumer.filter
 
-import io.mockk.*
+import io.mockk.confirmVerified
+import io.mockk.mockk
+import io.mockk.verifySequence
 import kolbasa.queue.Queue
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Test
@@ -44,11 +46,11 @@ internal class OrConditionTest {
 
     @Test
     internal fun testFillPreparedQuery() {
-        val firstCondition = mockk<Condition<String>>(relaxed = true)
-        val secondCondition = mockk<Condition<String>>(relaxed = true)
-        val thirdCondition = mockk<Condition<String>>(relaxed = true)
+        val firstCondition = mockk<Condition>(relaxed = true)
+        val secondCondition = mockk<Condition>(relaxed = true)
+        val thirdCondition = mockk<Condition>(relaxed = true)
 
-        val queue = mockk<Queue<*, String>>()
+        val queue = mockk<Queue<*>>()
         val preparedStatement = mockk<PreparedStatement>()
         val column = mockk<ColumnIndex>()
 

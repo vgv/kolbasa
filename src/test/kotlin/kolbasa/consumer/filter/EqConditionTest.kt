@@ -5,8 +5,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
-import kolbasa.queue.meta.MetaHelpers
+import kolbasa.queue.meta.*
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -16,8 +15,12 @@ internal class EqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
-        val eqExpression = EqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
+        val queue = Queue.of(
+            "test_queue",
+            databaseDataType = PredefinedDataTypes.ByteArray,
+            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
+        )
+        val eqExpression = EqCondition(INT_VALUE, 123)
 
         val sql = eqExpression.toSqlClause(queue)
         assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " = ?", sql)
@@ -25,8 +28,12 @@ internal class EqConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue.of("test_queue", databaseDataType = PredefinedDataTypes.ByteArray, metadata = TestMeta::class.java)
-        val eqExpression = EqCondition<TestMeta, Int>(TestMeta::intValue.name, 123)
+        val queue = Queue.of(
+            "test_queue",
+            databaseDataType = PredefinedDataTypes.ByteArray,
+            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
+        )
+        val eqExpression = EqCondition(INT_VALUE, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -41,9 +48,7 @@ internal class EqConditionTest {
     }
 
     companion object {
-        data class TestMeta(
-            @Searchable val intValue: Int,
-            val stringValue: String
-        )
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
+        private val STRING_VALUE = MetaField.string("string_value")
     }
 }

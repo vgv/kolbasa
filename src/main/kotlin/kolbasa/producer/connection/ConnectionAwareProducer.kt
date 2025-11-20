@@ -52,7 +52,7 @@ interface ConnectionAwareProducer {
      * @param data message to send
      * @returns [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(connection: Connection, queue: Queue<Data, Meta>, data: Data): SendResult<Data, Meta> {
+    fun <Data> send(connection: Connection, queue: Queue<Data>, data: Data): SendResult<Data> {
         return send(connection, queue, SendMessage(data))
     }
 
@@ -67,11 +67,11 @@ interface ConnectionAwareProducer {
      * @param data message, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(
+    fun <Data> send(
         connection: Connection,
-        queue: Queue<Data, Meta>,
-        data: SendMessage<Data, Meta>
-    ): SendResult<Data, Meta> {
+        queue: Queue<Data>,
+        data: SendMessage<Data>
+    ): SendResult<Data> {
         return send(connection, queue, listOf(data))
     }
 
@@ -87,11 +87,11 @@ interface ConnectionAwareProducer {
      * @param data list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(
+    fun <Data> send(
         connection: Connection,
-        queue: Queue<Data, Meta>,
-        data: List<SendMessage<Data, Meta>>
-    ): SendResult<Data, Meta> {
+        queue: Queue<Data>,
+        data: List<SendMessage<Data>>
+    ): SendResult<Data> {
         return send(connection, queue, SendRequest(data = data))
     }
 
@@ -108,9 +108,9 @@ interface ConnectionAwareProducer {
      * @param request list of messages, metadata (if any) and options (if any) to send
      * @return [SendResult] with the list of failed messages and the list of successful messages
      */
-    fun <Data, Meta : Any> send(
+    fun <Data> send(
         connection: Connection,
-        queue: Queue<Data, Meta>,
-        request: SendRequest<Data, Meta>
-    ): SendResult<Data, Meta>
+        queue: Queue<Data>,
+        request: SendRequest<Data>
+    ): SendResult<Data>
 }

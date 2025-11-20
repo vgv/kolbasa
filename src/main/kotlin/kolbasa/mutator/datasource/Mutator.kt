@@ -34,8 +34,8 @@ interface Mutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> addRemainingAttempts(
-        queue: Queue<Data, Meta>,
+    fun <Data> addRemainingAttempts(
+        queue: Queue<Data>,
         delta: Int,
         message: Id
     ): MutateResult {
@@ -52,8 +52,8 @@ interface Mutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> setRemainingAttempts(
-        queue: Queue<Data, Meta>,
+    fun <Data> setRemainingAttempts(
+        queue: Queue<Data>,
         newValue: Int,
         message: Id
     ): MutateResult {
@@ -70,8 +70,8 @@ interface Mutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> addScheduledAt(
-        queue: Queue<Data, Meta>,
+    fun <Data> addScheduledAt(
+        queue: Queue<Data>,
         delta: Duration,
         message: Id
     ): MutateResult {
@@ -88,8 +88,8 @@ interface Mutator {
      * @param message message identifier
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> setScheduledAt(
-        queue: Queue<Data, Meta>,
+    fun <Data> setScheduledAt(
+        queue: Queue<Data>,
         newValue: Duration,
         message: Id
     ): MutateResult {
@@ -106,8 +106,8 @@ interface Mutator {
      * @param messages messages identifiers
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>,
     ): MutateResult
@@ -122,8 +122,8 @@ interface Mutator {
      * @param messages messages identifiers
      * @return [CompletableFuture] of the [MutateResult]
      */
-    fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>,
     ): CompletableFuture<MutateResult>
@@ -149,10 +149,10 @@ interface Mutator {
      * @param filter custom, user-defined filter to mutate only specific messages in the queue
      * @return [MutateResult] with the information about mutate result (success/failure)
      */
-    fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): MutateResult
 
     /**
@@ -176,9 +176,9 @@ interface Mutator {
      * @param filter custom, user-defined filter to mutate only specific messages in the queue
      * @return [CompletableFuture] of the [MutateResult]
      */
-    fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult>
 }

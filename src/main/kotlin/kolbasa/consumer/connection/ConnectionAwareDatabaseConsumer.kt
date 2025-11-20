@@ -27,12 +27,12 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         shards = Shards.ALL_SHARDS
     )
 
-    override fun <Data, Meta : Any> receive(
+    override fun <Data> receive(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         limit: Int,
-        receiveOptions: ReceiveOptions<Meta>
-    ): List<Message<Data, Meta>> {
+        receiveOptions: ReceiveOptions
+    ): List<Message<Data>> {
         // Do we need to read OT data?
         receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
@@ -41,12 +41,12 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
     }
 
-    private fun <Data, Meta : Any> doRealReceive(
+    private fun <Data> doRealReceive(
         connection: Connection,
-        queue: Queue<Data, Meta>,
+        queue: Queue<Data>,
         limit: Int,
-        receiveOptions: ReceiveOptions<Meta>
-    ): List<Message<Data, Meta>> {
+        receiveOptions: ReceiveOptions
+    ): List<Message<Data>> {
         // delete expired messages before next read
         if (SweepHelper.needSweep(queue)) {
             SweepHelper.sweep(connection, queue, nodeId, limit)
@@ -63,7 +63,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
             connection.prepareStatement(query).use { preparedStatement ->
                 ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
                 preparedStatement.executeQuery().use { resultSet ->
-                    val result = ArrayList<Message<Data, Meta>>(limit)
+                    val result = ArrayList<Message<Data>>(limit)
 
                     while (resultSet.next()) {
                         result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
@@ -89,7 +89,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         return result
     }
 
-    override fun <Data, Meta : Any> delete(connection: Connection, queue: Queue<Data, Meta>, messageIds: List<Id>): Int {
+    override fun <Data> delete(connection: Connection, queue: Queue<Data>, messageIds: List<Id>): Int {
         if (messageIds.isEmpty()) {
             return 0
         }

@@ -4,22 +4,22 @@ import kolbasa.producer.*
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-fun main() {
-    // User-defined class to store meta-information
-    data class Metadata(
-        @Unique val uniqueKey: Int
-    )
+private val UNIQUE_KEY = MetaField.int("unique_key", FieldOption.UNIQUE_SEARCHABLE)
 
+fun main() {
     // Define three queues to demonstrate different PartialInsert modes
     val queueProhibited =
-        Queue.of("test_queue_prohibited", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_prohibited", PredefinedDataTypes.String, metadata = Metadata.of(UNIQUE_KEY))
     val queueUntilFirstFailure =
-        Queue.of("test_queue_until_first_failure", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_until_first_failure", PredefinedDataTypes.String, metadata = Metadata.of(UNIQUE_KEY))
     val queueAsManyAsPossible =
-        Queue.of("test_queue_as_many_as_possible", PredefinedDataTypes.String, metadata = Metadata::class.java)
+        Queue.of("test_queue_as_many_as_possible", PredefinedDataTypes.String, metadata = Metadata.of(UNIQUE_KEY))
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -37,12 +37,12 @@ fun main() {
     // Messages to send with one poison message in the middle of the list
     // Due to different PartialInsert modes, the result of sending messages will be different
     val messagesToSend = listOf(
-        SendMessage("Unique key 1", Metadata(1)),
-        SendMessage("Unique key 2", Metadata(2)),
-        SendMessage("Unique key 3", Metadata(3)),
-        SendMessage("Unique key 1", Metadata(1)), // POISON MESSAGE
-        SendMessage("Unique key 5", Metadata(5)),
-        SendMessage("Unique key 6", Metadata(6)),
+        SendMessage("Unique key 1", MetaValues.of(UNIQUE_KEY.value(1))),
+        SendMessage("Unique key 2", MetaValues.of(UNIQUE_KEY.value(2))),
+        SendMessage("Unique key 3", MetaValues.of(UNIQUE_KEY.value(3))),
+        SendMessage("Unique key 1", MetaValues.of(UNIQUE_KEY.value(1))), // POISON MESSAGE
+        SendMessage("Unique key 5", MetaValues.of(UNIQUE_KEY.value(5))),
+        SendMessage("Unique key 6", MetaValues.of(UNIQUE_KEY.value(6))),
     )
 
     // -------------------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ fun main() {
     }
 }
 
-private fun dumpResult(sendResult: SendResult<*, *>) {
+private fun dumpResult(sendResult: SendResult<*>) {
     println("OK: ${sendResult.onlySuccessful().size}, FAILURE: ${sendResult.onlyFailed().sumOf { it.messages.size }}: ")
 
     sendResult.messages.forEach { message ->

@@ -10,8 +10,10 @@ import kolbasa.producer.SendResult.Companion.onlyFailed
 import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,12 +21,12 @@ import kotlin.test.assertEquals
 
 class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
-    internal data class TestMeta(@Searchable @Unique val field: Int)
+    private val FIELD = MetaField.int("field", FieldOption.UNIQUE_SEARCHABLE)
 
     private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
-        metadata = TestMeta::class.java
+        metadata = Metadata.of(FIELD)
     )
 
     @BeforeEach
@@ -34,7 +36,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
     @Test
     fun testDeduplication_ERROR_SingleMessage() {
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
+        val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(deduplicationMode = DeduplicationMode.ERROR)
@@ -56,7 +58,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
     @Test
     fun testDeduplication_ERROR_MessagesList() {
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
+        val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(deduplicationMode = DeduplicationMode.ERROR, batchSize = 1000)
@@ -67,7 +69,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
         // Second send several messages with one poison message should fail completely
         val messagesWithPoisonMessage = (100 downTo 1).map {
-            SendMessage("bugaga_$it", TestMeta(it))
+            SendMessage("bugaga_$it", MetaValues.of(FIELD.value(it)))
         }
         // this call should not insert anything, because there is the poison message with TestMeta.field == 1
         val sendResult = producer.send(queue, messagesWithPoisonMessage)
@@ -82,7 +84,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
     @Test
     fun testDeduplication_IGNORE_DUPLICATES_SingleMessage() {
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
+        val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
@@ -104,7 +106,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
     @Test
     fun testDeduplication_IGNORE_DUPLICATES_MessagesList() {
-        val messageToSend = SendMessage("bugaga", TestMeta(1))
+        val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES, batchSize = 1000)
@@ -115,7 +117,7 @@ class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
         // Second send several messages with one poison message should insert 99 messages
         val messagesWithPoisonMessage = (100 downTo 1).map {
-            SendMessage("bugaga_$it", TestMeta(it))
+            SendMessage("bugaga_$it", MetaValues.of(FIELD.value(it)))
         }
         val sendResult = producer.send(queue, messagesWithPoisonMessage)
 

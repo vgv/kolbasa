@@ -4,9 +4,8 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.*
 import org.junit.jupiter.api.Test
-import java.math.BigInteger
 import java.time.Duration
 import kotlin.test.*
 
@@ -18,18 +17,15 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
     private val cacheValue = 1000.toLong()
     private val incrementValue = 1.toLong()
 
-    data class SchemaExtractorTestMeta(
-        val stringValue: String,
-        val longValue: Long,
-        @Unique
-        val intValue: Int,
-        val shortValue: Short,
-        val booleanValue: Boolean,
-        val doubleValue: Double,
-        val floatValue: Float,
-        val charValue: Char,
-        val bigIntegerValue: BigInteger
-    )
+    private val STRING_FIELD = MetaField.string("string_value")
+    private val LONG_FIELD = MetaField.long("long_value")
+    private val INT_FIELD = MetaField.int("int_value", FieldOption.UNIQUE_SEARCHABLE)
+    private val SHORT_FIELD = MetaField.short("short_value")
+    private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
+    private val DOUBLE_FIELD = MetaField.double("double_value")
+    private val FLOAT_FIELD = MetaField.float("float_value")
+    private val CHAR_FIELD = MetaField.char("char_value")
+    private val BIGINTEGER_FIELD = MetaField.bigInteger("big_integer_value")
 
     private val testQueue = Queue(
         queueName,
@@ -38,7 +34,17 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             defaultDelay = Duration.ofMinutes(5),
             defaultAttempts = 42
         ),
-        metadata = SchemaExtractorTestMeta::class.java
+        metadata = Metadata.of(
+            STRING_FIELD,
+            LONG_FIELD,
+            INT_FIELD,
+            SHORT_FIELD,
+            BOOLEAN_FIELD,
+            DOUBLE_FIELD,
+            FLOAT_FIELD,
+            CHAR_FIELD,
+            BIGINTEGER_FIELD
+        )
     )
 
     @BeforeTest

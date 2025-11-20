@@ -4,21 +4,21 @@ import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 
-internal class EmptyQueueTracing<Data, Meta : Any>: QueueTracing<Data, Meta> {
+internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
 
     override fun readOpenTelemetryData(): Boolean {
         return false
     }
 
     override fun makeProducerCall(
-        request: SendRequest<Data, Meta>,
-        businessCall: () -> SendResult<Data, Meta>
-    ): SendResult<Data, Meta> {
+        request: SendRequest<Data>,
+        businessCall: () -> SendResult<Data>
+    ): SendResult<Data> {
         // default trivial implementation
         return businessCall()
     }
 
-    override fun makeConsumerCall(businessCall: () -> List<Message<Data, Meta>>): List<Message<Data, Meta>> {
+    override fun makeConsumerCall(businessCall: () -> List<Message<Data>>): List<Message<Data>> {
         // default trivial implementation
         return businessCall()
     }

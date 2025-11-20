@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 internal object SqlDumpHelper {
 
     fun dumpQuery(
-        queue: Queue<*, *>,
+        queue: Queue<*>,
         kind: StatementKind,
         query: String,
         execution: Execution,

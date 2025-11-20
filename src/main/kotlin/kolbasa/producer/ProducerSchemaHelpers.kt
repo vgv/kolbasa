@@ -5,6 +5,7 @@ import kolbasa.cluster.ShardStrategy
 import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.QueueHelpers
+import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.TimeHelper
@@ -16,10 +17,10 @@ import kotlin.math.abs
 internal object ProducerSchemaHelpers {
 
     fun generateInsertPreparedQuery(
-        queue: Queue<*, *>,
+        queue: Queue<*>,
         producerName: String?,
         deduplicationMode: DeduplicationMode,
-        request: SendRequest<*, *>
+        request: SendRequest<*>
     ): String {
         val columns = mutableListOf<String>()
         val values = Array<MutableList<String>>(request.data.size) { mutableListOf() }
@@ -50,15 +51,13 @@ internal object ProducerSchemaHelpers {
         }
 
         // meta fields
-        if (queue.metadataDescription != null) {
-            queue.metadataDescription.fields.forEach { field ->
-                columns += field.dbColumnName
-            }
+        queue.metadata.fields.forEach { field ->
+            columns += field.dbColumnName
+        }
 
-            request.data.forEachIndexed { index, _ ->
-                queue.metadataDescription.fields.forEach { _ ->
-                    values[index] += "?"
-                }
+        request.data.forEachIndexed { index, _ ->
+            queue.metadata.fields.forEach { _ ->
+                values[index] += "?"
             }
         }
 
@@ -112,10 +111,10 @@ internal object ProducerSchemaHelpers {
         return "insert into ${queue.dbTableName}${columnsStr} values $valuesStr $onConflictStr returning $returningColumns"
     }
 
-    fun <Data, Meta : Any> fillInsertPreparedQuery(
-        queue: Queue<Data, Meta>,
+    fun <Data> fillInsertPreparedQuery(
+        queue: Queue<Data>,
         producerName: String?,
-        request: SendRequest<Data, Meta>,
+        request: SendRequest<Data>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
     ) {
@@ -128,8 +127,8 @@ internal object ProducerSchemaHelpers {
 
         request.data.forEach { item ->
             // All meta fields
-            queue.metadataDescription?.fields?.forEach { field ->
-                field.fillPreparedStatement(preparedStatement, columnIndex++, item.meta)
+            queue.metadata.fields.forEach { field: MetaField<*> ->
+                field.fillPreparedStatementForValue(preparedStatement, columnIndex++, item.meta)
             }
 
             // producer name

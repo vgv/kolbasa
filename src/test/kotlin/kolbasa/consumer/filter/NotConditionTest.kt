@@ -20,9 +20,9 @@ internal class NotConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val testCondition = mockk<Condition<String>>(relaxed = true)
+        val testCondition = mockk<Condition>(relaxed = true)
 
-        val queue = mockk<Queue<*, String>>()
+        val queue = mockk<Queue<*>>()
         val preparedStatement = mockk<PreparedStatement>()
         val column = mockk<ColumnIndex>()
 

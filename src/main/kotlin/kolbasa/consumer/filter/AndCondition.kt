@@ -4,9 +4,9 @@ import kolbasa.queue.Queue
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class AndCondition<Meta : Any>(first: Condition<Meta>, second: Condition<Meta>) : Condition<Meta>() {
+internal class AndCondition(first: Condition, second: Condition) : Condition() {
 
-    private val conditions: List<Condition<Meta>> = when {
+    private val conditions: List<Condition> = when {
         first is AndCondition && second is AndCondition -> {
             first.conditions + second.conditions
         }
@@ -24,13 +24,13 @@ internal class AndCondition<Meta : Any>(first: Condition<Meta>, second: Conditio
         }
     }
 
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
+    override fun internalToSqlClause(queue: Queue<*>): String {
         return conditions.joinToString(separator = " and ") {
             "(" + it.toSqlClause(queue) + ")"
         }
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         conditions.forEach { expression ->
             expression.fillPreparedQuery(queue, preparedStatement, columnIndex)
         }

@@ -29,16 +29,16 @@ class DatabaseProducer internal constructor(
         peer = ConnectionAwareDatabaseProducer(producerOptions)
     )
 
-    override fun <Data, Meta : Any> send(queue: Queue<Data, Meta>, request: SendRequest<Data, Meta>): SendResult<Data, Meta> {
+    override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         return queue.queueTracing.makeProducerCall(request) {
             dataSource.useConnection { peer.send(it, queue, request) }
         }
     }
 
-    override fun <Data, Meta : Any> sendAsync(
-        queue: Queue<Data, Meta>,
-        request: SendRequest<Data, Meta>
-    ): CompletableFuture<SendResult<Data, Meta>> {
+    override fun <Data> sendAsync(
+        queue: Queue<Data>,
+        request: SendRequest<Data>
+    ): CompletableFuture<SendResult<Data>> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
             // make it better somehow
             customExecutor = (peer as? ConnectionAwareDatabaseProducer)?.producerOptions?.asyncExecutor,

@@ -32,8 +32,8 @@ class DatabaseMutator(
         peer = ConnectionAwareDatabaseMutator(mutatorOptions)
     )
 
-    override fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
@@ -42,18 +42,18 @@ class DatabaseMutator(
         }
     }
 
-    override fun <Data, Meta : Any> mutate(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutate(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): MutateResult {
         return dataSource.useConnection { connection ->
             peer.mutate(connection, queue, mutations, filter)
         }
     }
 
-    override fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
@@ -65,10 +65,10 @@ class DatabaseMutator(
         return CompletableFuture.supplyAsync({ mutate(queue, mutations, messages) }, executor)
     }
 
-    override fun <Data, Meta : Any> mutateAsync(
-        queue: Queue<Data, Meta>,
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
         mutations: List<Mutation>,
-        filter: Filter.() -> Condition<Meta>
+        filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
             customExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,

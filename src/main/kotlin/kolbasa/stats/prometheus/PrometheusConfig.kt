@@ -208,7 +208,7 @@ sealed class PrometheusConfig {
                 customQueueSizeMeasureInterval[queueName] = customInterval
             }
 
-            fun customQueueSizeMeasureInterval(queue: Queue<*, *>, customInterval: Duration) =
+            fun customQueueSizeMeasureInterval(queue: Queue<*>, customInterval: Duration) =
                 customQueueSizeMeasureInterval(queue.name, customInterval)
 
             fun preciseStringSize(preciseStringSize: Boolean) = apply { this.preciseStringSize = preciseStringSize }

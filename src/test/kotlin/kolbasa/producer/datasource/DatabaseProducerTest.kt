@@ -2,15 +2,14 @@ package kolbasa.producer.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.producer.MessageOptions
-import kolbasa.producer.MessageResult
-import kolbasa.producer.PartialInsert
-import kolbasa.producer.ProducerOptions
-import kolbasa.producer.SendMessage
+import kolbasa.producer.*
 import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
@@ -23,32 +22,34 @@ import kotlin.test.assertNotNull
 
 class DatabaseProducerTest : AbstractPostgresqlTest() {
 
+    private val FIELD = MetaField.int("field", FieldOption.UNIQUE_SEARCHABLE)
+
     private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
-        metadata = TestMeta::class.java
+        metadata = Metadata.of(FIELD)
     )
 
     private val first = listOf(
-        SendMessage("bugaga", TestMeta(1)),
-        SendMessage("bugaga", TestMeta(2)),
-        SendMessage("bugaga", TestMeta(3)),
-        SendMessage("bugaga", TestMeta(4)),
-        SendMessage("bugaga", TestMeta(5))
+        SendMessage("bugaga", MetaValues.of(FIELD.value(1))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(2))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(3))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(4))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(5)))
     )
     private val second = listOf(
-        SendMessage("bugaga", TestMeta(6)),
-        SendMessage("bugaga", TestMeta(7)),
-        SendMessage("bugaga", TestMeta(2)), // POISON MESSAGE WITH NON UNIQUE META FIELD
-        SendMessage("bugaga", TestMeta(9)),
-        SendMessage("bugaga", TestMeta(10))
+        SendMessage("bugaga", MetaValues.of(FIELD.value(6))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(7))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(2))), // POISON MESSAGE WITH NON UNIQUE META FIELD
+        SendMessage("bugaga", MetaValues.of(FIELD.value(9))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(10)))
     )
     private val third = listOf(
-        SendMessage("bugaga", TestMeta(11)),
-        SendMessage("bugaga", TestMeta(12)),
-        SendMessage("bugaga", TestMeta(13)),
-        SendMessage("bugaga", TestMeta(14)),
-        SendMessage("bugaga", TestMeta(15))
+        SendMessage("bugaga", MetaValues.of(FIELD.value(11))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(12))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(13))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(14))),
+        SendMessage("bugaga", MetaValues.of(FIELD.value(15)))
     )
     private val items = first + second + third
 
@@ -116,13 +117,13 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData_AsSendMessage() {
         val producer = DatabaseProducer(dataSource)
 
-        val id1 = producer.send(queue, SendMessage("bugaga", TestMeta(1))).let { (failedMessages, result) ->
+        val id1 = producer.send(queue, SendMessage("bugaga", MetaValues.of(FIELD.value(1)))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
 
-        val id2 = producer.send(queue, SendMessage("bugaga", TestMeta(2))).let { (failedMessages, result) ->
+        val id2 = producer.send(queue, SendMessage("bugaga", MetaValues.of(FIELD.value(2)))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
@@ -149,7 +150,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         assertEquals(1, result.messages.size) // all failed messages in one error message
 
         val messages = result.messages[0]
-        assertIs<MessageResult.Error<String, TestMeta>>(messages)
+        assertIs<MessageResult.Error<String>>(messages)
         assertNotNull(messages.exception)
         assertEquals(items, messages.messages)
 
@@ -172,14 +173,14 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
+            assertIs<MessageResult.Success<String>>(result.messages[index]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
 
         // Last one is bad
-        assertIs<MessageResult.Error<String, TestMeta>>(result.messages[5]).let {
+        assertIs<MessageResult.Error<String>>(result.messages[5]).let {
             assertEquals(second + third, it.messages)
         }
 
@@ -202,20 +203,20 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index]).let {
+            assertIs<MessageResult.Success<String>>(result.messages[index]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
 
         // Next one is bad
-        assertIs<MessageResult.Error<String, TestMeta>>(result.messages[5]).let {
+        assertIs<MessageResult.Error<String>>(result.messages[5]).let {
             assertEquals(second, it.messages)
         }
 
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String, TestMeta>>(result.messages[index + 6]).let {
+            assertIs<MessageResult.Success<String>>(result.messages[index + 6]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min + 8, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
@@ -243,5 +244,3 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
 }
-
-internal data class TestMeta(@Unique val field: Int)

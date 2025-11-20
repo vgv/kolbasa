@@ -1,7 +1,9 @@
 package kolbasa.consumer.filter
 
-internal class LessThanCondition<Meta : Any, T>(fieldName: String, value: T) :
-    AbstractOneValueCondition<Meta, T>(fieldName, value) {
+import kolbasa.queue.meta.MetaField
+
+internal class LessThanCondition<T>(field: MetaField<T>, value: T) :
+    AbstractOneValueCondition<T>(field, value) {
 
     override val operator: String = "<"
 

@@ -13,15 +13,15 @@ import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import java.time.Instant
 
-internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
+internal class OpenTelemetryQueueTracing<Data>(
     queueName: String,
     openTelemetryConfig: OpenTelemetryConfig.Config
-): QueueTracing<Data, Meta> {
+): QueueTracing<Data> {
 
-    private val producerInstrumenter: Instrumenter<SendRequest<Data, Meta>, SendResult<Data, Meta>> =
+    private val producerInstrumenter: Instrumenter<SendRequest<Data>, SendResult<Data>> =
         buildProducerInstrumenter(openTelemetryConfig.openTelemetry, queueName)
 
-    private val consumerInstrumenter: Instrumenter<List<Message<Data, Meta>>, Unit> =
+    private val consumerInstrumenter: Instrumenter<List<Message<Data>>, Unit> =
         buildConsumerInstrumenter(openTelemetryConfig.openTelemetry, queueName)
 
     override fun readOpenTelemetryData(): Boolean {
@@ -29,9 +29,9 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
     }
 
     override fun makeProducerCall(
-        request: SendRequest<Data, Meta>,
-        businessCall: () -> SendResult<Data, Meta>
-    ): SendResult<Data, Meta> {
+        request: SendRequest<Data>,
+        businessCall: () -> SendResult<Data>
+    ): SendResult<Data> {
         val parentContext = Context.current()
         if (!producerInstrumenter.shouldStart(parentContext, request)) {
             return businessCall()
@@ -52,7 +52,7 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
         return response
     }
 
-    override fun makeConsumerCall(businessCall: () -> List<Message<Data, Meta>>): List<Message<Data, Meta>> {
+    override fun makeConsumerCall(businessCall: () -> List<Message<Data>>): List<Message<Data>> {
         val start = Instant.now()
         val result = businessCall()
         val end = Instant.now()
@@ -68,8 +68,8 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
     private fun buildProducerInstrumenter(
         openTelemetry: OpenTelemetry,
         queueName: String
-    ): Instrumenter<SendRequest<Data, Meta>, SendResult<Data, Meta>> {
-        val sendRequestAttributesGetter = SendRequestAttributesGetter<Data, Meta>(queueName)
+    ): Instrumenter<SendRequest<Data>, SendResult<Data>> {
+        val sendRequestAttributesGetter = SendRequestAttributesGetter<Data>(queueName)
 
         val spanNameExtractor = MessagingSpanNameExtractor.create(sendRequestAttributesGetter, MessageOperation.PUBLISH)
 
@@ -79,7 +79,7 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
         )
             .build()
 
-        return Instrumenter.builder<SendRequest<Data, Meta>, SendResult<Data, Meta>>(
+        return Instrumenter.builder<SendRequest<Data>, SendResult<Data>>(
             openTelemetry,
             "kolbasa",
             spanNameExtractor
@@ -91,14 +91,14 @@ internal class OpenTelemetryQueueTracing<Data, Meta : Any>(
     private fun buildConsumerInstrumenter(
         openTelemetry: OpenTelemetry,
         queueName: String
-    ): Instrumenter<List<Message<Data, Meta>>, Unit> {
-        val getter = ConsumerResponseAttributesGetter<Data, Meta>(queueName)
+    ): Instrumenter<List<Message<Data>>, Unit> {
+        val getter = ConsumerResponseAttributesGetter<Data>(queueName)
         val operation = MessageOperation.RECEIVE
 
         val attributesExtractor = MessagingAttributesExtractor.builder(getter, operation)
             .build()
 
-        return Instrumenter.builder<List<Message<Data, Meta>>, Unit>(
+        return Instrumenter.builder<List<Message<Data>>, Unit>(
             openTelemetry,
             "kolbasa",
             MessagingSpanNameExtractor.create(getter, operation)

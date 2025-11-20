@@ -1,8 +1,9 @@
 package kolbasa.consumer
 
 import kolbasa.producer.Id
+import kolbasa.queue.meta.MetaValues
 
-data class Message<Data, Meta>(
+data class Message<Data>(
     /**
      * Unique message identifier
      *
@@ -68,7 +69,7 @@ data class Message<Data, Meta>(
      * 1) There is metadata attached to the message
      * 2) [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] set to true
      */
-    val meta: Meta?
+    val meta: MetaValues = MetaValues.EMPTY
 ) {
 
     internal var openTelemetryData: Map<String, String>? = null

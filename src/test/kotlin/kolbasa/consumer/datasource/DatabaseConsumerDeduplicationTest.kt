@@ -2,29 +2,34 @@ package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.producer.datasource.DatabaseProducer
-import kolbasa.producer.SendMessage
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.SendMessage
 import kolbasa.producer.SendResult.Companion.onlyDuplicated
 import kolbasa.producer.SendResult.Companion.onlyFailed
 import kolbasa.producer.SendResult.Companion.onlySuccessful
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
-import kolbasa.queue.Unique
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
+import kotlin.test.assertTrue
 
 class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 
-    internal data class TestMeta(@Searchable @Unique val field: Int)
+    private val FIELD = MetaField.int("field", FieldOption.UNIQUE_SEARCHABLE)
 
     private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
-        metadata = TestMeta::class.java
+        metadata = Metadata.of(FIELD)
     )
 
     @BeforeEach
@@ -35,7 +40,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     @Test
     fun testDeduplication_ZeroRemainingAttempts() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data = data, meta = TestMeta(1), messageOptions = MessageOptions(attempts = 1))
+        val messageToSend = SendMessage(data = data, meta = MetaValues.of(FIELD.value(1)), messageOptions = MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource)

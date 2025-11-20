@@ -33,7 +33,7 @@ interface Consumer {
      * @param queue queue from which to receive a message
      * @return message or null if the queue is empty
      */
-    fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>): Message<Data, Meta>? {
+    fun <Data> receive(queue: Queue<Data>): Message<Data>? {
         return receive(queue, ReceiveOptions())
     }
 
@@ -55,7 +55,7 @@ interface Consumer {
      * @param filter custom, user-defined filters to receive only specific messages from the queue
      * @return message or null if no message matches the filters
      */
-    fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, filter: Filter.() -> Condition<Meta>): Message<Data, Meta>? {
+    fun <Data> receive(queue: Queue<Data>, filter: Filter.() -> Condition): Message<Data>? {
         return receive(queue, ReceiveOptions(filter = filter(Filter)))
     }
 
@@ -70,7 +70,7 @@ interface Consumer {
      * @param receiveOptions custom options (filters, ordering etc.)
      * @return message or null if no message matches the filters specified in the `receiveOptions`
      */
-    fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, receiveOptions: ReceiveOptions<Meta>): Message<Data, Meta>? {
+    fun <Data> receive(queue: Queue<Data>, receiveOptions: ReceiveOptions): Message<Data>? {
         val result = receive(queue, limit = 1, receiveOptions)
         return result.firstOrNull()
     }
@@ -82,7 +82,7 @@ interface Consumer {
      * @param limit number of messages to receive
      * @return messages or an empty list if the queue is empty
      */
-    fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int): List<Message<Data, Meta>> {
+    fun <Data> receive(queue: Queue<Data>, limit: Int): List<Message<Data>> {
         return receive(queue, limit, ReceiveOptions())
     }
 
@@ -106,11 +106,11 @@ interface Consumer {
      * @param filter custom, user-defined filters to receive only specific messages from the queue
      * @return messages or an empty list if no message matches the filters
      */
-    fun <Data, Meta : Any> receive(
-        queue: Queue<Data, Meta>,
+    fun <Data> receive(
+        queue: Queue<Data>,
         limit: Int,
-        filter: Filter.() -> Condition<Meta>
-    ): List<Message<Data, Meta>> {
+        filter: Filter.() -> Condition
+    ): List<Message<Data>> {
         return receive(queue, limit, ReceiveOptions(filter = filter(Filter)))
     }
 
@@ -126,11 +126,11 @@ interface Consumer {
      * @param receiveOptions custom options (filters, ordering etc.)
      * @return messages or an empty list if no message matches the filters specified in the `receiveOptions`
      */
-    fun <Data, Meta : Any> receive(
-        queue: Queue<Data, Meta>,
+    fun <Data> receive(
+        queue: Queue<Data>,
         limit: Int,
-        receiveOptions: ReceiveOptions<Meta>
-    ): List<Message<Data, Meta>>
+        receiveOptions: ReceiveOptions
+    ): List<Message<Data>>
 
     // Delete
 
@@ -140,7 +140,7 @@ interface Consumer {
      * @param queue queue from which the message should be deleted
      * @param message message to delete
      */
-    fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, message: Message<Data, Meta>): Int {
+    fun <Data> delete(queue: Queue<Data>, message: Message<Data>): Int {
         return delete(queue, message.id)
     }
 
@@ -150,8 +150,8 @@ interface Consumer {
      * @param queue queue from which the messages should be deleted
      * @param messages messages to delete
      */
-    fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messages: Collection<Message<Data, Meta>>): Int {
-        return delete(queue, messages.map(Message<Data, Meta>::id))
+    fun <Data> delete(queue: Queue<Data>, messages: Collection<Message<Data>>): Int {
+        return delete(queue, messages.map(Message<Data>::id))
     }
 
     /**
@@ -160,7 +160,7 @@ interface Consumer {
      * @param queue queue from which the message should be deleted
      * @param messageId identifier of the message to delete
      */
-    fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messageId: Id): Int {
+    fun <Data> delete(queue: Queue<Data>, messageId: Id): Int {
         return delete(queue, listOf(messageId))
     }
 
@@ -170,7 +170,7 @@ interface Consumer {
      * @param queue queue from which the messages should be deleted
      * @param messageIds identifiers of the messages to delete
      */
-    fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messageIds: List<Id>): Int
+    fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int
 
 }
 

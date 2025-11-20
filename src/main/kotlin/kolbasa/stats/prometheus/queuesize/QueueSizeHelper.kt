@@ -25,7 +25,7 @@ internal object QueueSizeHelper {
      * - [Const.TABLE_DOES_NOT_EXIST] if table doesn't exist
      * - otherwise approximate queue length
      */
-    fun calculateQueueLength(connection: Connection, queue: Queue<*, *>): Long {
+    fun calculateQueueLength(connection: Connection, queue: Queue<*>): Long {
         val tableSizeData = readTableSizeData(connection, queue.dbTableName)
 
         return tableSizeData?.getTableSize() ?: Const.TABLE_DOES_NOT_EXIST

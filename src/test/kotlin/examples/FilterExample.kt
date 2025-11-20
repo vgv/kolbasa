@@ -1,22 +1,22 @@
 package examples
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.SendMessage
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-fun main() {
-    // User-defined class to store meta-information
-    data class Metadata(
-        @Searchable val userId: Int,
-        @Searchable val priority: Int
-    )
+private val USER_ID = MetaField.int("user_id", FieldOption.SEARCHABLE)
+private val PRIORITY = MetaField.int("priority", FieldOption.SEARCHABLE)
 
+fun main() {
     // Define queue with name `test_queue`, varchar type as data storage and metadata
-    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata::class.java)
+    val queue = Queue.of("test_queue", PredefinedDataTypes.String, metadata = Metadata.of(USER_ID, PRIORITY))
 
     // Valid datasource from DI, static factory etc.
     val dataSource = ExamplesDataSourceProvider.getDataSource()
@@ -35,7 +35,7 @@ fun main() {
     // Create producer and send several messages with meta information
     val producer = DatabaseProducer(dataSource)
     val messagesToSend = (1..100).map { index ->
-        SendMessage("Message $index", Metadata(userId = index, priority = index % 10))
+        SendMessage("Message $index", MetaValues.of(USER_ID.value(index), PRIORITY.value(index % 10)))
     }
     producer.send(queue, messagesToSend)
 
@@ -46,7 +46,7 @@ fun main() {
     // Try to read 100 messages with (userId<=10 or userId=78) from the queue
     val messages = consumer.receive(queue, 100) {
         // Type-safe DSL to filter messages
-        (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+        (USER_ID lessEq 10) or (USER_ID eq 78)
     }
     messages.forEach {
         println(it)

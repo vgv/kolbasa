@@ -1,31 +1,26 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.Queue
+import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 import java.text.MessageFormat
 
-internal class NativeSqlCondition<Meta : Any>(
+internal class NativeSqlCondition(
     private val sqlPattern: String,
-    private val fieldNames: List<String>
-) : Condition<Meta>() {
+    private val fields: Array<out MetaField<*>>
+) : Condition() {
 
-    private lateinit var names: Array<String>
+    private val names = Array(fields.size) {
+        fields[it].dbColumnName
+    }
 
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
-        if (!::names.isInitialized) {
-            names = Array(fieldNames.size) {
-                val fieldName = fieldNames[it]
-                val field = findField(fieldName)
-                field.dbColumnName
-            }
-        }
-
+    override fun internalToSqlClause(queue: Queue<*>): String {
         // make a replacement
         return MessageFormat.format(sqlPattern, *names)
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         // NOP
     }
 

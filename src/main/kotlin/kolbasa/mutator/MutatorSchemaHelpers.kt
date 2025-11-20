@@ -9,7 +9,7 @@ import kolbasa.utils.TimeHelper
 internal object MutatorSchemaHelpers {
 
     fun generateListMutateQuery(
-        queue: Queue<*, *>,
+        queue: Queue<*>,
         mutations: List<Mutation>,
         messages: List<Id>
     ): String {
@@ -34,10 +34,10 @@ internal object MutatorSchemaHelpers {
             returning $ALL_FIELDS"""
     }
 
-    fun <Meta : Any> generateFilterQuery(
-        queue: Queue<*, Meta>,
+    fun generateFilterQuery(
+        queue: Queue<*>,
         mutations: List<Mutation>,
-        condition: Condition<Meta>,
+        condition: Condition,
         lastKnownId: Long,
         returnAllFields: Boolean
     ): String {

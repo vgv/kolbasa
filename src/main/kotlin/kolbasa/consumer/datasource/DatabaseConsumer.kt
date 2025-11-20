@@ -27,7 +27,7 @@ class DatabaseConsumer internal constructor(
         peer = ConnectionAwareDatabaseConsumer(consumerOptions)
     )
 
-    override fun <Data, Meta : Any> receive(queue: Queue<Data, Meta>, limit: Int, receiveOptions: ReceiveOptions<Meta>): List<Message<Data, Meta>> {
+    override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
         // Do we need to read OT data?
         receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
@@ -36,7 +36,7 @@ class DatabaseConsumer internal constructor(
         }
     }
 
-    override fun <Data, Meta : Any> delete(queue: Queue<Data, Meta>, messageIds: List<Id>): Int {
+    override fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int {
         return dataSource.useConnection { peer.delete(it, queue, messageIds) }
     }
 

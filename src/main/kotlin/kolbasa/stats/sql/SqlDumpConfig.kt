@@ -36,7 +36,7 @@ data class SqlDumpConfig(
         fun enabled() = apply { this.enabled = true }
         fun disabled() = apply { this.enabled = false }
         fun writer(writer: Writer) = apply { this.writer = writer }
-        fun queue(queue: Queue<*, *>, vararg kind: StatementKind) = apply {
+        fun queue(queue: Queue<*>, vararg kind: StatementKind) = apply {
             queues[queue.name] = EnumSet.copyOf(kind.toList())
         }
 

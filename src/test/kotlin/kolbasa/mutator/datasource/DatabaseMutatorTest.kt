@@ -12,7 +12,10 @@ import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.queue.Searchable
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import java.time.Duration
@@ -20,12 +23,12 @@ import kotlin.test.*
 
 class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
-    internal data class TestMeta(@Searchable val field: Int)
+    private val FIELD = MetaField.int("field", FieldOption.SEARCHABLE)
 
     private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
-        metadata = TestMeta::class.java
+        metadata = Metadata.of(FIELD)
     )
 
     @BeforeTest
@@ -40,11 +43,11 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         val producer = DatabaseProducer(dataSource)
         val data1 = (1..50).map {
-            val meta = TestMeta(it)
+            val meta = MetaValues.of(FIELD.value(it))
             SendMessage(it.toString(), meta, MessageOptions(attempts = attempts))
         }
         val data2 = (100..150).map {
-            val meta = TestMeta(it)
+            val meta = MetaValues.of(FIELD.value(it))
             SendMessage(it.toString(), meta, MessageOptions(attempts = attempts))
         }
 
@@ -116,7 +119,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         val producer = DatabaseProducer(dataSource)
         val data = (1..100).map {
-            val meta = TestMeta(it)
+            val meta = MetaValues.of(FIELD.value(it))
             SendMessage(it.toString(), meta, MessageOptions(attempts = attempts))
         }
 
@@ -132,14 +135,14 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         val mutator = DatabaseMutator(dataSource)
         val mutations = listOf(AddRemainingAttempts(attemptsDelta))
         val mutateResult = mutator.mutate(queue, mutations) {
-            (TestMeta::field lessEq 67) or (TestMeta::field eq 99)
+            (FIELD lessEq 67) or (FIELD eq 99)
         }
 
         val expectedMutatedIds = sentMessages
             .filter {
                 val meta = requireNotNull(it.message.meta)
                 // Same expression as above
-                meta.field <= 67 || meta.field == 99
+                meta.get(FIELD) <= 67 || meta.get(FIELD) == 99
             }
             .map { it.id }
 
@@ -198,7 +201,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         val producer = DatabaseProducer(dataSource)
         val data = (1..100).map {
-            val meta = TestMeta(it)
+            val meta = MetaValues.of(FIELD.value(it))
             SendMessage(it.toString(), meta, MessageOptions(attempts = attempts))
         }
 
@@ -216,14 +219,14 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         val mutator = DatabaseMutator(dataSource, mutatorOptions)
         val mutations = listOf(AddRemainingAttempts(attemptsDelta))
         val mutateResult = mutator.mutate(queue, mutations) {
-            (TestMeta::field lessEq 67) or (TestMeta::field eq 99)
+            (FIELD lessEq 67) or (FIELD eq 99)
         }
 
         val expectedMutatedIds = sentMessages
             .filter {
                 val meta = requireNotNull(it.message.meta)
                 // Same expression as above
-                meta.field <= 67 || meta.field == 99
+                meta.get(FIELD) <= 67 || meta.get(FIELD) == 99
             }
             .map { it.id }
 
@@ -282,7 +285,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         val producer = DatabaseProducer(dataSource)
         val data = (1..100).map {
-            SendMessage<String, TestMeta>(it.toString(), meta = null)
+            SendMessage(it.toString())
         }
 
         // Id list to mutate
@@ -318,7 +321,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
         (1..100).forEach { _ ->
             val data = (1..1000).map {
-                SendMessage("${System.nanoTime()}_${it}", meta = TestMeta(it))
+                SendMessage("${System.nanoTime()}_${it}", meta = MetaValues.of(FIELD.value(it)))
             }
 
             val ids = producer.send(queue, data).onlySuccessful().map { it.id }

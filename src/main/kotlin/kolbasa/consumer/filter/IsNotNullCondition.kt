@@ -5,20 +5,14 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal data class IsNotNullCondition<Meta : Any>(private val fieldName: String) : Condition<Meta>() {
+internal data class IsNotNullCondition(private val field: MetaField<*>) : Condition() {
 
-    private lateinit var field: MetaField<Meta>
-
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
-        if (!::field.isInitialized) {
-            field = findField(fieldName)
-        }
-
+    override fun internalToSqlClause(queue: Queue<*>): String {
         return "${field.dbColumnName} is not null"
     }
 
     override fun internalFillPreparedQuery(
-        queue: Queue<*, Meta>,
+        queue: Queue<*>,
         preparedStatement: PreparedStatement,
         columnIndex: ColumnIndex
     ) {

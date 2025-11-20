@@ -13,6 +13,7 @@ import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
+import kolbasa.queue.meta.*
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.SchemaHelpers
 import java.math.BigDecimal
@@ -26,7 +27,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
     val migrateBatchSize = 1000
     val shardsToMove = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     val shardsToStay = listOf(10, 11, 12, 13, 14, 15, 16, 17, 18, 19)
-    var sentItems = mutableMapOf<Id, SendMessage<Value, TestMeta>>()
+    var sentItems = mutableMapOf<Id, SendMessage<Value>>()
 
     @BeforeTest
     fun before() {
@@ -42,7 +43,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
                     shardsToStay.random()
                 }
 
-                SendMessage<Value, TestMeta>(data = Value(shard), meta = randomTestMeta())
+                SendMessage(data = Value(shard), meta = randomTestMeta())
             }
             .groupBy { it.data.value }
 
@@ -135,20 +136,18 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             THIRD
         }
 
-        internal data class TestMeta(
-            val stringField: String,
-            val longField: Long,
-            val intField: Int,
-            val shortField: Short,
-            val byteField: Byte,
-            val booleanField: Boolean,
-            val doubleField: Double,
-            val floatField: Float,
-            val charField: Char,
-            val bigIntegerField: BigInteger,
-            val bigDecimalField: BigDecimal,
-            val enumField: TestEnum
-        )
+        internal val STRING_FIELD = MetaField.string("string_field")
+        internal val LONG_FIELD = MetaField.long("long_field")
+        internal val INT_FIELD = MetaField.int("int_field")
+        internal val SHORT_FIELD = MetaField.short("short_field")
+        internal val BYTE_FIELD = MetaField.byte("byte_field")
+        internal val BOOLEAN_FIELD = MetaField.boolean("boolean_field")
+        internal val DOUBLE_FIELD = MetaField.double("double_field")
+        internal val FLOAT_FIELD = MetaField.float("float_field")
+        internal val CHAR_FIELD = MetaField.char("char_field")
+        internal val BI_FIELD = MetaField.bigInteger("big_integer_field")
+        internal val BD_FIELD = MetaField.bigDecimal("big_decimal_field")
+        internal val ENUM_FIELD = MetaField.enum("enum_field", type = TestEnum::class.java)
 
         internal data class Value(val value: Int)
 
@@ -157,23 +156,36 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             DatabaseQueueDataType.Json<Value>(
                 serializer = { "{\"value\": ${it.value}}" },
                 deserializer = { Value(it.removeSurrounding("{\"value\": ", "}").toInt()) }),
-            metadata = TestMeta::class.java
+            metadata = Metadata.of(
+                STRING_FIELD,
+                LONG_FIELD,
+                INT_FIELD,
+                SHORT_FIELD,
+                BYTE_FIELD,
+                BOOLEAN_FIELD,
+                DOUBLE_FIELD,
+                FLOAT_FIELD,
+                CHAR_FIELD,
+                BI_FIELD,
+                BD_FIELD,
+                ENUM_FIELD
+            )
         )
 
-        internal fun randomTestMeta(): TestMeta {
-            return TestMeta(
-                stringField = ('a'..'z').toList().shuffled().take(Random.nextInt(5, 10)).joinToString(""),
-                longField = Random.nextLong(),
-                intField = Random.nextInt(),
-                shortField = Random.nextInt().toShort(),
-                byteField = Random.nextInt().toByte(),
-                booleanField = Random.nextBoolean(),
-                doubleField = Random.nextDouble(Double.MIN_VALUE, Double.MAX_VALUE),
-                floatField = Random.nextFloat() * 1_000_000,
-                charField = ('a'..'z').random(),
-                bigIntegerField = BigInteger.valueOf(Random.nextLong()),
-                bigDecimalField = BigDecimal.valueOf(Random.nextDouble()),
-                enumField = TestEnum.values().random()
+        internal fun randomTestMeta(): MetaValues {
+            return MetaValues.of(
+                STRING_FIELD.value(('a'..'z').toList().shuffled().take(Random.nextInt(5, 10)).joinToString("")),
+                LONG_FIELD.value(Random.nextLong()),
+                INT_FIELD.value(Random.nextInt()),
+                SHORT_FIELD.value(Random.nextInt().toShort()),
+                BYTE_FIELD.value(Random.nextInt().toByte()),
+                BOOLEAN_FIELD.value(Random.nextBoolean()),
+                DOUBLE_FIELD.value(Random.nextDouble(Double.MIN_VALUE, Double.MAX_VALUE)),
+                FLOAT_FIELD.value(Random.nextFloat() * 1_000_000),
+                CHAR_FIELD.value(('a'..'z').random()),
+                BI_FIELD.value(BigInteger.valueOf(Random.nextLong())),
+                BD_FIELD.value(BigDecimal.valueOf(Random.nextDouble())),
+                ENUM_FIELD.value(TestEnum.values().random())
             )
         }
     }

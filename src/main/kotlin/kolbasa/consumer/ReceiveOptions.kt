@@ -6,7 +6,7 @@ import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.order.Order
 import java.time.Duration
 
-data class ReceiveOptions<Meta : Any> @JvmOverloads constructor(
+data class ReceiveOptions @JvmOverloads constructor(
     /**
      * Visibility timeout for this specific consume() call.
      * Visibility timeout is a delay before consumed but not deleted message will be
@@ -31,14 +31,14 @@ data class ReceiveOptions<Meta : Any> @JvmOverloads constructor(
     /**
      * If you want to receive messages in a specific order, you can specify it here.
      */
-    val order: List<Order<Meta>>? = null,
+    val order: List<Order>? = null,
     /**
      * If you want to receive messages filtered by meta fields values, you can specify it here.
      */
-    val filter: Condition<Meta>? = null,
+    val filter: Condition? = null,
 ) {
 
-    constructor(visibilityTimeout: Duration, readMetadata: Boolean, order: Order<Meta>, filter: Condition<Meta>?) :
+    constructor(visibilityTimeout: Duration, readMetadata: Boolean, order: Order, filter: Condition?) :
         this(visibilityTimeout, readMetadata, listOf(order), filter)
 
     init {

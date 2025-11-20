@@ -57,7 +57,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         // Send N messages randomly to all nodes
         val clusterProducer = ClusterProducer(cluster)
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
-            val sendRequest = SendRequest<Int, Unit>(
+            val sendRequest = SendRequest(
                 data = listOf(SendMessage(data = message)),
                 sendOptions = SendOptions(shard = message)
             )
@@ -97,17 +97,17 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         assertEquals(1, first.size + second.size + third.size, "second: $second, third: $third")
     }
 
-    private fun readData(dataSource: DataSource): List<Message<Int, Unit>> {
+    private fun readData(dataSource: DataSource): List<Message<Int>> {
         val consumer = DatabaseConsumer(dataSource)
         val messages = consumer.receive(queue, Shard.SHARD_COUNT)
         consumer.delete(queue, messages)
         return messages
     }
 
-    private fun tryToReadEverything(): List<Message<Int, Unit>> {
+    private fun tryToReadEverything(): List<Message<Int>> {
         val attemptsToRead = 100
         // Receive N messages and test that all messages are received
-        val received = mutableListOf<Message<Int, Unit>>()
+        val received = mutableListOf<Message<Int>>()
 
         var emptyReceiveAttempt = 0
         do {

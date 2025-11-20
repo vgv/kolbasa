@@ -5,25 +5,19 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal abstract class AbstractOneValueCondition<Meta : Any, T>(
-    private val fieldName: String,
+internal abstract class AbstractOneValueCondition<T>(
+    private val field: MetaField<T>,
     private val value: T
-) : Condition<Meta>() {
-
-    private lateinit var field: MetaField<Meta>
+) : Condition() {
 
     abstract val operator: String
 
-    override fun internalToSqlClause(queue: Queue<*, Meta>): String {
-        if (!::field.isInitialized) {
-            field = findField(fieldName)
-        }
-
+    override fun internalToSqlClause(queue: Queue<*>): String {
         // Field Operator Parameter, like field=?, field>? etc.
         return "${field.dbColumnName} $operator ?"
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*, Meta>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), value)
     }
 

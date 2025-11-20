@@ -15,6 +15,7 @@ import kolbasa.schema.IdSchema
 import kolbasa.schema.SchemaHelpers
 import java.sql.Statement
 import javax.sql.DataSource
+import kotlin.collections.isNotEmpty
 import kotlin.test.*
 
 class ClusterProducerTest : AbstractPostgresqlTest() {
@@ -45,7 +46,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     fun testMessagesDistribution_SendOneMessageAndCheckShard() {
         val shard = 123
 
-        val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+        val sendRequest = SendRequest(listOf(SendMessage(shard)), SendOptions(shard = shard))
         val sendResult = clusterProducer.send(queue, sendRequest)
 
         // read directly from the producer node
@@ -82,7 +83,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         // send to random nodes
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
-            val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+            val sendRequest = SendRequest<Int>(listOf(SendMessage(shard)), SendOptions(shard = shard))
             clusterProducer.send(queue, sendRequest)
         }
 
@@ -128,7 +129,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         // send to random nodes
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
-            val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+            val sendRequest = SendRequest(listOf(SendMessage(shard)), SendOptions(shard = shard))
             clusterProducer.send(queue, sendRequest)
         }
 
@@ -154,7 +155,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         val shard = 123
 
         val results = (1..messagesToSend).map {
-            val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+            val sendRequest = SendRequest(listOf(SendMessage(shard)), SendOptions(shard = shard))
             clusterProducer.send(queue, sendRequest)
         }
 
@@ -193,7 +194,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
     fun testMessagesDistribution_RandomShard() {
         val results = (1..messagesToSend).map {
             val shard = ShardStrategy.Random.getShard()
-            val sendRequest = SendRequest<Int, Unit>(listOf(SendMessage(shard)), SendOptions(shard = shard))
+            val sendRequest = SendRequest(listOf(SendMessage(shard)), SendOptions(shard = shard))
             clusterProducer.send(queue, sendRequest)
         }
 
@@ -214,7 +215,7 @@ class ClusterProducerTest : AbstractPostgresqlTest() {
         assertEquals(messagesToSend, first.size + second.size + third.size)
     }
 
-    private fun readData(dataSource: DataSource): List<Message<Int, Unit>> {
+    private fun readData(dataSource: DataSource): List<Message<Int>> {
         val consumer = DatabaseConsumer(dataSource)
         val messages = consumer.receive(queue, messagesToSend)
         consumer.delete(queue, messages)
