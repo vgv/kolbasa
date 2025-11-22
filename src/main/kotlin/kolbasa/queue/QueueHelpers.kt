@@ -3,9 +3,28 @@ package kolbasa.queue
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
+import kolbasa.schema.Const
 import java.time.Duration
 
 internal object QueueHelpers {
+
+    fun generateDatabaseName(vararg parts: String, separator: String = ""): String {
+        val result = parts.joinToString(separator = separator)
+
+        check(result.length <= Const.MAX_DATABASE_OBJECT_NAME_LENGTH) {
+            "Your identifier name is too long ($result). Max allowed length is ${Const.MAX_DATABASE_OBJECT_NAME_LENGTH} symbols"
+        }
+
+        return result
+    }
+
+    fun generateQueueDbName(name: String): String {
+        return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, name)
+    }
+
+    fun generateDbMetaColumnName(name: String): String {
+        return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, name)
+    }
 
     fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {
         var delay = queueOptions?.defaultDelay

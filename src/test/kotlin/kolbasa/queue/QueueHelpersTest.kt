@@ -3,13 +3,29 @@ package kolbasa.queue
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
-import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
+import kolbasa.schema.Const
 import java.time.Duration
 import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 internal class QueueHelpersTest {
+
+    @Test
+    fun testGenerateDatabaseName() {
+        assertEquals("abcd", QueueHelpers.generateDatabaseName("a", "b", "c", "d"))
+        assertEquals("a-b-c-d", QueueHelpers.generateDatabaseName("a", "b", "c", "d", separator = "-"))
+    }
+
+    @Test
+    fun testGenerateDatabaseName_TooLong() {
+        val longName = "a".repeat(Const.MAX_DATABASE_OBJECT_NAME_LENGTH + 1)
+        assertFailsWith<IllegalStateException> {
+           QueueHelpers.generateDatabaseName(longName, longName, longName, separator = "-")
+        }
+    }
 
     @Test
     fun testCalculateDelay() {
@@ -101,19 +117,23 @@ internal class QueueHelpersTest {
 
     @Test
     fun testCalculateVisibilityTimeout() {
-        assertEquals(QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-            null,
-            null,
-            null
-        ))
+        assertEquals(
+            QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
+                null,
+                null,
+                null
+            )
+        )
 
         run {
             val options = QueueOptions()
-            assertEquals(QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-                options,
-                null,
-                null
-            ))
+            assertEquals(
+                QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
+                    options,
+                    null,
+                    null
+                )
+            )
         }
 
         run {
@@ -150,22 +170,26 @@ internal class QueueHelpersTest {
             val options = QueueOptions(defaultVisibilityTimeout = timeout)
             val consumerOptions = ConsumerOptions(visibilityTimeout = consumerTimeout)
             val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
-            assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
-                options,
-                consumerOptions,
-                receiveOptions
-            ))
+            assertEquals(
+                receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
+                    options,
+                    consumerOptions,
+                    receiveOptions
+                )
+            )
         }
 
         run {
             val receiveTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val options = QueueOptions()
             val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
-            assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
-                options,
-                null,
-                receiveOptions
-            ))
+            assertEquals(
+                receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
+                    options,
+                    null,
+                    receiveOptions
+                )
+            )
         }
 
         run {

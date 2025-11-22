@@ -1,5 +1,6 @@
 package kolbasa.queue.meta
 
+import kolbasa.queue.Checks
 import kolbasa.schema.Const
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -13,6 +14,10 @@ sealed class MetaField<T>(
     internal val dbColumnType: String,
     internal val sqlColumnType: Int
 ) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     internal abstract val dbColumnName: String
     internal abstract val dbIndexType: MetaIndexType
