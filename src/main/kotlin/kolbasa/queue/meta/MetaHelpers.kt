@@ -33,21 +33,6 @@ internal object MetaHelpers {
         }
     }
 
-    fun findEnumValueOfFunction(kClass: KClass<*>): KFunction<*>? {
-        return kClass.staticFunctions.find { function ->
-            if (function.name == "valueOf") {
-                val arguments = function.valueParameters
-                if (arguments.size == 1) {
-                    if (arguments.first().type.classifier == String::class) {
-                        return@find true
-                    }
-                }
-            }
-
-            false
-        }
-    }
-
 }
 
 internal enum class MetaIndexType {
