@@ -1,6 +1,5 @@
 package kolbasa.consumer.filter
 
-import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
@@ -15,12 +14,12 @@ internal class NativeSqlCondition(
         fields[it].dbColumnName
     }
 
-    override fun internalToSqlClause(queue: Queue<*>): String {
+    override fun toSqlClause(): String {
         // make a replacement
         return MessageFormat.format(sqlPattern, *names)
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         // NOP
     }
 

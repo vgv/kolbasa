@@ -171,7 +171,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
         val (execution, _) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->
                 val columnIndex = ColumnIndex()
-                condition.fillPreparedQuery(queue, preparedStatement, columnIndex)
+                condition.fillPreparedQuery(preparedStatement, columnIndex)
                 preparedStatement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
                         val localId = if (returnFullResponse) {
