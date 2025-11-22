@@ -4,7 +4,7 @@ import kolbasa.AbstractPostgresqlTest
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.*
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -22,14 +22,23 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
     )
 
     @Test
-    fun testExtractSchema_CheckStatementsAreEqualIfNoTablesAtAll() {
+    fun testExtractSchema_Check_Statements_If_No_Tables_At_All() {
         val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.LOCAL_RANGE)
 
-        assertEquals(schema.all, schema.required)
+        // Table DDL
+        val createTableStatements = 1
+        val addInternalColumns = 2 // add shard and alter remaining_attempts
+        val addMetaColumns = queue.metadata.fields.size
+        assertEquals(createTableStatements + addInternalColumns + addMetaColumns, schema.tableStatements.size)
+
+        // Indexes DDL
+        val internalIndexes = 2  // shard index + scheduled_at index
+        val metaIndexes = queue.metadata.fields.count { it.option != FieldOption.NONE }
+        assertEquals(internalIndexes + metaIndexes, schema.indexStatements.size)
     }
 
     @Test
-    fun testExtractSchema_CheckRequiredStatementsAreEmptyIfSchemaIsActual() {
+    fun testExtractSchema_Check_Statements_Are_Empty_If_Schema_Is_Actual() {
         // update database schema
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
 
@@ -39,7 +48,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
         // we don't expect anything in "required", because schema is actual
         val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.LOCAL_RANGE)
-        assertTrue(schema.required.isEmpty(), "Required object: ${schema.required}")
+        assertTrue(schema.isEmpty(), "Required object: $schema")
     }
 
 }

@@ -56,7 +56,7 @@ object SchemaHelpers {
     fun updateDatabaseSchema(dataSource: DataSource, queues: List<Queue<*>>) {
         generateDatabaseSchema(dataSource, queues).forEach { (_, schema) ->
             // we execute only required statements
-            executeSchemaStatements(dataSource, schema.required)
+            executeSchemaStatements(dataSource, schema)
         }
     }
 
@@ -70,8 +70,8 @@ object SchemaHelpers {
         updateDatabaseSchema(dataSource, queues.toList())
     }
 
-    private fun executeSchemaStatements(dataSource: DataSource, statements: SchemaStatements) {
-        if (statements.isEmpty()) {
+    private fun executeSchemaStatements(dataSource: DataSource, schema: Schema) {
+        if (schema.isEmpty()) {
             // nothing to execute
             return
         }
@@ -79,8 +79,8 @@ object SchemaHelpers {
         dataSource.useConnectionWithAutocommit { connection ->
             // separate transaction for each statement
             connection.createStatement().use { statement ->
-                statements.tableStatements.forEach(statement::execute)
-                statements.indexStatements.forEach(statement::execute)
+                schema.tableStatements.forEach(statement::execute)
+                schema.indexStatements.forEach(statement::execute)
             }
         }
     }

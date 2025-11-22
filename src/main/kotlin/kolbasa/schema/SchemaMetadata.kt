@@ -3,11 +3,6 @@ package kolbasa.schema
 import java.sql.Types
 
 data class Schema(
-    val all: SchemaStatements,
-    val required: SchemaStatements
-)
-
-data class SchemaStatements(
     /**
      * All "create table", "alter column", "set default" etc. statements
      */
@@ -17,8 +12,11 @@ data class SchemaStatements(
      */
     val indexStatements: List<String>
 ) {
+
     fun isEmpty() = tableStatements.isEmpty() && indexStatements.isEmpty()
+
 }
+
 
 internal data class Table(
     val name: String,

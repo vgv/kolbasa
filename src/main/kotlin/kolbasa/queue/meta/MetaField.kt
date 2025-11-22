@@ -15,10 +15,6 @@ sealed class MetaField<T>(
     internal val sqlColumnType: Int
 ) {
 
-    init {
-        Checks.checkMetaFieldName(name)
-    }
-
     internal abstract val dbColumnName: String
     internal abstract val dbIndexType: MetaIndexType
 
@@ -111,6 +107,10 @@ private data class ByteField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Byte>(name, option, "smallint", Types.SMALLINT) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -129,6 +129,10 @@ private data class ShortField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Short>(name, option, "smallint", Types.SMALLINT) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
@@ -149,6 +153,10 @@ private data class IntField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Int>(name, option, "int", Types.INTEGER) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -167,6 +175,10 @@ private data class LongField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Long>(name, option, "bigint", Types.BIGINT) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
@@ -187,6 +199,10 @@ private data class BooleanField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Boolean>(name, option, "boolean", Types.BOOLEAN) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -205,6 +221,10 @@ private data class FloatField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Float>(name, option, "real", Types.REAL) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
@@ -225,6 +245,10 @@ private data class DoubleField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Double>(name, option, "double precision", Types.DOUBLE) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -243,6 +267,10 @@ private data class CharField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Char>(name, option, "varchar(${Const.META_FIELD_CHAR_TYPE_MAX_LENGTH})", Types.VARCHAR) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
@@ -268,6 +296,10 @@ private data class StringField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<String>(name, option, "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})", Types.VARCHAR) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -286,6 +318,10 @@ private data class BigIntegerField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<BigInteger>(name, option, "numeric", Types.NUMERIC) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
@@ -306,6 +342,10 @@ private data class BigDecimalField(
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<BigDecimal>(name, option, "numeric", Types.NUMERIC) {
 
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
@@ -325,6 +365,10 @@ private data class EnumField<E : Enum<E>>(
     val type: Class<E>,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<E>(name, option, "varchar(${Const.META_FIELD_ENUM_TYPE_MAX_LENGTH})", Types.VARCHAR) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
 
     override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
