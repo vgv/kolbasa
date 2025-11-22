@@ -6,8 +6,8 @@ import kolbasa.pg.DatabaseExtensions.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
-import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 @Tag("unit-db")

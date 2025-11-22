@@ -51,12 +51,11 @@ data class SendRequest<Data>(
      */
     internal fun chunked(chunkSize: Int): Sequence<SendRequest<Data>> {
         return if (data.size <= chunkSize) {
-            // Just an optimization
+            // Just an optimization to avoid useless allocation
             sequenceOf(this)
         } else {
-            (data.indices step chunkSize).asSequence().map {
-                val from = it
-                val to = min(it + chunkSize, data.size)
+            (data.indices step chunkSize).asSequence().map { from ->
+                val to = min(from + chunkSize, data.size)
                 makeView(from, to)
             }
         }

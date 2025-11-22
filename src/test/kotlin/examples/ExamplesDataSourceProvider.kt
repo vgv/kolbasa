@@ -2,7 +2,7 @@ package examples
 
 import com.zaxxer.hikari.HikariDataSource
 import kolbasa.AbstractPostgresqlTest
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 object ExamplesDataSourceProvider {

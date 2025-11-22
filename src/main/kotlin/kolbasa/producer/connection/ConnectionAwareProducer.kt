@@ -46,7 +46,6 @@ interface ConnectionAwareProducer {
      * Sends one message without metadata and another options
      *
      * @param Data type of the message
-     * @param Meta type of the metadata
      * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message to send
@@ -61,7 +60,6 @@ interface ConnectionAwareProducer {
      * Sends one message with optional metadata and [kolbasa.producer.MessageOptions]
      *
      * @param Data type of the message
-     * @param Meta type of the metadata
      * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data message, metadata (if any) and options (if any) to send
@@ -81,7 +79,6 @@ interface ConnectionAwareProducer {
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
      * @param Data type of the message
-     * @param Meta type of the metadata
      * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param data list of messages, metadata (if any) and options (if any) to send
@@ -102,7 +99,6 @@ interface ConnectionAwareProducer {
      * This is the most effective way to send a lot of messages due to the batching and another optimizations.
      *
      * @param Data type of the message
-     * @param Meta type of the metadata
      * @param connection JDBC connection used to send the message
      * @param queue queue to send message
      * @param request list of messages, metadata (if any) and options (if any) to send

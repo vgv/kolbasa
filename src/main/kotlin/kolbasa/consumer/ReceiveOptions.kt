@@ -20,18 +20,21 @@ data class ReceiveOptions @JvmOverloads constructor(
      * [QueueOptions.defaultVisibilityTimeout][kolbasa.queue.QueueOptions.defaultVisibilityTimeout]
      */
     val visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET,
+
     /**
      * Do we need to read metadata?
      * By default, we don't want to read these fields from the DB, parse them and instantiate the
-     * metaclass [Meta] for performance reasons.
+     * meta values for performance reasons.
      *
      * You don't need to read metadata if the only thing you need is to filter (or sort) messages by metadata fields.
      */
     val readMetadata: Boolean = false,
+
     /**
      * If you want to receive messages in a specific order, you can specify it here.
      */
     val order: List<Order>? = null,
+
     /**
      * If you want to receive messages filtered by meta fields values, you can specify it here.
      */
