@@ -78,8 +78,7 @@ internal object Checks {
         }
 
         // check all symbols
-        val allowedSymbols = Const.QUEUE_NAME_ALLOWED_SYMBOLS.toSet()
-        check(queueName.all { it in allowedSymbols }) {
+        check(queueName.all { it in Const.QUEUE_NAME_ALLOWED_SYMBOLS_SET }) {
             "Queue name contains illegal symbols. Allowed: ${Const.QUEUE_NAME_ALLOWED_SYMBOLS} (current=$queueName)"
         }
     }
@@ -94,8 +93,7 @@ internal object Checks {
         }
 
         // check all symbols
-        val allowedSymbols = Const.META_FIELD_NAME_ALLOWED_SYMBOLS.toSet()
-        check(fieldName.all { it in allowedSymbols }) {
+        check(fieldName.all { it in Const.META_FIELD_NAME_ALLOWED_SYMBOLS_SET }) {
             "Meta field name contains illegal symbols. Allowed: ${Const.META_FIELD_NAME_ALLOWED_SYMBOLS} (current=$fieldName)"
         }
     }
