@@ -10,7 +10,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-private val UNIQUE_KEY = MetaField.int("unique_key", FieldOption.UNIQUE_SEARCHABLE)
+private val UNIQUE_KEY = MetaField.int("unique_key", FieldOption.STRICT_UNIQUE)
 
 fun main() {
     // Define three queues to demonstrate different PartialInsert modes

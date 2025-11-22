@@ -17,9 +17,9 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
     private val incrementValue = 1.toLong()
 
     private val STRING_FIELD = MetaField.string("string_value")
-    private val LONG_FIELD = MetaField.long("long_value", FieldOption.SEARCHABLE)
-    private val INT_FIELD = MetaField.int("int_value", FieldOption.UNIQUE_SEARCHABLE)
-    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.RELAXED_UNIQUE_SEARCH)
+    private val LONG_FIELD = MetaField.long("long_value", FieldOption.SEARCH)
+    private val INT_FIELD = MetaField.int("int_value", FieldOption.STRICT_UNIQUE)
+    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.PENDING_UNIQUE)
     private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
     private val DOUBLE_FIELD = MetaField.double("double_value")
     private val FLOAT_FIELD = MetaField.float("float_value")
@@ -190,7 +190,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         }
 
         // meta_int index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_int_value_us")).let { metaFieldIndex ->
+        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_int_value_su")).let { metaFieldIndex ->
             assertTrue(metaFieldIndex.unique)
             assertEquals("(remaining_attempts > 0)", metaFieldIndex.filterCondition?.lowercase())
             assertFalse(metaFieldIndex.invalid)
@@ -200,7 +200,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         }
 
         // meta_short index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_short_value_ur")).let { metaFieldIndex ->
+        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_short_value_pu")).let { metaFieldIndex ->
             assertTrue(metaFieldIndex.unique)
             assertEquals("((remaining_attempts > 0) and (processing_at is null))", metaFieldIndex.filterCondition?.lowercase())
             assertFalse(metaFieldIndex.invalid)

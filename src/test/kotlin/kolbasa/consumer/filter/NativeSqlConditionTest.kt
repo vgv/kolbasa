@@ -42,7 +42,7 @@ class NativeSqlConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
-        private val STRING_VALUE = MetaField.string("string_value", FieldOption.SEARCHABLE)
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
+        private val STRING_VALUE = MetaField.string("string_value", FieldOption.SEARCH)
     }
 }

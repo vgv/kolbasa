@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 
 class DatabaseProducerDeduplicationTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.UNIQUE_SEARCHABLE)
+    private val FIELD = MetaField.int("field", FieldOption.STRICT_UNIQUE)
 
     private val queue = Queue.of(
         "local",

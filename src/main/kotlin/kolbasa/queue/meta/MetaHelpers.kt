@@ -15,15 +15,15 @@ internal object MetaHelpers {
 
     fun defineIndexType(searchable: FieldOption): MetaIndexType {
         return when (searchable) {
-            FieldOption.RELAXED_UNIQUE_SEARCH -> {
-                MetaIndexType.RELAXED_UNIQUE_INDEX
+            FieldOption.PENDING_UNIQUE -> {
+                MetaIndexType.PENDING_UNIQUE_INDEX
             }
 
-            FieldOption.UNIQUE_SEARCHABLE -> {
+            FieldOption.STRICT_UNIQUE -> {
                 MetaIndexType.STRICT_UNIQUE_INDEX
             }
 
-            FieldOption.SEARCHABLE -> {
+            FieldOption.SEARCH -> {
                 MetaIndexType.JUST_INDEX
             }
 
@@ -39,6 +39,6 @@ internal enum class MetaIndexType {
     NO_INDEX,
     JUST_INDEX,
     STRICT_UNIQUE_INDEX,
-    RELAXED_UNIQUE_INDEX
+    PENDING_UNIQUE_INDEX
 }
 

@@ -31,7 +31,7 @@ import kotlin.test.*
 
 class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.SEARCHABLE)
+    private val FIELD = MetaField.int("field", FieldOption.SEARCH)
 
     private val queue = Queue.of(
         "local",

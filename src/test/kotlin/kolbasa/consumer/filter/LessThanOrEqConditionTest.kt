@@ -36,6 +36,6 @@ internal class LessThanOrEqConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
     }
 }

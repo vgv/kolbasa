@@ -188,18 +188,18 @@ internal object SchemaGenerator {
         // index
         val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName
         val justIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "j", separator = "_")
-        val strictUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "us", separator = "_")
-        val relaxedUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "ur", separator = "_")
+        val strictUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "su", separator = "_")
+        val pendingUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "pu", separator = "_")
 
         val oldIndex = existingTable?.findIndex(oldIndexName)
         val justIndex = existingTable?.findIndex(justIndexName)
         val strictUniqueIndex = existingTable?.findIndex(strictUniqueIndexName)
-        val relaxedUniqueIndex = existingTable?.findIndex(relaxedUniqueIndexName)
+        val pendingUniqueIndex = existingTable?.findIndex(pendingUniqueIndexName)
 
         val dropOldIndexStatement = "drop index concurrently if exists $oldIndexName"
         val dropJustIndexStatement = "drop index concurrently if exists $justIndexName"
         val dropStrictUniqueIndexStatement = "drop index concurrently if exists $strictUniqueIndexName"
-        val dropRelaxedUniqueIndexStatement = "drop index concurrently if exists $relaxedUniqueIndexName"
+        val dropPendingUniqueIndexStatement = "drop index concurrently if exists $pendingUniqueIndexName"
 
         // Remove old index format, delete these lines after migration
         if (existingTable != null && oldIndex != null) {
@@ -215,8 +215,8 @@ internal object SchemaGenerator {
                     if (strictUniqueIndex != null) {
                         mutableSchema.indexes += dropStrictUniqueIndexStatement
                     }
-                    if (relaxedUniqueIndex != null) {
-                        mutableSchema.indexes += dropRelaxedUniqueIndexStatement
+                    if (pendingUniqueIndex != null) {
+                        mutableSchema.indexes += dropPendingUniqueIndexStatement
                     }
                 }
             }
@@ -233,8 +233,8 @@ internal object SchemaGenerator {
                 if (strictUniqueIndex != null) {
                     mutableSchema.indexes += dropStrictUniqueIndexStatement
                 }
-                if (relaxedUniqueIndex != null) {
-                    mutableSchema.indexes += dropRelaxedUniqueIndexStatement
+                if (pendingUniqueIndex != null) {
+                    mutableSchema.indexes += dropPendingUniqueIndexStatement
                 }
             }
 
@@ -251,14 +251,14 @@ internal object SchemaGenerator {
                 if (strictUniqueIndex == null) {
                     mutableSchema.indexes += createIndexStatement
                 }
-                if (relaxedUniqueIndex != null) {
-                    mutableSchema.indexes += dropRelaxedUniqueIndexStatement
+                if (pendingUniqueIndex != null) {
+                    mutableSchema.indexes += dropPendingUniqueIndexStatement
                 }
             }
 
-            MetaIndexType.RELAXED_UNIQUE_INDEX -> {
+            MetaIndexType.PENDING_UNIQUE_INDEX -> {
                 val createIndexStatement = """
-                    create unique index concurrently if not exists $relaxedUniqueIndexName
+                    create unique index concurrently if not exists $pendingUniqueIndexName
                     on ${queue.dbTableName}(${metaField.dbColumnName})
                     where (${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0) and (${Const.PROCESSING_AT_COLUMN_NAME} is null)
                 """.trimIndent()
@@ -269,7 +269,7 @@ internal object SchemaGenerator {
                 if (strictUniqueIndex != null) {
                     mutableSchema.indexes += dropStrictUniqueIndexStatement
                 }
-                if (relaxedUniqueIndex == null) {
+                if (pendingUniqueIndex == null) {
                     mutableSchema.indexes += createIndexStatement
                 }
             }

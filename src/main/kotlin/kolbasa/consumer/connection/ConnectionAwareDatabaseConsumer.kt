@@ -61,7 +61,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
 
         val (execution, result) = TimeHelper.measure {
             connection.prepareStatement(query).use { preparedStatement ->
-                ConsumerSchemaHelpers.fillSelectPreparedQuery(queue, consumerOptions, receiveOptions, preparedStatement)
+                ConsumerSchemaHelpers.fillSelectPreparedQuery(consumerOptions, receiveOptions, preparedStatement)
                 preparedStatement.executeQuery().use { resultSet ->
                     val result = ArrayList<Message<Data>>(limit)
 

@@ -11,8 +11,8 @@ import kotlin.test.assertTrue
 
 class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
-    private val FIRST = MetaField.int("first", FieldOption.SEARCHABLE)
-    private val SECOND = MetaField.long("second", FieldOption.UNIQUE_SEARCHABLE)
+    private val FIRST = MetaField.int("first", FieldOption.SEARCH)
+    private val SECOND = MetaField.long("second", FieldOption.STRICT_UNIQUE)
     private val THIRD = MetaField.string("third")
 
     private val queue = Queue.of(
