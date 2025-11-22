@@ -43,12 +43,14 @@ data class Message<Data>(
      * receive it again. This can be useful for additional actions, such as logging, sending a different message to a different
      * queue, writing to a database, and so on.
      *
+     * To avoid having to remember and work with magic constants (0), there is a convenient [isLastAttempt] method for checking
+     *
      * ```
      * fun processOneMessage(message: Message<Data, Meta>) {
      *   try {
      *     // ... business code to process the message ...
      *   } catch (e: Exception) {
-     *     if (message.remainingAttempts == 0) {
+     *     if (message.isLastAttempt()) {
      *       // This was the last attempt to process this message, but it failed again. Let's log it
      *       log.error("Can't process: $message")
      *     }
@@ -73,5 +75,7 @@ data class Message<Data>(
 ) {
 
     internal var openTelemetryData: Map<String, String>? = null
+
+    fun isLastAttempt(): Boolean = (remainingAttempts == 0)
 
 }
