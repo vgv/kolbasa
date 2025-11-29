@@ -3,6 +3,8 @@ package kolbasa.producer.datasource
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.*
+import kolbasa.producer.SendResult.Companion.onlyDuplicated
+import kolbasa.producer.SendResult.Companion.onlyFailed
 import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -62,15 +64,21 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData() {
         val producer = DatabaseProducer(dataSource)
 
-        val result1 = producer.send(queue, "bugaga")
-        assertEquals(0, result1.failedMessages)
-        assertEquals(1, result1.onlySuccessful().size)
-        val id1 = result1.onlySuccessful().first().id
+        val id1 = producer.send(queue, "bugaga").let { result ->
+            assertEquals(0, result.failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlySuccessful().size) // only one successful result
+            result.onlySuccessful().first().id
+        }
 
-        val result2 = producer.send(queue, "bugaga")
-        assertEquals(0, result2.failedMessages)
-        assertEquals(1, result2.onlySuccessful().size)
-        val id2 = result2.onlySuccessful().first().id
+        val id2 = producer.send(queue, "bugaga").let { result ->
+            assertEquals(0, result.failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
         assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
         assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
@@ -86,15 +94,21 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         val firstProducer = DatabaseProducer(dataSource, ProducerOptions(producer = firstProducerName))
         val secondProducer = DatabaseProducer(dataSource, ProducerOptions(producer = secondProducerName))
 
-        val result1 = firstProducer.send(queue, "bugaga")
-        assertEquals(0, result1.failedMessages)
-        assertEquals(1, result1.onlySuccessful().size)
-        val id1 = result1.onlySuccessful().first().id
+        val id1 = firstProducer.send(queue, "bugaga").let { result ->
+            assertEquals(0, result.failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
-        val result2 = secondProducer.send(queue, "bugaga")
-        assertEquals(0, result2.failedMessages)
-        assertEquals(1, result2.onlySuccessful().size)
-        val id2 = result2.onlySuccessful().first().id
+        val id2 = secondProducer.send(queue, "bugaga").let { result ->
+            assertEquals(0, result.failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
 
         assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
         assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
@@ -119,12 +133,16 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val id1 = producer.send(queue, SendMessage("bugaga", MetaValues.of(FIELD.value(1)))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
 
         val id2 = producer.send(queue, SendMessage("bugaga", MetaValues.of(FIELD.value(2)))).let { (failedMessages, result) ->
             assertEquals(0, failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
             assertEquals(1, result.onlySuccessful().size)
             result.onlySuccessful().first().id
         }
@@ -137,7 +155,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSend_Prohibited() {
+    fun testSend_PartialInsert_Prohibited() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
@@ -159,7 +177,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSend_UntilFirstFailure() {
+    fun testSend_PartialInsert_UntilFirstFailure() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
@@ -189,7 +207,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testSend_AsManyAsPossible() {
+    fun testSend_PartialInsert_AsManyAsPossible() {
         val producer = DatabaseProducer(
             dataSource,
             ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
