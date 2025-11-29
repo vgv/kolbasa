@@ -57,7 +57,7 @@ internal object ConsumerSchemaHelpers {
             whereClauses += "${Const.SHARD_COLUMN_NAME} in (${shards.asText})"
         }
         receiveOptions.filter?.let { filter ->
-            whereClauses += filter.toSqlClause(queue)
+            whereClauses += filter.toSqlClause()
         }
 
         // ----------------------------------------------------------
@@ -110,7 +110,6 @@ internal object ConsumerSchemaHelpers {
     }
 
     fun fillSelectPreparedQuery(
-        queue: Queue<*>,
         consumerOptions: ConsumerOptions,
         receiveOptions: ReceiveOptions,
         preparedStatement: PreparedStatement
@@ -118,7 +117,7 @@ internal object ConsumerSchemaHelpers {
         val columnIndex = ColumnIndex()
 
         // fill filter clauses, if any
-        receiveOptions.filter?.fillPreparedQuery(queue, preparedStatement, columnIndex)
+        receiveOptions.filter?.fillPreparedQuery(preparedStatement, columnIndex)
 
         // consumer name, if any
         if (consumerOptions.consumer != null) {

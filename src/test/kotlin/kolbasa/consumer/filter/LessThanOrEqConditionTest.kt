@@ -3,8 +3,6 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
-import kolbasa.queue.PredefinedDataTypes
-import kolbasa.queue.Queue
 import kolbasa.queue.meta.*
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -15,34 +13,22 @@ internal class LessThanOrEqConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue.of(
-            "test_queue",
-            databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
-        )
-
         val lteExpression = LessThanOrEqCondition(INT_VALUE, 123)
 
-        val sql = lteExpression.toSqlClause(queue)
+        val sql = lteExpression.toSqlClause()
         assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " <= ?", sql)
     }
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue.of(
-            "test_queue",
-            databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
-        )
-
         val lteExpression = LessThanOrEqCondition(INT_VALUE, 123)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
 
         // call
-        lteExpression.toSqlClause(queue)
-        lteExpression.fillPreparedQuery(queue, preparedStatement, column)
+        lteExpression.toSqlClause()
+        lteExpression.fillPreparedQuery(preparedStatement, column)
 
         // check
         verify { preparedStatement.setInt(eq(1), eq(123)) }
@@ -50,7 +36,6 @@ internal class LessThanOrEqConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
-        private val STRING_VALUE = MetaField.string("string_value")
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
     }
 }

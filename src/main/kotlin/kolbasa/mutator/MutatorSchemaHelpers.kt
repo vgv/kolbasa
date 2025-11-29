@@ -43,7 +43,7 @@ internal object MutatorSchemaHelpers {
     ): String {
         val clauses = generateMutateExpressions(mutations)
         // meta_field_1 = ? and meta_field_2 > ? and ...
-        val query = condition.toSqlClause(queue)
+        val query = condition.toSqlClause()
         val fields = if (returnAllFields) {
             ALL_FIELDS
         } else {

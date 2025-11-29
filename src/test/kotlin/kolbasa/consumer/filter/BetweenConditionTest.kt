@@ -3,12 +3,9 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
-import kolbasa.queue.PredefinedDataTypes
-import kolbasa.queue.Queue
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaHelpers
-import kolbasa.queue.meta.Metadata
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -18,32 +15,22 @@ internal class BetweenConditionTest {
 
     @Test
     fun testToSql() {
-        val queue = Queue.of(
-            "test_queue",
-            databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
-        )
         val betweenExpression = BetweenCondition(INT_VALUE, Pair(10, 20))
 
-        val sql = betweenExpression.toSqlClause(queue)
+        val sql = betweenExpression.toSqlClause()
         assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " between ? and ?", sql)
     }
 
     @Test
     fun testFillPreparedQuery() {
-        val queue = Queue.of(
-            "test_queue",
-            databaseDataType = PredefinedDataTypes.ByteArray,
-            metadata = Metadata.of(INT_VALUE, STRING_VALUE)
-        )
         val betweenExpression = BetweenCondition(INT_VALUE, Pair(10, 20))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
 
         // call
-        betweenExpression.toSqlClause(queue)
-        betweenExpression.fillPreparedQuery(queue, preparedStatement, column)
+        betweenExpression.toSqlClause()
+        betweenExpression.fillPreparedQuery(preparedStatement, column)
 
         // check
         verify { preparedStatement.setInt(eq(1), eq(10)) }
@@ -52,7 +39,6 @@ internal class BetweenConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCHABLE)
-        private val STRING_VALUE = MetaField.string("string_value")
+        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
     }
 }

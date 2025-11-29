@@ -54,7 +54,7 @@ data class Queue<Data> @JvmOverloads constructor(
         Checks.checkQueueName(name)
     }
 
-    internal val dbTableName = Const.QUEUE_TABLE_NAME_PREFIX + name
+    internal val dbTableName = QueueHelpers.generateQueueDbName(name)
 
     internal val queueMetrics: QueueMetrics by lazy {
         when (val config = Kolbasa.prometheusConfig) {

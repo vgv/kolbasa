@@ -6,14 +6,15 @@ internal object Const {
      * PG default identifier length
      * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
      */
-    private const val PG_MAX_IDENTIFIER_LENGTH = 63
+    const val MAX_DATABASE_OBJECT_NAME_LENGTH = 63
 
     const val QUEUE_TABLE_NAME_PREFIX = "q_"
-    const val QUEUE_NAME_MAX_LENGTH = PG_MAX_IDENTIFIER_LENGTH - QUEUE_TABLE_NAME_PREFIX.length
+    const val QUEUE_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - QUEUE_TABLE_NAME_PREFIX.length
     const val QUEUE_NAME_ALLOWED_SYMBOLS = "0123456789" +
         "abcdefghijklmnopqrstuvwxyz" +
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
         "_"
+    val QUEUE_NAME_ALLOWED_SYMBOLS_SET = QUEUE_NAME_ALLOWED_SYMBOLS.toSet()
 
     // q__
     const val INTERNAL_KOLBASA_TABLE_PREFIX = QUEUE_TABLE_NAME_PREFIX + "_"
@@ -42,9 +43,10 @@ internal object Const {
     const val DATA_COLUMN_NAME = "data"
 
     const val META_FIELD_NAME_PREFIX = "meta_"
-    const val META_FIELD_NAME_MAX_LENGTH = PG_MAX_IDENTIFIER_LENGTH - META_FIELD_NAME_PREFIX.length
+    const val META_FIELD_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - META_FIELD_NAME_PREFIX.length
 
     const val META_FIELD_NAME_ALLOWED_SYMBOLS = QUEUE_NAME_ALLOWED_SYMBOLS
+    val META_FIELD_NAME_ALLOWED_SYMBOLS_SET = META_FIELD_NAME_ALLOWED_SYMBOLS.toSet()
 
     /**
      * Max possible size for one string meta field

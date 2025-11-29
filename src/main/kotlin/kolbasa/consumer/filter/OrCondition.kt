@@ -1,6 +1,5 @@
 package kolbasa.consumer.filter
 
-import kolbasa.queue.Queue
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
@@ -24,15 +23,15 @@ internal class OrCondition(first: Condition, second: Condition) : Condition() {
         }
     }
 
-    override fun internalToSqlClause(queue: Queue<*>): String {
+    override fun toSqlClause(): String {
         return conditions.joinToString(separator = " or ") {
-            "(" + it.toSqlClause(queue) + ")"
+            "(" + it.toSqlClause() + ")"
         }
     }
 
-    override fun internalFillPreparedQuery(queue: Queue<*>, preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+    override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         conditions.forEach { expression ->
-            expression.fillPreparedQuery(queue, preparedStatement, columnIndex)
+            expression.fillPreparedQuery(preparedStatement, columnIndex)
         }
     }
 
