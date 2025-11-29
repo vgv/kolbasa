@@ -15,8 +15,8 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
@@ -32,7 +32,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         metadata = Metadata.of(FIELD)
     )
 
-    @BeforeEach
+    @BeforeTest
     fun before() {
         SchemaHelpers.updateDatabaseSchema(dataSource, queue)
     }
