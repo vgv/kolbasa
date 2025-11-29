@@ -15,7 +15,7 @@ internal object MetaHelpers {
 
     fun defineIndexType(searchable: FieldOption): MetaIndexType {
         return when (searchable) {
-            FieldOption.PENDING_UNIQUE -> {
+            FieldOption.PENDING_ONLY_UNIQUE -> {
                 MetaIndexType.PENDING_UNIQUE_INDEX
             }
 
