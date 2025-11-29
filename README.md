@@ -1,3 +1,6 @@
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.vgv/kolbasa)](https://central.sonatype.com/search?namespace=io.github.vgv)
+[![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
+
 # kolbasa
 
 Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based queues to your project.
