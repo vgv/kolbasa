@@ -8,6 +8,7 @@ import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
+import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.Test
@@ -81,9 +82,16 @@ internal class ChecksTest {
         Checks.checkProducerName(null)
         Checks.checkProducerName("just value shorter than 255 symbols")
 
+        // too long name
         assertFailsWith<IllegalStateException> {
-            val longValue = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_LENGTH + 1)
-            Checks.checkProducerName(longValue)
+            val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
+            Checks.checkProducerName(longName)
+        }
+
+        // wrong symbols
+        assertFailsWith<IllegalStateException> {
+            val wrongName = "producer;name"
+            Checks.checkProducerName(wrongName)
         }
     }
 
@@ -97,6 +105,11 @@ internal class ChecksTest {
         assertFailsWith<IllegalStateException> {
             Checks.checkBatchSize(-1)
         }
+
+        // any value >= 1 should pass
+        assertDoesNotThrow {
+            Checks.checkBatchSize(Random.nextInt(1, 1_000_000))
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -106,9 +119,16 @@ internal class ChecksTest {
         Checks.checkConsumerName(null)
         Checks.checkConsumerName("just value shorter than 255 symbols")
 
+        // too long name
         assertFailsWith<IllegalStateException> {
-            val longValue = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_LENGTH + 1)
-            Checks.checkConsumerName(longValue)
+            val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
+            Checks.checkConsumerName(longName)
+        }
+
+        // wrong symbols
+        assertFailsWith<IllegalStateException> {
+            val wrongName = "consumer;name"
+            Checks.checkConsumerName(wrongName)
         }
     }
 

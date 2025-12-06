@@ -30,11 +30,16 @@ internal object Checks {
         }
     }
 
-    fun checkProducerName(producer: String?) {
-        if (producer == null) return
+    fun checkProducerName(producerName: String?) {
+        if (producerName == null) return
 
-        check(producer.length < Const.PRODUCER_CONSUMER_VALUE_LENGTH) {
-            "Producer name length must be less than ${Const.PRODUCER_CONSUMER_VALUE_LENGTH} symbols (current $producer)"
+        check(producerName.length < Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH) {
+            "Producer name length must be less than ${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH} symbols (current $producerName)"
+        }
+
+        // check all symbols
+        check(producerName.all { it in Const.PRODUCER_CONSUMER_ALLOWED_SYMBOLS_SET }) {
+            "Producer name contains illegal symbols. Allowed: ${Const.PRODUCER_CONSUMER_ALLOWED_SYMBOLS} (current=$producerName)"
         }
     }
 
@@ -44,11 +49,16 @@ internal object Checks {
         }
     }
 
-    fun checkConsumerName(consumer: String?) {
-        if (consumer == null) return
+    fun checkConsumerName(consumerName: String?) {
+        if (consumerName == null) return
 
-        check(consumer.length < Const.PRODUCER_CONSUMER_VALUE_LENGTH) {
-            "Consumer name length must be less than ${Const.PRODUCER_CONSUMER_VALUE_LENGTH} symbols (current=$consumer)"
+        check(consumerName.length < Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH) {
+            "Consumer name length must be less than ${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH} symbols (current=$consumerName)"
+        }
+
+        // check all symbols
+        check(consumerName.all { it in Const.PRODUCER_CONSUMER_ALLOWED_SYMBOLS_SET }) {
+            "Consumer name contains illegal symbols. Allowed: ${Const.PRODUCER_CONSUMER_ALLOWED_SYMBOLS} (current=$consumerName)"
         }
     }
 

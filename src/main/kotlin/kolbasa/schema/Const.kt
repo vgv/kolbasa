@@ -36,7 +36,14 @@ internal object Const {
 
     const val PRODUCER_COLUMN_NAME = "producer"
     const val CONSUMER_COLUMN_NAME = "consumer"
-    const val PRODUCER_CONSUMER_VALUE_LENGTH = 256
+    const val PRODUCER_CONSUMER_VALUE_MAX_LENGTH = 256
+    const val PRODUCER_CONSUMER_ALLOWED_SYMBOLS = "0123456789" +
+        "abcdefghijklmnopqrstuvwxyz" +
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+        "_-./*" +  // some extra symbols
+        " " // and space
+    val PRODUCER_CONSUMER_ALLOWED_SYMBOLS_SET = PRODUCER_CONSUMER_ALLOWED_SYMBOLS.toSet()
+
 
     const val REMAINING_ATTEMPTS_COLUMN_NAME = "remaining_attempts"
 

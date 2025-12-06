@@ -46,8 +46,8 @@ internal object SchemaGenerator {
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
-                ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
-                ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
+                ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
+                ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
                 ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} int not null,
                 ${Const.DATA_COLUMN_NAME} ${queue.databaseDataType.dbColumnType} not null
             )
