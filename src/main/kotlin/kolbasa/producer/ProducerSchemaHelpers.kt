@@ -65,7 +65,7 @@ internal object ProducerSchemaHelpers {
         if (producerName != null) {
             columns += Const.PRODUCER_COLUMN_NAME
             request.data.forEachIndexed { index, _ ->
-                values[index] += "?"
+                values[index] += "'$producerName'"
             }
         }
 
@@ -113,7 +113,6 @@ internal object ProducerSchemaHelpers {
 
     fun <Data> fillInsertPreparedQuery(
         queue: Queue<Data>,
-        producerName: String?,
         request: SendRequest<Data>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
@@ -131,11 +130,7 @@ internal object ProducerSchemaHelpers {
                 field.fillPreparedStatementForValue(preparedStatement, columnIndex++, item.meta)
             }
 
-            // producer name
-            if (producerName != null) {
-                preparedStatement.setString(columnIndex++, producerName)
-            }
-
+            // OpenTelemetry context propagation data
             if (openTelemetryData != null) {
                 preparedStatement.setArray(columnIndex++, openTelemetryData)
             }
