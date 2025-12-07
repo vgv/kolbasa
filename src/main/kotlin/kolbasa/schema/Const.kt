@@ -8,6 +8,8 @@ internal object Const {
      */
     const val MAX_DATABASE_OBJECT_NAME_LENGTH = 63
 
+    // ------------------------------------------------------------------------------------------------------------
+    // Queue
     const val QUEUE_TABLE_NAME_PREFIX = "q_"
     const val QUEUE_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - QUEUE_TABLE_NAME_PREFIX.length
     const val QUEUE_NAME_ALLOWED_SYMBOLS = "0123456789" +
@@ -16,9 +18,12 @@ internal object Const {
         "_"
     val QUEUE_NAME_ALLOWED_SYMBOLS_SET = QUEUE_NAME_ALLOWED_SYMBOLS.toSet()
 
-    // q__
+    // ------------------------------------------------------------------------------------------------------------
+    // Internal queues, prefix q__
     const val INTERNAL_KOLBASA_TABLE_PREFIX = QUEUE_TABLE_NAME_PREFIX + "_"
 
+    // ------------------------------------------------------------------------------------------------------------
+    // Columns
     const val ID_COLUMN_NAME = "id"
     const val ID_COLUMN_IDENTITY_CACHE_VALUE = 1000L
 
@@ -44,11 +49,12 @@ internal object Const {
         " " // and space
     val PRODUCER_CONSUMER_ALLOWED_SYMBOLS_SET = PRODUCER_CONSUMER_ALLOWED_SYMBOLS.toSet()
 
-
     const val REMAINING_ATTEMPTS_COLUMN_NAME = "remaining_attempts"
 
     const val DATA_COLUMN_NAME = "data"
 
+    // ------------------------------------------------------------------------------------------------------------
+    // Meta fields
     const val META_FIELD_NAME_PREFIX = "meta_"
     const val META_FIELD_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - META_FIELD_NAME_PREFIX.length
 

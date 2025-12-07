@@ -4,6 +4,7 @@ import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
 import kolbasa.schema.Const
+import kolbasa.utils.Helpers
 import java.time.Duration
 
 internal object QueueHelpers {
@@ -30,6 +31,21 @@ internal object QueueHelpers {
 
         // add 'meta_' prefix
         return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, snakeCaseName)
+    }
+
+    fun generateMetaColumnIndexName(queueName: String, fieldName: String, indexSuffix: String): String {
+        return try {
+            // Queue name + field name + index suffix is less than max length, everything is ok
+            generateDatabaseName(queueName, fieldName, indexSuffix, separator = "_")
+        } catch (_: IllegalStateException) {
+            try {
+                // Try to keep the queue name and use short hash for field name
+                generateDatabaseName(queueName, Helpers.shortHash(fieldName), indexSuffix, separator = "_")
+            } catch (_: IllegalStateException) {
+                // Even a queue name is too long, use hash for both queue name and field name
+                generateDatabaseName("idx", Helpers.md5Hash(queueName + fieldName), indexSuffix, separator = "_")
+            }
+        }
     }
 
     fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {
