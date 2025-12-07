@@ -2,6 +2,7 @@ package kolbasa.consumer.filter
 
 import io.mockk.confirmVerified
 import io.mockk.mockk
+import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaHelpers
@@ -17,7 +18,7 @@ internal class IsNotNullConditionTest {
         val isNotNullExpression = IsNotNullCondition(INT_VALUE)
 
         val sql = isNotNullExpression.toSqlClause()
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " is not null", sql)
+        assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " is not null", sql)
     }
 
     @Test

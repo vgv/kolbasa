@@ -46,8 +46,8 @@ internal object SchemaGenerator {
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
-                ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
-                ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_LENGTH}),
+                ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
+                ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
                 ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} int not null,
                 ${Const.DATA_COLUMN_NAME} ${queue.databaseDataType.dbColumnType} not null
             )
@@ -186,10 +186,10 @@ internal object SchemaGenerator {
         }
 
         // index
-        val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName
-        val justIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "j", separator = "_")
-        val strictUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "su", separator = "_")
-        val pendingUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "pu", separator = "_")
+        val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName // old format, to be removed later
+        val justIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "j")
+        val strictUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "su")
+        val pendingUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "pu")
 
         val oldIndex = existingTable?.findIndex(oldIndexName)
         val justIndex = existingTable?.findIndex(justIndexName)

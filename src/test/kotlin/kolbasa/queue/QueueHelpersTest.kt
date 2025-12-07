@@ -28,6 +28,47 @@ internal class QueueHelpersTest {
     }
 
     @Test
+    fun testGenerateQueueDbName() {
+        val queueName = "my_queue"
+        val expectedDbName = Const.QUEUE_TABLE_NAME_PREFIX + queueName
+        assertEquals(expectedDbName, QueueHelpers.generateQueueDbName(queueName))
+    }
+
+    @Test
+    fun testGenerateMetaColumnDbName() {
+        val fieldName = "someFieldName"
+        val expectedColumnName = Const.META_FIELD_NAME_PREFIX + "some_field_name"
+        assertEquals(expectedColumnName, QueueHelpers.generateMetaColumnDbName(fieldName))
+    }
+
+    @Test
+    fun testGenerateMetaColumnIndexName_Normal() {
+        val queueName = "my_queue"
+        val fieldName = "someField"
+        val indexSuffix = "idx"
+        val expectedIndexName = "my_queue_someField_idx"
+        assertEquals(expectedIndexName, QueueHelpers.generateMetaColumnIndexName(queueName, fieldName, indexSuffix))
+    }
+
+    @Test
+    fun testGenerateMetaColumnIndexName_Replace_Column_Name() {
+        val queueName = "my_queue_quite_long_name_name_name_name_name"
+        val fieldName = "someExtremelyLongFieldNameThatMayCauseTheIndexNameToBeTooLong"
+        val indexSuffix = "idx"
+        val expectedIndexName = "my_queue_quite_long_name_name_name_name_name_1ba1bfe469_idx"
+        assertEquals(expectedIndexName, QueueHelpers.generateMetaColumnIndexName(queueName, fieldName, indexSuffix))
+    }
+
+    @Test
+    fun testGenerateMetaColumnIndexName_Replace_Everything() {
+        val queueName = "my_queue_quite_long_name_name_name_name_name_name__name_name"
+        val fieldName = "someExtremelyLongFieldNameThatMayCauseTheIndexNameToBeTooLong"
+        val indexSuffix = "idx"
+        val expectedIndexName = "idx_b55a442ae34d130843c1bc90904acdbd_idx"
+        assertEquals(expectedIndexName, QueueHelpers.generateMetaColumnIndexName(queueName, fieldName, indexSuffix))
+    }
+
+    @Test
     fun testCalculateDelay() {
         assertNull(QueueHelpers.calculateDelay(null, null))
 

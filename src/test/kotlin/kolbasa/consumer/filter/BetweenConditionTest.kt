@@ -3,6 +3,7 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
+import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaHelpers
@@ -18,7 +19,7 @@ internal class BetweenConditionTest {
         val betweenExpression = BetweenCondition(INT_VALUE, Pair(10, 20))
 
         val sql = betweenExpression.toSqlClause()
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " between ? and ?", sql)
+        assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " between ? and ?", sql)
     }
 
     @Test

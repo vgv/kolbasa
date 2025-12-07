@@ -1,6 +1,7 @@
 package kolbasa.queue.meta
 
 import kolbasa.queue.Checks
+import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -111,7 +112,7 @@ private data class ByteField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Byte): ByteValue = ByteValue(this, value)
@@ -134,7 +135,7 @@ private data class ShortField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Short): ShortValue = ShortValue(this, value)
@@ -157,7 +158,7 @@ private data class IntField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Int): IntValue = IntValue(this, value)
@@ -180,7 +181,7 @@ private data class LongField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Long): LongValue = LongValue(this, value)
@@ -203,7 +204,7 @@ private data class BooleanField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Boolean): BooleanValue = BooleanValue(this, value)
@@ -226,7 +227,7 @@ private data class FloatField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Float): FloatValue = FloatValue(this, value)
@@ -249,7 +250,7 @@ private data class DoubleField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Double): DoubleValue = DoubleValue(this, value)
@@ -272,7 +273,7 @@ private data class CharField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: Char): CharValue = CharValue(this, value)
@@ -300,7 +301,7 @@ private data class StringField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: String): StringValue = StringValue(this, value)
@@ -323,7 +324,7 @@ private data class BigIntegerField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: BigInteger): BigIntegerValue = BigIntegerValue(this, value)
@@ -346,7 +347,7 @@ private data class BigDecimalField(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: BigDecimal): BigDecimalValue = BigDecimalValue(this, value)
@@ -370,7 +371,7 @@ private data class EnumField<E : Enum<E>>(
         Checks.checkMetaFieldName(name)
     }
 
-    override val dbColumnName = MetaHelpers.generateMetaColumnName(name)
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
     override fun value(value: E): EnumValue<E> = EnumValue(this, value)

@@ -3,6 +3,7 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
+import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaHelpers
@@ -18,7 +19,7 @@ internal class InConditionTest {
         val inExpression = InCondition(INT_VALUE, listOf(123))
 
         val sql = inExpression.toSqlClause()
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " = ANY (?)", sql)
+        assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " = ANY (?)", sql)
     }
 
     @Test

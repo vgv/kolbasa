@@ -159,7 +159,6 @@ class ConnectionAwareDatabaseProducer internal constructor(
             connection.usePreparedStatement(query) { preparedStatement ->
                 ProducerSchemaHelpers.fillInsertPreparedQuery(
                     queue,
-                    producerName = producerOptions.producer,
                     request,
                     preparedStatement,
                     approxStatsBytes

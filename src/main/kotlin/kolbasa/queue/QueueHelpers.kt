@@ -4,9 +4,12 @@ import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
 import kolbasa.schema.Const
+import kolbasa.utils.Helpers
 import java.time.Duration
 
 internal object QueueHelpers {
+
+    private val META_COLUMN_REGEX = Regex("([a-z])([A-Z]+)")
 
     fun generateDatabaseName(vararg parts: String, separator: String = ""): String {
         val result = parts.joinToString(separator = separator)
@@ -22,8 +25,27 @@ internal object QueueHelpers {
         return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, name)
     }
 
-    fun generateDbMetaColumnName(name: String): String {
-        return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, name)
+    fun generateMetaColumnDbName(fieldName: String): String {
+        // convert Java field into column name, like someField -> some_field
+        val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
+
+        // add 'meta_' prefix
+        return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, snakeCaseName)
+    }
+
+    fun generateMetaColumnIndexName(queueName: String, fieldName: String, indexSuffix: String): String {
+        return try {
+            // Queue name + field name + index suffix is less than max length, everything is ok
+            generateDatabaseName(queueName, fieldName, indexSuffix, separator = "_")
+        } catch (_: IllegalStateException) {
+            try {
+                // Try to keep the queue name and use short hash for field name
+                generateDatabaseName(queueName, Helpers.shortHash(fieldName), indexSuffix, separator = "_")
+            } catch (_: IllegalStateException) {
+                // Even a queue name is too long, use hash for both queue name and field name
+                generateDatabaseName("idx", Helpers.md5Hash(queueName + fieldName), indexSuffix, separator = "_")
+            }
+        }
     }
 
     fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {
