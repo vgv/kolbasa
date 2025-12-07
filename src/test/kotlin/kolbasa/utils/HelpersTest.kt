@@ -1,6 +1,6 @@
 package kolbasa.utils
 
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -22,6 +22,22 @@ class HelpersTest {
         assertFailsWith<IllegalArgumentException> {
             Helpers.arrayToMap(arrayOf("1", "2", "3", "4", "5"))
         }
+    }
+
+    @Test
+    fun testMd5Hash() {
+        val input = "test input"
+        val expectedHash = "5eed650258ee02f6a77c87b748b764ec" // Precomputed MD5 hash of "test input"
+        val actualHash = Helpers.md5Hash(input)
+        assertEquals(expectedHash, actualHash)
+    }
+
+    @Test
+    fun testShortHash() {
+        val input = "test input"
+        val expectedHash = "5eed650258" // Precomputed MD5 hash of "test input" is 5eed650258ee02f6a77c87b748b764ec
+        val actualHash = Helpers.shortHash(input)
+        assertEquals(expectedHash, actualHash)
     }
 
 }

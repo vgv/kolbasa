@@ -1,5 +1,7 @@
 package kolbasa.utils
 
+import java.security.MessageDigest
+
 internal object Helpers {
 
     fun arrayToMap(array: Array<String>?): Map<String, String>? {
@@ -22,5 +24,23 @@ internal object Helpers {
 
         return data
     }
+
+    /**
+     * This implementation is far from being the most efficient one, but Kolbasa doesn't use MD5 hashing heavily,
+     * so this should be sufficient for now.
+     */
+    fun md5Hash(input: String): String {
+        val md = MessageDigest.getInstance("MD5")
+        val hashBytes = md.digest(input.toByteArray(charset = Charsets.UTF_8))
+        return hashBytes.joinToString("") { String.format("%02x", it) }
+    }
+
+    /**
+     * Returns the first 10 characters of the MD5 hash of the input string.
+     */
+    fun shortHash(input: String): String {
+        return md5Hash(input).take(10)
+    }
+
 
 }
