@@ -3,6 +3,7 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
+import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaHelpers
@@ -18,7 +19,7 @@ internal class LikeConditionTest {
         val likeExpression = LikeCondition(STRING_VALUE, "123%")
 
         val sql = likeExpression.toSqlClause()
-        assertEquals(MetaHelpers.generateMetaColumnName("stringValue") + " like ?", sql)
+        assertEquals(QueueHelpers.generateMetaColumnDbName("stringValue") + " like ?", sql)
     }
 
     @Test

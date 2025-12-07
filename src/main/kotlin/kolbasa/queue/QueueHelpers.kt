@@ -8,6 +8,8 @@ import java.time.Duration
 
 internal object QueueHelpers {
 
+    private val META_COLUMN_REGEX = Regex("([a-z])([A-Z]+)")
+
     fun generateDatabaseName(vararg parts: String, separator: String = ""): String {
         val result = parts.joinToString(separator = separator)
 
@@ -22,8 +24,12 @@ internal object QueueHelpers {
         return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, name)
     }
 
-    fun generateMetaColumnDbName(name: String): String {
-        return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, name)
+    fun generateMetaColumnDbName(fieldName: String): String {
+        // convert Java field into column name, like someField -> some_field
+        val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
+
+        // add 'meta_' prefix
+        return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, snakeCaseName)
     }
 
     fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {

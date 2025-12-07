@@ -3,6 +3,7 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verify
+import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.*
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,7 +17,7 @@ internal class GreaterThanConditionTest {
         val gtExpression = GreaterThanCondition(INT_VALUE, 123)
 
         val sql = gtExpression.toSqlClause()
-        assertEquals(MetaHelpers.generateMetaColumnName("intValue") + " > ?", sql)
+        assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " > ?", sql)
     }
 
     @Test
