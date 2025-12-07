@@ -186,7 +186,7 @@ internal object SchemaGenerator {
         }
 
         // index
-        val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName
+        val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName // old format, to be removed later
         val justIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "j", separator = "_")
         val strictUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "su", separator = "_")
         val pendingUniqueIndexName = QueueHelpers.generateDatabaseName(queue.dbTableName, metaField.name, "pu", separator = "_")

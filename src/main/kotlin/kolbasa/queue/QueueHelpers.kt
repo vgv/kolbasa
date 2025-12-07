@@ -22,7 +22,7 @@ internal object QueueHelpers {
         return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, name)
     }
 
-    fun generateDbMetaColumnName(name: String): String {
+    fun generateMetaColumnDbName(name: String): String {
         return generateDatabaseName(Const.META_FIELD_NAME_PREFIX, name)
     }
 

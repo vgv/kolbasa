@@ -10,7 +10,7 @@ internal object MetaHelpers {
         // convert Java field into column name, like someField -> some_field
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
         // add 'meta_' prefix
-        return QueueHelpers.generateDbMetaColumnName(snakeCaseName)
+        return QueueHelpers.generateMetaColumnDbName(snakeCaseName)
     }
 
     fun defineIndexType(searchable: FieldOption): MetaIndexType {
