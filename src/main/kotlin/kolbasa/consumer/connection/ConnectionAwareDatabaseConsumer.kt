@@ -21,7 +21,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
 ) : ConnectionAwareConsumer {
 
     @JvmOverloads
-    constructor(consumerOptions: ConsumerOptions = ConsumerOptions()) : this(
+    constructor(consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         consumerOptions = consumerOptions,
         shards = Shards.ALL_SHARDS

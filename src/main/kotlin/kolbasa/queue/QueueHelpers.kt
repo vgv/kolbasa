@@ -50,7 +50,12 @@ internal object QueueHelpers {
         }
     }
 
-    fun calculateDelay(queueOptions: QueueOptions, producerOptions: ProducerOptions, sendOptions: SendOptions, messageOptions: MessageOptions): Duration {
+    fun calculateDelay(
+        queueOptions: QueueOptions,
+        producerOptions: ProducerOptions,
+        sendOptions: SendOptions,
+        messageOptions: MessageOptions
+    ): Duration {
         if (messageOptions.delay != null) {
             return messageOptions.delay
         }
@@ -66,7 +71,12 @@ internal object QueueHelpers {
         return queueOptions.defaultDelay
     }
 
-    fun calculateAttempts(queueOptions: QueueOptions, producerOptions: ProducerOptions, sendOptions: SendOptions, messageOptions: MessageOptions): Int {
+    fun calculateAttempts(
+        queueOptions: QueueOptions,
+        producerOptions: ProducerOptions,
+        sendOptions: SendOptions,
+        messageOptions: MessageOptions
+    ): Int {
         if (messageOptions.attempts != null) {
             return messageOptions.attempts
         }
@@ -84,24 +94,18 @@ internal object QueueHelpers {
 
     fun calculateVisibilityTimeout(
         queueOptions: QueueOptions,
-        consumerOptions: ConsumerOptions?,
-        receiveOptions: ReceiveOptions?
+        consumerOptions: ConsumerOptions,
+        receiveOptions: ReceiveOptions
     ): Duration {
-        var timeout = queueOptions.defaultVisibilityTimeout
-
-        if (consumerOptions != null) {
-            if (consumerOptions.visibilityTimeout !== QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) {
-                timeout = consumerOptions.visibilityTimeout
-            }
+        if (receiveOptions.visibilityTimeout != null) {
+            return receiveOptions.visibilityTimeout
         }
 
-        if (receiveOptions != null) {
-            if (receiveOptions.visibilityTimeout !== QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) {
-                timeout = receiveOptions.visibilityTimeout
-            }
+        if (consumerOptions.visibilityTimeout != null) {
+            return consumerOptions.visibilityTimeout
         }
 
-        return timeout
+        return queueOptions.defaultVisibilityTimeout
     }
 
 }

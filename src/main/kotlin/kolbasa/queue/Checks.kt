@@ -60,12 +60,8 @@ internal object Checks {
         }
     }
 
-    fun checkVisibilityTimeout(visibilityTimeout: Duration) {
-        // We need some marker to check that visibilityTimeout is set by user
-        // If it isn't set, we don't need to check it at all, because internal
-        // default value has a special meaning and is always valid
-        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
-        if (visibilityTimeout === QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) return
+    fun checkVisibilityTimeout(visibilityTimeout: Duration?) {
+        if (visibilityTimeout == null) return
 
         check(!visibilityTimeout.isNegative) {
             "visibility timeout must be greater than or equal to zero (current: $visibilityTimeout)"

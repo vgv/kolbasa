@@ -26,7 +26,7 @@ class DatabaseMutator(
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        mutatorOptions: MutatorOptions = MutatorOptions()
+        mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
     ) : this(
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseMutator(mutatorOptions)

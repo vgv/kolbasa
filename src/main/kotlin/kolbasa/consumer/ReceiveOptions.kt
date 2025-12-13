@@ -1,14 +1,26 @@
 package kolbasa.consumer
 
-import kolbasa.queue.Checks
-import kolbasa.queue.QueueOptions
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.order.Order
+import kolbasa.queue.Checks
 import java.time.Duration
 
 data class ReceiveOptions @JvmOverloads constructor(
     /**
+     * Arbitrary consumer name.
+     *
+     * Every message, consumed by receive() call with the specified option will have this name in the 'consumer' column
+     * of corresponding queue table.
+     *
+     * Used for debugging purposes only. There is no way to get this value during consuming.
+     * If you feel it can be helpful to understand which consumer read a message when you debug your application by
+     * exploring queue table directly in PostgreSQL, you can set this value.
+     */
+    val consumer: String? = null,
+
+    /**
      * Visibility timeout for this specific consume() call.
+     *
      * Visibility timeout is a delay before consumed but not deleted message will be
      * visible to another consumers. By default, value is not set, which means the
      * [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout] will be used or,
@@ -19,7 +31,7 @@ data class ReceiveOptions @JvmOverloads constructor(
      * [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout] and, at the end,
      * [QueueOptions.defaultVisibilityTimeout][kolbasa.queue.QueueOptions.defaultVisibilityTimeout]
      */
-    val visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET,
+    val visibilityTimeout: Duration? = null,
 
     /**
      * Do we need to read metadata?
@@ -41,15 +53,45 @@ data class ReceiveOptions @JvmOverloads constructor(
     val filter: Condition? = null,
 ) {
 
-    constructor(visibilityTimeout: Duration, readMetadata: Boolean, order: Order, filter: Condition?) :
-        this(visibilityTimeout, readMetadata, listOf(order), filter)
-
     init {
+        Checks.checkConsumerName(consumer)
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
     // do we need to read, parse and propagate OT data?
     internal var readOpenTelemetryData: Boolean = false
+
+    class Builder {
+        private var consumer: String? = null
+        private var visibilityTimeout: Duration? = null
+        private var readMetadata: Boolean = false
+        private var order: List<Order>? = null
+        private var filter: Condition? = null
+
+        fun consumer(consumer: String) = apply { this.consumer = consumer }
+        fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
+        fun readMetadata(readMetadata: Boolean) = apply { this.readMetadata = readMetadata }
+        fun order(order: List<Order>) = apply { this.order = order }
+        fun filter(filter: Condition) = apply { this.filter = filter }
+
+        fun build(): ReceiveOptions {
+            return ReceiveOptions(
+                consumer = consumer,
+                visibilityTimeout = visibilityTimeout,
+                readMetadata = readMetadata,
+                order = order,
+                filter = filter
+            )
+        }
+    }
+
+    companion object {
+
+        internal val DEFAULT = ReceiveOptions()
+
+        @JvmStatic
+        fun builder() = Builder()
+    }
 
 }
 

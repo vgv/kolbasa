@@ -59,7 +59,7 @@ interface ConnectionAwareConsumer {
      * @return message or null if the queue is empty
      */
     fun <Data> receive(connection: Connection, queue: Queue<Data>): Message<Data>? {
-        return receive(connection, queue, ReceiveOptions())
+        return receive(connection, queue, ReceiveOptions.DEFAULT)
     }
 
     /**
@@ -74,7 +74,6 @@ interface ConnectionAwareConsumer {
      * }
      * ```
      *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param connection JDBC connection used to receive the message
      * @param queue queue from which to receive a message
@@ -119,7 +118,7 @@ interface ConnectionAwareConsumer {
      * @return messages or an empty list if the queue is empty
      */
     fun <Data> receive(connection: Connection, queue: Queue<Data>, limit: Int): List<Message<Data>> {
-        return receive(connection, queue, limit, ReceiveOptions())
+        return receive(connection, queue, limit, ReceiveOptions.DEFAULT)
     }
 
     /**
@@ -135,7 +134,6 @@ interface ConnectionAwareConsumer {
      * }
      * ```
      *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param connection JDBC connection used to receive the message
      * @param queue queue from which to receive a message

@@ -86,9 +86,7 @@ data class QueueOptions(
     companion object {
         private val DEFAULT_DELAY = Duration.ZERO
         private const val DEFAULT_ATTEMPTS = 5
-
         private val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
-        internal val VISIBILITY_TIMEOUT_NOT_SET = Duration.ofMillis(-1)
 
         internal val DEFAULT = QueueOptions()
 

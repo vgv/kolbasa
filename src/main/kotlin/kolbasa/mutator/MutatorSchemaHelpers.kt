@@ -9,10 +9,7 @@ import java.util.concurrent.ExecutorService
 
 internal object MutatorSchemaHelpers {
 
-    fun calculateAsyncExecutor(
-        mutatorExecutor: ExecutorService?,
-        defaultExecutor: ExecutorService
-    ): ExecutorService {
+    fun calculateAsyncExecutor(mutatorExecutor: ExecutorService?, defaultExecutor: ExecutorService): ExecutorService {
         if (mutatorExecutor != null) {
             return mutatorExecutor
         }

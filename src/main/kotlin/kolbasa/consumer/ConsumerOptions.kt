@@ -1,7 +1,6 @@
 package kolbasa.consumer
 
 import kolbasa.queue.Checks
-import kolbasa.queue.QueueOptions
 import java.time.Duration
 
 data class ConsumerOptions(
@@ -14,6 +13,7 @@ data class ConsumerOptions(
      * exploring queue table directly in PostgreSQL, you can set this value.
      */
     val consumer: String? = null,
+
     /**
      * Queue visibility timeout. Delay before consumed but not deleted message will be visible to another
      * consumers. By default, value is not set, which means the
@@ -23,7 +23,7 @@ data class ConsumerOptions(
      * for every consume() call. [ReceiveOptions.visibilityTimeout][kolbasa.consumer.ReceiveOptions.visibilityTimeout]
      * has priority over [visibilityTimeout]
      */
-    val visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET
+    val visibilityTimeout: Duration? = null
 ) {
 
     init {
@@ -33,15 +33,18 @@ data class ConsumerOptions(
 
     class Builder {
         private var consumer: String? = null
-        private var visibilityTimeout: Duration = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET
+        private var visibilityTimeout: Duration? = null
 
-        fun consumer(consumer: String?) = apply { this.consumer = consumer }
+        fun consumer(consumer: String) = apply { this.consumer = consumer }
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
 
         fun build() = ConsumerOptions(consumer, visibilityTimeout)
     }
 
     companion object {
+
+        internal val DEFAULT = ConsumerOptions()
+
         @JvmStatic
         fun builder() = Builder()
     }

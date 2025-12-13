@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture
 
 class ClusterMutator(
     private val cluster: Cluster,
-    private val mutatorOptions: MutatorOptions = MutatorOptions()
+    private val mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
 ) : Mutator {
 
     override fun <Data> mutate(

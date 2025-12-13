@@ -181,8 +181,6 @@ interface ConnectionAwareMutator {
      * }
      * ```
      *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
-     *
      * @param connection JDBC connection used to mutate the message
      * @param queue queue from which to mutate a message
      * @param mutations mutations to apply to the `messages`

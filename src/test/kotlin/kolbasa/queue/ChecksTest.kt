@@ -12,9 +12,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotSame
 
 internal class ChecksTest {
 
@@ -129,20 +127,9 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckVisibilityTimeout_VisibilityTimeout_NotSet_Works() {
-        // check DELAY_NOT_SET works
-        Checks.checkVisibilityTimeout(QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
-    }
-
-    @Test
-    fun testCheckVisibilityTimeout_VisibilityTimeout_Copy_Fails() {
-        // Check any copies of DELAY_NOT_SET fail
-        val copy = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET.negated().negated()
-        assertNotSame(copy, QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
-        assertEquals(copy, QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
-        assertFailsWith<IllegalStateException> {
-            Checks.checkVisibilityTimeout(copy)
-        }
+    fun testCheckVisibilityTimeout_VisibilityTimeout_Null_Works() {
+        // check NULL works
+        Checks.checkVisibilityTimeout(null)
     }
 
     @Test
