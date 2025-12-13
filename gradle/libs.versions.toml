@@ -11,7 +11,7 @@ nebula = "20.2.0"
 nexus = "2.0.0"
 
 prometheus = "1.4.3"
-opentelemetry = "1.56.0"
+opentelemetry = "1.57.0"
 opentelemetry-instrumentation = "2.22.0"
 opentelemetry-instrumentation-incubator = "2.22.0-alpha"
 opentelemetry-semconv = "1.37.0"
@@ -22,7 +22,7 @@ jcommander = "1.82"
 logback = "1.5.21"
 testcontainers = "2.0.2"
 junit = "6.0.1"
-mockk = "1.14.6"
+mockk = "1.14.7"
 
 [libraries]
 

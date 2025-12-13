@@ -3,6 +3,8 @@ package kolbasa.queue
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.ProducerOptions
+import kolbasa.producer.SendOptions
 import kolbasa.schema.Const
 import kolbasa.utils.Helpers
 import java.time.Duration
@@ -48,48 +50,62 @@ internal object QueueHelpers {
         }
     }
 
-    fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {
-        var delay = queueOptions?.defaultDelay
-        if (messageOptions != null) {
-            if (messageOptions.delay !== QueueOptions.DELAY_NOT_SET) {
-                delay = messageOptions.delay
-            }
+    fun calculateDelay(
+        queueOptions: QueueOptions,
+        producerOptions: ProducerOptions,
+        sendOptions: SendOptions,
+        messageOptions: MessageOptions
+    ): Duration {
+        if (messageOptions.delay != null) {
+            return messageOptions.delay
         }
 
-        return delay
+        if (sendOptions.delay != null) {
+            return sendOptions.delay
+        }
+
+        if (producerOptions.delay != null) {
+            return producerOptions.delay
+        }
+
+        return queueOptions.defaultDelay
     }
 
-    fun calculateAttempts(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Int {
-        var attempts = queueOptions?.defaultAttempts ?: QueueOptions.DEFAULT_ATTEMPTS
-        if (messageOptions != null) {
-            if (messageOptions.attempts != QueueOptions.ATTEMPTS_NOT_SET) {
-                attempts = messageOptions.attempts
-            }
+    fun calculateAttempts(
+        queueOptions: QueueOptions,
+        producerOptions: ProducerOptions,
+        sendOptions: SendOptions,
+        messageOptions: MessageOptions
+    ): Int {
+        if (messageOptions.attempts != null) {
+            return messageOptions.attempts
         }
 
-        return attempts
+        if (sendOptions.attempts != null) {
+            return sendOptions.attempts
+        }
+
+        if (producerOptions.attempts != null) {
+            return producerOptions.attempts
+        }
+
+        return queueOptions.defaultAttempts
     }
 
     fun calculateVisibilityTimeout(
-        queueOptions: QueueOptions?,
-        consumerOptions: ConsumerOptions?,
-        receiveOptions: ReceiveOptions?
+        queueOptions: QueueOptions,
+        consumerOptions: ConsumerOptions,
+        receiveOptions: ReceiveOptions
     ): Duration {
-        var timeout = queueOptions?.defaultVisibilityTimeout ?: QueueOptions.DEFAULT_VISIBILITY_TIMEOUT
-
-        if (consumerOptions != null) {
-            if (consumerOptions.visibilityTimeout !== QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) {
-                timeout = consumerOptions.visibilityTimeout
-            }
+        if (receiveOptions.visibilityTimeout != null) {
+            return receiveOptions.visibilityTimeout
         }
 
-        if (receiveOptions != null) {
-            if (receiveOptions.visibilityTimeout !== QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) {
-                timeout = receiveOptions.visibilityTimeout
-            }
+        if (consumerOptions.visibilityTimeout != null) {
+            return consumerOptions.visibilityTimeout
         }
 
-        return timeout
+        return queueOptions.defaultVisibilityTimeout
     }
 
 }

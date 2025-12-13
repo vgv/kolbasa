@@ -130,12 +130,6 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
     }
 
     companion object {
-        internal enum class TestEnum {
-            FIRST,
-            SECOND,
-            THIRD
-        }
-
         internal val STRING_FIELD = MetaField.string("string_field")
         internal val LONG_FIELD = MetaField.long("long_field")
         internal val INT_FIELD = MetaField.int("int_field")
@@ -144,10 +138,8 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
         internal val BOOLEAN_FIELD = MetaField.boolean("boolean_field")
         internal val DOUBLE_FIELD = MetaField.double("double_field")
         internal val FLOAT_FIELD = MetaField.float("float_field")
-        internal val CHAR_FIELD = MetaField.char("char_field")
         internal val BI_FIELD = MetaField.bigInteger("big_integer_field")
         internal val BD_FIELD = MetaField.bigDecimal("big_decimal_field")
-        internal val ENUM_FIELD = MetaField.enum("enum_field", type = TestEnum::class.java)
 
         internal data class Value(val value: Int)
 
@@ -165,10 +157,8 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
                 BOOLEAN_FIELD,
                 DOUBLE_FIELD,
                 FLOAT_FIELD,
-                CHAR_FIELD,
                 BI_FIELD,
-                BD_FIELD,
-                ENUM_FIELD
+                BD_FIELD
             )
         )
 
@@ -182,10 +172,8 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
                 BOOLEAN_FIELD.value(Random.nextBoolean()),
                 DOUBLE_FIELD.value(Random.nextDouble(Double.MIN_VALUE, Double.MAX_VALUE)),
                 FLOAT_FIELD.value(Random.nextFloat() * 1_000_000),
-                CHAR_FIELD.value(('a'..'z').random()),
                 BI_FIELD.value(BigInteger.valueOf(Random.nextLong())),
-                BD_FIELD.value(BigDecimal.valueOf(Random.nextDouble())),
-                ENUM_FIELD.value(TestEnum.values().random())
+                BD_FIELD.value(BigDecimal.valueOf(Random.nextDouble()))
             )
         }
     }

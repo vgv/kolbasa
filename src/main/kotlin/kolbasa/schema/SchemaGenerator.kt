@@ -3,7 +3,6 @@ package kolbasa.schema
 import kolbasa.cluster.Shard
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
-import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
 import kolbasa.utils.TimeHelper
@@ -118,7 +117,7 @@ internal object SchemaGenerator {
             ?.findColumn(Const.SCHEDULED_AT_COLUMN_NAME)
             ?.defaultExpression != null
 
-        if (queue.options == null || queue.options.defaultDelay.isZero) {
+        if (queue.options.defaultDelay.isZero) {
             val alterStatement = """
                     alter table ${queue.dbTableName}
                     alter ${Const.SCHEDULED_AT_COLUMN_NAME}
@@ -154,7 +153,7 @@ internal object SchemaGenerator {
     }
 
     private fun forRemainingAttemptsColumn(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema) {
-        val desiredAttempts = queue.options?.defaultAttempts ?: QueueOptions.DEFAULT_ATTEMPTS
+        val desiredAttempts = queue.options.defaultAttempts
         val currentDefaultClause = existingTable
             ?.findColumn(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
             ?.defaultExpression

@@ -18,7 +18,7 @@ internal object ProducerSchemaHelpers {
 
     fun generateInsertPreparedQuery(
         queue: Queue<*>,
-        producerName: String?,
+        producerOptions: ProducerOptions,
         deduplicationMode: DeduplicationMode,
         request: SendRequest<*>
     ): String {
@@ -28,18 +28,18 @@ internal object ProducerSchemaHelpers {
         // delayMillis
         columns += Const.SCHEDULED_AT_COLUMN_NAME
         request.data.forEachIndexed { index, item ->
-            val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
-            values[index] += if (delay != null) {
-                "clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(delay)}"
-            } else {
+            val delay = QueueHelpers.calculateDelay(queue.options, producerOptions, request.sendOptions, item.messageOptions)
+            values[index] += if (delay.isZero) {
                 "clock_timestamp()"
+            } else {
+                "clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(delay)}"
             }
         }
 
         // attempts
         columns += Const.REMAINING_ATTEMPTS_COLUMN_NAME
         request.data.forEachIndexed { index, item ->
-            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
+            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, producerOptions, request.sendOptions, item.messageOptions)
 
             values[index] += "$remainingAttempts"
         }
@@ -62,6 +62,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // producer name
+        val producerName = calculateProducerName(producerOptions, request.sendOptions)
         if (producerName != null) {
             columns += Const.PRODUCER_COLUMN_NAME
             request.data.forEachIndexed { index, _ ->
@@ -172,28 +173,20 @@ internal object ProducerSchemaHelpers {
         }
     }
 
+    fun calculateProducerName(producerOptions: ProducerOptions, sendOptions: SendOptions): String? {
+        return sendOptions.producer ?: producerOptions.producer
+    }
+
     fun calculateDeduplicationMode(producerOptions: ProducerOptions, sendOptions: SendOptions): DeduplicationMode {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.deduplicationMode
-        } else {
-            producerOptions.deduplicationMode
-        }
+        return sendOptions.deduplicationMode ?: producerOptions.deduplicationMode
     }
 
     fun calculateBatchSize(producerOptions: ProducerOptions, sendOptions: SendOptions): Int {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.batchSize
-        } else {
-            producerOptions.batchSize
-        }
+        return sendOptions.batchSize ?: producerOptions.batchSize
     }
 
     fun calculatePartialInsert(producerOptions: ProducerOptions, sendOptions: SendOptions): PartialInsert {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.partialInsert
-        } else {
-            producerOptions.partialInsert
-        }
+        return sendOptions.partialInsert ?: producerOptions.partialInsert
     }
 
     fun calculateEffectiveShard(sendOptions: SendOptions, producerOptions: ProducerOptions, shardStrategy: ShardStrategy): Int {
@@ -208,9 +201,17 @@ internal object ProducerSchemaHelpers {
         return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
     }
 
-    fun calculateAsyncExecutor(customExecutor: ExecutorService?, defaultExecutor: ExecutorService): ExecutorService {
-        if (customExecutor != null) {
-            return customExecutor
+    fun calculateAsyncExecutor(
+        callExecutor: ExecutorService?,
+        producerExecutor: ExecutorService?,
+        defaultExecutor: ExecutorService
+    ): ExecutorService {
+        if (callExecutor != null) {
+            return callExecutor
+        }
+
+        if (producerExecutor != null) {
+            return producerExecutor
         }
 
         return defaultExecutor

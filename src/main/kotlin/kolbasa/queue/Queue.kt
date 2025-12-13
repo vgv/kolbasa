@@ -2,7 +2,6 @@ package kolbasa.queue
 
 import kolbasa.Kolbasa
 import kolbasa.queue.meta.Metadata
-import kolbasa.schema.Const
 import kolbasa.stats.opentelemetry.EmptyQueueTracing
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
@@ -38,7 +37,7 @@ data class Queue<Data> @JvmOverloads constructor(
      * Producers, consumers, send request and even particular message options can override queue options. Read more
      * details in [QueueOptions]
      */
-    val options: QueueOptions? = null,
+    val options: QueueOptions = QueueOptions.DEFAULT,
 
     /**
      * Metadata for a queue.
@@ -83,7 +82,7 @@ data class Queue<Data> @JvmOverloads constructor(
         private val name: String,
         private val databaseDataType: DatabaseQueueDataType<Data>,
     ) {
-        private var options: QueueOptions? = null
+        private var options: QueueOptions = QueueOptions.DEFAULT
         private var metadata: Metadata = Metadata.EMPTY
 
         fun options(options: QueueOptions) = apply { this.options = options }

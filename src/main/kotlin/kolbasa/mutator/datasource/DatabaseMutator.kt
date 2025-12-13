@@ -6,11 +6,11 @@ import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.MutateResult
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.MutatorSchemaHelpers
 import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.connection.ConnectionAwareMutator
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.producer.Id
-import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
@@ -26,7 +26,7 @@ class DatabaseMutator(
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        mutatorOptions: MutatorOptions = MutatorOptions()
+        mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
     ) : this(
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseMutator(mutatorOptions)
@@ -57,8 +57,8 @@ class DatabaseMutator(
         mutations: List<Mutation>,
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
-        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
@@ -70,8 +70,8 @@ class DatabaseMutator(
         mutations: List<Mutation>,
         filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
-        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

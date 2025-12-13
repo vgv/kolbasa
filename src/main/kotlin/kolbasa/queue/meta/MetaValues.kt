@@ -51,13 +51,9 @@ internal data class LongValue(override val field: MetaField<Long>, override val 
 internal data class BooleanValue(override val field: MetaField<Boolean>, override val value: Boolean) : MetaValue<Boolean>(field, value)
 internal data class FloatValue(override val field: MetaField<Float>, override val value: Float) : MetaValue<Float>(field, value)
 internal data class DoubleValue(override val field: MetaField<Double>, override val value: Double) : MetaValue<Double>(field, value)
-internal data class CharValue(override val field: MetaField<Char>, override val value: Char) : MetaValue<Char>(field, value)
 internal data class StringValue(override val field: MetaField<String>, override val value: String) : MetaValue<String>(field, value)
 internal data class BigIntegerValue(override val field: MetaField<BigInteger>, override val value: BigInteger) :
     MetaValue<BigInteger>(field, value)
 
 internal data class BigDecimalValue(override val field: MetaField<BigDecimal>, override val value: BigDecimal) :
     MetaValue<BigDecimal>(field, value)
-
-internal data class EnumValue<E : Enum<E>>(override val field: MetaField<E>, override val value: E) :
-    MetaValue<E>(field, value)

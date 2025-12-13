@@ -5,6 +5,8 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendOptions
+import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult.Companion.onlyDuplicated
 import kolbasa.producer.SendResult.Companion.onlyFailed
 import kolbasa.producer.SendResult.Companion.onlySuccessful
@@ -68,6 +70,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
     fun testSendSimpleData_WithCustomProducerName() {
         val firstProducerName = "first_producer"
         val secondProducerName = "second_producer"
+        val thirdProducerName = "third_producer"
         val firstProducer = DatabaseProducer(dataSource, ProducerOptions(producer = firstProducerName))
         val secondProducer = DatabaseProducer(dataSource, ProducerOptions(producer = secondProducerName))
 
@@ -87,19 +90,35 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
+        // This message is sent by firstProducer, but with overridden producer name in SendOptions
+        val id3 = firstProducer.send(queue, SendRequest(listOf(SendMessage("bugaga")), sendOptions = SendOptions(producer = thirdProducerName))).let { result ->
+            assertEquals(0, result.failedMessages)
+            assertEquals(0, result.onlyFailed().size)
+            assertEquals(0, result.onlyDuplicated().size)
+            assertEquals(1, result.onlySuccessful().size)
+            result.onlySuccessful().first().id
+        }
+
         assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
         assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
+        assertEquals(IdRange.LOCAL_RANGE.min + 2, id3.localId)
 
         // check database
-        assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+        assertEquals(3, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
         // check first producer
         assertEquals(
             1,
             dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$firstProducerName'")
         )
+        // check second producer
         assertEquals(
             1,
             dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$secondProducerName'")
+        )
+        // check third producer with overridden name
+        assertEquals(
+            1,
+            dataSource.readInt("select count(*) from ${queue.dbTableName} where ${Const.PRODUCER_COLUMN_NAME}='$thirdProducerName'")
         )
     }
 

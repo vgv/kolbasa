@@ -66,16 +66,4 @@ internal object Const {
      * I don't think it's a good idea to have a huge storage (longer than 8Kb) for meta values
      */
     const val META_FIELD_STRING_TYPE_MAX_LENGTH = 8 * 1024 // 8 KB chars
-
-    /**
-     * One char in PostgreSQL is enough to store one Java char
-     */
-    const val META_FIELD_CHAR_TYPE_MAX_LENGTH = 1 // 1 char
-
-    /**
-     * Do you really have an enum value longer than 1024 chars?
-     */
-    const val META_FIELD_ENUM_TYPE_MAX_LENGTH = 1024 // 1024 chars
-
-
 }

@@ -34,7 +34,7 @@ interface Consumer {
      * @return message or null if the queue is empty
      */
     fun <Data> receive(queue: Queue<Data>): Message<Data>? {
-        return receive(queue, ReceiveOptions())
+        return receive(queue, ReceiveOptions.DEFAULT)
     }
 
     /**
@@ -48,8 +48,6 @@ interface Consumer {
      *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
      * }
      * ```
-     *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param queue queue from which to receive a message
      * @param filter custom, user-defined filters to receive only specific messages from the queue
@@ -83,7 +81,7 @@ interface Consumer {
      * @return messages or an empty list if the queue is empty
      */
     fun <Data> receive(queue: Queue<Data>, limit: Int): List<Message<Data>> {
-        return receive(queue, limit, ReceiveOptions())
+        return receive(queue, limit, ReceiveOptions.DEFAULT)
     }
 
     /**
@@ -98,8 +96,6 @@ interface Consumer {
      *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
      * }
      * ```
-     *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param queue queue from which to receive a message
      * @param limit number of messages to receive

@@ -142,8 +142,6 @@ interface Mutator {
      * }
      * ```
      *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
-     *
      * @param queue queue from which to mutate a message
      * @param mutations mutations to apply to the `messages`
      * @param filter custom, user-defined filter to mutate only specific messages in the queue
@@ -168,8 +166,6 @@ interface Mutator {
      *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
      * }
      * ```
-     *
-     * If you use Java, please take a look at [JavaField][kolbasa.consumer.JavaField] class for examples.
      *
      * @param queue queue from which to mutate a message
      * @param mutations mutations to apply to the `messages`
