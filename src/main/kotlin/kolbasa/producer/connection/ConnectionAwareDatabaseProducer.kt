@@ -21,7 +21,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
 ) : ConnectionAwareProducer {
 
     @JvmOverloads
-    constructor(producerOptions: ProducerOptions = ProducerOptions()) : this(
+    constructor(producerOptions: ProducerOptions = ProducerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         producerOptions = producerOptions
     )

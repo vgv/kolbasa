@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture
 
 class ClusterProducer(
     private val cluster: Cluster,
-    private val producerOptions: ProducerOptions = ProducerOptions()
+    private val producerOptions: ProducerOptions = ProducerOptions.DEFAULT
 ) : Producer {
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {

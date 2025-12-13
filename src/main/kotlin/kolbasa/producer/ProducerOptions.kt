@@ -101,7 +101,9 @@ data class ProducerOptions(
     }
 
     companion object {
-        internal const val DEFAULT_BATCH_SIZE = 500
+        private const val DEFAULT_BATCH_SIZE = 500
+
+        internal val DEFAULT = ProducerOptions()
 
         @JvmStatic
         fun builder() = Builder()

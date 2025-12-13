@@ -23,7 +23,7 @@ class DatabaseProducer internal constructor(
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        producerOptions: ProducerOptions = ProducerOptions()
+        producerOptions: ProducerOptions = ProducerOptions.DEFAULT
     ) : this(
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseProducer(producerOptions)
