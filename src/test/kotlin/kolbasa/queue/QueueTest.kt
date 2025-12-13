@@ -16,7 +16,6 @@ class QueueTest {
         val actual = Queue(
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
-            options = null,
             metadata = Metadata.EMPTY
         )
 
@@ -32,7 +31,6 @@ class QueueTest {
         val actual = Queue(
             name = "1",
             databaseDataType = PredefinedDataTypes.String,
-            options = null,
             metadata = Metadata.of(USER_ID, NAME)
         )
 

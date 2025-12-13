@@ -48,8 +48,8 @@ internal object QueueHelpers {
         }
     }
 
-    fun calculateDelay(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Duration? {
-        var delay = queueOptions?.defaultDelay
+    fun calculateDelay(queueOptions: QueueOptions, messageOptions: MessageOptions?): Duration {
+        var delay = queueOptions.defaultDelay
         if (messageOptions != null) {
             if (messageOptions.delay !== QueueOptions.DELAY_NOT_SET) {
                 delay = messageOptions.delay
@@ -59,8 +59,8 @@ internal object QueueHelpers {
         return delay
     }
 
-    fun calculateAttempts(queueOptions: QueueOptions?, messageOptions: MessageOptions?): Int {
-        var attempts = queueOptions?.defaultAttempts ?: QueueOptions.DEFAULT_ATTEMPTS
+    fun calculateAttempts(queueOptions: QueueOptions, messageOptions: MessageOptions?): Int {
+        var attempts = queueOptions.defaultAttempts
         if (messageOptions != null) {
             if (messageOptions.attempts != QueueOptions.ATTEMPTS_NOT_SET) {
                 attempts = messageOptions.attempts
@@ -71,11 +71,11 @@ internal object QueueHelpers {
     }
 
     fun calculateVisibilityTimeout(
-        queueOptions: QueueOptions?,
+        queueOptions: QueueOptions,
         consumerOptions: ConsumerOptions?,
         receiveOptions: ReceiveOptions?
     ): Duration {
-        var timeout = queueOptions?.defaultVisibilityTimeout ?: QueueOptions.DEFAULT_VISIBILITY_TIMEOUT
+        var timeout = queueOptions.defaultVisibilityTimeout
 
         if (consumerOptions != null) {
             if (consumerOptions.visibilityTimeout !== QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) {

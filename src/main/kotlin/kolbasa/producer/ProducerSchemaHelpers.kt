@@ -29,10 +29,10 @@ internal object ProducerSchemaHelpers {
         columns += Const.SCHEDULED_AT_COLUMN_NAME
         request.data.forEachIndexed { index, item ->
             val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
-            values[index] += if (delay != null) {
-                "clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(delay)}"
-            } else {
+            values[index] += if (delay.isZero) {
                 "clock_timestamp()"
+            } else {
+                "clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(delay)}"
             }
         }
 

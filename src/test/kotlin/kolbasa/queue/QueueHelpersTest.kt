@@ -9,7 +9,6 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 internal class QueueHelpersTest {
 
@@ -70,11 +69,9 @@ internal class QueueHelpersTest {
 
     @Test
     fun testCalculateDelay() {
-        assertNull(QueueHelpers.calculateDelay(null, null))
-
         run {
             val options = QueueOptions()
-            assertEquals(QueueOptions.DEFAULT_DELAY, QueueHelpers.calculateDelay(options, null))
+            assertEquals(options.defaultDelay, QueueHelpers.calculateDelay(options, null))
         }
 
         run {
@@ -100,12 +97,6 @@ internal class QueueHelpersTest {
 
         run {
             val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val messageOptions = MessageOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(null, messageOptions))
-        }
-
-        run {
-            val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val options = QueueOptions()
             val messageOptions = MessageOptions(delay = sendDuration)
             assertEquals(sendDuration, QueueHelpers.calculateDelay(options, messageOptions))
@@ -114,11 +105,9 @@ internal class QueueHelpersTest {
 
     @Test
     fun testCalculateAttempts() {
-        assertEquals(QueueOptions.DEFAULT_ATTEMPTS, QueueHelpers.calculateAttempts(null, null))
-
         run {
             val options = QueueOptions()
-            assertEquals(QueueOptions.DEFAULT_ATTEMPTS, QueueHelpers.calculateAttempts(options, null))
+            assertEquals(options.defaultAttempts, QueueHelpers.calculateAttempts(options, null))
         }
 
         run {
@@ -148,33 +137,13 @@ internal class QueueHelpersTest {
             val messageOptions = MessageOptions(attempts = sendAttempts)
             assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, messageOptions))
         }
-
-        run {
-            val sendAttempts = Random.nextInt(200, 300)
-            val messageOptions = MessageOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(null, messageOptions))
-        }
     }
 
     @Test
     fun testCalculateVisibilityTimeout() {
-        assertEquals(
-            QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-                null,
-                null,
-                null
-            )
-        )
-
         run {
             val options = QueueOptions()
-            assertEquals(
-                QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-                    options,
-                    null,
-                    null
-                )
-            )
+            assertEquals(options.defaultVisibilityTimeout, QueueHelpers.calculateVisibilityTimeout(options, null, null))
         }
 
         run {
@@ -231,12 +200,6 @@ internal class QueueHelpersTest {
                     receiveOptions
                 )
             )
-        }
-
-        run {
-            val receiveTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
-            assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(null, null, receiveOptions))
         }
     }
 }
