@@ -238,6 +238,7 @@ internal object ConsumerSchemaHelpers {
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
                     ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
                 limit $limit
+                for update skip locked
             )
         """.trimIndent()
     }
