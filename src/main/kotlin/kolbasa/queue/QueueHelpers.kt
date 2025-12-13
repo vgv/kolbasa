@@ -48,23 +48,22 @@ internal object QueueHelpers {
         }
     }
 
-    fun calculateDelay(queueOptions: QueueOptions, messageOptions: MessageOptions?): Duration {
+    fun calculateDelay(queueOptions: QueueOptions, messageOptions: MessageOptions): Duration {
         var delay = queueOptions.defaultDelay
-        if (messageOptions != null) {
-            if (messageOptions.delay !== QueueOptions.DELAY_NOT_SET) {
-                delay = messageOptions.delay
-            }
+
+        if (messageOptions.delay != null) {
+            delay = messageOptions.delay
         }
+
 
         return delay
     }
 
-    fun calculateAttempts(queueOptions: QueueOptions, messageOptions: MessageOptions?): Int {
+    fun calculateAttempts(queueOptions: QueueOptions, messageOptions: MessageOptions): Int {
         var attempts = queueOptions.defaultAttempts
-        if (messageOptions != null) {
-            if (messageOptions.attempts != QueueOptions.ATTEMPTS_NOT_SET) {
-                attempts = messageOptions.attempts
-            }
+
+        if (messageOptions.attempts != null) {
+            attempts = messageOptions.attempts
         }
 
         return attempts

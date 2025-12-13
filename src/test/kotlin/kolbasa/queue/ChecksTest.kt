@@ -19,20 +19,9 @@ import kotlin.test.assertNotSame
 internal class ChecksTest {
 
     @Test
-    fun testCheckDelay_DelayNotSetWorks() {
-        // check DELAY_NOT_SET doesn't fail
-        Checks.checkDelay(QueueOptions.DELAY_NOT_SET)
-    }
-
-    @Test
-    fun testCheckDelay_DelayNotSetCopyFails() {
-        // Check any copies of DELAY_NOT_SET doesn't work
-        val copy = QueueOptions.DELAY_NOT_SET.negated().negated()
-        assertNotSame(copy, QueueOptions.DELAY_NOT_SET)
-        assertEquals(copy, QueueOptions.DELAY_NOT_SET)
-        assertFailsWith<IllegalStateException> {
-            Checks.checkDelay(copy)
-        }
+    fun testCheckDelay_Null_Works() {
+        // check NULL doesn't fail
+        Checks.checkDelay(null)
     }
 
     @Test
@@ -53,9 +42,9 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckAttempts_AttemptsNotSetWorks() {
-        // check DELAY_NOT_SET works
-        Checks.checkAttempts(QueueOptions.ATTEMPTS_NOT_SET)
+    fun testCheckAttempts_Null_Works() {
+        // check NULL works
+        Checks.checkAttempts(null)
     }
 
     @Test

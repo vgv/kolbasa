@@ -10,20 +10,16 @@ import java.time.Duration
 
 internal object Checks {
 
-    fun checkDelay(delay: Duration) {
-        // We need some marker to check that delay is set by user
-        // If it isn't set, we don't need to check it at all, because internal
-        // default value has a special meaning and is always valid
-        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
-        if (delay === QueueOptions.DELAY_NOT_SET) return
+    fun checkDelay(delay: Duration?) {
+        if (delay == null) return
 
         check(!delay.isNegative) {
             "delay must be greater than or equal to zero (current: $delay)"
         }
     }
 
-    fun checkAttempts(attempts: Int) {
-        if (attempts == QueueOptions.ATTEMPTS_NOT_SET) return
+    fun checkAttempts(attempts: Int?) {
+        if (attempts == null) return
 
         check(attempts > 0) {
             "Attempts must be greater than zero (current: $attempts)"

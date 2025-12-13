@@ -71,13 +71,13 @@ internal class QueueHelpersTest {
     fun testCalculateDelay() {
         run {
             val options = QueueOptions()
-            assertEquals(options.defaultDelay, QueueHelpers.calculateDelay(options, null))
+            assertEquals(options.defaultDelay, QueueHelpers.calculateDelay(options, MessageOptions.NOT_SET))
         }
 
         run {
             val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
             val options = QueueOptions(defaultDelay = duration)
-            assertEquals(duration, QueueHelpers.calculateDelay(options, null))
+            assertEquals(duration, QueueHelpers.calculateDelay(options, MessageOptions.NOT_SET))
         }
 
         run {
@@ -107,13 +107,13 @@ internal class QueueHelpersTest {
     fun testCalculateAttempts() {
         run {
             val options = QueueOptions()
-            assertEquals(options.defaultAttempts, QueueHelpers.calculateAttempts(options, null))
+            assertEquals(options.defaultAttempts, QueueHelpers.calculateAttempts(options, MessageOptions.NOT_SET))
         }
 
         run {
             val attempts = Random.nextInt(10, 100)
             val options = QueueOptions(defaultAttempts = attempts)
-            assertEquals(attempts, QueueHelpers.calculateAttempts(options, null))
+            assertEquals(attempts, QueueHelpers.calculateAttempts(options, MessageOptions.NOT_SET))
         }
 
         run {
