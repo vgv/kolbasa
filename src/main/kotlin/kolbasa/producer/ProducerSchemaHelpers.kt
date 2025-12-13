@@ -173,27 +173,15 @@ internal object ProducerSchemaHelpers {
     }
 
     fun calculateDeduplicationMode(producerOptions: ProducerOptions, sendOptions: SendOptions): DeduplicationMode {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.deduplicationMode
-        } else {
-            producerOptions.deduplicationMode
-        }
+        return sendOptions.deduplicationMode ?: producerOptions.deduplicationMode
     }
 
     fun calculateBatchSize(producerOptions: ProducerOptions, sendOptions: SendOptions): Int {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.batchSize
-        } else {
-            producerOptions.batchSize
-        }
+        return sendOptions.batchSize ?: producerOptions.batchSize
     }
 
     fun calculatePartialInsert(producerOptions: ProducerOptions, sendOptions: SendOptions): PartialInsert {
-        return if (sendOptions !== SendOptions.SEND_OPTIONS_NOT_SET) {
-            sendOptions.partialInsert
-        } else {
-            producerOptions.partialInsert
-        }
+        return sendOptions.partialInsert ?: producerOptions.partialInsert
     }
 
     fun calculateEffectiveShard(sendOptions: SendOptions, producerOptions: ProducerOptions, shardStrategy: ShardStrategy): Int {

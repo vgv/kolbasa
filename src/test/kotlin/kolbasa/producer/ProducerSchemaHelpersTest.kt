@@ -22,7 +22,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculateDeduplicationMode_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.SEND_OPTIONS_NOT_SET
+        val sendOptions = SendOptions.NOT_SET
         val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
 
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, sendOptions)
@@ -40,7 +40,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculateBatchSize_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.SEND_OPTIONS_NOT_SET
+        val sendOptions = SendOptions.NOT_SET
         val producerOptions = ProducerOptions(batchSize = 200)
 
         val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
@@ -58,7 +58,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculatePartialInsert_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.SEND_OPTIONS_NOT_SET
+        val sendOptions = SendOptions.NOT_SET
         val producerOptions = ProducerOptions(partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
 
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, sendOptions)

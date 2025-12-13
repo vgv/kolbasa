@@ -99,6 +99,11 @@ internal class ChecksTest {
         assertDoesNotThrow {
             Checks.checkBatchSize(Random.nextInt(1, 1_000_000))
         }
+
+        // null should pass
+        assertDoesNotThrow {
+            Checks.checkBatchSize(null)
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

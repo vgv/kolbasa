@@ -7,17 +7,17 @@ data class SendOptions(
     /**
      * @see [ProducerOptions.deduplicationMode]
      */
-    val deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR,
+    val deduplicationMode: DeduplicationMode? = null,
 
     /**
      * @see [ProducerOptions.batchSize]
      */
-    val batchSize: Int = ProducerOptions.DEFAULT_BATCH_SIZE,
+    val batchSize: Int? = null,
 
     /**
      * @see [ProducerOptions.partialInsert]
      */
-    val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
+    val partialInsert: PartialInsert? = null,
 
     /**
      * @see [ProducerOptions.shard]
@@ -35,9 +35,9 @@ data class SendOptions(
     }
 
     class Builder internal constructor() {
-        private var deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR
-        private var batchSize: Int = ProducerOptions.DEFAULT_BATCH_SIZE
-        private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
+        private var deduplicationMode: DeduplicationMode? = null
+        private var batchSize: Int? = null
+        private var partialInsert: PartialInsert? = null
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
 
@@ -51,7 +51,7 @@ data class SendOptions(
     }
 
     companion object {
-        internal val SEND_OPTIONS_NOT_SET = SendOptions()
+        internal val NOT_SET = SendOptions()
 
         @JvmStatic
         fun builder() = Builder()

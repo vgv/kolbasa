@@ -39,7 +39,9 @@ internal object Checks {
         }
     }
 
-    fun checkBatchSize(batchSize: Int) {
+    fun checkBatchSize(batchSize: Int?) {
+        if (batchSize == null) return
+
         check(batchSize >= 1) {
             "Batch size must be greater than or equal to 1 (current: $batchSize)"
         }
