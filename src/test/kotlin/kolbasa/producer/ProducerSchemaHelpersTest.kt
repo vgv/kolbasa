@@ -12,6 +12,43 @@ import kotlin.test.assertTrue
 class ProducerSchemaHelpersTest {
 
     @Test
+    fun testCalculateProducerName() {
+        // Test all fourth combinations of producer names from ProducerOptions and SendOptions
+
+        assertEquals(
+            expected = "send",
+            actual = ProducerSchemaHelpers.calculateProducerName(
+                ProducerOptions(producer = "producer"),
+                SendOptions(producer = "send")
+            )
+        )
+
+        assertEquals(
+            expected = "producer",
+            actual = ProducerSchemaHelpers.calculateProducerName(
+                ProducerOptions(producer = "producer"),
+                SendOptions(producer = null)
+            )
+        )
+
+        assertEquals(
+            expected = "send",
+            actual = ProducerSchemaHelpers.calculateProducerName(
+                ProducerOptions(producer = null),
+                SendOptions(producer = "send")
+            )
+        )
+
+        assertEquals(
+            expected = null,
+            actual = ProducerSchemaHelpers.calculateProducerName(
+                ProducerOptions(producer = null),
+                SendOptions(producer = null)
+            )
+        )
+    }
+
+    @Test
     fun testCalculateDeduplicationMode_SendOptionsDefined() {
         val sendOptions = SendOptions(deduplicationMode = DeduplicationMode.ERROR)
         val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
@@ -22,7 +59,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculateDeduplicationMode_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.NOT_SET
+        val sendOptions = SendOptions.DEFAULT
         val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
 
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, sendOptions)
@@ -40,7 +77,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculateBatchSize_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.NOT_SET
+        val sendOptions = SendOptions.DEFAULT
         val producerOptions = ProducerOptions(batchSize = 200)
 
         val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
@@ -58,7 +95,7 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculatePartialInsert_SendOptionsNotDefined() {
-        val sendOptions = SendOptions.NOT_SET
+        val sendOptions = SendOptions.DEFAULT
         val producerOptions = ProducerOptions(partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
 
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, sendOptions)

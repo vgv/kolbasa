@@ -153,7 +153,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, request.sendOptions)
-        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions.producer, deduplicationMode, request)
+        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, deduplicationMode, request)
 
         val (execution, result) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->

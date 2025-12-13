@@ -11,7 +11,7 @@ data class SendRequest<Data>(
     /**
      * Options for sending this list of messages, allows to override [ProducerOptions][kolbasa.producer.ProducerOptions] options
      */
-    val sendOptions: SendOptions = SendOptions.NOT_SET
+    val sendOptions: SendOptions = SendOptions.DEFAULT
 ) {
 
     // Effective shard, depends of many factors

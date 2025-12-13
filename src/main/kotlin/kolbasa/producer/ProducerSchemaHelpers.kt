@@ -18,7 +18,7 @@ internal object ProducerSchemaHelpers {
 
     fun generateInsertPreparedQuery(
         queue: Queue<*>,
-        producerName: String?,
+        producerOptions: ProducerOptions,
         deduplicationMode: DeduplicationMode,
         request: SendRequest<*>
     ): String {
@@ -28,7 +28,7 @@ internal object ProducerSchemaHelpers {
         // delayMillis
         columns += Const.SCHEDULED_AT_COLUMN_NAME
         request.data.forEachIndexed { index, item ->
-            val delay = QueueHelpers.calculateDelay(queue.options, item.messageOptions)
+            val delay = QueueHelpers.calculateDelay(queue.options, producerOptions, request.sendOptions, item.messageOptions)
             values[index] += if (delay.isZero) {
                 "clock_timestamp()"
             } else {
@@ -39,7 +39,7 @@ internal object ProducerSchemaHelpers {
         // attempts
         columns += Const.REMAINING_ATTEMPTS_COLUMN_NAME
         request.data.forEachIndexed { index, item ->
-            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, item.messageOptions)
+            val remainingAttempts = QueueHelpers.calculateAttempts(queue.options, producerOptions, request.sendOptions, item.messageOptions)
 
             values[index] += "$remainingAttempts"
         }
@@ -62,6 +62,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // producer name
+        val producerName = calculateProducerName(producerOptions, request.sendOptions)
         if (producerName != null) {
             columns += Const.PRODUCER_COLUMN_NAME
             request.data.forEachIndexed { index, _ ->
@@ -170,6 +171,10 @@ internal object ProducerSchemaHelpers {
                 }
             }
         }
+    }
+
+    fun calculateProducerName(producerOptions: ProducerOptions, sendOptions: SendOptions): String? {
+        return sendOptions.producer ?: producerOptions.producer
     }
 
     fun calculateDeduplicationMode(producerOptions: ProducerOptions, sendOptions: SendOptions): DeduplicationMode {

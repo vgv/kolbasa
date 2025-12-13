@@ -3,6 +3,8 @@ package kolbasa.queue
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.ProducerOptions
+import kolbasa.producer.SendOptions
 import kolbasa.schema.Const
 import kolbasa.utils.Helpers
 import java.time.Duration
@@ -48,25 +50,36 @@ internal object QueueHelpers {
         }
     }
 
-    fun calculateDelay(queueOptions: QueueOptions, messageOptions: MessageOptions): Duration {
-        var delay = queueOptions.defaultDelay
-
+    fun calculateDelay(queueOptions: QueueOptions, producerOptions: ProducerOptions, sendOptions: SendOptions, messageOptions: MessageOptions): Duration {
         if (messageOptions.delay != null) {
-            delay = messageOptions.delay
+            return messageOptions.delay
         }
 
+        if (sendOptions.delay != null) {
+            return sendOptions.delay
+        }
 
-        return delay
+        if (producerOptions.delay != null) {
+            return producerOptions.delay
+        }
+
+        return queueOptions.defaultDelay
     }
 
-    fun calculateAttempts(queueOptions: QueueOptions, messageOptions: MessageOptions): Int {
-        var attempts = queueOptions.defaultAttempts
-
+    fun calculateAttempts(queueOptions: QueueOptions, producerOptions: ProducerOptions, sendOptions: SendOptions, messageOptions: MessageOptions): Int {
         if (messageOptions.attempts != null) {
-            attempts = messageOptions.attempts
+            return messageOptions.attempts
         }
 
-        return attempts
+        if (sendOptions.attempts != null) {
+            return sendOptions.attempts
+        }
+
+        if (producerOptions.attempts != null) {
+            return producerOptions.attempts
+        }
+
+        return queueOptions.defaultAttempts
     }
 
     fun calculateVisibilityTimeout(
