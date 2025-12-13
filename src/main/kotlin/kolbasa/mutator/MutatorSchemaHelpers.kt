@@ -5,8 +5,20 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.utils.TimeHelper
+import java.util.concurrent.ExecutorService
 
 internal object MutatorSchemaHelpers {
+
+    fun calculateAsyncExecutor(
+        mutatorExecutor: ExecutorService?,
+        defaultExecutor: ExecutorService
+    ): ExecutorService {
+        if (mutatorExecutor != null) {
+            return mutatorExecutor
+        }
+
+        return defaultExecutor
+    }
 
     fun generateListMutateQuery(
         queue: Queue<*>,

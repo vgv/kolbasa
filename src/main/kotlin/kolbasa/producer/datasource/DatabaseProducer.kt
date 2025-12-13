@@ -40,8 +40,9 @@ class DatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): CompletableFuture<SendResult<Data>> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
+            callExecutor = request.sendOptions.asyncExecutor,
             // make it better somehow
-            customExecutor = (peer as? ConnectionAwareDatabaseProducer)?.producerOptions?.asyncExecutor,
+            producerExecutor = (peer as? ConnectionAwareDatabaseProducer)?.producerOptions?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

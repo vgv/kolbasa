@@ -35,7 +35,8 @@ class ClusterProducer(
     override fun <Data> sendAsync(queue: Queue<Data>, request: SendRequest<Data>): CompletableFuture<SendResult<Data>> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = producerOptions.asyncExecutor,
+            callExecutor = request.sendOptions.asyncExecutor,
+            producerExecutor = producerOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

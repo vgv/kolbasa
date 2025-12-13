@@ -3,15 +3,11 @@ package kolbasa.cluster
 import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
-import kolbasa.mutator.MessageResult
-import kolbasa.mutator.MutateResult
-import kolbasa.mutator.Mutation
-import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.*
 import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.Id
-import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
@@ -94,8 +90,8 @@ class ClusterMutator(
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
         // TODO: make it smarter
-        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = mutatorOptions.asyncExecutor,
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = mutatorOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
@@ -108,8 +104,8 @@ class ClusterMutator(
         filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
         // TODO: make it smarter
-        val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = mutatorOptions.asyncExecutor,
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = mutatorOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
