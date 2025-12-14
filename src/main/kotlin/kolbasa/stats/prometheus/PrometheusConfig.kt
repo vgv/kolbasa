@@ -145,12 +145,6 @@ sealed class PrometheusConfig {
             .labelNames("queue", "node_id")
             .register(registry)
 
-        internal val sweepIterationsCounter: Counter = Counter.builder()
-            .name("kolbasa_sweep_iterations")
-            .help("Number of sweep iterations (every sweep can have multiple iterations)")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
         internal val sweepMessagesRemovedCounter: Counter = Counter.builder()
             .name("kolbasa_sweep_removed_messages")
             .help("Number of messages removed by sweep")

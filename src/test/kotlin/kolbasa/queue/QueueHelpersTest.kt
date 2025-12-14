@@ -3,13 +3,14 @@ package kolbasa.queue
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.MessageOptions
+import kolbasa.producer.ProducerOptions
+import kolbasa.producer.SendOptions
 import kolbasa.schema.Const
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 internal class QueueHelpersTest {
 
@@ -23,7 +24,7 @@ internal class QueueHelpersTest {
     fun testGenerateDatabaseName_TooLong() {
         val longName = "a".repeat(Const.MAX_DATABASE_OBJECT_NAME_LENGTH + 1)
         assertFailsWith<IllegalStateException> {
-           QueueHelpers.generateDatabaseName(longName, longName, longName, separator = "-")
+            QueueHelpers.generateDatabaseName(longName, longName, longName, separator = "-")
         }
     }
 
@@ -70,153 +71,210 @@ internal class QueueHelpersTest {
 
     @Test
     fun testCalculateDelay() {
-        assertNull(QueueHelpers.calculateDelay(null, null))
-
+        // All default
         run {
-            val options = QueueOptions()
-            assertEquals(QueueOptions.DEFAULT_DELAY, QueueHelpers.calculateDelay(options, null))
+            assertEquals(
+                expected = QueueOptions.DEFAULT.defaultDelay,
+                actual = QueueHelpers.calculateDelay(
+                    QueueOptions(),
+                    ProducerOptions.DEFAULT,
+                    SendOptions.DEFAULT,
+                    MessageOptions.DEFAULT
+                )
+            )
         }
 
+        // Custom queue
         run {
             val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
             val options = QueueOptions(defaultDelay = duration)
-            assertEquals(duration, QueueHelpers.calculateDelay(options, null))
+            assertEquals(
+                expected = duration,
+                QueueHelpers.calculateDelay(options, ProducerOptions.DEFAULT, SendOptions.DEFAULT, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom producer
         run {
-            val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val options = QueueOptions(defaultDelay = duration)
-            val messageOptions = MessageOptions()
-            assertEquals(duration, QueueHelpers.calculateDelay(options, messageOptions))
+            val queueDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val producerDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val queueOptions = QueueOptions(defaultDelay = queueDuration)
+            val producerOptions = ProducerOptions(delay = producerDuration)
+            assertEquals(
+                expected = producerDuration,
+                QueueHelpers.calculateDelay(queueOptions, producerOptions, SendOptions.DEFAULT, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom send options
         run {
-            val duration = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val options = QueueOptions(defaultDelay = duration)
-            val messageOptions = MessageOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, messageOptions))
+            val queueDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val producerDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val sendDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+
+            val queueOptions = QueueOptions(defaultDelay = queueDuration)
+            val producerOptions = ProducerOptions(delay = producerDuration)
+            val sendOptions = SendOptions(delay = sendDuration)
+
+            assertEquals(
+                expected = sendDuration,
+                QueueHelpers.calculateDelay(queueOptions, producerOptions, sendOptions, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom message options
         run {
-            val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val messageOptions = MessageOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(null, messageOptions))
-        }
+            val queueDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val producerDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val sendDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val messageDuration = Duration.ofMillis(Random.nextLong(100, 10_000))
 
-        run {
-            val sendDuration = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val options = QueueOptions()
-            val messageOptions = MessageOptions(delay = sendDuration)
-            assertEquals(sendDuration, QueueHelpers.calculateDelay(options, messageOptions))
+            val queueOptions = QueueOptions(defaultDelay = queueDuration)
+            val producerOptions = ProducerOptions(delay = producerDuration)
+            val sendOptions = SendOptions(delay = sendDuration)
+            val messageOptions = MessageOptions(delay = messageDuration)
+
+            assertEquals(
+                expected = messageDuration,
+                QueueHelpers.calculateDelay(queueOptions, producerOptions, sendOptions, messageOptions)
+            )
         }
     }
 
     @Test
     fun testCalculateAttempts() {
-        assertEquals(QueueOptions.DEFAULT_ATTEMPTS, QueueHelpers.calculateAttempts(null, null))
-
+        // All default
         run {
-            val options = QueueOptions()
-            assertEquals(QueueOptions.DEFAULT_ATTEMPTS, QueueHelpers.calculateAttempts(options, null))
+            assertEquals(
+                expected = QueueOptions.DEFAULT.defaultAttempts,
+                actual = QueueHelpers.calculateAttempts(
+                    QueueOptions(),
+                    ProducerOptions.DEFAULT,
+                    SendOptions.DEFAULT,
+                    MessageOptions.DEFAULT
+                )
+            )
         }
 
+        // Custom queue
         run {
-            val attempts = Random.nextInt(10, 100)
-            val options = QueueOptions(defaultAttempts = attempts)
-            assertEquals(attempts, QueueHelpers.calculateAttempts(options, null))
+            val queueAttempts = Random.nextInt(1, 100)
+            val queueOptions = QueueOptions(defaultAttempts = queueAttempts)
+            assertEquals(
+                expected = queueAttempts,
+                QueueHelpers.calculateAttempts(queueOptions, ProducerOptions.DEFAULT, SendOptions.DEFAULT, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom producer
         run {
-            val attempts = Random.nextInt(10, 100)
-            val options = QueueOptions(defaultAttempts = attempts)
-            val messageOptions = MessageOptions()
-            assertEquals(attempts, QueueHelpers.calculateAttempts(options, messageOptions))
+            val queueAttempts = Random.nextInt(1, 100)
+            val producerAttempts = Random.nextInt(1, 100)
+
+            val queueOptions = QueueOptions(defaultAttempts = queueAttempts)
+            val producerOptions = ProducerOptions(attempts = producerAttempts)
+
+            assertEquals(
+                expected = producerAttempts,
+                QueueHelpers.calculateAttempts(queueOptions, producerOptions, SendOptions.DEFAULT, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom send options
         run {
-            val attempts = Random.nextInt(10, 100)
-            val sendAttempts = Random.nextInt(200, 300)
-            val options = QueueOptions(defaultAttempts = attempts)
-            val messageOptions = MessageOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, messageOptions))
+            val queueAttempts = Random.nextInt(1, 100)
+            val producerAttempts = Random.nextInt(1, 100)
+            val sendAttempts = Random.nextInt(1, 100)
+
+            val queueOptions = QueueOptions(defaultAttempts = queueAttempts)
+            val producerOptions = ProducerOptions(attempts = producerAttempts)
+            val sendOptions = SendOptions(attempts = sendAttempts)
+
+            assertEquals(
+                expected = sendAttempts,
+                QueueHelpers.calculateAttempts(queueOptions, producerOptions, sendOptions, MessageOptions.DEFAULT)
+            )
         }
 
+        // Custom message options
         run {
-            val sendAttempts = Random.nextInt(200, 300)
-            val options = QueueOptions()
-            val messageOptions = MessageOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(options, messageOptions))
-        }
+            val queueAttempts = Random.nextInt(1, 100)
+            val producerAttempts = Random.nextInt(1, 100)
+            val sendAttempts = Random.nextInt(1, 100)
+            val messageAttempts = Random.nextInt(1, 100)
 
-        run {
-            val sendAttempts = Random.nextInt(200, 300)
-            val messageOptions = MessageOptions(attempts = sendAttempts)
-            assertEquals(sendAttempts, QueueHelpers.calculateAttempts(null, messageOptions))
+            val queueOptions = QueueOptions(defaultAttempts = queueAttempts)
+            val producerOptions = ProducerOptions(attempts = producerAttempts)
+            val sendOptions = SendOptions(attempts = sendAttempts)
+            val messageOptions = MessageOptions(attempts = messageAttempts)
+
+            assertEquals(
+                expected = messageAttempts,
+                QueueHelpers.calculateAttempts(queueOptions, producerOptions, sendOptions, messageOptions)
+            )
         }
     }
 
     @Test
     fun testCalculateVisibilityTimeout() {
-        assertEquals(
-            QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-                null,
-                null,
-                null
-            )
-        )
-
         run {
             val options = QueueOptions()
             assertEquals(
-                QueueOptions.DEFAULT_VISIBILITY_TIMEOUT, QueueHelpers.calculateVisibilityTimeout(
-                    options,
-                    null,
-                    null
-                )
+                expected = QueueOptions.DEFAULT.defaultVisibilityTimeout,
+                QueueHelpers.calculateVisibilityTimeout(options, ConsumerOptions.DEFAULT, ReceiveOptions.DEFAULT)
             )
         }
 
         run {
-            val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val options = QueueOptions(defaultVisibilityTimeout = timeout)
-            assertEquals(timeout, QueueHelpers.calculateVisibilityTimeout(options, null, null))
+            val queueTimeout = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val queueOptions = QueueOptions(defaultVisibilityTimeout = queueTimeout)
+
+            assertEquals(
+                expected = queueTimeout,
+                QueueHelpers.calculateVisibilityTimeout(queueOptions, ConsumerOptions.DEFAULT, ReceiveOptions.DEFAULT)
+            )
         }
 
         run {
-            val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val options = QueueOptions(defaultVisibilityTimeout = timeout)
-            val consumerOptions = ConsumerOptions()
-            assertEquals(timeout, QueueHelpers.calculateVisibilityTimeout(options, consumerOptions, null))
+            val queueTimeout = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val queueOptions = QueueOptions(defaultVisibilityTimeout = queueTimeout)
+
+            assertEquals(
+                expected = queueTimeout,
+                QueueHelpers.calculateVisibilityTimeout(queueOptions, ConsumerOptions(), ReceiveOptions.DEFAULT)
+            )
         }
 
         run {
-            val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val options = QueueOptions()
-            val consumerOptions = ConsumerOptions(visibilityTimeout = timeout)
-            assertEquals(timeout, QueueHelpers.calculateVisibilityTimeout(options, consumerOptions, null))
+            val consumerTimeout = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val consumerOptions = ConsumerOptions(visibilityTimeout = consumerTimeout)
+            assertEquals(
+                expected = consumerTimeout,
+                QueueHelpers.calculateVisibilityTimeout(QueueOptions(), consumerOptions, ReceiveOptions.DEFAULT)
+            )
         }
 
         run {
-            val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
-            val options = QueueOptions(defaultVisibilityTimeout = timeout)
-            val receiveOptions = ReceiveOptions()
-            assertEquals(timeout, QueueHelpers.calculateVisibilityTimeout(options, null, receiveOptions))
+            val queueTimeout = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val queueOptions = QueueOptions(defaultVisibilityTimeout = queueTimeout)
+
+            assertEquals(
+                expected = queueTimeout,
+                QueueHelpers.calculateVisibilityTimeout(queueOptions, ConsumerOptions.DEFAULT, ReceiveOptions())
+            )
         }
 
         run {
-            val timeout = Duration.ofMillis(Random.nextLong(100, 10_000))
+            val queueTimeout = Duration.ofMillis(Random.nextLong(100, 10_000))
             val consumerTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
             val receiveTimeout = Duration.ofMillis(Random.nextLong(30_000, 1_000_000_000))
-            val options = QueueOptions(defaultVisibilityTimeout = timeout)
+
+            val queueOptions = QueueOptions(defaultVisibilityTimeout = queueTimeout)
             val consumerOptions = ConsumerOptions(visibilityTimeout = consumerTimeout)
             val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
             assertEquals(
-                receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
-                    options,
-                    consumerOptions,
-                    receiveOptions
-                )
+                expected = receiveTimeout,
+                QueueHelpers.calculateVisibilityTimeout(queueOptions, consumerOptions, receiveOptions)
             )
         }
 
@@ -225,18 +283,9 @@ internal class QueueHelpersTest {
             val options = QueueOptions()
             val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
             assertEquals(
-                receiveTimeout, QueueHelpers.calculateVisibilityTimeout(
-                    options,
-                    null,
-                    receiveOptions
-                )
+                expected = receiveTimeout,
+                QueueHelpers.calculateVisibilityTimeout(options, ConsumerOptions.DEFAULT, receiveOptions)
             )
-        }
-
-        run {
-            val receiveTimeout = Duration.ofMillis(Random.nextLong(20_000, 1_000_000))
-            val receiveOptions = ReceiveOptions(visibilityTimeout = receiveTimeout)
-            assertEquals(receiveTimeout, QueueHelpers.calculateVisibilityTimeout(null, null, receiveOptions))
         }
     }
 }

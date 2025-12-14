@@ -21,7 +21,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
 ) : ConnectionAwareProducer {
 
     @JvmOverloads
-    constructor(producerOptions: ProducerOptions = ProducerOptions()) : this(
+    constructor(producerOptions: ProducerOptions = ProducerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         producerOptions = producerOptions
     )
@@ -153,7 +153,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, request.sendOptions)
-        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions.producer, deduplicationMode, request)
+        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, deduplicationMode, request)
 
         val (execution, result) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->

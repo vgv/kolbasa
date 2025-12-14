@@ -10,14 +10,9 @@ data class SweepConfig(
     val enabled: Boolean = true,
 
     /**
-     * Max messages to delete at each iteration
+     * Max messages to delete during sweep
      */
     val maxMessages: Int = DEFAULT_SWEEP_MESSAGES,
-
-    /**
-     * Max cleanup iterations at each sweep
-     */
-    val maxIterations: Int = DEFAULT_SWEEP_ITERATIONS,
 
     /**
      * How often we want to trigger a sweep?
@@ -31,40 +26,30 @@ data class SweepConfig(
 
     init {
         Checks.checkSweepMaxMessages(maxMessages)
-        Checks.checkSweepMaxIterations(maxIterations)
         Checks.checkSweepPeriod(period)
     }
 
     class Builder internal constructor() {
         private var enabled: Boolean = true
         private var maxMessages: Int = DEFAULT_SWEEP_MESSAGES
-        private var maxIterations: Int = DEFAULT_SWEEP_ITERATIONS
         private var period: Int = DEFAULT_SWEEP_PERIOD
 
         fun enabled() = apply { this.enabled = true }
         fun disabled() = apply { this.enabled = false }
         fun maxMessages(maxMessages: Int) = apply { this.maxMessages = maxMessages }
-        fun maxIterations(maxIterations: Int) = apply { this.maxIterations = maxIterations }
         fun period(period: Int) = apply { this.period = period }
 
-        fun build() = SweepConfig(enabled, maxMessages, maxIterations, period)
+        fun build() = SweepConfig(enabled, maxMessages, period)
     }
 
     companion object {
 
         /**
-         * How many messages to delete at each iteration during sweep
+         * How many messages to delete during sweep
          */
         const val MIN_SWEEP_MESSAGES = 100
-        const val DEFAULT_SWEEP_MESSAGES = 1_000
+        const val DEFAULT_SWEEP_MESSAGES = 10_000
         const val MAX_SWEEP_MESSAGES = 100_000
-
-        /**
-         * How many iterations at each sweep
-         */
-        const val MIN_SWEEP_ITERATIONS = 1
-        const val DEFAULT_SWEEP_ITERATIONS = 5
-        const val MAX_SWEEP_ITERATIONS = 100
 
         /**
          * How often we want to trigger a sweep?

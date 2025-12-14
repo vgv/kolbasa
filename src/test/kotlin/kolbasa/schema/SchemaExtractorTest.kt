@@ -23,7 +23,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
     private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
     private val DOUBLE_FIELD = MetaField.double("double_value")
     private val FLOAT_FIELD = MetaField.float("float_value")
-    private val CHAR_FIELD = MetaField.char("char_value")
     private val BIGINTEGER_FIELD = MetaField.bigInteger("big_integer_value")
 
     private val testQueue = Queue(
@@ -41,7 +40,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             BOOLEAN_FIELD,
             DOUBLE_FIELD,
             FLOAT_FIELD,
-            CHAR_FIELD,
             BIGINTEGER_FIELD
         )
     )
@@ -61,7 +59,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         val testTable = assertNotNull(tables[testQueue.dbTableName], "Table not found, tables: ${tables.keys}")
 
         // check columns
-        assertEquals(20, testTable.columns.size, "Found columns: ${testTable.columns}")
+        assertEquals(19, testTable.columns.size, "Found columns: ${testTable.columns}")
 
         // id and identity
         assertNotNull(testTable.findColumn("id")).let { idColumn ->
@@ -150,13 +148,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             assertEquals(ColumnType.REAL, metaFloatValueColumn.type)
             assertTrue(metaFloatValueColumn.nullable)
             assertNull(metaFloatValueColumn.defaultExpression)
-        }
-
-        // meta_char_value
-        assertNotNull(testTable.findColumn("meta_char_value")).let { metaCharValueColumn ->
-            assertEquals(ColumnType.VARCHAR, metaCharValueColumn.type)
-            assertTrue(metaCharValueColumn.nullable)
-            assertNull(metaCharValueColumn.defaultExpression)
         }
 
         // meta_biginteger_value

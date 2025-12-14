@@ -21,7 +21,7 @@ class DatabaseConsumer internal constructor(
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        consumerOptions: ConsumerOptions = ConsumerOptions()
+        consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
     ) : this(
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseConsumer(consumerOptions)

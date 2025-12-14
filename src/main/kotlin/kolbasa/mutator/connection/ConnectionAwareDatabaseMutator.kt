@@ -20,11 +20,11 @@ import kotlin.math.min
 
 class ConnectionAwareDatabaseMutator internal constructor(
     internal val nodeId: NodeId,
-    internal val mutatorOptions: MutatorOptions = MutatorOptions()
+    internal val mutatorOptions: MutatorOptions
 ) : ConnectionAwareMutator {
 
     @JvmOverloads
-    constructor(mutatorOptions: MutatorOptions = MutatorOptions()) : this(
+    constructor(mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         mutatorOptions = mutatorOptions
     )

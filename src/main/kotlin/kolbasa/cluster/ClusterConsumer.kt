@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 class ClusterConsumer(
     private val cluster: Cluster,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions()
+    private val consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
 ) : Consumer {
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {

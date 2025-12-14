@@ -81,9 +81,6 @@ sealed class MetaField<T>(
         fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> =
             DoubleField(name, option)
 
-        fun char(name: String, option: FieldOption = FieldOption.NONE): MetaField<Char> =
-            CharField(name, option)
-
         fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> =
             StringField(name, option)
 
@@ -92,13 +89,6 @@ sealed class MetaField<T>(
 
         fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> =
             BigDecimalField(name, option)
-
-        fun <E : Enum<E>> enum(
-            name: String,
-            type: Class<E>,
-            searchable: FieldOption = FieldOption.NONE
-        ): MetaField<E> = EnumField(name, type, searchable)
-
     }
 
 }
@@ -264,34 +254,6 @@ private data class DoubleField(
     }
 }
 
-private data class CharField(
-    override val name: String,
-    override val option: FieldOption = FieldOption.NONE
-) : MetaField<Char>(name, option, "varchar(${Const.META_FIELD_CHAR_TYPE_MAX_LENGTH})", Types.VARCHAR) {
-
-    init {
-        Checks.checkMetaFieldName(name)
-    }
-
-    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
-    override val dbIndexType = MetaHelpers.defineIndexType(option)
-
-    override fun value(value: Char): CharValue = CharValue(this, value)
-
-    override fun read(rs: ResultSet, columnIndex: Int): Char? {
-        val value = rs.getString(columnIndex)
-        return if (value == null || value.isEmpty()) {
-            null
-        } else {
-            value[0]
-        }
-    }
-
-    override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: Char) {
-        ps.setString(columnIndex, value.toString())
-    }
-}
-
 private data class StringField(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -358,35 +320,5 @@ private data class BigDecimalField(
 
     override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: BigDecimal) {
         ps.setBigDecimal(columnIndex, value)
-    }
-}
-
-private data class EnumField<E : Enum<E>>(
-    override val name: String,
-    val type: Class<E>,
-    override val option: FieldOption = FieldOption.NONE
-) : MetaField<E>(name, option, "varchar(${Const.META_FIELD_ENUM_TYPE_MAX_LENGTH})", Types.VARCHAR) {
-
-    init {
-        Checks.checkMetaFieldName(name)
-    }
-
-    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
-    override val dbIndexType = MetaHelpers.defineIndexType(option)
-
-    override fun value(value: E): EnumValue<E> = EnumValue(this, value)
-
-    override fun read(rs: ResultSet, columnIndex: Int): E? {
-        val textValue = rs.getString(columnIndex)
-
-        return if (textValue == null) {
-            null
-        } else {
-            java.lang.Enum.valueOf<E>(type, textValue)
-        }
-    }
-
-    override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: E) {
-        ps.setString(columnIndex, value.name)
     }
 }

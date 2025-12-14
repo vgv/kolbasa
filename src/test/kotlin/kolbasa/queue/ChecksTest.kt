@@ -12,38 +12,25 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Duration
 import kotlin.random.Random
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotSame
 
 internal class ChecksTest {
 
     @Test
-    fun testCheckDelay_DelayNotSetWorks() {
-        // check DELAY_NOT_SET doesn't fail
-        Checks.checkDelay(QueueOptions.DELAY_NOT_SET)
+    fun testCheckDelay_Null_Works() {
+        // check NULL doesn't fail
+        Checks.checkDelay(null)
     }
 
     @Test
-    fun testCheckDelay_DelayNotSetCopyFails() {
-        // Check any copies of DELAY_NOT_SET doesn't work
-        val copy = QueueOptions.DELAY_NOT_SET.negated().negated()
-        assertNotSame(copy, QueueOptions.DELAY_NOT_SET)
-        assertEquals(copy, QueueOptions.DELAY_NOT_SET)
-        assertFailsWith<IllegalStateException> {
-            Checks.checkDelay(copy)
-        }
-    }
-
-    @Test
-    fun testCheckDelay_ZeroOrPositiveWorks() {
+    fun testCheckDelay_ZeroOrPositive_Works() {
         //Check all values >= zero work
         Checks.checkDelay(Duration.ofMillis(0))
         Checks.checkDelay(Duration.ofMillis(Random.nextLong(1, Long.MAX_VALUE)))
     }
 
     @Test
-    fun testCheckDelay_NegativeFails() {
+    fun testCheckDelay_Negative_Fails() {
         // Check other negative values fail
         assertFailsWith<IllegalStateException> {
             Checks.checkDelay(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
@@ -53,19 +40,19 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckAttempts_AttemptsNotSetWorks() {
-        // check DELAY_NOT_SET works
-        Checks.checkAttempts(QueueOptions.ATTEMPTS_NOT_SET)
+    fun testCheckAttempts_Null_Works() {
+        // check NULL works
+        Checks.checkAttempts(null)
     }
 
     @Test
-    fun testCheckAttempts_PositiveWorks() {
+    fun testCheckAttempts_Positive_Works() {
         //Check all positive values work
         Checks.checkAttempts(Random.nextInt(1, Int.MAX_VALUE))
     }
 
     @Test
-    fun testCheckAttempts_ZeroOrNegativeFails() {
+    fun testCheckAttempts_ZeroOrNegative_Fails() {
         // Check other negative or zero values fail
         assertFailsWith<IllegalStateException> {
             Checks.checkAttempts(0)
@@ -98,7 +85,7 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testBatchSize_ZeroOrNegativeFails() {
+    fun testBatchSize_ZeroOrNegative_Fails() {
         assertFailsWith<IllegalStateException> {
             Checks.checkBatchSize(0)
         }
@@ -109,6 +96,11 @@ internal class ChecksTest {
         // any value >= 1 should pass
         assertDoesNotThrow {
             Checks.checkBatchSize(Random.nextInt(1, 1_000_000))
+        }
+
+        // null should pass
+        assertDoesNotThrow {
+            Checks.checkBatchSize(null)
         }
     }
 
@@ -135,31 +127,20 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckVisibilityTimeout_VisibilityTimeoutNotSetWorks() {
-        // check DELAY_NOT_SET works
-        Checks.checkVisibilityTimeout(QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
+    fun testCheckVisibilityTimeout_VisibilityTimeout_Null_Works() {
+        // check NULL works
+        Checks.checkVisibilityTimeout(null)
     }
 
     @Test
-    fun testCheckVisibilityTimeout_VisibilityTimeoutCopyFails() {
-        // Check any copies of DELAY_NOT_SET fail
-        val copy = QueueOptions.VISIBILITY_TIMEOUT_NOT_SET.negated().negated()
-        assertNotSame(copy, QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
-        assertEquals(copy, QueueOptions.VISIBILITY_TIMEOUT_NOT_SET)
-        assertFailsWith<IllegalStateException> {
-            Checks.checkVisibilityTimeout(copy)
-        }
-    }
-
-    @Test
-    fun testCheckVisibilityTimeout_ZeroOrPositiveWorks() {
+    fun testCheckVisibilityTimeout_ZeroOrPositive_Works() {
         //Check all values >= zero work
         Checks.checkVisibilityTimeout(Duration.ofMillis(0))
         Checks.checkVisibilityTimeout(Duration.ofMillis(Random.nextLong(1, Long.MAX_VALUE)))
     }
 
     @Test
-    fun testCheckVisibilityTimeout_NegativeFails() {
+    fun testCheckVisibilityTimeout_Negative_Fails() {
         // Check other negative values fail
         assertFailsWith<IllegalStateException> {
             Checks.checkVisibilityTimeout(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
@@ -234,22 +215,6 @@ internal class ChecksTest {
     fun testCheckSweepMaxMessages_MoreThanMax() {
         assertFailsWith<IllegalStateException> {
             Checks.checkSweepMaxMessages(SweepConfig.MAX_SWEEP_MESSAGES + 1)
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
-
-    @Test
-    fun testCheckSweepMaxIterations_LessThanMin() {
-        assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(SweepConfig.MIN_SWEEP_ITERATIONS - 1)
-        }
-    }
-
-    @Test
-    fun testCheckSweepMaxIterations_MoreThanMax() {
-        assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(SweepConfig.MAX_SWEEP_ITERATIONS + 1)
         }
     }
 

@@ -2,11 +2,11 @@ package kolbasa.consumer
 
 import kolbasa.cluster.Shards
 import kolbasa.producer.Id
-import kolbasa.queue.Queue
 import kolbasa.queue.DatabaseQueueDataType
-import kolbasa.queue.meta.MetaValues
-import kolbasa.queue.meta.MetaValue
+import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
+import kolbasa.queue.meta.MetaValue
+import kolbasa.queue.meta.MetaValues
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.ColumnIndex
@@ -120,8 +120,9 @@ internal object ConsumerSchemaHelpers {
         receiveOptions.filter?.fillPreparedQuery(preparedStatement, columnIndex)
 
         // consumer name, if any
-        if (consumerOptions.consumer != null) {
-            preparedStatement.setString(columnIndex.nextIndex(), consumerOptions.consumer)
+        val consumerName = calculateConsumerName(consumerOptions, receiveOptions)
+        if (consumerName != null) {
+            preparedStatement.setString(columnIndex.nextIndex(), consumerName)
         } else {
             preparedStatement.setNull(columnIndex.nextIndex(), Types.VARCHAR)
         }
@@ -237,8 +238,13 @@ internal object ConsumerSchemaHelpers {
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
                     ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
                 limit $limit
+                for update skip locked
             )
         """.trimIndent()
+    }
+
+    fun calculateConsumerName(consumerOptions: ConsumerOptions, receiveOptions: ReceiveOptions): String? {
+        return receiveOptions.consumer ?: consumerOptions.consumer
     }
 
 }

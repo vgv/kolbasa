@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture
 
 class ClusterProducer(
     private val cluster: Cluster,
-    private val producerOptions: ProducerOptions = ProducerOptions()
+    private val producerOptions: ProducerOptions = ProducerOptions.DEFAULT
 ) : Producer {
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
@@ -35,7 +35,8 @@ class ClusterProducer(
     override fun <Data> sendAsync(queue: Queue<Data>, request: SendRequest<Data>): CompletableFuture<SendResult<Data>> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            customExecutor = producerOptions.asyncExecutor,
+            callExecutor = request.sendOptions.asyncExecutor,
+            producerExecutor = producerOptions.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

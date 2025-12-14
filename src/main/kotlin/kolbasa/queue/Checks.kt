@@ -10,20 +10,16 @@ import java.time.Duration
 
 internal object Checks {
 
-    fun checkDelay(delay: Duration) {
-        // We need some marker to check that delay is set by user
-        // If it isn't set, we don't need to check it at all, because internal
-        // default value has a special meaning and is always valid
-        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
-        if (delay === QueueOptions.DELAY_NOT_SET) return
+    fun checkDelay(delay: Duration?) {
+        if (delay == null) return
 
         check(!delay.isNegative) {
             "delay must be greater than or equal to zero (current: $delay)"
         }
     }
 
-    fun checkAttempts(attempts: Int) {
-        if (attempts == QueueOptions.ATTEMPTS_NOT_SET) return
+    fun checkAttempts(attempts: Int?) {
+        if (attempts == null) return
 
         check(attempts > 0) {
             "Attempts must be greater than zero (current: $attempts)"
@@ -43,7 +39,9 @@ internal object Checks {
         }
     }
 
-    fun checkBatchSize(batchSize: Int) {
+    fun checkBatchSize(batchSize: Int?) {
+        if (batchSize == null) return
+
         check(batchSize >= 1) {
             "Batch size must be greater than or equal to 1 (current: $batchSize)"
         }
@@ -62,12 +60,8 @@ internal object Checks {
         }
     }
 
-    fun checkVisibilityTimeout(visibilityTimeout: Duration) {
-        // We need some marker to check that visibilityTimeout is set by user
-        // If it isn't set, we don't need to check it at all, because internal
-        // default value has a special meaning and is always valid
-        @Suppress("IDENTITY_SENSITIVE_OPERATIONS_WITH_VALUE_TYPE")
-        if (visibilityTimeout === QueueOptions.VISIBILITY_TIMEOUT_NOT_SET) return
+    fun checkVisibilityTimeout(visibilityTimeout: Duration?) {
+        if (visibilityTimeout == null) return
 
         check(!visibilityTimeout.isNegative) {
             "visibility timeout must be greater than or equal to zero (current: $visibilityTimeout)"
@@ -111,12 +105,6 @@ internal object Checks {
     fun checkSweepMaxMessages(messages: Int) {
         check(messages in SweepConfig.MIN_SWEEP_MESSAGES..SweepConfig.MAX_SWEEP_MESSAGES) {
             "Sweep max messages must be in the [${SweepConfig.MIN_SWEEP_MESSAGES}..${SweepConfig.MAX_SWEEP_MESSAGES}] range"
-        }
-    }
-
-    fun checkSweepMaxIterations(maxIterations: Int) {
-        check(maxIterations in SweepConfig.MIN_SWEEP_ITERATIONS..SweepConfig.MAX_SWEEP_ITERATIONS) {
-            "Sweep max iterations must be in the [${SweepConfig.MIN_SWEEP_ITERATIONS}..${SweepConfig.MAX_SWEEP_ITERATIONS}] range"
         }
     }
 
