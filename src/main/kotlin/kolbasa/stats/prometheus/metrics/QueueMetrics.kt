@@ -33,7 +33,6 @@ internal interface QueueMetrics {
 
     fun sweepMetrics(
         nodeId: NodeId,
-        iterations: Int,
         removedMessages: Int,
         executionNanos: Long
     )

@@ -221,22 +221,6 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckSweepMaxIterations_LessThanMin() {
-        assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(SweepConfig.MIN_SWEEP_ITERATIONS - 1)
-        }
-    }
-
-    @Test
-    fun testCheckSweepMaxIterations_MoreThanMax() {
-        assertFailsWith<IllegalStateException> {
-            Checks.checkSweepMaxIterations(SweepConfig.MAX_SWEEP_ITERATIONS + 1)
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
-
-    @Test
     fun testCheckSweepPeriod_LessThanMin() {
         assertFailsWith<IllegalStateException> {
             Checks.checkSweepPeriod(SweepConfig.MIN_SWEEP_PERIOD - 1)

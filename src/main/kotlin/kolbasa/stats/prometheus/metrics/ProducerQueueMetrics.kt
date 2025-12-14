@@ -86,7 +86,6 @@ internal class PrometheusQueueMetrics(
 
     override fun sweepMetrics(
         nodeId: NodeId,
-        iterations: Int,
         removedMessages: Int,
         executionNanos: Long
     ) {
@@ -95,7 +94,6 @@ internal class PrometheusQueueMetrics(
         }
 
         sweepQueueMetrics.sweepMetrics(
-            iterations = iterations,
             removedMessages = removedMessages,
             executionNanos = executionNanos
         )
@@ -271,16 +269,13 @@ internal class SweepQueueMetrics(
     prometheusConfig: PrometheusConfig.Config
 ) {
 
-    fun sweepMetrics(iterations: Int, removedMessages: Int, executionNanos: Long) {
+    fun sweepMetrics(removedMessages: Int, executionNanos: Long) {
         sweepCounter.inc()
-        sweepIterationsCounter.incInt(iterations)
         sweepMessagesRemovedCounter.incInt(removedMessages)
         sweepDuration.observeNanos(executionNanos)
     }
 
     private val sweepCounter: CounterDataPoint = prometheusConfig.sweepCounter
-        .labelValues(queueName, nodeId.id)
-    private val sweepIterationsCounter: CounterDataPoint = prometheusConfig.sweepIterationsCounter
         .labelValues(queueName, nodeId.id)
     private val sweepMessagesRemovedCounter: CounterDataPoint = prometheusConfig.sweepMessagesRemovedCounter
         .labelValues(queueName, nodeId.id)

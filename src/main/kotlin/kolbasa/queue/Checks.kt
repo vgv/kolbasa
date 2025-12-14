@@ -108,12 +108,6 @@ internal object Checks {
         }
     }
 
-    fun checkSweepMaxIterations(maxIterations: Int) {
-        check(maxIterations in SweepConfig.MIN_SWEEP_ITERATIONS..SweepConfig.MAX_SWEEP_ITERATIONS) {
-            "Sweep max iterations must be in the [${SweepConfig.MIN_SWEEP_ITERATIONS}..${SweepConfig.MAX_SWEEP_ITERATIONS}] range"
-        }
-    }
-
     fun checkSweepPeriod(period: Int) {
         check(period in SweepConfig.MIN_SWEEP_PERIOD..SweepConfig.MAX_SWEEP_PERIOD) {
             "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PERIOD}..${SweepConfig.MAX_SWEEP_PERIOD}] range"
