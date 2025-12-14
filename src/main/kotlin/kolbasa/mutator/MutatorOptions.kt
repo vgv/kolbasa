@@ -32,10 +32,33 @@ data class MutatorOptions(
     val asyncExecutor: ExecutorService? = null,
 ) {
 
+    class Builder {
+        private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
+        private var asyncExecutor: ExecutorService? = null
+
+        fun maxMutatedMessagesKeepInMemory(value: Int) = apply {
+            this.maxMutatedMessagesKeepInMemory = value
+        }
+
+        fun asyncExecutor(value: ExecutorService?) = apply {
+            this.asyncExecutor = value
+        }
+
+        fun build(): MutatorOptions {
+            return MutatorOptions(
+                maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
+                asyncExecutor = asyncExecutor
+            )
+        }
+    }
+
     internal companion object {
         const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 100
 
         internal val DEFAULT = MutatorOptions()
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
     }
 
 }
