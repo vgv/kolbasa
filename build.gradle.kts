@@ -61,6 +61,7 @@ kotlin {
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_1_9
         languageVersion = KotlinVersion.KOTLIN_1_9
+        // We need JVM default methods for interfaces, but don't need the compatibility bridges
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }
