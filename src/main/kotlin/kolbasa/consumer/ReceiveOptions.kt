@@ -87,7 +87,7 @@ data class ReceiveOptions @JvmOverloads constructor(
 
     companion object {
 
-        internal val DEFAULT = ReceiveOptions()
+        val DEFAULT = ReceiveOptions()
 
         @JvmStatic
         fun builder() = Builder()

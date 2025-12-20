@@ -88,7 +88,7 @@ data class QueueOptions(
         private const val DEFAULT_ATTEMPTS = 5
         private val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
 
-        internal val DEFAULT = QueueOptions()
+        val DEFAULT = QueueOptions()
 
         @JvmStatic
         fun builder(): Builder = Builder()
