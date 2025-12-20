@@ -75,7 +75,7 @@ data class MessageOptions(
     }
 
     companion object {
-        internal val DEFAULT = MessageOptions()
+        val DEFAULT = MessageOptions()
 
         @JvmStatic
         fun builder() = Builder()

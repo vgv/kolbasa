@@ -231,8 +231,8 @@ internal object ConsumerSchemaHelpers {
         return """
             delete from
                 ${queue.dbTableName}
-            where id in (
-                select id
+            where ctid in (
+                select ctid
                 from ${queue.dbTableName}
                 where
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and

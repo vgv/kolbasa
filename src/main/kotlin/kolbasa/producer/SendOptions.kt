@@ -135,7 +135,7 @@ data class SendOptions(
     }
 
     companion object {
-        internal val DEFAULT = SendOptions()
+        val DEFAULT = SendOptions()
 
         @JvmStatic
         fun builder() = Builder()

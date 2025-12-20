@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
@@ -58,10 +59,10 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_1_8
-        languageVersion = KotlinVersion.KOTLIN_1_8
-        // to generate default method implementations in interfaces
-        freeCompilerArgs = listOf("-Xjvm-default=all")
+        apiVersion = KotlinVersion.KOTLIN_1_9
+        languageVersion = KotlinVersion.KOTLIN_1_9
+        // We need JVM default methods for interfaces, but don't need the compatibility bridges
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }
 

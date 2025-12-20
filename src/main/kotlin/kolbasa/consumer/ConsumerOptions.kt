@@ -43,7 +43,7 @@ data class ConsumerOptions(
 
     companion object {
 
-        internal val DEFAULT = ConsumerOptions()
+        val DEFAULT = ConsumerOptions()
 
         @JvmStatic
         fun builder() = Builder()
