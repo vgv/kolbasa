@@ -55,7 +55,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
     @BeforeTest
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @Test

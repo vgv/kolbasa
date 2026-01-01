@@ -46,7 +46,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     @BeforeTest
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, testQueue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, testQueue)
     }
 
     @Test

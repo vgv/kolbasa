@@ -19,7 +19,7 @@ class ProducerConsumerTest : PerformanceTest {
         Env.reportProducerConsumerTestEnv()
 
         // Update
-        SchemaHelpers.updateDatabaseSchema(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
 
         // Truncate table before test
         Env.dataSource.useStatement { statement ->

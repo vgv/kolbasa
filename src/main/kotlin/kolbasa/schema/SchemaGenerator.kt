@@ -35,6 +35,27 @@ internal object SchemaGenerator {
         return Schema(mutableSchema.tables, mutableSchema.indexes)
     }
 
+    internal fun generateRenameTableSchema(queue: Queue<*>, existingTable: Table?, newQueueName: String): Schema {
+        if (existingTable == null) {
+            // Rename only existing tables
+            return Schema.EMPTY
+        }
+
+        val newDatabaseTableName = QueueHelpers.generateQueueDbName(newQueueName)
+        val renameSql = "alter table if exists ${queue.dbTableName} RENAME TO $newDatabaseTableName"
+        return Schema(tableStatements = listOf(renameSql), indexStatements = emptyList())
+    }
+
+    internal fun generateDropTableSchema(queue: Queue<*>, existingTable: Table?): Schema {
+        if (existingTable == null) {
+            // Drop only existing tables
+            return Schema.EMPTY
+        }
+
+        val dropSql = "drop table if exists ${queue.dbTableName}"
+        return Schema(tableStatements = listOf(dropSql), indexStatements = emptyList())
+    }
+
     private fun forTable(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema, idRange: IdRange) {
         val createTableStatement = """
             create table if not exists ${queue.dbTableName}(
@@ -57,11 +78,7 @@ internal object SchemaGenerator {
         }
     }
 
-    private fun forIdentity(
-        existingTable: Table?,
-        mutableSchema: MutableSchema,
-        idRange: IdRange
-    ) {
+    private fun forIdentity(existingTable: Table?, mutableSchema: MutableSchema, idRange: IdRange) {
         if (existingTable == null) {
             // If table does not exist, we can't adjust identity column because there is no such column
             // CREATE TABLE statement will create identity column with the desired settings automatically
@@ -86,7 +103,6 @@ internal object SchemaGenerator {
             mutableSchema.tables += alterSequenceStatement
         }
     }
-
 
     private fun forShard(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema) {
         val hasColumn = existingTable?.findColumn(Const.SHARD_COLUMN_NAME) != null
@@ -274,13 +290,11 @@ internal object SchemaGenerator {
             }
         }
     }
+}
 
-
-    // Just a holder class for a few mutable lists
-    private class MutableSchema {
-        val tables = mutableListOf<String>()
-        val indexes = mutableListOf<String>()
-    }
-
+// Just a holder class for a few mutable lists
+private class MutableSchema {
+    val tables = mutableListOf<String>()
+    val indexes = mutableListOf<String>()
 }
 

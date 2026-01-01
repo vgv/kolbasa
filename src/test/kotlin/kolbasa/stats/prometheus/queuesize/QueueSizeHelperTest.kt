@@ -26,7 +26,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
     @Test
     fun testCalculateQueueLength_EmptyTableWithoutVacuum() {
         val queue = Queue.of("real_queue", PredefinedDataTypes.String)
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         // Measure table size
         val length = dataSource.useConnection { QueueSizeHelper.calculateQueueLength(it, queue) }
@@ -40,7 +40,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
     @Test
     fun testCalculateQueueLength_FullTableWithoutVacuum() {
         val queue = Queue.of("real_queue", PredefinedDataTypes.String)
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, "1")
@@ -60,7 +60,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
     @Test
     fun testCalculateQueueLength_EmptyTableWithVacuum() {
         val queue = Queue.of("real_queue", PredefinedDataTypes.String)
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         // Run vacuum to update stats
         fullVacuum(dataSource, queue.dbTableName)
@@ -73,7 +73,7 @@ class QueueSizeHelperTest : AbstractPostgresqlTest() {
     @Test
     fun testCalculateQueueLength_FullTableWithVacuum() {
         val queue = Queue.of("real_queue", PredefinedDataTypes.String)
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, "1")

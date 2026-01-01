@@ -27,7 +27,7 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
 
     @BeforeTest
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @Test
