@@ -15,6 +15,17 @@ data class Schema(
 
     fun isEmpty() = tableStatements.isEmpty() && indexStatements.isEmpty()
 
+    companion object {
+        val EMPTY = Schema(emptyList(), emptyList())
+
+        operator fun Schema.plus(other: Schema): Schema {
+            val tableStatements = this.tableStatements + other.tableStatements
+            val indexStatements = this.indexStatements + other.indexStatements
+
+            return Schema(tableStatements, indexStatements)
+        }
+    }
+
 }
 
 
@@ -53,7 +64,7 @@ internal enum class ColumnType(
     JSONB(setOf("jsonb"), Types.OTHER);
 
     companion object {
-        fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
+        fun fromDbType(dbType: String): ColumnType? = ColumnType.entries.find { dbType in it.dbTypes }
     }
 }
 
