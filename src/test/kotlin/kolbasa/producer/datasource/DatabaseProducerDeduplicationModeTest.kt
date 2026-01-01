@@ -15,9 +15,9 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
 
@@ -25,7 +25,7 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
 
     private val queue = Queue.of("local", PredefinedDataTypes.String, metadata = Metadata.of(FIELD))
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }

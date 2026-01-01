@@ -6,9 +6,14 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.sql.Statement
 import javax.sql.DataSource
-import kotlin.test.*
 
 class ClusterTest : AbstractPostgresqlTest() {
 
@@ -16,7 +21,7 @@ class ClusterTest : AbstractPostgresqlTest() {
     fun testInitCluster_If_No_DataSources() {
         val cluster = Cluster(emptyList())
 
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             cluster.initAndScheduleStateUpdate()
         }
     }
@@ -26,7 +31,7 @@ class ClusterTest : AbstractPostgresqlTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val cluster = Cluster(dataSources)
 
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             cluster.getState()
         }
     }

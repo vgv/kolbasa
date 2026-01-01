@@ -1,9 +1,9 @@
 package kolbasa.utils
 
 import io.mockk.mockk
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class DaemonThreadFactoryTest {
 

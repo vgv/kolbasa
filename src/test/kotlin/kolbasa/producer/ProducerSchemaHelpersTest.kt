@@ -2,12 +2,12 @@ package kolbasa.producer
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.ShardStrategy
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import java.util.concurrent.Executors
 import kotlin.math.abs
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertSame
-import kotlin.test.assertTrue
 
 class ProducerSchemaHelpersTest {
 
@@ -16,32 +16,32 @@ class ProducerSchemaHelpersTest {
         // Test all fourth combinations of producer names from ProducerOptions and SendOptions
 
         assertEquals(
-            expected = "send",
-            actual = ProducerSchemaHelpers.calculateProducerName(
+            "send",
+            ProducerSchemaHelpers.calculateProducerName(
                 ProducerOptions(producer = "producer"),
                 SendOptions(producer = "send")
             )
         )
 
         assertEquals(
-            expected = "producer",
-            actual = ProducerSchemaHelpers.calculateProducerName(
+            "producer",
+            ProducerSchemaHelpers.calculateProducerName(
                 ProducerOptions(producer = "producer"),
                 SendOptions(producer = null)
             )
         )
 
         assertEquals(
-            expected = "send",
-            actual = ProducerSchemaHelpers.calculateProducerName(
+            "send",
+            ProducerSchemaHelpers.calculateProducerName(
                 ProducerOptions(producer = null),
                 SendOptions(producer = "send")
             )
         )
 
         assertEquals(
-            expected = null,
-            actual = ProducerSchemaHelpers.calculateProducerName(
+            null,
+            ProducerSchemaHelpers.calculateProducerName(
                 ProducerOptions(producer = null),
                 SendOptions(producer = null)
             )

@@ -1,7 +1,13 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import kotlin.test.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 
 class IdSchemaTest : AbstractPostgresqlTest() {
 

@@ -2,9 +2,9 @@ package kolbasa.consumer
 
 import kolbasa.consumer.connection.ConnectionAwareConsumer
 import kolbasa.consumer.datasource.Consumer
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import kotlin.reflect.full.declaredMemberFunctions
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class DataSourceVsConnectionAwareConsumersTest {
 

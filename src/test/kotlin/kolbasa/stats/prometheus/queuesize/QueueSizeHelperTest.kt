@@ -8,9 +8,9 @@ import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import javax.sql.DataSource
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class QueueSizeHelperTest : AbstractPostgresqlTest() {
 

@@ -5,11 +5,11 @@ import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.IllegalStateException
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class MigrateHelpersTest : AbstractPostgresqlTest() {
 
@@ -32,7 +32,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
         // Without shard table we expect an exception
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             MigrateHelpers.readShards(nodes)
         }
     }
@@ -56,7 +56,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
     fun testSplitNodes_Failure() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             MigrateHelpers.splitNodes(nodes, NodeId("bugaga-non-existing-target-id-${System.nanoTime()}"))
         }
     }

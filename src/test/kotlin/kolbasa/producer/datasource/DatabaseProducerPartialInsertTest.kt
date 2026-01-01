@@ -14,11 +14,11 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.api.assertNotNull
 
 class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
@@ -53,7 +53,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
     )
     private val items = first + second + third
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
@@ -72,7 +72,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
         assertEquals(1, result.messages.size) // all failed messages in one error message
 
         val messages = result.messages[0]
-        assertIs<MessageResult.Error<String>>(messages)
+        assertInstanceOf<MessageResult.Error<String>>(messages)
         assertNotNull(messages.exception)
         assertEquals(items, messages.messages)
 
@@ -95,14 +95,14 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String>>(result.messages[index]).let {
+            assertInstanceOf<MessageResult.Success<String>>(result.messages[index]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
 
         // Last one is bad
-        assertIs<MessageResult.Error<String>>(result.messages[5]).let {
+        assertInstanceOf<MessageResult.Error<String>>(result.messages[5]).let {
             assertEquals(second + third, it.messages)
         }
 
@@ -125,20 +125,20 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String>>(result.messages[index]).let {
+            assertInstanceOf<MessageResult.Success<String>>(result.messages[index]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
 
         // Next one is bad
-        assertIs<MessageResult.Error<String>>(result.messages[5]).let {
+        assertInstanceOf<MessageResult.Error<String>>(result.messages[5]).let {
             assertEquals(second, it.messages)
         }
 
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
-            assertIs<MessageResult.Success<String>>(result.messages[index + 6]).let {
+            assertInstanceOf<MessageResult.Success<String>>(result.messages[index + 6]).let {
                 assertEquals(index + IdRange.LOCAL_RANGE.min + 8, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
