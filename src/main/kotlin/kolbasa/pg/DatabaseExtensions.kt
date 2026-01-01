@@ -2,6 +2,7 @@ package kolbasa.pg
 
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.sql.ResultSet
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -61,6 +62,20 @@ internal object DatabaseExtensions {
     fun <T> Connection.useStatement(block: (Statement) -> T): T {
         return createStatement().use { statement: Statement ->
             block(statement)
+        }
+    }
+
+    fun <T> DataSource.useStatement(query: String, block: (ResultSet) -> T): T {
+        return useConnection { connection: Connection ->
+            connection.useStatement(query, block)
+        }
+    }
+
+    fun <T> Connection.useStatement(query: String, block: (ResultSet) -> T): T {
+        return createStatement().use { statement: Statement ->
+            statement.executeQuery(query).use { resultSet ->
+                block(resultSet)
+            }
         }
     }
 
