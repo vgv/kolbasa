@@ -21,18 +21,16 @@ internal object SchemaExtractor {
         val tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%"
 
         return dataSource.useConnection { connection ->
+            val tables = mutableMapOf<String, Table>()
             val databaseMetaData = connection.metaData
 
-            val tablesResultSet = databaseMetaData.getTables(null, connection.schema, tableNamePattern, arrayOf("TABLE"))
-            val tables = mutableMapOf<String, Table>()
-            while (tablesResultSet.next()) {
-                val tableName = tablesResultSet.getString("TABLE_NAME")
+            // Collect all table names first
+            for ((tableName, columns) in getAllColumns(connection.schema, tableNamePattern, databaseMetaData)) {
                 if (queueNames != null && tableName !in queueNames) {
                     // continue only for specific tables
                     continue
                 }
 
-                val columns = getAllColumns(connection.schema, tableName, databaseMetaData)
                 if (!checkColumns(columns)) {
                     // table columns don't look like a queue table
                     continue
@@ -51,11 +49,12 @@ internal object SchemaExtractor {
         }
     }
 
-    private fun getAllColumns(schemaName: String?, tableName: String, databaseMetaData: DatabaseMetaData): Set<Column> {
-        val columnsResultSet = databaseMetaData.getColumns(null, schemaName, tableName, null)
-        val result = mutableSetOf<Column>()
+    private fun getAllColumns(schemaName: String?, tableNamePattern: String, databaseMetaData: DatabaseMetaData): Map<String, Set<Column>> {
+        val result = mutableMapOf<String, MutableSet<Column>>()
 
+        val columnsResultSet = databaseMetaData.getColumns(null, schemaName, tableNamePattern, null)
         while (columnsResultSet.next()) {
+            val tableName = columnsResultSet.getString("TABLE_NAME")
             val columnName = columnsResultSet.getString("COLUMN_NAME")
             val columnType = columnsResultSet.getString("TYPE_NAME")
             val columnDefault = columnsResultSet.getString("COLUMN_DEF")
@@ -63,7 +62,15 @@ internal object SchemaExtractor {
 
             val parsedColumnType = ColumnType.fromDbType(columnType)
             if (parsedColumnType != null) {
-                result += Column(columnName, parsedColumnType, columnNullable == 1, columnDefault)
+                val column = Column(columnName, parsedColumnType, columnNullable == 1, columnDefault)
+                result.compute(tableName) { _, existingColumns ->
+                    if (existingColumns == null) {
+                        mutableSetOf(column)
+                    } else {
+                        existingColumns.add(column)
+                        existingColumns
+                    }
+                }
             }
         }
 
