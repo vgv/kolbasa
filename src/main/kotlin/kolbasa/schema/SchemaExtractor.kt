@@ -1,6 +1,5 @@
 package kolbasa.schema
 
-import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.readString
 import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.pg.DatabaseExtensions.useStatement
@@ -80,12 +79,11 @@ internal object SchemaExtractor {
             val column = indexesResultSet.getString("COLUMN_NAME")
             val unique = !indexesResultSet.getBoolean("NON_UNIQUE")
             val filterCondition = indexesResultSet.getString("FILTER_CONDITION")
-            val invalid = isIndexInvalid(databaseMetaData.connection, schemaName, indexName)
             val asc = indexesResultSet.getString("ASC_OR_DESC") == "A"
 
             result.compute(indexName) { _, existingDefinition ->
                 if (existingDefinition == null) {
-                    Index(indexName, unique, listOf(IndexColumn(column, asc)), filterCondition, invalid)
+                    Index(indexName, unique, listOf(IndexColumn(column, asc)), filterCondition)
                 } else {
                     val newColumns = existingDefinition.columns + IndexColumn(column, asc)
                     existingDefinition.copy(columns = newColumns)
@@ -94,20 +92,6 @@ internal object SchemaExtractor {
         }
 
         return result.values.toSet()
-    }
-
-    private fun isIndexInvalid(connection: Connection, schemaName: String?, indexName: String): Boolean {
-        val query = """
-            select count(*) from pg_namespace
-            inner join pg_class on (pg_namespace.oid = pg_class.relnamespace)
-            inner join pg_index on (pg_class.oid = pg_index.indexrelid)
-            where
-                pg_namespace.nspname = '${schemaName ?: "public"}' and
-                pg_class.relname='$indexName' and
-                pg_index.indisvalid = false
-        """.trimIndent()
-
-        return connection.readInt(query) > 0
     }
 
     private fun getIdentity(connection: Connection, schemaName: String?, tableName: String): Identity? {

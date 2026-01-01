@@ -82,8 +82,7 @@ internal data class Index(
     val name: String,
     val unique: Boolean,
     val columns: List<IndexColumn>,
-    val filterCondition: String?,
-    val invalid: Boolean
+    val filterCondition: String?
 )
 
 internal data class IndexColumn(

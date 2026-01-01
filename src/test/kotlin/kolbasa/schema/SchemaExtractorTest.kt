@@ -164,7 +164,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         assertNotNull(testTable.findIndex("${testQueue.dbTableName}_scheduled_at")).let { scheduledAtIndex ->
             assertFalse(scheduledAtIndex.unique)
             assertNull(scheduledAtIndex.filterCondition)
-            assertFalse(scheduledAtIndex.invalid)
             assertEquals(1, scheduledAtIndex.columns.size, "Columns: ${scheduledAtIndex.columns}")
             val scheduledAtColumn = assertNotNull(scheduledAtIndex.columns.find { it.name == "scheduled_at" })
             assertTrue(scheduledAtColumn.asc)
@@ -174,7 +173,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         assertNotNull(testTable.findIndex("${testQueue.dbTableName}_long_value_j")).let { metaFieldIndex ->
             assertFalse(metaFieldIndex.unique)
             assertNull(metaFieldIndex.filterCondition)
-            assertFalse(metaFieldIndex.invalid)
             assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
             val longColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_long_value" })
             assertTrue(longColumn.asc)
@@ -184,7 +182,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         assertNotNull(testTable.findIndex("${testQueue.dbTableName}_int_value_su")).let { metaFieldIndex ->
             assertTrue(metaFieldIndex.unique)
             assertEquals("(remaining_attempts > 0)", metaFieldIndex.filterCondition?.lowercase())
-            assertFalse(metaFieldIndex.invalid)
             assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
             val intColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_int_value" })
             assertTrue(intColumn.asc)
@@ -194,7 +191,6 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         assertNotNull(testTable.findIndex("${testQueue.dbTableName}_short_value_pu")).let { metaFieldIndex ->
             assertTrue(metaFieldIndex.unique)
             assertEquals("((remaining_attempts > 0) and (processing_at is null))", metaFieldIndex.filterCondition?.lowercase())
-            assertFalse(metaFieldIndex.invalid)
             assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
             val shortColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_short_value" })
             assertTrue(shortColumn.asc)
