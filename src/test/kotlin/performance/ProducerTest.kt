@@ -18,7 +18,7 @@ class ProducerTest : PerformanceTest {
         Env.reportProducerTestEnv()
 
         // Update
-        SchemaHelpers.updateDatabaseSchema(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
 
         // Generate data
         val randomData = (1..1000).map {

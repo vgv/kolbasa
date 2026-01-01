@@ -15,7 +15,7 @@ class EmptyConsumerTest : PerformanceTest {
         Env.reportEmptyConsumerTestEnv()
 
         // Update
-        SchemaHelpers.updateDatabaseSchema(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
 
         // Truncate table before test
         Env.dataSource.useStatement { statement ->

@@ -29,7 +29,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         Kolbasa.shardStrategy = ShardStrategy.Random
 
         dataSources.forEach { dataSource ->
-            SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+            SchemaHelpers.createOrUpdateQueues(dataSource, queue)
         }
 
         cluster = Cluster(dataSources)

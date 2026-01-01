@@ -119,7 +119,7 @@ class Cluster @JvmOverloads constructor(
         }
 
         dataSources.forEach { dataSource: DataSource ->
-            SchemaHelpers.updateDatabaseSchema(dataSource, queues)
+            SchemaHelpers.createOrUpdateQueues(dataSource, queues)
         }
 
         schemaUpdated = true

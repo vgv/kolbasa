@@ -15,12 +15,12 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNotSame
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
 
 private val STRICT_FIELD = MetaField.int("strict_field", FieldOption.STRICT_UNIQUE)
 private val PENDING_ONLY_FIELD = MetaField.int("pending_only_field", FieldOption.PENDING_ONLY_UNIQUE)
@@ -33,9 +33,9 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
         metadata = Metadata.of(STRICT_FIELD, PENDING_ONLY_FIELD)
     )
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @Test

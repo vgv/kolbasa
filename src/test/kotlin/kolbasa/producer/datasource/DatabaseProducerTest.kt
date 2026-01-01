@@ -19,10 +19,10 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.time.Duration
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class DatabaseProducerTest : AbstractPostgresqlTest() {
 
@@ -34,9 +34,9 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         metadata = Metadata.of(FIELD)
     )
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @Test

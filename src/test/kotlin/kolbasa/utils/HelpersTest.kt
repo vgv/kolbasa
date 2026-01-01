@@ -1,9 +1,9 @@
 package kolbasa.utils
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
+import org.junit.jupiter.api.assertThrows
 
 class HelpersTest {
 
@@ -19,7 +19,7 @@ class HelpersTest {
 
     @Test
     fun testArrayToMap_IfOdd() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             Helpers.arrayToMap(arrayOf("1", "2", "3", "4", "5"))
         }
     }

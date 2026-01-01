@@ -31,8 +31,8 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
 
     @BeforeTest
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
-        SchemaHelpers.updateDatabaseSchema(dataSourceFirstSchema, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSourceFirstSchema, queue)
 
         // shard => messages to send
         val dataToSend = (1..itemsToMove)

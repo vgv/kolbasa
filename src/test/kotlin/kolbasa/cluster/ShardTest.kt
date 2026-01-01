@@ -1,9 +1,9 @@
 package kolbasa.cluster
 
 import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.assertThrows
 
 class ShardTest {
 
@@ -16,17 +16,17 @@ class ShardTest {
     @Test
     fun testInitialConditions() {
         // Wrong shard
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Shard(Shard.MAX_SHARD + 1, NodeId("a"), NodeId("a"), null)
         }
 
         // Wrong stable state
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Shard(Shard.MAX_SHARD, NodeId("a"), NodeId("b"), null)
         }
 
         // Wrong migration state
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Shard(Shard.MAX_SHARD, NodeId("a"), null, NodeId("b"))
         }
 

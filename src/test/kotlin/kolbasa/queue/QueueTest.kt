@@ -2,9 +2,9 @@ package kolbasa.queue
 
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import java.time.Duration
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class QueueTest {
 

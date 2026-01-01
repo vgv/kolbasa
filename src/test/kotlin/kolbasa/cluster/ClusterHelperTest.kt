@@ -3,9 +3,9 @@ package kolbasa.cluster
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.IdSchema
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ClusterHelperTest : AbstractPostgresqlTest() {
 
@@ -42,7 +42,7 @@ class ClusterHelperTest : AbstractPostgresqlTest() {
         }
 
         // Check again, expect an exception
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         }
     }

@@ -15,17 +15,37 @@ data class Schema(
 
     fun isEmpty() = tableStatements.isEmpty() && indexStatements.isEmpty()
 
+    companion object {
+        val EMPTY = Schema(emptyList(), emptyList())
+
+        operator fun Schema.plus(other: Schema): Schema {
+            val tableStatements = this.tableStatements + other.tableStatements
+            val indexStatements = this.indexStatements + other.indexStatements
+
+            return Schema(tableStatements, indexStatements)
+        }
+    }
+
 }
 
 
 internal data class Table(
     val name: String,
     val columns: Set<Column>,
-    val indexes: Set<Index>,
+    val indexes: Set<String>,
     val identity: Identity
 ) {
     fun findColumn(name: String): Column? = columns.find { it.name == name }
-    fun findIndex(name: String): Index? = indexes.find { it.name == name }
+
+    companion object {
+        fun Table?.hasIndex(name: String): Boolean {
+            return if (this == null) {
+                false
+            } else {
+                name in indexes
+            }
+        }
+    }
 }
 
 internal data class Column(
@@ -53,7 +73,7 @@ internal enum class ColumnType(
     JSONB(setOf("jsonb"), Types.OTHER);
 
     companion object {
-        fun fromDbType(dbType: String): ColumnType? = values().find { dbType in it.dbTypes }
+        fun fromDbType(dbType: String): ColumnType? = ColumnType.entries.find { dbType in it.dbTypes }
     }
 }
 
@@ -65,17 +85,4 @@ internal data class Identity(
     val increment: Long,
     val cycles: Boolean,
     val cache: Long
-)
-
-internal data class Index(
-    val name: String,
-    val unique: Boolean,
-    val columns: List<IndexColumn>,
-    val filterCondition: String?,
-    val invalid: Boolean
-)
-
-internal data class IndexColumn(
-    val name: String,
-    val asc: Boolean
 )

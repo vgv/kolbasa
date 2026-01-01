@@ -4,7 +4,7 @@ data class Metadata(val fields: List<MetaField<*>>) {
 
     private val nameToFields = fields.associateBy { it.name }
 
-    internal fun findMetaFieldByName(fieldName: String): MetaField<*>? = nameToFields[fieldName]
+    fun findByName(fieldName: String): MetaField<*>? = nameToFields[fieldName]
 
     companion object {
         val EMPTY = of(emptyList())

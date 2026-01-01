@@ -7,12 +7,12 @@ import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.api.assertNull
+import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertIs
-import kotlin.test.assertNull
 
 class PrepareKtTest : AbstractPostgresqlTest() {
 
@@ -96,7 +96,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val migrateEvents = mockk<MigrateEvents>(relaxed = true)
 
         // RUN
-        val exception = assertFailsWith<MigrateException.MigrateToNonExistingNodeException> {
+        val exception = assertThrows<MigrateException.MigrateToNonExistingNodeException> {
             prepare(
                 shards = shardsToMove,
                 targetNode = targetNode,
@@ -106,7 +106,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         }
 
         // CHECK
-        assertIs<MigrateException.MigrateToNonExistingNodeException>(exception)
+        assertInstanceOf<MigrateException.MigrateToNonExistingNodeException>(exception)
         assertEquals(nodes.keys.toList(), exception.knownNodes)
         assertEquals(targetNode, exception.targetNode)
     }
@@ -132,7 +132,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         val migrateEvents = mockk<MigrateEvents>(relaxed = true)
 
         // RUN
-        val exception = assertFailsWith<MigrateException.MigrateToTheSameShardException> {
+        val exception = assertThrows<MigrateException.MigrateToTheSameShardException> {
             prepare(
                 shards = shardsToMove,
                 targetNode = targetNode.id,
@@ -142,7 +142,7 @@ class PrepareKtTest : AbstractPostgresqlTest() {
         }
 
         // CHECK
-        assertIs<MigrateException.MigrateToTheSameShardException>(exception)
+        assertInstanceOf<MigrateException.MigrateToTheSameShardException>(exception)
         assertEquals(shards[shardsToMove.first()], exception.shard)
         assertEquals(targetNode.id, exception.targetNode)
     }

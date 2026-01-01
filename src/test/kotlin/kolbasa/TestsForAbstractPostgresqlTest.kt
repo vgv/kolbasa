@@ -2,8 +2,8 @@ package kolbasa
 
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.readString
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 
 // Yes, this is a test class for test class AbstractPostgresqlTest :)

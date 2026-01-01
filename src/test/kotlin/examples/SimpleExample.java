@@ -22,7 +22,7 @@ class SimpleExample {
         // Of course, in a real application this should be done once at the start of the service, and not before each send/receive.
         // A good analogy is updating the business tables schema before the start of the service using migration or other
         // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue);
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue);
 
         // -------------------------------------------------------------------------------------------
         // Create producer and send simple message

@@ -32,7 +32,7 @@ fun main() {
     // Of course, in a real application this should be done once at the start of the service, and not before each send/receive.
     // A good analogy is updating the business tables schema before the start of the service using migration or other
     // methods - this should be done once at the start of the service, and not before each SQL query from these tables.
-    SchemaHelpers.updateDatabaseSchema(dataSource, queueProhibited, queueUntilFirstFailure, queueAsManyAsPossible)
+    SchemaHelpers.createOrUpdateQueues(dataSource, queueProhibited, queueUntilFirstFailure, queueAsManyAsPossible)
 
     // Messages to send with one poison message in the middle of the list
     // Due to different PartialInsert modes, the result of sending messages will be different

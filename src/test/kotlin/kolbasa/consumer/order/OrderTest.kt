@@ -8,18 +8,14 @@ import kolbasa.consumer.order.Order.Companion.descNullsFirst
 import kolbasa.consumer.order.Order.Companion.descNullsLast
 import kolbasa.consumer.order.Order.Companion.then
 import kolbasa.queue.meta.MetaField
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 class OrderTest {
 
     private val STRING_FIELD = MetaField.string("string_value")
     private val INT_FIELD = MetaField.int("int_value")
-
-//    private val property = TestMeta::stringValue
-//    private val propertyName = property.name
-//    private val javaField = JavaField.of(propertyName, property)
-//    private val metaColumnName = MetaHelpers.generateMetaColumnName(propertyName)
 
     @Test
     fun testThenInfixMethod() {
@@ -29,12 +25,17 @@ class OrderTest {
         val order = first then second
 
         assertEquals(2, order.size)
-        assertEquals(first[0], order[0])
-        assertEquals(second[0], order[1])
+        assertSame(first[0], order[0])
+        assertSame(second[0], order[1])
     }
 
     @Test
     fun testOrderFactoryMethods() {
+        // OF
+        val order = Order.of(STRING_FIELD, SortOrder.DESC)
+        assertSame(STRING_FIELD, order.field)
+        assertSame(SortOrder.DESC, order.order)
+
         // ASC
         checkOrder(STRING_FIELD.asc(), SortOrder.ASC)
 
@@ -60,8 +61,8 @@ class OrderTest {
 
         // Let's make sure that sole element has correct values
         val base = order.first()
-        assertEquals(STRING_FIELD, base.field)
-        assertEquals(sortOrder, base.order)
+        assertSame(STRING_FIELD, base.field)
+        assertSame(sortOrder, base.order)
         assertEquals("${STRING_FIELD.dbColumnName} ${sortOrder.sql}", base.dbOrderClause)
     }
 

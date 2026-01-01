@@ -25,7 +25,7 @@ class SweepHelperTest : AbstractPostgresqlTest() {
 
     @BeforeEach
     fun before() {
-        SchemaHelpers.updateDatabaseSchema(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @Test

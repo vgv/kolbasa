@@ -4,6 +4,7 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.utils.ColumnIndex
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
@@ -14,7 +15,7 @@ internal class AndConditionTest {
         val expression =  AndCondition(TestCondition("1"), TestCondition("2"))
         //val queue =
 
-        kotlin.test.assertEquals("(1) and (2)", expression.toSqlClause())
+        assertEquals("(1) and (2)", expression.toSqlClause())
     }
 
     @Test
@@ -23,7 +24,7 @@ internal class AndConditionTest {
         val second = TestCondition("3")
         val expression = AndCondition(first, second)
 
-        kotlin.test.assertEquals("(1) and (2) and (3)", expression.toSqlClause())
+        assertEquals("(1) and (2) and (3)", expression.toSqlClause())
     }
     @Test
     fun testObjectAndListToSql() {
@@ -31,7 +32,7 @@ internal class AndConditionTest {
         val second = AndCondition(TestCondition("2"), TestCondition("3"))
         val expression = AndCondition(first, second)
 
-        kotlin.test.assertEquals("(1) and (2) and (3)", expression.toSqlClause())
+        assertEquals("(1) and (2) and (3)", expression.toSqlClause())
     }
 
     @Test
@@ -40,7 +41,7 @@ internal class AndConditionTest {
         val second = AndCondition(TestCondition("3"), TestCondition("4"))
         val expression = AndCondition(first, second)
 
-        kotlin.test.assertEquals("(1) and (2) and (3) and (4)", expression.toSqlClause())
+        assertEquals("(1) and (2) and (3) and (4)", expression.toSqlClause())
     }
 
     @Test

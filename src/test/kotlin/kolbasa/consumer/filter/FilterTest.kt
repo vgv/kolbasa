@@ -17,83 +17,83 @@ import kolbasa.consumer.filter.Filter.nativeSql
 import kolbasa.consumer.filter.Filter.not
 import kolbasa.queue.meta.MetaField
 import org.junit.jupiter.api.Test
-import kotlin.test.assertIs
+import org.junit.jupiter.api.assertInstanceOf
 
 internal class FilterTest {
 
     @Test
     fun testEq() {
-        assertIs<EqCondition<*>>(STR_FIELD eq "local")
+        assertInstanceOf<EqCondition<*>>(STR_FIELD eq "local")
     }
 
     @Test
     fun testNeq() {
-        assertIs<NeqCondition<*>>(STR_FIELD neq "local")
+        assertInstanceOf<NeqCondition<*>>(STR_FIELD neq "local")
     }
 
     @Test
     fun testGreater() {
-        assertIs<GreaterThanCondition<*>>(STR_FIELD greater "local")
+        assertInstanceOf<GreaterThanCondition<*>>(STR_FIELD greater "local")
     }
 
     @Test
     fun testGreaterEq() {
-        assertIs<GreaterThanOrEqCondition< *>>(STR_FIELD greaterEq "local")
+        assertInstanceOf<GreaterThanOrEqCondition< *>>(STR_FIELD greaterEq "local")
     }
 
     @Test
     fun testLess() {
-        assertIs<LessThanCondition<*>>(STR_FIELD less "local")
+        assertInstanceOf<LessThanCondition<*>>(STR_FIELD less "local")
     }
 
     @Test
     fun testLessEq() {
-        assertIs<LessThanOrEqCondition<*>>(STR_FIELD lessEq "local")
+        assertInstanceOf<LessThanOrEqCondition<*>>(STR_FIELD lessEq "local")
     }
 
     @Test
     fun testBetween() {
-        assertIs<BetweenCondition<*>>(STR_FIELD between Pair("a", "b"))
+        assertInstanceOf<BetweenCondition<*>>(STR_FIELD between Pair("a", "b"))
     }
 
     @Test
     fun testLike() {
-        assertIs<LikeCondition>(STR_FIELD like "asd")
+        assertInstanceOf<LikeCondition>(STR_FIELD like "asd")
     }
 
     @Test
     fun testAnd() {
-        assertIs<AndCondition>((STR_FIELD eq "123") and (STR_FIELD neq "2234"))
+        assertInstanceOf<AndCondition>((STR_FIELD eq "123") and (STR_FIELD neq "2234"))
     }
 
     @Test
     fun testOr() {
-        assertIs<OrCondition>((STR_FIELD eq "123") or (STR_FIELD neq "2234"))
+        assertInstanceOf<OrCondition>((STR_FIELD eq "123") or (STR_FIELD neq "2234"))
     }
 
     @Test
     fun testIsNull() {
-        assertIs<IsNullCondition>(isNull(STR_FIELD))
+        assertInstanceOf<IsNullCondition>(isNull(STR_FIELD))
     }
 
     @Test
     fun testIsNotNull() {
-        assertIs<IsNotNullCondition>(isNotNull(STR_FIELD))
+        assertInstanceOf<IsNotNullCondition>(isNotNull(STR_FIELD))
     }
 
     @Test
     fun testNot() {
-        assertIs<NotCondition>(not(STR_FIELD eq "123"))
+        assertInstanceOf<NotCondition>(not(STR_FIELD eq "123"))
     }
 
     @Test
     fun testIn() {
-        assertIs<InCondition<*>>(STR_FIELD `in` listOf("local"))
+        assertInstanceOf<InCondition<*>>(STR_FIELD `in` listOf("local"))
     }
 
     @Test
     fun testNativeSql() {
-        assertIs<NativeSqlCondition>(nativeSql("{0} like '%asd%'", STR_FIELD))
+        assertInstanceOf<NativeSqlCondition>(nativeSql("{0} like '%asd%'", STR_FIELD))
     }
 }
 

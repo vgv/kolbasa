@@ -11,12 +11,12 @@ import kolbasa.cluster.schema.ShardSchema.SHARD_TABLE_NAME
 import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import java.sql.Statement
 import kotlin.random.Random
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ShardSchemaTest : AbstractPostgresqlTest() {
 

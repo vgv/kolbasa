@@ -93,7 +93,7 @@ sealed class MetaField<T>(
 
 }
 
-private data class ByteField(
+data class ByteField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Byte>(name, option, "smallint", Types.SMALLINT) {
@@ -105,7 +105,7 @@ private data class ByteField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Byte): ByteValue = ByteValue(this, value)
+    override fun value(value: Byte): MetaValue<Byte> = ByteValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Byte {
         return rs.getByte(columnIndex)
@@ -116,7 +116,7 @@ private data class ByteField(
     }
 }
 
-private data class ShortField(
+data class ShortField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Short>(name, option, "smallint", Types.SMALLINT) {
@@ -128,7 +128,7 @@ private data class ShortField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Short): ShortValue = ShortValue(this, value)
+    override fun value(value: Short): MetaValue<Short> = ShortValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Short {
         return rs.getShort(columnIndex)
@@ -139,7 +139,7 @@ private data class ShortField(
     }
 }
 
-private data class IntField(
+data class IntField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Int>(name, option, "int", Types.INTEGER) {
@@ -151,7 +151,7 @@ private data class IntField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Int): IntValue = IntValue(this, value)
+    override fun value(value: Int): MetaValue<Int> = IntValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Int {
         return rs.getInt(columnIndex)
@@ -162,7 +162,7 @@ private data class IntField(
     }
 }
 
-private data class LongField(
+data class LongField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Long>(name, option, "bigint", Types.BIGINT) {
@@ -174,7 +174,7 @@ private data class LongField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Long): LongValue = LongValue(this, value)
+    override fun value(value: Long): MetaValue<Long> = LongValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Long {
         return rs.getLong(columnIndex)
@@ -185,7 +185,7 @@ private data class LongField(
     }
 }
 
-private data class BooleanField(
+data class BooleanField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Boolean>(name, option, "boolean", Types.BOOLEAN) {
@@ -197,7 +197,7 @@ private data class BooleanField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Boolean): BooleanValue = BooleanValue(this, value)
+    override fun value(value: Boolean): MetaValue<Boolean> = BooleanValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Boolean {
         return rs.getBoolean(columnIndex)
@@ -208,7 +208,7 @@ private data class BooleanField(
     }
 }
 
-private data class FloatField(
+data class FloatField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Float>(name, option, "real", Types.REAL) {
@@ -220,7 +220,7 @@ private data class FloatField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Float): FloatValue = FloatValue(this, value)
+    override fun value(value: Float): MetaValue<Float> = FloatValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Float {
         return rs.getFloat(columnIndex)
@@ -231,7 +231,7 @@ private data class FloatField(
     }
 }
 
-private data class DoubleField(
+data class DoubleField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<Double>(name, option, "double precision", Types.DOUBLE) {
@@ -243,7 +243,7 @@ private data class DoubleField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: Double): DoubleValue = DoubleValue(this, value)
+    override fun value(value: Double): MetaValue<Double> = DoubleValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): Double {
         return rs.getDouble(columnIndex)
@@ -254,7 +254,7 @@ private data class DoubleField(
     }
 }
 
-private data class StringField(
+data class StringField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<String>(name, option, "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})", Types.VARCHAR) {
@@ -266,7 +266,7 @@ private data class StringField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: String): StringValue = StringValue(this, value)
+    override fun value(value: String): MetaValue<String> = StringValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): String? {
         return rs.getString(columnIndex)
@@ -277,7 +277,7 @@ private data class StringField(
     }
 }
 
-private data class BigIntegerField(
+data class BigIntegerField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<BigInteger>(name, option, "numeric", Types.NUMERIC) {
@@ -289,7 +289,7 @@ private data class BigIntegerField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: BigInteger): BigIntegerValue = BigIntegerValue(this, value)
+    override fun value(value: BigInteger): MetaValue<BigInteger> = BigIntegerValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): BigInteger? {
         return rs.getBigDecimal(columnIndex)?.toBigInteger()
@@ -300,7 +300,7 @@ private data class BigIntegerField(
     }
 }
 
-private data class BigDecimalField(
+data class BigDecimalField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
 ) : MetaField<BigDecimal>(name, option, "numeric", Types.NUMERIC) {
@@ -312,7 +312,7 @@ private data class BigDecimalField(
     override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
     override val dbIndexType = MetaHelpers.defineIndexType(option)
 
-    override fun value(value: BigDecimal): BigDecimalValue = BigDecimalValue(this, value)
+    override fun value(value: BigDecimal): MetaValue<BigDecimal> = BigDecimalValue(this, value)
 
     override fun read(rs: ResultSet, columnIndex: Int): BigDecimal? {
         return rs.getBigDecimal(columnIndex)
