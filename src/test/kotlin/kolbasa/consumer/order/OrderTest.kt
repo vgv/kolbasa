@@ -8,9 +8,9 @@ import kolbasa.consumer.order.Order.Companion.descNullsFirst
 import kolbasa.consumer.order.Order.Companion.descNullsLast
 import kolbasa.consumer.order.Order.Companion.then
 import kolbasa.queue.meta.MetaField
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertSame
 
 class OrderTest {
 

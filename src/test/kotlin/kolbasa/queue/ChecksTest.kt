@@ -8,11 +8,11 @@ import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
 import kolbasa.schema.Const
 import kolbasa.stats.prometheus.PrometheusConfig
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 import java.time.Duration
 import kotlin.random.Random
-import kotlin.test.Test
-import kotlin.test.assertFailsWith
 
 internal class ChecksTest {
 
@@ -32,7 +32,7 @@ internal class ChecksTest {
     @Test
     fun testCheckDelay_Negative_Fails() {
         // Check other negative values fail
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkDelay(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
         }
     }
@@ -54,10 +54,10 @@ internal class ChecksTest {
     @Test
     fun testCheckAttempts_ZeroOrNegative_Fails() {
         // Check other negative or zero values fail
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkAttempts(0)
         }
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkAttempts(Random.nextInt(Int.MIN_VALUE, 0))
         }
     }
@@ -70,13 +70,13 @@ internal class ChecksTest {
         Checks.checkProducerName("just value shorter than 255 symbols")
 
         // too long name
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
             Checks.checkProducerName(longName)
         }
 
         // wrong symbols
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val wrongName = "producer;name"
             Checks.checkProducerName(wrongName)
         }
@@ -86,10 +86,10 @@ internal class ChecksTest {
 
     @Test
     fun testBatchSize_ZeroOrNegative_Fails() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkBatchSize(0)
         }
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkBatchSize(-1)
         }
 
@@ -112,13 +112,13 @@ internal class ChecksTest {
         Checks.checkConsumerName("just value shorter than 255 symbols")
 
         // too long name
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
             Checks.checkConsumerName(longName)
         }
 
         // wrong symbols
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val wrongName = "consumer;name"
             Checks.checkConsumerName(wrongName)
         }
@@ -142,7 +142,7 @@ internal class ChecksTest {
     @Test
     fun testCheckVisibilityTimeout_Negative_Fails() {
         // Check other negative values fail
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkVisibilityTimeout(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
         }
     }
@@ -151,14 +151,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckQueueName_IfEmpty() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkQueueName("")
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidPrefix() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkQueueName("q_customer_email")
         }
     }
@@ -166,14 +166,14 @@ internal class ChecksTest {
     @Test
     fun testCheckQueueName_TooLong() {
         val longName = "a".repeat(Const.QUEUE_NAME_MAX_LENGTH + 1)
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkQueueName(longName)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidSymbols() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkQueueName("queue$")
         }
     }
@@ -182,7 +182,7 @@ internal class ChecksTest {
 
     @Test
     fun testCheckMetaFieldName_IfEmpty() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMetaFieldName("")
         }
     }
@@ -190,14 +190,14 @@ internal class ChecksTest {
     @Test
     fun testCheckMetaFieldName_TooLong() {
         val longName = "a".repeat(Const.META_FIELD_NAME_MAX_LENGTH + 1)
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMetaFieldName(longName)
         }
     }
 
     @Test
     fun testCheckMetaFieldName_InvalidSymbols() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMetaFieldName("meta$")
         }
     }
@@ -206,14 +206,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckSweepMaxMessages_LessThanMin() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkSweepMaxMessages(SweepConfig.MIN_SWEEP_MESSAGES - 1)
         }
     }
 
     @Test
     fun testCheckSweepMaxMessages_MoreThanMax() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkSweepMaxMessages(SweepConfig.MAX_SWEEP_MESSAGES + 1)
         }
     }
@@ -222,14 +222,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckSweepPeriod_LessThanMin() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkSweepPeriod(SweepConfig.MIN_SWEEP_PERIOD - 1)
         }
     }
 
     @Test
     fun testCheckSweepPeriod_MoreThanMax() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkSweepPeriod(SweepConfig.MAX_SWEEP_PERIOD + 1)
         }
     }
@@ -238,7 +238,7 @@ internal class ChecksTest {
 
     @Test
     fun testCheckCustomQueueSizeMeasureInterval() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val ulp = Duration.ofNanos(1)
             val aBitSmaller = PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
             Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
@@ -249,7 +249,7 @@ internal class ChecksTest {
 
     @Test
     fun testCheckClusterStateUpdateInterval() {
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             val ulp = Duration.ofNanos(1)
             val aBitSmaller = ClusterStateUpdateConfig.MIN_INTERVAL - ulp
             Checks.checkClusterStateUpdateInterval(aBitSmaller)
@@ -269,17 +269,17 @@ internal class ChecksTest {
     @Test
     fun testCheckMutations_Error() {
         // Only remaining_attempts field mutations
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMutations(listOf(AddRemainingAttempts(1), SetRemainingAttempts(2)))
         }
 
         // Only scheduled_at field mutations
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMutations(listOf(AddScheduledAt(Duration.ZERO), SetScheduledAt(Duration.ZERO)))
         }
 
         // More than one field
-        assertFailsWith<IllegalStateException> {
+        assertThrows<IllegalStateException> {
             Checks.checkMutations(
                 listOf(
                     AddScheduledAt(Duration.ZERO),

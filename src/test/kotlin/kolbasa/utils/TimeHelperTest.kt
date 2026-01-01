@@ -1,9 +1,9 @@
 package kolbasa.utils
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.time.Duration
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class TimeHelperTest {
 
@@ -24,7 +24,7 @@ class TimeHelperTest {
             "interval '2000000000 minute'"
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             TimeHelper.generatePostgreSQLInterval(Duration.ofMinutes(Int.MAX_VALUE.toLong() + 1))
         }
     }

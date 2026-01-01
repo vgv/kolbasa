@@ -1,8 +1,8 @@
 package kolbasa.schema
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotSame
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Test
 
 class NodeIdTest {
 

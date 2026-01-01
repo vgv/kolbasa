@@ -1,8 +1,8 @@
 package kolbasa.producer
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertSame
 
 class SendRequestTest {
 
