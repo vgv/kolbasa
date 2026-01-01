@@ -25,39 +25,44 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
         }
 
         // -------------------------------------------------------------------------------------------
+        fun of(field: MetaField<*>, order: SortOrder): Order {
+            return Order(field, order)
+        }
+
+        // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.asc(): List<Order> {
-            return listOf(Order(this, SortOrder.ASC))
+            return listOf(of(this, SortOrder.ASC))
         }
 
         // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.desc(): List<Order> {
-            return listOf(Order(this, SortOrder.DESC))
+            return listOf(of(this, SortOrder.DESC))
         }
 
         // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.ascNullsFirst(): List<Order> {
-            return listOf(Order(this, SortOrder.ASC_NULLS_FIRST))
+            return listOf(of(this, SortOrder.ASC_NULLS_FIRST))
         }
 
         // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.descNullsFirst(): List<Order> {
-            return listOf(Order(this, SortOrder.DESC_NULLS_FIRST))
+            return listOf(of(this, SortOrder.DESC_NULLS_FIRST))
         }
 
         // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.ascNullsLast(): List<Order> {
-            return listOf(Order(this, SortOrder.ASC_NULLS_LAST))
+            return listOf(of(this, SortOrder.ASC_NULLS_LAST))
         }
 
         // -------------------------------------------------------------------------------------------
 
         fun MetaField<*>.descNullsLast(): List<Order> {
-            return listOf(Order(this, SortOrder.DESC_NULLS_LAST))
+            return listOf(of(this, SortOrder.DESC_NULLS_LAST))
         }
     }
 }
