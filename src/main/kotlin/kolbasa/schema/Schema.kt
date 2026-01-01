@@ -32,11 +32,20 @@ data class Schema(
 internal data class Table(
     val name: String,
     val columns: Set<Column>,
-    val indexes: Set<Index>,
+    val indexes: Set<String>,
     val identity: Identity
 ) {
     fun findColumn(name: String): Column? = columns.find { it.name == name }
-    fun findIndex(name: String): Index? = indexes.find { it.name == name }
+
+    companion object {
+        fun Table?.hasIndex(name: String): Boolean {
+            return if (this == null) {
+                false
+            } else {
+                name in indexes
+            }
+        }
+    }
 }
 
 internal data class Column(
@@ -76,16 +85,4 @@ internal data class Identity(
     val increment: Long,
     val cycles: Boolean,
     val cache: Long
-)
-
-internal data class Index(
-    val name: String,
-    val unique: Boolean,
-    val columns: List<IndexColumn>,
-    val filterCondition: String?
-)
-
-internal data class IndexColumn(
-    val name: String,
-    val asc: Boolean
 )

@@ -5,6 +5,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
+import kolbasa.schema.Table.Companion.hasIndex
 import kolbasa.utils.TimeHelper
 
 internal object SchemaGenerator {
@@ -122,7 +123,8 @@ internal object SchemaGenerator {
                 on ${queue.dbTableName}(${Const.SHARD_COLUMN_NAME})
             """.trimIndent()
 
-        val hasIndex = existingTable?.findIndex(indexName) != null
+
+        val hasIndex = existingTable.hasIndex(indexName)
         if (!hasIndex) {
             mutableSchema.indexes += indexStatement
         }
@@ -162,7 +164,7 @@ internal object SchemaGenerator {
                 on ${queue.dbTableName}(${Const.SCHEDULED_AT_COLUMN_NAME})
             """.trimIndent()
 
-        val hasIndex = existingTable?.findIndex(indexName) != null
+        val hasIndex = existingTable.hasIndex(indexName)
         if (!hasIndex) {
             mutableSchema.indexes += indexStatement
         }
@@ -206,10 +208,10 @@ internal object SchemaGenerator {
         val strictUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "su")
         val pendingUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "pu")
 
-        val oldIndex = existingTable?.findIndex(oldIndexName)
-        val justIndex = existingTable?.findIndex(justIndexName)
-        val strictUniqueIndex = existingTable?.findIndex(strictUniqueIndexName)
-        val pendingUniqueIndex = existingTable?.findIndex(pendingUniqueIndexName)
+        val hasOldIndex = existingTable.hasIndex(oldIndexName)
+        val hasJustIndex = existingTable.hasIndex(justIndexName)
+        val hasStrictUniqueIndex = existingTable.hasIndex(strictUniqueIndexName)
+        val hasPendingUniqueIndex = existingTable.hasIndex(pendingUniqueIndexName)
 
         val dropOldIndexStatement = "drop index concurrently if exists $oldIndexName"
         val dropJustIndexStatement = "drop index concurrently if exists $justIndexName"
@@ -217,20 +219,21 @@ internal object SchemaGenerator {
         val dropPendingUniqueIndexStatement = "drop index concurrently if exists $pendingUniqueIndexName"
 
         // Remove old index format, delete these lines after migration
-        if (existingTable != null && oldIndex != null) {
+        if (existingTable != null && hasOldIndex) {
             mutableSchema.indexes += dropOldIndexStatement
         }
 
         when (metaField.dbIndexType) {
             MetaIndexType.NO_INDEX -> {
+                // NO_INDEX means we need to drop all existing indexes if they exist
                 if (existingTable != null) {
-                    if (justIndex != null) {
+                    if (hasJustIndex) {
                         mutableSchema.indexes += dropJustIndexStatement
                     }
-                    if (strictUniqueIndex != null) {
+                    if (hasStrictUniqueIndex) {
                         mutableSchema.indexes += dropStrictUniqueIndexStatement
                     }
-                    if (pendingUniqueIndex != null) {
+                    if (hasPendingUniqueIndex) {
                         mutableSchema.indexes += dropPendingUniqueIndexStatement
                     }
                 }
@@ -242,13 +245,13 @@ internal object SchemaGenerator {
                     on ${queue.dbTableName}(${metaField.dbColumnName})
                 """.trimIndent()
 
-                if (justIndex == null) {
+                if (!hasJustIndex) {
                     mutableSchema.indexes += createIndexStatement
                 }
-                if (strictUniqueIndex != null) {
+                if (hasStrictUniqueIndex) {
                     mutableSchema.indexes += dropStrictUniqueIndexStatement
                 }
-                if (pendingUniqueIndex != null) {
+                if (hasPendingUniqueIndex) {
                     mutableSchema.indexes += dropPendingUniqueIndexStatement
                 }
             }
@@ -260,13 +263,13 @@ internal object SchemaGenerator {
                     where (${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0)
                 """.trimIndent()
 
-                if (justIndex != null) {
+                if (hasJustIndex) {
                     mutableSchema.indexes += dropJustIndexStatement
                 }
-                if (strictUniqueIndex == null) {
+                if (!hasStrictUniqueIndex) {
                     mutableSchema.indexes += createIndexStatement
                 }
-                if (pendingUniqueIndex != null) {
+                if (hasPendingUniqueIndex) {
                     mutableSchema.indexes += dropPendingUniqueIndexStatement
                 }
             }
@@ -278,13 +281,13 @@ internal object SchemaGenerator {
                     where (${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0) and (${Const.PROCESSING_AT_COLUMN_NAME} is null)
                 """.trimIndent()
 
-                if (justIndex != null) {
+                if (hasJustIndex) {
                     mutableSchema.indexes += dropJustIndexStatement
                 }
-                if (strictUniqueIndex != null) {
+                if (hasStrictUniqueIndex) {
                     mutableSchema.indexes += dropStrictUniqueIndexStatement
                 }
-                if (pendingUniqueIndex == null) {
+                if (!hasPendingUniqueIndex) {
                     mutableSchema.indexes += createIndexStatement
                 }
             }

@@ -5,16 +5,74 @@ import kolbasa.pg.DatabaseExtensions.readInt
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.Metadata
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import java.time.Duration
-import kotlin.test.assertEquals
+import kotlin.random.Random
+import kotlin.system.measureTimeMillis
 
 class SchemaHelpersTest : AbstractPostgresqlTest() {
 
-    private val queue = Queue.of("test_queue", PredefinedDataTypes.String)
+    @Test
+    fun testTime() {
+        val queues = 1000
+        val tablesSql = "select count(*) from information_schema.tables where table_schema='public'"
+        val indexesSql = "select count(*) from pg_indexes where schemaname='public'"
+
+        // 1000 queues with random metadata
+        val randomQueues = (1..queues).map { index -> createRandomQueue(index) }
+
+        // Sanity direct database check - empty database should have 0 tables and 0 indexes
+        assertEquals(0, dataSource.readInt(tablesSql))
+        assertEquals(0, dataSource.readInt(indexesSql))
+
+
+        // ------------------------------------------------------------------------------------
+        // First test - measure time to create all tables from empty database
+        val emptyDatabaseMillis = measureTimeMillis {
+            SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
+        }
+        // Direct database checks, all tables and indexes should be created
+        assertEquals(queues, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        assertTrue(emptyDatabaseMillis < 10_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
+
+
+
+        // ------------------------------------------------------------------------------------
+        // Second test - drop half of the tables and measure time to create or update all tables again
+        SchemaHelpers.deleteQueues(dataSource, randomQueues.shuffled().take(queues / 2))
+        assertEquals(queues / 2, dataSource.readInt(tablesSql))
+        assertEquals(queues * 3, dataSource.readInt(indexesSql))
+        val halfDatabaseMillis = measureTimeMillis {
+            SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
+        }
+        // All tables and indexes should be created again
+        assertEquals(queues, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        assertTrue(halfDatabaseMillis < 10_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
+
+
+        // ------------------------------------------------------------------------------------
+        // Third test - measure time to create or update all tables again without any changes
+        val upToDateDatabaseMillis = measureTimeMillis {
+            SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
+        }
+        // All tables and indexes should remain the same
+        assertEquals(queues, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        assertTrue(upToDateDatabaseMillis < 10_000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
+    }
 
     @Test
     fun testRename() {
+        val queue = Queue.of("test_queue", PredefinedDataTypes.String)
+
         // Create queue before renaming
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
@@ -40,6 +98,8 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testDelete() {
+        val queue = Queue.of("test_queue", PredefinedDataTypes.String)
+
         // Create queue before renaming
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
@@ -66,6 +126,25 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
             .build()
 
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+    }
+
+    private fun createRandomQueue(number: Int): Queue<*> {
+        val first = MetaField.int("first", FieldOption.SEARCH)
+        val second = MetaField.long("second", FieldOption.STRICT_UNIQUE)
+        val third = MetaField.string("third", FieldOption.PENDING_ONLY_UNIQUE)
+        val fourth = MetaField.boolean("fourth")
+
+        val databaseType = when (Random.nextInt(4)) {
+            0 -> PredefinedDataTypes.String
+            1 -> PredefinedDataTypes.ByteArray
+            2 -> PredefinedDataTypes.Long
+            3 -> PredefinedDataTypes.Int
+            else -> fail("Unexpected number of data types")
+        }
+
+        return Queue.builder("test_queue_$number", databaseType)
+            .metadata(Metadata.of(first, second, third, fourth))
+            .build()
     }
 
 

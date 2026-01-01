@@ -2,7 +2,6 @@ package kolbasa.schema
 
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.queue.Queue
-import kolbasa.schema.SchemaHelpers.createOrUpdateQueues
 import javax.sql.DataSource
 
 object SchemaHelpers {

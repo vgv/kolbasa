@@ -5,6 +5,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.*
+import kolbasa.schema.Table.Companion.hasIndex
 import java.time.Duration
 import kotlin.test.*
 
@@ -160,40 +161,22 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         // Check indexes
         assertEquals(6, testTable.indexes.size, "Indexes: ${testTable.indexes}")
 
+        // PK index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_pkey"))
+
+        // shard index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_shard"))
+
         // scheduled_at index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_scheduled_at")).let { scheduledAtIndex ->
-            assertFalse(scheduledAtIndex.unique)
-            assertNull(scheduledAtIndex.filterCondition)
-            assertEquals(1, scheduledAtIndex.columns.size, "Columns: ${scheduledAtIndex.columns}")
-            val scheduledAtColumn = assertNotNull(scheduledAtIndex.columns.find { it.name == "scheduled_at" })
-            assertTrue(scheduledAtColumn.asc)
-        }
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_scheduled_at"))
 
         // meta_long index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_long_value_j")).let { metaFieldIndex ->
-            assertFalse(metaFieldIndex.unique)
-            assertNull(metaFieldIndex.filterCondition)
-            assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
-            val longColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_long_value" })
-            assertTrue(longColumn.asc)
-        }
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_long_value_j"))
 
         // meta_int index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_int_value_su")).let { metaFieldIndex ->
-            assertTrue(metaFieldIndex.unique)
-            assertEquals("(remaining_attempts > 0)", metaFieldIndex.filterCondition?.lowercase())
-            assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
-            val intColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_int_value" })
-            assertTrue(intColumn.asc)
-        }
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_int_value_su"))
 
         // meta_short index
-        assertNotNull(testTable.findIndex("${testQueue.dbTableName}_short_value_pu")).let { metaFieldIndex ->
-            assertTrue(metaFieldIndex.unique)
-            assertEquals("((remaining_attempts > 0) and (processing_at is null))", metaFieldIndex.filterCondition?.lowercase())
-            assertEquals(1, metaFieldIndex.columns.size, "Columns: ${metaFieldIndex.columns}")
-            val shortColumn = assertNotNull(metaFieldIndex.columns.find { it.name == "meta_short_value" })
-            assertTrue(shortColumn.asc)
-        }
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_short_value_pu"))
     }
 }
