@@ -27,7 +27,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
         // Table DDL
         val createTableStatements = 1
-        val addInternalColumns = 2 // add shard and alter remaining_attempts
+        val addInternalColumns = 1 // alter remaining_attempts
         val addMetaColumns = queue.metadata.fields.size
         assertEquals(createTableStatements + addInternalColumns + addMetaColumns, schema.tableStatements.size)
 
