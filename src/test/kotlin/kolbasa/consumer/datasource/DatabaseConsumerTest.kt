@@ -1,6 +1,8 @@
 package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgresqlTest
+import kolbasa.assertNotNull
+import kolbasa.assertTrue
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between
@@ -17,7 +19,10 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
@@ -31,8 +36,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.random.Random
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
@@ -314,11 +317,17 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         assertEquals(data, firstMessage.data)
         assertNotSame(data, firstMessage.data)
         assertTrue(firstMessage.createdAt <= firstMessage.processingAt, "message=$firstMessage")
+
+
+
         assertTrue("message=$firstMessage") {
             val visibilityTimeoutMillis = delay.toMillis()
             compareTimestamps(firstMessage.processingAt + visibilityTimeoutMillis, firstMessage.scheduledAt)
         }
-        assertEquals(QueueOptions.DEFAULT.defaultAttempts- 1, firstMessage.remainingAttempts)
+
+
+
+        assertEquals(QueueOptions.DEFAULT.defaultAttempts - 1, firstMessage.remainingAttempts)
         assertSame(MetaValues.EMPTY, firstMessage.meta)
     }
 
@@ -356,9 +365,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         // Read second message with metadata and check it
         val withMetadata = consumer.receive(queue, ReceiveOptions(readMetadata = true))
         assertNotNull(withMetadata)
-        assertNotNull(withMetadata.meta) {
-            assertEquals(2, it.get(FIELD))
-        }
+        assertEquals(2, withMetadata.meta.get(FIELD))
         assertEquals(id2, withMetadata.id)
         assertEquals(data, withMetadata.data)
         assertNotSame(data, withMetadata.data)
@@ -403,9 +410,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
                 compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
             }
             if (readMetadata) {
-                assertNotNull(message.meta) {
-                    assertEquals(reverseIndex, it.get(FIELD))
-                }
+                assertEquals(reverseIndex, message.meta.get(FIELD))
             } else {
                 assertSame(MetaValues.EMPTY, message.meta)
             }
@@ -452,9 +457,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
                 compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
             }
             if (readMetadata) {
-                assertNotNull(message.meta) {
-                    assertEquals(index, it.get(FIELD))
-                }
+                assertEquals(index, message.meta.get(FIELD))
             } else {
                 assertSame(MetaValues.EMPTY, message.meta)
             }
