@@ -136,11 +136,8 @@ internal object SchemaGenerator {
             ?.defaultExpression != null
 
         if (queue.options.defaultDelay.isZero) {
-            val alterStatement = """
-                    alter table ${queue.dbTableName}
-                    alter ${Const.SCHEDULED_AT_COLUMN_NAME}
-                    set default clock_timestamp()
-                """.trimIndent()
+            val alterStatement =
+                "alter table ${queue.dbTableName} alter ${Const.SCHEDULED_AT_COLUMN_NAME} set default clock_timestamp()"
 
             if (existingTable != null && hasDefaultClause) {
                 mutableSchema.tables += alterStatement
@@ -159,10 +156,8 @@ internal object SchemaGenerator {
 
         // index
         val indexName = queue.dbTableName + "_" + Const.SCHEDULED_AT_COLUMN_NAME
-        val indexStatement = """
-                create index concurrently if not exists $indexName
-                on ${queue.dbTableName}(${Const.SCHEDULED_AT_COLUMN_NAME})
-            """.trimIndent()
+        val indexStatement =
+            "create index concurrently if not exists $indexName on ${queue.dbTableName}(${Const.SCHEDULED_AT_COLUMN_NAME})"
 
         val hasIndex = existingTable.hasIndex(indexName)
         if (!hasIndex) {
@@ -176,11 +171,8 @@ internal object SchemaGenerator {
             ?.findColumn(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
             ?.defaultExpression
 
-        val alterStatement = """
-                alter table ${queue.dbTableName}
-                alter ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
-                set default $desiredAttempts
-            """.trimIndent()
+        val alterStatement =
+            "alter table ${queue.dbTableName} alter ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} set default $desiredAttempts"
 
         if (desiredAttempts.toString() != currentDefaultClause) {
             mutableSchema.tables += alterStatement
@@ -194,10 +186,9 @@ internal object SchemaGenerator {
         mutableSchema: MutableSchema
     ) {
         val hasColumn = existingTable?.findColumn(metaField.dbColumnName) != null
-        val alterStatement = """
-            alter table ${queue.dbTableName}
-            add if not exists ${metaField.dbColumnName} ${metaField.dbColumnType}
-        """.trimIndent()
+        val alterStatement =
+            "alter table ${queue.dbTableName} add if not exists ${metaField.dbColumnName} ${metaField.dbColumnType}"
+
         if (!hasColumn) {
             mutableSchema.tables += alterStatement
         }
@@ -240,10 +231,8 @@ internal object SchemaGenerator {
             }
 
             MetaIndexType.JUST_INDEX -> {
-                val createIndexStatement = """
-                    create index concurrently if not exists $justIndexName
-                    on ${queue.dbTableName}(${metaField.dbColumnName})
-                """.trimIndent()
+                val createIndexStatement =
+                    "create index concurrently if not exists $justIndexName on ${queue.dbTableName}(${metaField.dbColumnName})"
 
                 if (!hasJustIndex) {
                     mutableSchema.indexes += createIndexStatement
