@@ -2,6 +2,7 @@ package kolbasa.schema
 
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.queue.Queue
+import kolbasa.schema.Schema.Companion.merge
 import javax.sql.DataSource
 
 object SchemaHelpers {
@@ -56,10 +57,10 @@ object SchemaHelpers {
      * making the correct data migration for each of the above cases
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>) {
-        generateUpdateStatements(dataSource, queues).forEach { (_, schema) ->
-            executeSchemaStatements(dataSource, schema)
-        }
+    fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>): Int {
+        val mergedSchema = generateUpdateStatements(dataSource, queues).values.merge()
+        executeSchemaStatements(dataSource, mergedSchema)
+        return mergedSchema.size
     }
 
     /**
@@ -68,8 +69,8 @@ object SchemaHelpers {
      * See [createOrUpdateQueues] for more details
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, vararg queues: Queue<*>) {
-        createOrUpdateQueues(dataSource, queues.toList())
+    fun createOrUpdateQueues(dataSource: DataSource, vararg queues: Queue<*>): Int {
+        return createOrUpdateQueues(dataSource, queues.toList())
     }
 
     // ----------------------------------------------------------------------------------------
@@ -114,10 +115,10 @@ object SchemaHelpers {
      * the [renameFunction].
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, queues: List<Queue<*>>, renameFunction: (Queue<*>) -> String) {
-        generateRenameStatements(dataSource, queues, renameFunction).forEach { (_, schema) ->
-            executeSchemaStatements(dataSource, schema)
-        }
+    fun renameQueues(dataSource: DataSource, queues: List<Queue<*>>, renameFunction: (Queue<*>) -> String): Int {
+        val mergedSchema = generateRenameStatements(dataSource, queues, renameFunction).values.merge()
+        executeSchemaStatements(dataSource, mergedSchema)
+        return mergedSchema.size
     }
 
     /**
@@ -126,8 +127,8 @@ object SchemaHelpers {
      * See [renameQueues] for more details
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, vararg queues: Queue<*>, renameFunction: (Queue<*>) -> String) {
-        renameQueues(dataSource, queues.toList(), renameFunction)
+    fun renameQueues(dataSource: DataSource, vararg queues: Queue<*>, renameFunction: (Queue<*>) -> String): Int {
+        return renameQueues(dataSource, queues.toList(), renameFunction)
     }
 
 
@@ -163,10 +164,10 @@ object SchemaHelpers {
      * This is a convenient method that allows you to drop the table in the database
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, queues: List<Queue<*>>) {
-        generateDeleteStatements(dataSource, queues).forEach { (_, schema) ->
-            executeSchemaStatements(dataSource, schema)
-        }
+    fun deleteQueues(dataSource: DataSource, queues: List<Queue<*>>): Int {
+        val mergedSchema = generateDeleteStatements(dataSource, queues).values.merge()
+        executeSchemaStatements(dataSource, mergedSchema)
+        return mergedSchema.size
     }
 
     /**
@@ -175,13 +176,13 @@ object SchemaHelpers {
      * See [deleteQueues] for more details
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, vararg queues: Queue<*>) {
-        deleteQueues(dataSource, queues.toList())
+    fun deleteQueues(dataSource: DataSource, vararg queues: Queue<*>): Int {
+        return deleteQueues(dataSource, queues.toList())
     }
 
 
     private fun executeSchemaStatements(dataSource: DataSource, schema: Schema) {
-        if (schema.isEmpty()) {
+        if (schema.isEmpty) {
             // nothing to execute
             return
         }

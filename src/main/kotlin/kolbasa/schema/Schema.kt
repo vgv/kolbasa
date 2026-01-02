@@ -13,16 +13,26 @@ data class Schema(
     val indexStatements: List<String>
 ) {
 
-    fun isEmpty() = tableStatements.isEmpty() && indexStatements.isEmpty()
+    val size = (tableStatements.size + indexStatements.size)
+    val isEmpty = (size == 0)
 
     companion object {
         val EMPTY = Schema(emptyList(), emptyList())
 
-        operator fun Schema.plus(other: Schema): Schema {
-            val tableStatements = this.tableStatements + other.tableStatements
-            val indexStatements = this.indexStatements + other.indexStatements
+        /**
+         * Merge multiple schemas into one
+         */
+        fun Iterable<Schema>.merge(): Schema {
+            val tableStatements = sumOf { it.tableStatements.size }
+            val indexStatements = sumOf { it.indexStatements.size }
 
-            return Schema(tableStatements, indexStatements)
+            if (tableStatements == 0 && indexStatements == 0) {
+                return EMPTY
+            } else {
+                val mergedTableStatements = flatMapTo(ArrayList(tableStatements)) { it.tableStatements }
+                val mergedIndexStatements = flatMapTo(ArrayList(indexStatements)) { it.indexStatements }
+                return Schema(mergedTableStatements, mergedIndexStatements)
+            }
         }
     }
 

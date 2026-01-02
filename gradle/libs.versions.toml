@@ -28,7 +28,6 @@ mockk = "1.14.7"
 
 # Kotlin
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
-kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 
 # Prometheus
 prometheus-metrics-core = { module = "io.prometheus:prometheus-metrics-core", version.ref = "prometheus" }

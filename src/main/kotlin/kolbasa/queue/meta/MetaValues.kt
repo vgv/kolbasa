@@ -45,52 +45,52 @@ sealed class MetaValue<T>(
     open val value: T
 )
 
-internal data class ByteValue(
+data class ByteValue internal constructor(
     override val field: MetaField<Byte>,
     override val value: Byte
 ) : MetaValue<Byte>(field, value)
 
-internal data class ShortValue(
+data class ShortValue internal constructor(
     override val field: MetaField<Short>,
     override val value: Short
 ) : MetaValue<Short>(field, value)
 
-internal data class IntValue(
+data class IntValue internal constructor(
     override val field: MetaField<Int>,
     override val value: Int
 ) : MetaValue<Int>(field, value)
 
-internal data class LongValue(
+data class LongValue internal constructor(
     override val field: MetaField<Long>,
     override val value: Long
 ) : MetaValue<Long>(field, value)
 
-internal data class BooleanValue(
+data class BooleanValue internal constructor(
     override val field: MetaField<Boolean>,
     override val value: Boolean
 ) : MetaValue<Boolean>(field, value)
 
-internal data class FloatValue(
+data class FloatValue internal constructor(
     override val field: MetaField<Float>,
     override val value: Float
 ) : MetaValue<Float>(field, value)
 
-internal data class DoubleValue(
+data class DoubleValue internal constructor(
     override val field: MetaField<Double>,
     override val value: Double
 ) : MetaValue<Double>(field, value)
 
-internal data class StringValue(
+data class StringValue internal constructor(
     override val field: MetaField<String>,
     override val value: String
 ) : MetaValue<String>(field, value)
 
-internal data class BigIntegerValue(
+data class BigIntegerValue internal constructor(
     override val field: MetaField<BigInteger>,
     override val value: BigInteger
 ) : MetaValue<BigInteger>(field, value)
 
-internal data class BigDecimalValue(
+data class BigDecimalValue internal constructor(
     override val field: MetaField<BigDecimal>,
     override val value: BigDecimal
 ) : MetaValue<BigDecimal>(field, value)
