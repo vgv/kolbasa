@@ -46,9 +46,10 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(queue.dbTableName))[queue.dbTableName]
         assertNotNull(existingTable)
 
-        // we don't expect anything in "required", because schema is actual
+        // we don't expect anything because schema is actual
         val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.LOCAL_RANGE)
-        assertTrue(schema.isEmpty(), "Required object: $schema")
+        assertTrue(schema.isEmpty, "Required object: $schema")
+        assertEquals(0, schema.size, "Required object: $schema")
     }
 
     @Test
@@ -76,7 +77,8 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         val schema = SchemaGenerator.generateRenameTableSchema(queue, null, "new_queue_table")
 
         // Schema should be empty
-        assertTrue(schema.isEmpty(), "Schema: $schema")
+        assertTrue(schema.isEmpty, "Schema: $schema")
+        assertEquals(0, schema.size, "Schema: $schema")
     }
 
     @Test
@@ -103,6 +105,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         val schema = SchemaGenerator.generateDropTableSchema(queue, null)
 
         // Schema should be empty
-        assertTrue(schema.isEmpty(), "Schema: $schema")
+        assertTrue(schema.isEmpty, "Schema: $schema")
+        assertEquals(0, schema.size, "Schema: $schema")
     }
 }
