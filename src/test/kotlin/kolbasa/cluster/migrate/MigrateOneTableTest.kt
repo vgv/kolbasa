@@ -16,10 +16,14 @@ import kolbasa.queue.Queue
 import kolbasa.queue.meta.*
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.random.Random
-import kotlin.test.*
 
 internal class MigrateOneTableTest : AbstractPostgresqlTest() {
 
@@ -29,7 +33,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
     val shardsToStay = listOf(10, 11, 12, 13, 14, 15, 16, 17, 18, 19)
     var sentItems = mutableMapOf<Id, SendMessage<Value>>()
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
         SchemaHelpers.createOrUpdateQueues(dataSourceFirstSchema, queue)

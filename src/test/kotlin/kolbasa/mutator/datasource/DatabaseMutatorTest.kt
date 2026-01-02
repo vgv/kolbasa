@@ -18,8 +18,12 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.time.Duration
-import kotlin.test.*
 
 class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
@@ -31,7 +35,7 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         metadata = Metadata.of(FIELD)
     )
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
@@ -233,8 +237,8 @@ class DatabaseMutatorTest : AbstractPostgresqlTest() {
         assertTrue(mutateResult.truncated)
         assertEquals(expectedMutatedIds.size, mutateResult.mutatedMessages)
         // Since response is truncated, we can check only that all returned ids are from expectedMutatedIds list
-        assertTrue("expected: $expectedMutatedIds, mutated: $mutateResult") {
-            expectedMutatedIds.containsAll(mutateResult.onlyMutated().map { it.id })
+        assertTrue(expectedMutatedIds.containsAll(mutateResult.onlyMutated().map { it.id })) {
+            "expected: $expectedMutatedIds, mutated: $mutateResult"
         }
 
         val uniqueNewAttempts = mutateResult.onlyMutated().map { it.remainingAttempts }.distinct()

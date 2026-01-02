@@ -1,8 +1,8 @@
 package kolbasa.mutator
 
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Test
 import java.util.concurrent.Executors
-import kotlin.test.Test
-import kotlin.test.assertSame
 
 class MutatorSchemaHelpersTest {
 

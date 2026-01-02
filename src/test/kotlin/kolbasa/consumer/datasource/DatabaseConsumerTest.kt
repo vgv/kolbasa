@@ -17,6 +17,10 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
@@ -27,7 +31,8 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.random.Random
-import kotlin.test.*
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class DatabaseConsumerTest : AbstractPostgresqlTest() {
 
@@ -39,7 +44,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         metadata = Metadata.of(FIELD)
     )
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }

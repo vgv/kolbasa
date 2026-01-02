@@ -4,9 +4,10 @@ import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.utils.ColumnIndex
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import kotlin.test.assertEquals
+
 
 internal class OrConditionTest {
 

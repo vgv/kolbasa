@@ -6,8 +6,14 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.*
 import kolbasa.schema.Table.Companion.hasIndex
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import java.time.Duration
-import kotlin.test.*
+import kotlin.test.assertNotNull
 
 internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
@@ -45,7 +51,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         )
     )
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(dataSource, testQueue)
     }
