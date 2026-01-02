@@ -1,35 +1,47 @@
 package kolbasa.schema
 
-import kolbasa.schema.Schema.Companion.plus
+import kolbasa.schema.Schema.Companion.merge
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
 class SchemaTest {
 
     @Test
-    fun test_EMPTY_and_IsEmpty() {
-        assertTrue(Schema.EMPTY.isEmpty())
-        assertTrue(Schema(emptyList(), emptyList()).isEmpty())
+    fun test_IsEmpty_And_Size() {
+        // Special case: empty schema
+        assertTrue(Schema.EMPTY.isEmpty)
+        assertEquals(0, Schema.EMPTY.size)
+
+        assertTrue(Schema(emptyList(), emptyList()).isEmpty)
+        assertEquals(0, Schema(emptyList(), emptyList()).size)
+
+        // Random schema
+        val schema = Schema(
+            tableStatements = (1..Random.nextInt(20)).map { "create table test_$it(id int);" },
+            indexStatements = (1..Random.nextInt(20)).map { "create index index_${it}_id on test_$it(id);" }
+        )
+        assertEquals(schema.tableStatements.size + schema.indexStatements.size, schema.size)
+        assertFalse(schema.isEmpty)
     }
 
     @Test
-    fun testPlusOperator() {
-        val schema1 = Schema(
-            tableStatements = listOf("create table test1 (id int);"),
-            indexStatements = listOf("create index idx_test1_id on test1(id);")
-        )
+    fun testMerge() {
+        val schemas = 10
+        val generatedSchemas = (1..schemas).map { index ->
+            Schema(
+                tableStatements = listOf("create table table_$index(id int);"),
+                indexStatements = listOf("create index index_${index}_id on table_$index(id);")
+            )
+        }
 
-        val schema2 = Schema(
-            tableStatements = listOf("alter table test1 add column name text;"),
-            indexStatements = listOf("create index idx_test1_name on test1(name);")
-        )
+        val combinedSchema = generatedSchemas.merge()
 
-        val combinedSchema = schema1 + schema2
-
-        assertEquals(combinedSchema.tableStatements.size, schema1.tableStatements.size + schema2.tableStatements.size)
-        assertEquals(combinedSchema.indexStatements.size, schema1.indexStatements.size + schema2.indexStatements.size)
-        assertEquals(combinedSchema.tableStatements, schema1.tableStatements + schema2.tableStatements)
-        assertEquals(combinedSchema.indexStatements, schema1.indexStatements + schema2.indexStatements)
+        assertEquals(combinedSchema.tableStatements.size, schemas)
+        assertEquals(combinedSchema.indexStatements.size, schemas)
+        assertEquals(combinedSchema.tableStatements, generatedSchemas.flatMap { it.tableStatements })
+        assertEquals(combinedSchema.indexStatements, generatedSchemas.flatMap { it.indexStatements })
     }
 }
