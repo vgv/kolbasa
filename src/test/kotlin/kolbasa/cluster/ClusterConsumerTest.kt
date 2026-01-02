@@ -12,9 +12,12 @@ import kolbasa.producer.SendRequest
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.sql.Statement
 import javax.sql.DataSource
-import kotlin.test.*
 
 class ClusterConsumerTest : AbstractPostgresqlTest() {
 
@@ -24,7 +27,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
     private lateinit var cluster: Cluster
     private lateinit var clusterConsumer: ClusterConsumer
 
-    @BeforeTest
+    @BeforeEach
     fun before() {
         Kolbasa.shardStrategy = ShardStrategy.Random
 

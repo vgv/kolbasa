@@ -12,9 +12,14 @@ import kolbasa.pg.DatabaseExtensions.useConnection
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useSavepoint
 import kolbasa.pg.DatabaseExtensions.useStatement
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
-import kotlin.test.*
 
 internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
@@ -208,7 +213,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadInt_NoRows() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // No rows with str_value == 'z'
             dataSource.readInt("select int_value from full_table where str_value='z'")
         }
@@ -216,7 +221,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadInt_MoreThanOneRow() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // More than one row
             dataSource.readInt("select int_value from full_table")
         }
@@ -231,7 +236,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLong_NoRows() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // No rows with str_value == 'z'
             dataSource.readLong("select long_value from full_table where str_value='z'")
         }
@@ -239,7 +244,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLong_MoreThanOneRow() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // More than one row
             dataSource.readLong("select long_value from full_table")
         }
@@ -255,7 +260,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadBoolean_NoRows() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // No rows with str_value == 'z'
             dataSource.readBoolean("select boolean_value from full_table where str_value='z'")
         }
@@ -263,7 +268,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadBoolean_MoreThanOneRow() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // More than one row
             dataSource.readBoolean("select boolean_value from full_table")
         }
@@ -279,7 +284,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadString_NoRows() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // No rows with int_value=123
             dataSource.readString("select str_value from full_table where int_value=123")
         }
@@ -287,7 +292,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadString_MoreThanOneRow() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows<IllegalArgumentException> {
             // More than one row
             dataSource.readString("select str_value from full_table")
         }

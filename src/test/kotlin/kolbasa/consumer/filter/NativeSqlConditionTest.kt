@@ -5,9 +5,9 @@ import io.mockk.mockk
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
-import kotlin.test.assertEquals
 
 class NativeSqlConditionTest {
     @Test
@@ -19,8 +19,8 @@ class NativeSqlConditionTest {
 
         val sql = nativeExpression.toSqlClause()
         assertEquals(
-            expected = "(meta_string_value like 'a%') or (meta_string_value like 'b%') and meta_int_value is null and meta_string_value is null",
-            actual = sql
+            "(meta_string_value like 'a%') or (meta_string_value like 'b%') and meta_int_value is null and meta_string_value is null",
+            sql
         )
     }
 
