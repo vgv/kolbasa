@@ -40,14 +40,13 @@ dependencies {
 
     // Test
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.launcher)
 
     testImplementation(libs.mockk)
 
     testImplementation(libs.testcontainers.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
-
-    testImplementation(libs.kotlin.test)
 
     testImplementation(libs.logback.core)
     testImplementation(libs.logback.classic)
