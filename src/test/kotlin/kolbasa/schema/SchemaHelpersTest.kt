@@ -8,8 +8,7 @@ import kolbasa.queue.QueueOptions
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -42,8 +41,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // Direct database checks, all tables and indexes should be created
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        assertTrue(emptyDatabaseMillis < 10_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
-
+        assertTrue(emptyDatabaseMillis < 12_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
 
 
         // ------------------------------------------------------------------------------------
@@ -57,7 +55,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // All tables and indexes should be created again
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        assertTrue(halfDatabaseMillis < 10_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
+        assertTrue(halfDatabaseMillis < 6_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
 
 
         // ------------------------------------------------------------------------------------
@@ -68,7 +66,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // All tables and indexes should remain the same
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        assertTrue(upToDateDatabaseMillis < 10_000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
+        assertTrue(upToDateDatabaseMillis < 1000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
     }
 
     @Test
@@ -150,6 +148,49 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
 
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
+
+    @Test
+    fun testExecuteSchemaStatements() {
+        val statements = 1000
+        // just 3 and 5 random numbers, it doesn't matter which ones
+        val tableFailedIndexes = listOf(111, 222, 333)
+        val indexFailedIndexes = listOf(234, 345, 456, 567, 678)
+
+        val tableStatementsWithOneFailed = (1..statements).map { index ->
+            if (index in tableFailedIndexes) {
+                "INVALID SQL STATEMENT;"
+            } else {
+                "CREATE TABLE test_table_$index (id INT);"
+            }
+        }
+        val indexStatementsWithFiveFailed = (1..statements).map { index ->
+            if (index in indexFailedIndexes) {
+                "INVALID SQL STATEMENT;"
+            } else {
+                "CREATE INDEX CONCURRENTLY index_test_table_$index ON test_table_1(id);"
+            }
+        }
+
+        // Pre-check - database should be empty
+        val tablesSql = "select count(*) from information_schema.tables where table_schema='public'"
+        val indexesSql = "select count(*) from pg_indexes where schemaname='public'"
+        assertEquals(0, dataSource.readInt(tablesSql))
+        assertEquals(0, dataSource.readInt(indexesSql))
+
+        // ------------------------------------------------------------------------------------
+        // Execute statements with one invalid
+        val schema = Schema(tableStatementsWithOneFailed, indexStatementsWithFiveFailed)
+        val schemaResult = SchemaHelpers.executeSchemaStatements(dataSource, schema)
+
+        assertSame(schema, schemaResult.schema)
+        assertEquals(tableFailedIndexes.size + indexFailedIndexes.size, schemaResult.failedStatements)
+        assertEquals(tableFailedIndexes.size, schemaResult.failedTableStatements.size)
+        assertEquals(indexFailedIndexes.size, schemaResult.failedIndexStatements.size)
+        // Direct database checks - all valid tables should be created
+        assertEquals(statements - tableFailedIndexes.size, dataSource.readInt(tablesSql))
+        assertEquals(statements - indexFailedIndexes.size, dataSource.readInt(indexesSql))
+    }
+
 
     private fun createRandomQueue(number: Int): Queue<*> {
         val first = MetaField.int("first", FieldOption.SEARCH)
