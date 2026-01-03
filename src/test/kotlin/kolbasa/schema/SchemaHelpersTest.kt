@@ -39,7 +39,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // Direct database checks, all tables and indexes should be created
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        //assertTrue(emptyDatabaseMillis < 10_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
+        assertTrue(emptyDatabaseMillis < 12_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
 
 
         // ------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // All tables and indexes should be created again
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        //assertTrue(halfDatabaseMillis < 5_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
+        assertTrue(halfDatabaseMillis < 6_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
 
 
         // ------------------------------------------------------------------------------------
@@ -64,9 +64,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // All tables and indexes should remain the same
         assertEquals(queues, dataSource.readInt(tablesSql))
         assertEquals(queues * 6, dataSource.readInt(indexesSql))
-        //assertTrue(upToDateDatabaseMillis < 1000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
-
-        println("Creating $queues tables: empty database = ${emptyDatabaseMillis} ms, half database = ${halfDatabaseMillis} ms, up-to-date database = ${upToDateDatabaseMillis} ms")
+        assertTrue(upToDateDatabaseMillis < 1000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
     }
 
     @Test
