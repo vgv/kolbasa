@@ -60,10 +60,9 @@ object SchemaHelpers {
      * making the correct data migration for each of the above cases
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>): Int {
+    fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>): SchemaResult {
         val mergedSchema = generateCreateOrUpdateStatements(dataSource, queues).values.merge()
-        executeSchemaStatements(dataSource, mergedSchema)
-        return mergedSchema.size
+        return executeSchemaStatements(dataSource, mergedSchema)
     }
 
     /**
@@ -72,7 +71,7 @@ object SchemaHelpers {
      * See [createOrUpdateQueues] for more details
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, vararg queues: Queue<*>): Int {
+    fun createOrUpdateQueues(dataSource: DataSource, vararg queues: Queue<*>): SchemaResult {
         return createOrUpdateQueues(dataSource, queues.toList())
     }
 
@@ -118,10 +117,9 @@ object SchemaHelpers {
      * the [renameFunction].
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, queues: List<Queue<*>>, renameFunction: (Queue<*>) -> String): Int {
+    fun renameQueues(dataSource: DataSource, queues: List<Queue<*>>, renameFunction: (Queue<*>) -> String): SchemaResult {
         val mergedSchema = generateRenameStatements(dataSource, queues, renameFunction).values.merge()
-        executeSchemaStatements(dataSource, mergedSchema)
-        return mergedSchema.size
+        return executeSchemaStatements(dataSource, mergedSchema)
     }
 
     /**
@@ -130,7 +128,7 @@ object SchemaHelpers {
      * See [renameQueues] for more details
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, vararg queues: Queue<*>, renameFunction: (Queue<*>) -> String): Int {
+    fun renameQueues(dataSource: DataSource, vararg queues: Queue<*>, renameFunction: (Queue<*>) -> String): SchemaResult {
         return renameQueues(dataSource, queues.toList(), renameFunction)
     }
 
@@ -167,10 +165,9 @@ object SchemaHelpers {
      * This is a convenient method that allows you to drop the table in the database
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, queues: List<Queue<*>>): Int {
+    fun deleteQueues(dataSource: DataSource, queues: List<Queue<*>>): SchemaResult {
         val mergedSchema = generateDeleteStatements(dataSource, queues).values.merge()
-        executeSchemaStatements(dataSource, mergedSchema)
-        return mergedSchema.size
+        return executeSchemaStatements(dataSource, mergedSchema)
     }
 
     /**
@@ -179,7 +176,7 @@ object SchemaHelpers {
      * See [deleteQueues] for more details
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, vararg queues: Queue<*>): Int {
+    fun deleteQueues(dataSource: DataSource, vararg queues: Queue<*>): SchemaResult {
         return deleteQueues(dataSource, queues.toList())
     }
 
