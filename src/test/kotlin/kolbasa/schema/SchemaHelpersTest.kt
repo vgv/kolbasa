@@ -86,8 +86,9 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         // --------------------------------------------------------------------------------
         // Rename queue table
         val newQueueSuffix = "_renamed"
-        var renameStatements = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
-        assertEquals(1, renameStatements)
+        var renameResult = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
+        assertEquals(0, renameResult.failedStatements)
+        assertEquals(1, renameResult.schema.tableStatements.size)
 
         // More direct database checks
         val newTableExistsQuery = """select count(*)
@@ -99,8 +100,9 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
 
         // --------------------------------------------------------------------------------
         // Try to rename again to the same name - should be no changes
-        renameStatements = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
-        assertEquals(0, renameStatements) // because queue is already renamed
+        renameResult = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
+        assertEquals(0, renameResult.failedStatements)
+        assertTrue(renameResult.schema.isEmpty) // because queue is already renamed
 
         // More direct database checks
         assertEquals(0, dataSource.readInt(oldTableExistsQuery))
@@ -123,16 +125,18 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
 
         // --------------------------------------------------------------------------------
         // Delete queue table
-        var deleteStatements = SchemaHelpers.deleteQueues(dataSource, queue)
-        assertEquals(1, deleteStatements)
+        var deleteResult = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteResult.failedStatements)
+        assertEquals(1, deleteResult.schema.tableStatements.size)
 
         // One more direct database check
         assertEquals(0, dataSource.readInt(tableExistsQuery))
 
         // --------------------------------------------------------------------------------
         // Try to delete again - should be no changes
-        deleteStatements = SchemaHelpers.deleteQueues(dataSource, queue)
-        assertEquals(0, deleteStatements) // because queue table is already deleted
+        deleteResult = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteResult.failedStatements)
+        assertTrue(deleteResult.schema.isEmpty) // because queue table is already deleted
 
         // One more direct database check
         assertEquals(0, dataSource.readInt(tableExistsQuery))
