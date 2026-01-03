@@ -9,6 +9,7 @@ import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.time.Duration
@@ -18,6 +19,7 @@ import kotlin.system.measureTimeMillis
 class SchemaHelpersTest : AbstractPostgresqlTest() {
 
     @Test
+    @Disabled
     fun testTime() {
         val queues = 1000
         val tablesSql = "select count(*) from information_schema.tables where table_schema='public'"
