@@ -3,6 +3,9 @@ package kolbasa.schema
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.queue.Queue
 import kolbasa.schema.Schema.Companion.merge
+import kolbasa.schema.SchemaHelpers.createOrUpdateQueues
+import kolbasa.schema.SchemaHelpers.deleteQueues
+import kolbasa.schema.SchemaHelpers.renameQueues
 import javax.sql.DataSource
 
 object SchemaHelpers {
@@ -14,7 +17,7 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateUpdateStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
+    fun generateCreateOrUpdateStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
         val node = IdSchema.readNodeInfo(dataSource)
         val idRange = if (node != null) {
             // This server is a part of a clustered environment, currently or in the past
@@ -37,8 +40,8 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateUpdateStatements(dataSource: DataSource, vararg queues: Queue<*>): Map<Queue<*>, Schema> {
-        return generateUpdateStatements(dataSource, queues.toList())
+    fun generateCreateOrUpdateStatements(dataSource: DataSource, vararg queues: Queue<*>): Map<Queue<*>, Schema> {
+        return generateCreateOrUpdateStatements(dataSource, queues.toList())
     }
 
     /**
@@ -58,7 +61,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>): Int {
-        val mergedSchema = generateUpdateStatements(dataSource, queues).values.merge()
+        val mergedSchema = generateCreateOrUpdateStatements(dataSource, queues).values.merge()
         executeSchemaStatements(dataSource, mergedSchema)
         return mergedSchema.size
     }
@@ -181,19 +184,75 @@ object SchemaHelpers {
     }
 
 
-    private fun executeSchemaStatements(dataSource: DataSource, schema: Schema) {
+    @JvmStatic
+    fun executeSchemaStatements(dataSource: DataSource, schema: Schema): SchemaResult {
         if (schema.isEmpty) {
             // nothing to execute
-            return
+            return SchemaResult(schema, 0, emptyList(), emptyList())
         }
 
-        dataSource.useConnectionWithAutocommit { connection ->
-            // separate transaction for each statement
+        // separate transaction for each statement
+        return dataSource.useConnectionWithAutocommit { connection ->
             connection.createStatement().use { statement ->
-                schema.tableStatements.forEach(statement::execute)
-                schema.indexStatements.forEach(statement::execute)
+
+                // Execute table statements
+                // Try to execute them in chunks to reduce number of round-trips to the database
+                val failedTableStatements = mutableListOf<FailedStatement>()
+                schema.tableStatements.chunked(DEFAULT_CHUNK_SIZE).forEach { statementsChunk ->
+                    try {
+                        val combined = statementsChunk.joinToString(separator = ";")
+                        statement.execute(combined)
+                    } catch (_: Exception) {
+                        // If we failed to execute the chunk, try to execute statements one by one
+                        statementsChunk.forEach { sql ->
+                            try {
+                                statement.execute(sql)
+                            } catch (e: Exception) {
+                                failedTableStatements += FailedStatement(sql, e)
+                            }
+                        }
+                    }
+                }
+
+                // Execute index statements
+                // Can't batch them because almost all Kolbasa indexes use CREATE INDEX CONCURRENTLY which
+                // cannot be executed inside a transaction block
+                val failedIndexStatements = mutableListOf<FailedStatement>()
+                schema.indexStatements.forEach { sql ->
+                    try {
+                        statement.execute(sql)
+                    } catch (e: Exception) {
+                        failedIndexStatements += FailedStatement(sql, e)
+                    }
+                }
+
+                SchemaResult(
+                    schema = schema,
+                    failedStatements = failedTableStatements.size + failedIndexStatements.size,
+                    failedTableStatements = failedTableStatements,
+                    failedIndexStatements = failedIndexStatements
+                )
             }
         }
     }
 
+    private const val DEFAULT_CHUNK_SIZE = 25
+
 }
+
+data class SchemaResult(
+    val schema: Schema,
+    val failedStatements: Int,
+    val failedTableStatements: List<FailedStatement>,
+    val failedIndexStatements: List<FailedStatement>
+) {
+    init {
+        check(failedTableStatements.size + failedIndexStatements.size == failedStatements) {
+            "Inconsistent schema result: failedStatements=$failedStatements, " +
+                "failedTableStatements=${failedTableStatements.size}, " +
+                "failedIndexStatements=${failedIndexStatements.size}"
+        }
+    }
+}
+
+data class FailedStatement(val statement: String, val error: Exception)
