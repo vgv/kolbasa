@@ -2,6 +2,7 @@ package kolbasa.producer
 
 import kolbasa.producer.MessageResult.Error
 import kolbasa.producer.MessageResult.Success
+import kolbasa.producer.MessageResult.Duplicate
 
 /**
  * Result of sending a batch of messages
@@ -46,7 +47,7 @@ data class SendResult<Data>(
     /**
      * Convenient function to collect all duplicated messages
      */
-    fun onlyDuplicated(): List<MessageResult.Duplicate<Data>> {
+    fun onlyDuplicated(): List<Duplicate<Data>> {
         return messages.onlyDuplicated()
     }
 
@@ -54,7 +55,11 @@ data class SendResult<Data>(
      * Convenient function to collect all failed messages
      */
     fun onlyFailed(): List<Error<Data>> {
-        return messages.onlyFailed()
+        return if (failedMessages == 0) {
+            emptyList()
+        } else {
+            messages.onlyFailed()
+        }
     }
 
     /**
@@ -64,8 +69,65 @@ data class SendResult<Data>(
      * appropriate for sending them again using `Producer.send(data: List<SendMessage<Data, Meta>>)`
      */
     fun gatherFailedMessages(): List<SendMessage<Data>> {
-        val collector = ArrayList<SendMessage<Data>>(failedMessages)
-        return onlyFailed().flatMapTo(collector) { it.messages }
+        if (failedMessages == 0) {
+            return emptyList()
+        }
+
+        val result = ArrayList<SendMessage<Data>>(failedMessages)
+        messages.forEach { message ->
+            if (message is Error<Data>) {
+                result.addAll(message.messages)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Convenient function to collect all exceptions
+     */
+    fun gatherExceptions(): List<Throwable> {
+        if (failedMessages == 0) {
+            return emptyList()
+        }
+
+        val result = mutableListOf<Throwable>()
+        messages.forEach { message ->
+            if (message is Error<Data>) {
+                result.add(message.exception)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Convenient function to throw an exception if there were any failed messages
+     *
+     * If there were multiple exceptions, they can be added as suppressed to the first one if needed. By default, they
+     * are not added.
+     */
+    fun throwExceptionIfAny(addOthersAsSuppressed: Boolean = false) {
+        if (failedMessages == 0) {
+            return
+        }
+
+        // We have at least one failed message, so we definitely find at least one exception
+        var exception: Throwable? = null
+        for (message in messages) {
+            if (message is Error<Data>) {
+                if (exception == null && !addOthersAsSuppressed) {
+                    // Just throw the first one, nothing more
+                    throw message.exception
+                }
+
+                if (exception == null) {
+                    exception = message.exception
+                } else {
+                    exception.addSuppressed(message.exception)
+                }
+            }
+        }
+
+        throw requireNotNull(exception)
     }
 
     companion object {
@@ -74,8 +136,8 @@ data class SendResult<Data>(
             return filterIsInstance<Success<Data>>()
         }
 
-        fun <Data> List<MessageResult<Data>>.onlyDuplicated(): List<MessageResult.Duplicate<Data>> {
-            return filterIsInstance<MessageResult.Duplicate<Data>>()
+        fun <Data> List<MessageResult<Data>>.onlyDuplicated(): List<Duplicate<Data>> {
+            return filterIsInstance<Duplicate<Data>>()
         }
 
         fun <Data> List<MessageResult<Data>>.onlyFailed(): List<Error<Data>> {
