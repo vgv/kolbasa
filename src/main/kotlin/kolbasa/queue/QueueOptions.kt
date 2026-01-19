@@ -52,15 +52,24 @@ data class QueueOptions(
     val defaultAttempts: Int = DEFAULT_ATTEMPTS,
 
     /**
-     * Default queue visibility timeout. Delay before consumed but not deleted message will be visible to another
-     * consumers. Default value is 60 seconds.
+     * Default queue visibility timeout.
      *
-     * Can be overridden by [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout] for
-     * a specific consumer or by [ReceiveOptions.visibilityTimeout][kolbasa.consumer.ReceiveOptions.visibilityTimeout]
-     * for every consume() call. [ReceiveOptions.visibilityTimeout][kolbasa.consumer.ReceiveOptions.visibilityTimeout]
-     * has the highest priority, next is
-     * [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout] and, at the end,
-     * [defaultVisibilityTimeout]
+     * Delay before consumed but not deleted message will be visible to another consumers. Default value is 60 seconds.
+     *
+     * The value can be overridden at various levels, from a global queue-wide setting to values for specific consumers
+     * and, finally, the most granular level – individual receive() calls.
+     *
+     * Values can be overridden in this order, from lowest to highest priority:
+     * 1. [QueueOptions.defaultVisibilityTimeout][kolbasa.queue.QueueOptions.defaultVisibilityTimeout]  (lowest priority)
+     * 2. [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout]
+     * 3. [ReceiveOptions.visibilityTimeout][kolbasa.consumer.ReceiveOptions.visibilityTimeout] (highest priority)
+     *
+     * So, if you set the default timeout to 10 minutes at the queue level, but a specific consumer has a timeout of 5
+     * minutes using [ConsumerOptions.visibilityTimeout][kolbasa.consumer.ConsumerOptions.visibilityTimeout], messages received
+     * by that consumer (!) will be visible in the queue again after 5 minutes. However, if you set a timeout of 2 minutes for
+     * a specific receive() call using [ReceiveOptions.visibilityTimeout][kolbasa.consumer.ReceiveOptions.visibilityTimeout],
+     * messages received in that call will be available after 2 minutes, overriding the default values for both the consumer
+     * and the queue.
      */
     val defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
 ) {

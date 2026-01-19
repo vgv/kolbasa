@@ -17,7 +17,7 @@ data class SweepConfig(
     /**
      * How often we want to trigger a sweep?
      * Every fifth consume? Every tenth? Every hundredth?
-     * Default value is 5, so, it means that every fifth consume will trigger a sweep.
+     * Default value is 10_000, so, it means that every ten thousandth consume will trigger a sweep.
      *
      * If you need to trigger a sweep at every consume, you have to use period=1 (EVERYTIME_SWEEP_PERIOD)
      */
@@ -55,12 +55,12 @@ data class SweepConfig(
          * How often we want to trigger a sweep?
          * Every fifth consume? Every tenth? Every hundredth?
          *
-         * Default value is 50, so, it means that every 50th consume will trigger a sweep.
+         * Default value is 10_000, so, it means that every ten thousandth consume will trigger a sweep.
          * If you want to trigger a sweep at every consume, you have to use period = 1 (EVERYTIME_SWEEP_PERIOD)
          */
         const val EVERYTIME_SWEEP_PERIOD = 1
         const val MIN_SWEEP_PERIOD = EVERYTIME_SWEEP_PERIOD
-        const val DEFAULT_SWEEP_PERIOD = 50
+        const val DEFAULT_SWEEP_PERIOD = 10_000
         const val MAX_SWEEP_PERIOD = 1_000_000_000
 
         @JvmStatic

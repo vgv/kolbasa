@@ -22,9 +22,9 @@ internal object ShardSchema {
     private const val CREATE_SHARD_TABLE_STATEMENT = """
         create table if not exists $SHARD_TABLE_NAME(
             $SHARD_COLUMN_NAME int not null primary key,
-            $PRODUCER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}) not null,
-            $CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}),
-            $NEXT_CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.SERVER_ID_COLUMN_LENGTH}),
+            $PRODUCER_NODE_COLUMN_NAME varchar(${IdSchema.ID_COLUMN_LENGTH}) not null,
+            $CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.ID_COLUMN_LENGTH}),
+            $NEXT_CONSUMER_NODE_COLUMN_NAME varchar(${IdSchema.ID_COLUMN_LENGTH}),
             check (
                 ($PRODUCER_NODE_COLUMN_NAME=$CONSUMER_NODE_COLUMN_NAME and $NEXT_CONSUMER_NODE_COLUMN_NAME is null) or
                 ($PRODUCER_NODE_COLUMN_NAME=$NEXT_CONSUMER_NODE_COLUMN_NAME and $CONSUMER_NODE_COLUMN_NAME is null)

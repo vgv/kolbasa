@@ -54,7 +54,7 @@ internal object ConsumerSchemaHelpers {
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         if (shards != Shards.ALL_SHARDS) {
-            whereClauses += "${Const.SHARD_COLUMN_NAME} in (${shards.asText})"
+            whereClauses += shards.asWhereClause
         }
         receiveOptions.filter?.let { filter ->
             whereClauses += filter.toSqlClause()

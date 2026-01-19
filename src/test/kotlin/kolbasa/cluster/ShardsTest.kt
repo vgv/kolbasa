@@ -1,14 +1,15 @@
 package kolbasa.cluster
 
+import kolbasa.schema.Const
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class ShardsTest {
 
     @Test
-    fun testAsText() {
+    fun testAsWhereClause() {
         val shards = Shards(listOf(1, 2, 3))
-        assertEquals("1,2,3", shards.asText)
+        assertEquals("${Const.SHARD_COLUMN_NAME} in (1,2,3)", shards.asWhereClause)
     }
 
     @Test

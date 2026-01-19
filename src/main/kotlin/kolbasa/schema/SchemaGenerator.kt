@@ -180,25 +180,17 @@ internal object SchemaGenerator {
         }
 
         // index
-        val oldIndexName = queue.dbTableName + "_" + metaField.dbColumnName // old format, to be removed later
         val justIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "j")
         val strictUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "su")
         val pendingUniqueIndexName = QueueHelpers.generateMetaColumnIndexName(queue.dbTableName, metaField.name, "pu")
 
-        val hasOldIndex = existingTable.hasIndex(oldIndexName)
         val hasJustIndex = existingTable.hasIndex(justIndexName)
         val hasStrictUniqueIndex = existingTable.hasIndex(strictUniqueIndexName)
         val hasPendingUniqueIndex = existingTable.hasIndex(pendingUniqueIndexName)
 
-        val dropOldIndexStatement = "drop index concurrently if exists $oldIndexName"
         val dropJustIndexStatement = "drop index concurrently if exists $justIndexName"
         val dropStrictUniqueIndexStatement = "drop index concurrently if exists $strictUniqueIndexName"
         val dropPendingUniqueIndexStatement = "drop index concurrently if exists $pendingUniqueIndexName"
-
-        // Remove old index format, delete these lines after migration
-        if (existingTable != null && hasOldIndex) {
-            mutableSchema.indexes += dropOldIndexStatement
-        }
 
         when (metaField.dbIndexType) {
             MetaIndexType.NO_INDEX -> {
