@@ -2,8 +2,8 @@ package kolbasa.utils
 
 import java.time.Duration
 
-data class Execution(val startTimeEpochMillis: Long, val durationNanos: Long)
-data class MeasureResult<T>(val execution: Execution, val result: T)
+internal data class Execution(val startTimeEpochMillis: Long, val durationNanos: Long)
+internal data class MeasureResult<T>(val execution: Execution, val result: T)
 
 internal object TimeHelper {
 
