@@ -3,6 +3,47 @@ package kolbasa.producer
 import kolbasa.queue.Checks
 import java.time.Duration
 
+/**
+ * Configuration options for an individual message.
+ *
+ * MessageOptions provides the most granular level of control, allowing you to override
+ * settings for specific messages within a batch. This is the highest priority level
+ * in the options hierarchy.
+ *
+ * ## Options Hierarchy
+ *
+ * Kolbasa uses a layered configuration system where more specific settings override general ones.
+ * For producer-related settings (`delay`, `attempts`), the priority order is:
+ *
+ * ```
+ * QueueOptions (lowest) → ProducerOptions → SendOptions → MessageOptions (highest)
+ * ```
+ *
+ * MessageOptions has the highest priority and will override all other levels.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val urgentOptions = MessageOptions(
+ *     delay = Duration.ZERO,  // Available immediately
+ *     attempts = 10           // More retry attempts for important messages
+ * )
+ *
+ * val delayedOptions = MessageOptions(
+ *     delay = Duration.ofHours(1)  // Delay this specific message
+ * )
+ *
+ * producer.send(queue, listOf(
+ *     SendMessage(urgentPayload, options = urgentOptions),
+ *     SendMessage(normalPayload),  // Uses producer/queue defaults
+ *     SendMessage(delayedPayload, options = delayedOptions)
+ * ))
+ * ```
+ *
+ * @see ProducerOptions for producer-level defaults
+ * @see SendOptions for per-send() call overrides
+ * @see kolbasa.queue.QueueOptions for queue-wide defaults
+ */
 data class MessageOptions(
     /**
      * Delay before message will be visible to consumers.
