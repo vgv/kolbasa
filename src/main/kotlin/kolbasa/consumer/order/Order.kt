@@ -14,9 +14,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          * list manipulation.
          *
          * Example:
-         * ```
+         * ```kotlin
          * ReceiveOptions(
-         *    order = Meta::userId.asc() then Meta::saleId.ascNullsFirst() then Meta::priority.desc()
+         *    order = USER_ID.asc() then SALE_ID.ascNullsFirst() then PRIORITY.desc()
          * )
          * ```
          */

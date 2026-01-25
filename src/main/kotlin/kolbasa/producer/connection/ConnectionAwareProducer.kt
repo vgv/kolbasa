@@ -23,7 +23,7 @@ import java.sql.Connection
  * current active JDBC connection to every `send` method.
  *
  * In case of Hibernate, it may look like this
- * ```
+ * ```kotlin
  * // Persist customer object
  * session.persist(customer);
  * // Send message to the queue in the same transaction
