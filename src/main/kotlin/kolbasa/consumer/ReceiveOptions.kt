@@ -5,6 +5,43 @@ import kolbasa.consumer.order.Order
 import kolbasa.queue.Checks
 import java.time.Duration
 
+/**
+ * Configuration options for a single `receive()` call.
+ *
+ * ReceiveOptions allows overriding [ConsumerOptions] for a specific `receive()` invocation
+ * and provides additional capabilities like filtering and ordering that are only available
+ * at the receive level, not at the consumer level.
+ *
+ * ## Options Hierarchy
+ *
+ * Kolbasa uses a layered configuration system where more specific settings override general ones.
+ * For consumer-related settings, the priority order is:
+ *
+ * ```
+ * QueueOptions (lowest) → ConsumerOptions → ReceiveOptions (highest)
+ * ```
+ *
+ * ReceiveOptions has the highest priority for consumer settings.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = ReceiveOptions(
+ *     visibilityTimeout = Duration.ofMinutes(2),
+ *     readMetadata = true,
+ *     filter = ACCOUNT_ID eq 123,
+ *     order = PRIORITY.desc()
+ * )
+ *
+ * // Use options in receive() call
+ * val messages = consumer.receive(queue, 10, options)
+ * ```
+ *
+ * @see ConsumerOptions for consumer-level defaults
+ * @see kolbasa.queue.QueueOptions for queue-wide defaults
+ * @see Condition for filtering options
+ * @see Order for ordering options
+ */
 data class ReceiveOptions @JvmOverloads constructor(
     /**
      * Arbitrary consumer name.
