@@ -48,7 +48,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
         // delete expired messages before next read
-        if (SweepHelper.needSweep(queue)) {
+        if (SweepHelper.needSweep()) {
             SweepHelper.sweep(connection, queue, nodeId, limit)
         }
 
