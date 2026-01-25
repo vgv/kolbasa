@@ -1,9 +1,9 @@
 package performance
 
 import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -12,37 +12,33 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
-class ProducerTest : PerformanceTest {
+class OnlyProducerTest : PerformanceTest {
 
     override fun run() {
-        Env.reportProducerTestEnv()
+        Env.reportOnlyProducerTestEnv()
 
-        // Update
-        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
+        // Update schema
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Generate data
         val randomData = (1..1000).map {
-            val dataSize = (Env.pDataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
-
+            val dataSize = (Env.OnlyProducer.dataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
             Random.nextBytes(dataSize)
         }
 
         val producedRecords = AtomicLong()
 
-        val producerThreads = (1..Env.pThreads).map {
+        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(batchSize = Env.OnlyProducer.batchSize))
+
+        val producerThreads = (1..Env.OnlyProducer.threads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pBatchSize))
-
                 while (true) {
-                    val data = (1..Env.pSendSize).map {
-                        SendMessage<ByteArray>(randomData.random())
+                    val data = (1..Env.OnlyProducer.sendSize).map {
+                        SendMessage(randomData.random())
                     }
 
-                    val result = producer.send(queue, data)
-                    if (result.failedMessages > 0) {
-                        // Just throw first exception and finish
-                        throw result.onlyFailed().first().exception
-                    }
+                    producer.send(queue, data)
+                        .throwExceptionIfAny(addOthersAsSuppressed = false)
 
                     // Increment
                     producedRecords.addAndGet(data.size.toLong())
@@ -56,8 +52,10 @@ class ProducerTest : PerformanceTest {
 
             while (true) {
                 TimeUnit.SECONDS.sleep(1)
-                val currentProducer = producedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
+
                 val seconds = ((System.currentTimeMillis() - start) / 1000)
+                val currentProducer = producedRecords.get() / seconds
+
                 println("Seconds: $seconds, produced: $currentProducer items/sec")
                 println("-------------------------------------------")
             }
@@ -67,7 +65,7 @@ class ProducerTest : PerformanceTest {
         thread {
             while (true) {
                 TimeUnit.SECONDS.sleep(1)
-                Env.dataSource.useStatement { statement ->
+                Env.Common.dataSource.useStatement { statement ->
                     statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
                 }
             }
@@ -85,5 +83,5 @@ class ProducerTest : PerformanceTest {
 }
 
 fun main() {
-    ProducerTest().run()
+    OnlyProducerTest().run()
 }

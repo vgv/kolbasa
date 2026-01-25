@@ -9,25 +9,25 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
-class EmptyConsumerTest : PerformanceTest {
+class OnlyConsumerTest : PerformanceTest {
 
     override fun run() {
-        Env.reportEmptyConsumerTestEnv()
+        Env.reportOnlyConsumerTestEnv()
 
         // Update
-        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.dataSource.useStatement { statement ->
+        Env.Common.dataSource.useStatement { statement ->
             statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
         }
 
         val consumeCalls = AtomicLong()
 
-        val consumerThreads = (1..Env.ecThreads).map {
-            thread {
-                val consumer = DatabaseConsumer(Env.dataSource)
+        val consumer = DatabaseConsumer(Env.Common.dataSource)
 
+        val consumerThreads = (1..Env.OnlyConsumer.threads).map {
+            thread {
                 while (true) {
                     consumer.receive(queue)
                     consumeCalls.incrementAndGet()
@@ -41,8 +41,10 @@ class EmptyConsumerTest : PerformanceTest {
 
             while (true) {
                 TimeUnit.SECONDS.sleep(1)
-                val currentCalls = consumeCalls.get() / ((System.currentTimeMillis() - start) / 1000)
+
                 val seconds = ((System.currentTimeMillis() - start) / 1000)
+                val currentCalls = consumeCalls.get() / seconds
+
                 println("Seconds: $seconds, consumer calls: $currentCalls calls/sec")
                 println("-------------------------------------------")
             }
@@ -60,5 +62,5 @@ class EmptyConsumerTest : PerformanceTest {
 }
 
 fun main() {
-    EmptyConsumerTest().run()
+    OnlyConsumerTest().run()
 }

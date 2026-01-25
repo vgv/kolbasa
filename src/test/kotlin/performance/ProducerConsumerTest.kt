@@ -19,41 +19,40 @@ class ProducerConsumerTest : PerformanceTest {
         Env.reportProducerConsumerTestEnv()
 
         // Update
-        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.dataSource.useStatement { statement ->
+        Env.Common.dataSource.useStatement { statement ->
             statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
         }
 
         // Generate test data
         val randomData = (1..1000).map {
-            val dataSize = (Env.pcDataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
+            val dataSize = (Env.ProducerConsumer.dataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
             Random.nextBytes(dataSize)
         }
 
         val producedRecords = AtomicLong()
         val consumedRecords = AtomicLong()
 
-        val producerThreads = (1..Env.pcProducerThreads).map {
+        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(batchSize = Env.ProducerConsumer.batchSize))
+        val consumer = DatabaseConsumer(Env.Common.dataSource)
+
+        val producerThreads = (1..Env.ProducerConsumer.producerThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pcBatchSize))
                 while (true) {
                     val produced = producedRecords.get()
                     val consumed = consumedRecords.get()
 
-                    if (produced > consumed + Env.pcQueueSizeBaseline) {
+                    if (produced > consumed + Env.ProducerConsumer.queueSizeBaseline) {
                         TimeUnit.MILLISECONDS.sleep(100)
                     } else {
-                        val data = (1..Env.pcSendSize).map {
+                        val data = (1..Env.ProducerConsumer.sendSize).map {
                             SendMessage(randomData.random())
                         }
 
-                        val result = producer.send(queue, data)
-                        if (result.failedMessages > 0) {
-                            // Just throw first exception and finish
-                            throw result.onlyFailed().first().exception
-                        }
+                        producer.send(queue, data)
+                            .throwExceptionIfAny(addOthersAsSuppressed = false)
 
                         // Increment
                         producedRecords.addAndGet(data.size.toLong())
@@ -62,11 +61,10 @@ class ProducerConsumerTest : PerformanceTest {
             }
         }
 
-        val consumerThreads = (1..Env.pcConsumerThreads).map {
+        val consumerThreads = (1..Env.ProducerConsumer.consumerThreads).map {
             thread {
-                val consumer = DatabaseConsumer(Env.dataSource)
                 while (true) {
-                    val result = consumer.receive(queue, Env.pcConsumerReceiveLimit)
+                    val result = consumer.receive(queue, Env.ProducerConsumer.consumerReceiveLimit)
                     consumer.delete(queue, result)
 
                     // Increment
