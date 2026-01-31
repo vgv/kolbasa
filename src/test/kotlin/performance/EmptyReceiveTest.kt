@@ -9,10 +9,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
-class OnlyConsumerTest : PerformanceTest {
+class EmptyReceiveTest : PerformanceTest {
 
     override fun run() {
-        Env.reportOnlyConsumerTestEnv()
+        Env.EmptyReceive.report()
 
         // Update
         SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
@@ -22,15 +22,14 @@ class OnlyConsumerTest : PerformanceTest {
             statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
         }
 
-        val consumeCalls = AtomicLong()
+        val receiveCalls = AtomicLong()
 
         val consumer = DatabaseConsumer(Env.Common.dataSource)
 
-        val consumerThreads = (1..Env.OnlyConsumer.threads).map {
+        val consumerThreads = (1..Env.EmptyReceive.threads).map {
             thread {
-                while (true) {
+                while (receiveCalls.incrementAndGet() <= Env.EmptyReceive.totalReceiveCalls) {
                     consumer.receive(queue)
-                    consumeCalls.incrementAndGet()
                 }
             }
         }
@@ -39,13 +38,15 @@ class OnlyConsumerTest : PerformanceTest {
         thread {
             val start = System.currentTimeMillis()
 
-            while (true) {
+            while (receiveCalls.get() < Env.EmptyReceive.totalReceiveCalls) {
                 TimeUnit.SECONDS.sleep(1)
 
                 val seconds = ((System.currentTimeMillis() - start) / 1000)
-                val currentCalls = consumeCalls.get() / seconds
 
-                println("Seconds: $seconds, consumer calls: $currentCalls calls/sec")
+                val recvCalls = receiveCalls.get()
+                val receiveRate = recvCalls / seconds
+
+                println("Time: $seconds s, receive calls: $recvCalls ($receiveRate calls/s)")
                 println("-------------------------------------------")
             }
         }
@@ -55,12 +56,12 @@ class OnlyConsumerTest : PerformanceTest {
 
     companion object {
         private val queue = Queue.of(
-            name = "empty_consumer_test",
+            name = "empty_receive_test_queue",
             databaseDataType = PredefinedDataTypes.ByteArray
         )
     }
 }
 
 fun main() {
-    OnlyConsumerTest().run()
+    EmptyReceiveTest().run()
 }
