@@ -1,6 +1,6 @@
 package kolbasa.stats.prometheus.queuesize
 
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.queue.Queue
 import java.sql.Connection
 import java.sql.Statement

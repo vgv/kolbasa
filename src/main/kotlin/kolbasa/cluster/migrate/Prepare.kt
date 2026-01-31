@@ -2,7 +2,7 @@ package kolbasa.cluster.migrate
 
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.pg.DatabaseExtensions.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 

@@ -2,7 +2,7 @@ package kolbasa.consumer.sweep
 
 import kolbasa.Kolbasa
 import kolbasa.consumer.ConsumerSchemaHelpers
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper

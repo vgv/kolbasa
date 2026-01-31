@@ -1,27 +1,23 @@
-package kolbasa.pg
+package kolbasa.utils
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.pg.DatabaseExtensions.readBoolean
-import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.pg.DatabaseExtensions.readIntList
-import kolbasa.pg.DatabaseExtensions.readLong
-import kolbasa.pg.DatabaseExtensions.readLongList
-import kolbasa.pg.DatabaseExtensions.readString
-import kolbasa.pg.DatabaseExtensions.readStringList
-import kolbasa.pg.DatabaseExtensions.useConnection
-import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
-import kolbasa.pg.DatabaseExtensions.useSavepoint
-import kolbasa.pg.DatabaseExtensions.useStatement
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertTrue
+import kolbasa.utils.JdbcHelpers.readBoolean
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.readIntList
+import kolbasa.utils.JdbcHelpers.readLong
+import kolbasa.utils.JdbcHelpers.readLongList
+import kolbasa.utils.JdbcHelpers.readString
+import kolbasa.utils.JdbcHelpers.readStringList
+import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.useSavepoint
+import kolbasa.utils.JdbcHelpers.useStatement
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
 
-internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
+internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     override fun generateTestData(): List<String> {
         val statements = mutableListOf<String>()
@@ -38,7 +34,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     fun testUseConnection_CheckAutoCommit() {
         // Check auto-commit is off
         dataSource.useConnection { connection: Connection ->
-            assertFalse(connection.autoCommit)
+            Assertions.assertFalse(connection.autoCommit)
         }
     }
 
@@ -48,30 +44,30 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
         var secondTransaction: Long = -1
 
         dataSource.useConnection { connection: Connection ->
-            assertEquals(3, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
             connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
-            assertEquals(0, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
             firstTransaction = connection.readLong("select txid_current()")
 
             // read in another transaction
             dataSource.useConnection { otherConnection ->
-                assertEquals(3, otherConnection.readInt("select count(*) from full_table"))
+                Assertions.assertEquals(3, otherConnection.readInt("select count(*) from full_table"))
                 secondTransaction = otherConnection.readLong("select txid_current()")
             }
 
             // read again in the first transaction
-            assertEquals(0, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
         }
 
         // read again after commit^ above
         dataSource.useConnection { connection: Connection ->
-            assertEquals(0, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
         }
 
         // Check that
-        assertNotEquals(-1L, firstTransaction) // transaction id was assigned
-        assertNotEquals(-1L, secondTransaction) // transaction id was assigned
-        assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
+        Assertions.assertNotEquals(-1L, firstTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(-1L, secondTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
     }
 
     // -------------------------------------------------------------------------------------------
@@ -80,7 +76,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     fun testUseConnectionWithAutocommit_CheckAutoCommit() {
         // Check auto-commit is off
         dataSource.useConnectionWithAutocommit { connection: Connection ->
-            assertTrue(connection.autoCommit)
+            Assertions.assertTrue(connection.autoCommit)
         }
     }
 
@@ -90,32 +86,32 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
         var secondTransaction: Long = -1
 
         dataSource.useConnectionWithAutocommit { connection: Connection ->
-            assertEquals(3, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
             connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
-            assertEquals(0, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
             firstTransaction = connection.readLong("select txid_current()")
 
             // read in another transaction
             dataSource.useConnectionWithAutocommit { otherConnection ->
-                assertEquals(0, otherConnection.readInt("select count(*) from full_table"))
+                Assertions.assertEquals(0, otherConnection.readInt("select count(*) from full_table"))
                 otherConnection.useStatement { statement -> statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('a',1,10,false)") }
-                assertEquals(1, otherConnection.readInt("select count(*) from full_table"))
+                Assertions.assertEquals(1, otherConnection.readInt("select count(*) from full_table"))
                 secondTransaction = otherConnection.readLong("select txid_current()")
             }
 
             // read again in the first transaction
-            assertEquals(1, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(1, connection.readInt("select count(*) from full_table"))
         }
 
         // read again after commit^ above
         dataSource.useConnectionWithAutocommit { connection: Connection ->
-            assertEquals(1, connection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(1, connection.readInt("select count(*) from full_table"))
         }
 
         // Check that
-        assertNotEquals(-1L, firstTransaction) // transaction id was assigned
-        assertNotEquals(-1L, secondTransaction) // transaction id was assigned
-        assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
+        Assertions.assertNotEquals(-1L, firstTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(-1L, secondTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
     }
 
     // -------------------------------------------------------------------------------------------
@@ -123,12 +119,12 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testUseSavepoint() {
         dataSource.useConnection { dataSourceConnection ->
-            assertEquals(3, dataSourceConnection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(3, dataSourceConnection.readInt("select count(*) from full_table"))
 
             // Successful savepoint
             dataSourceConnection.useSavepoint { savepointConnection ->
                 // Connection in a savepoint block must be the same
-                assertSame(dataSourceConnection, savepointConnection)
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
                 savepointConnection.useStatement { statement ->
                     statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('d',4,40,true)")
                 }
@@ -137,7 +133,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
             // Invalid savepoint
             dataSourceConnection.useSavepoint { savepointConnection ->
                 // Connection in a savepoint block must be the same
-                assertSame(dataSourceConnection, savepointConnection)
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
                 savepointConnection.useStatement { statement ->
                     // Insert into table with wrong name, PG throws an exception
                     statement.executeUpdate("insert into full_table_wrong_name(str_value,int_value,long_value,boolean_value) values ('d',4,40,true)")
@@ -147,32 +143,35 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
             // Successful savepoint
             dataSourceConnection.useSavepoint { savepointConnection ->
                 // Connection in a savepoint block must be the same
-                assertSame(dataSourceConnection, savepointConnection)
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
                 savepointConnection.useStatement { statement ->
                     statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('e',5,50,true)")
                 }
             }
 
             // Check inside the same transaction
-            assertEquals(5, dataSourceConnection.readInt("select count(*) from full_table"))
+            Assertions.assertEquals(5, dataSourceConnection.readInt("select count(*) from full_table"))
         }
 
         // Check outside of transaction
-        assertEquals(5, dataSource.readInt("select count(*) from full_table"))
-        assertEquals(listOf(1, 2, 3, 4, 5), dataSource.readIntList("select int_value from full_table order by int_value"))
+        Assertions.assertEquals(5, dataSource.readInt("select count(*) from full_table"))
+        Assertions.assertEquals(
+            listOf(1, 2, 3, 4, 5),
+            dataSource.readIntList("select int_value from full_table order by int_value")
+        )
     }
 
     // -------------------------------------------------------------------------------------------
     @Test
     fun testReadStringList_ifEmpty() {
         val list = dataSource.readStringList("select str_value from empty_table")
-        assertTrue(list.isEmpty())
+        Assertions.assertTrue(list.isEmpty())
     }
 
     @Test
     fun testReadStringList() {
         val list = dataSource.readStringList("select str_value from full_table order by str_value")
-        assertEquals(listOf("a", "b", "c"), list)
+        Assertions.assertEquals(listOf("a", "b", "c"), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -180,13 +179,13 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadIntList_ifEmpty() {
         val list = dataSource.readIntList("select int_value from empty_table")
-        assertTrue(list.isEmpty())
+        Assertions.assertTrue(list.isEmpty())
     }
 
     @Test
     fun testReadIntList() {
         val list = dataSource.readIntList("select int_value from full_table order by int_value")
-        assertEquals(listOf(1, 2, 3), list)
+        Assertions.assertEquals(listOf(1, 2, 3), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -194,13 +193,13 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadLongList_ifEmpty() {
         val list = dataSource.readLongList("select long_value from empty_table")
-        assertTrue(list.isEmpty())
+        Assertions.assertTrue(list.isEmpty())
     }
 
     @Test
     fun testReadLongList() {
         val list = dataSource.readLongList("select long_value from full_table order by long_value")
-        assertEquals(listOf<Long>(10, 20, 30), list)
+        Assertions.assertEquals(listOf<Long>(10, 20, 30), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -208,7 +207,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadInt() {
         val value = dataSource.readInt("select int_value from full_table where str_value='a'")
-        assertEquals(1, value)
+        Assertions.assertEquals(1, value)
     }
 
     @Test
@@ -231,7 +230,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadLong() {
         val value = dataSource.readLong("select long_value from full_table where str_value='a'")
-        assertEquals(10, value)
+        Assertions.assertEquals(10, value)
     }
 
     @Test
@@ -255,7 +254,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadBoolean() {
         val value = dataSource.readBoolean("select boolean_value from full_table where str_value='b'")
-        assertTrue(value)
+        Assertions.assertTrue(value)
     }
 
     @Test
@@ -279,7 +278,7 @@ internal class DatabaseExtensionsTest : AbstractPostgresqlTest() {
     @Test
     fun testReadString() {
         val value = dataSource.readString("select str_value from full_table where int_value=1")
-        assertEquals("a", value)
+        Assertions.assertEquals("a", value)
     }
 
     @Test

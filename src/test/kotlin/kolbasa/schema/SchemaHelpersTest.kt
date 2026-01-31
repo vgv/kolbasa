@@ -1,7 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.pg.DatabaseExtensions.readInt
+import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions

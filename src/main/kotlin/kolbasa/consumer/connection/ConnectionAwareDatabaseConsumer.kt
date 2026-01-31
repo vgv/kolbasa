@@ -3,7 +3,7 @@ package kolbasa.consumer.connection
 import kolbasa.cluster.Shards
 import kolbasa.consumer.*
 import kolbasa.consumer.sweep.SweepHelper
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId

@@ -2,7 +2,7 @@ package performance
 
 import kolbasa.cluster.Shard
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue

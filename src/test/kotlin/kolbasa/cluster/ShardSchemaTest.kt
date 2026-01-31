@@ -8,8 +8,8 @@ import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.SHARD_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.SHARD_TABLE_NAME
-import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

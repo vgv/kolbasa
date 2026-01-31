@@ -1,8 +1,8 @@
 package kolbasa
 
 import com.zaxxer.hikari.HikariDataSource
-import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag

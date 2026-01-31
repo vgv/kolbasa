@@ -3,8 +3,8 @@ package kolbasa.consumer.sweep
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer

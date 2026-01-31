@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.queue.Queue
 import kolbasa.schema.Schema.Companion.merge
 import kolbasa.schema.SchemaHelpers.createOrUpdateQueues
