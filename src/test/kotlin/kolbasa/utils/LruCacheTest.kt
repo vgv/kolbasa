@@ -14,17 +14,27 @@ import kotlin.intArrayOf
 class LruCacheTest {
 
     @Test
-    fun testCapacityMustBePositive() {
-        assertThrows<IllegalArgumentException> {
-            LruCache<String, String>(0)
-        }.also {
-            assertEquals("Capacity must be positive, but was: 0", it.message)
+    fun testCornerCases() {
+        // Capacity
+        assertThrows<IllegalArgumentException> { LruCache<String, String>(0) }.also {
+            assertEquals("capacity must be positive, but was: 0", it.message)
         }
 
-        assertThrows<IllegalArgumentException> {
-            LruCache<String, String>(-1)
-        }.also {
-            assertEquals("Capacity must be positive, but was: -1", it.message)
+        assertThrows<IllegalArgumentException> { LruCache<String, String>(-1) }.also {
+            assertEquals("capacity must be positive, but was: -1", it.message)
+        }
+
+        // evictionInterval
+        assertThrows<IllegalArgumentException> { LruCache<String, String>(100, evictionInterval = 0) }.also {
+            assertEquals("evictionInterval must be at least 1, but was: 0", it.message)
+        }
+
+        // entriesRemovedAtEviction
+        assertThrows<IllegalArgumentException> { LruCache<String, String>(100, entriesRemovedAtEviction = 0) }.also {
+            assertEquals("entriesRemovedAtEviction must be in range [1..100], but was: 0" , it.message)
+        }
+        assertThrows<IllegalArgumentException> { LruCache<String, String>(100, entriesRemovedAtEviction = 101) }.also {
+            assertEquals("entriesRemovedAtEviction must be in range [1..100], but was: 101" , it.message)
         }
     }
 
@@ -183,7 +193,7 @@ class LruCacheTest {
             thread {
                 startLatch.await()
                 try {
-                    (1 .. operationsPerThread).forEach { i ->
+                    (1..operationsPerThread).forEach { i ->
                         val key = threadIndex * operationsPerThread + i
                         cache.put(key, key)
                         cache.get(key)

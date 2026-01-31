@@ -29,7 +29,7 @@ internal class LruCache<K : Any, V>(
 ) {
 
     init {
-        require(capacity > 0) { "Capacity must be positive, but was: $capacity" }
+        require(capacity > 0) { "capacity must be positive, but was: $capacity" }
         require(evictionInterval >= 1) { "evictionInterval must be at least 1, but was: $evictionInterval" }
         require(entriesRemovedAtEviction in 1..capacity) { "entriesRemovedAtEviction must be in range [1..$capacity], but was: $entriesRemovedAtEviction" }
     }
