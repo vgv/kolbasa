@@ -11,6 +11,7 @@ import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.LruCache
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
@@ -55,9 +56,9 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         // read
         val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
-        val query = ConsumerSchemaHelpers.generateSelectPreparedQuery(
-            queue, consumerOptions, shards, receiveOptions, limit
-        )
+        val query = receiveQueryCache.getOrPut(CacheKey(queue.name, consumerOptions, shards, receiveOptions, limit)) {
+            ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, shards, receiveOptions, limit)
+        }
 
         val (execution, result) = TimeHelper.measure {
             connection.prepareStatement(query).use { preparedStatement ->
@@ -112,5 +113,18 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         )
 
         return removedMessages
+    }
+
+    private companion object {
+
+        data class CacheKey(
+            val queueName: String,
+            val consumerOptions: ConsumerOptions,
+            val shards: Shards,
+            val receiveOptions: ReceiveOptions,
+            val limit: Int
+        )
+
+        val receiveQueryCache = LruCache<CacheKey, String>(capacity = 1000)
     }
 }
