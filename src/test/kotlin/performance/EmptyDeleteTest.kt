@@ -1,5 +1,6 @@
 package performance
 
+import kolbasa.cluster.Shard
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.producer.Id
@@ -21,7 +22,7 @@ class EmptyDeleteTest : PerformanceTest {
 
         val randomIdsToDelete = (1..1000).map {
             (1..Env.EmptyDelete.oneDeleteMessages).map {
-                Id(Random.nextLong(), Random.nextInt())
+                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(Shard.MIN_SHARD, Shard.MAX_SHARD + 1))
             }
         }
 
