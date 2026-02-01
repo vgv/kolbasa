@@ -72,6 +72,8 @@ enum class FieldOption {
      * never been processed are unique.
      * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
      *
+     * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
+     *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
      * worse the performance impact, so use this field type only if uniqueness is truly required for the field. Indexes are
@@ -127,6 +129,8 @@ enum class FieldOption {
      * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
      * never been processed are unique.
      * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
+     *
+     * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
      *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
