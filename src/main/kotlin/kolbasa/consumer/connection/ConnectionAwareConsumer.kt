@@ -70,7 +70,7 @@ interface ConnectionAwareConsumer {
      * // Try to read a message with (userId<=10 OR userId=78) from the queue
      * val message = consumer.receive(queue) {
      *     // Type-safe DSL to filter messages
-     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }
      * ```
      *
@@ -130,7 +130,7 @@ interface ConnectionAwareConsumer {
      * // Try to read up to 100 messages with (userId<=10 OR userId=78) from the queue
      * val messages = consumer.receive(queue, 100) {
      *     // Type-safe DSL to filter messages
-     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }
      * ```
      *
