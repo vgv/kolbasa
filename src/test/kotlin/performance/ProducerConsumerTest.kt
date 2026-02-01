@@ -1,10 +1,10 @@
 package performance
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.useStatement
-import kolbasa.producer.datasource.DatabaseProducer
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -16,61 +16,62 @@ import kotlin.random.Random
 class ProducerConsumerTest : PerformanceTest {
 
     override fun run() {
-        Env.reportProducerConsumerTestEnv()
+        Env.ProducerConsumer.report()
 
         // Update
-        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.dataSource.useStatement { statement ->
+        Env.Common.dataSource.useStatement { statement ->
             statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
         }
 
         // Generate test data
         val randomData = (1..1000).map {
-            val dataSize = (Env.pcDataSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
+            val dataSize = (Env.ProducerConsumer.oneMessageSizeBytes * Random.nextDouble(0.9, 1.1)).toInt()
             Random.nextBytes(dataSize)
         }
 
-        val producedRecords = AtomicLong()
-        val consumedRecords = AtomicLong()
+        val sendCalls = AtomicLong()
+        val receiveCalls = AtomicLong()
 
-        val producerThreads = (1..Env.pcProducerThreads).map {
+        val sendMessages = AtomicLong()
+        val receiveMessages = AtomicLong()
+
+        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(batchSize = Env.ProducerConsumer.batchSize))
+        val consumer = DatabaseConsumer(Env.Common.dataSource)
+
+        val producerThreads = (1..Env.ProducerConsumer.producerThreads).map {
             thread {
-                val producer = DatabaseProducer(Env.dataSource, ProducerOptions(batchSize = Env.pcBatchSize))
-                while (true) {
-                    val produced = producedRecords.get()
-                    val consumed = consumedRecords.get()
+                while (sendCalls.get() < Env.ProducerConsumer.totalSendCalls) {
+                    // Keep the baseline
+                    while (sendMessages.get() > (receiveMessages.get() + Env.ProducerConsumer.queueSizeBaseline)) {
+                        TimeUnit.MILLISECONDS.sleep(10)
+                    }
 
-                    if (produced > consumed + Env.pcQueueSizeBaseline) {
-                        TimeUnit.MILLISECONDS.sleep(100)
-                    } else {
-                        val data = (1..Env.pcSendSize).map {
+                    if (sendCalls.incrementAndGet() <= Env.ProducerConsumer.totalSendCalls) {
+                        val data = (1..Env.ProducerConsumer.oneSendMessages).map {
                             SendMessage(randomData.random())
                         }
 
-                        val result = producer.send(queue, data)
-                        if (result.failedMessages > 0) {
-                            // Just throw first exception and finish
-                            throw result.onlyFailed().first().exception
-                        }
+                        producer.send(queue, data)
+                            .throwExceptionIfAny(addOthersAsSuppressed = false)
 
-                        // Increment
-                        producedRecords.addAndGet(data.size.toLong())
+                        sendMessages.addAndGet(data.size.toLong())
                     }
                 }
             }
         }
 
-        val consumerThreads = (1..Env.pcConsumerThreads).map {
+        val consumerThreads = (1..Env.ProducerConsumer.consumerThreads).map {
             thread {
-                val consumer = DatabaseConsumer(Env.dataSource)
-                while (true) {
-                    val result = consumer.receive(queue, Env.pcConsumerReceiveLimit)
+                while (receiveMessages.get() < Env.ProducerConsumer.totalSendCalls * Env.ProducerConsumer.oneSendMessages) {
+                    val result = consumer.receive(queue, Env.ProducerConsumer.consumerReceiveLimit)
                     consumer.delete(queue, result)
 
                     // Increment
-                    consumedRecords.addAndGet(result.size.toLong())
+                    receiveMessages.addAndGet(result.size.toLong())
+                    receiveCalls.incrementAndGet()
                 }
             }
         }
@@ -79,14 +80,23 @@ class ProducerConsumerTest : PerformanceTest {
         thread {
             val start = System.currentTimeMillis()
 
-            TimeUnit.SECONDS.sleep(10)
-            while (true) {
+            while (receiveMessages.get() < Env.ProducerConsumer.totalSendCalls * Env.ProducerConsumer.oneSendMessages) {
                 TimeUnit.SECONDS.sleep(1)
-                val currentProducer = producedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
-                val currentConsumer = consumedRecords.get() / ((System.currentTimeMillis() - start) / 1000)
+
                 val seconds = ((System.currentTimeMillis() - start) / 1000)
-                println("Seconds: $seconds, produced: $currentProducer items/sec, consumed: $currentConsumer items/sec")
-                println("-------------------------------------------")
+
+                val produced = sendMessages.get()
+                val produceRate = produced / seconds
+                val sendCallsMade = sendCalls.get()
+                val sendCallsRate = sendCallsMade / seconds
+
+                val recv = receiveMessages.get()
+                val recvRate = recv / seconds
+                val recvCallsMade = receiveCalls.get()
+                val recvCallsRate = recvCallsMade / seconds
+
+                println("Time: $seconds s, sent: $produced msg ($produceRate msg/s), calls: $sendCalls ($sendCallsRate calls/s); received: $recv msg ($recvRate msg/s), calls: $recvCallsMade ($recvCallsRate calls/s)")
+
             }
         }
 
@@ -95,7 +105,7 @@ class ProducerConsumerTest : PerformanceTest {
 
     companion object {
         private val queue = Queue.of(
-            name = "producer_consumer_test",
+            name = "producer_consumer_test_queue",
             databaseDataType = PredefinedDataTypes.ByteArray
         )
     }

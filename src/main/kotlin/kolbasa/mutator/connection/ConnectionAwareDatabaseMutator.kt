@@ -3,8 +3,8 @@ package kolbasa.mutator.connection
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.*
-import kolbasa.pg.DatabaseExtensions.usePreparedStatement
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue

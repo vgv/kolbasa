@@ -1,7 +1,7 @@
 package kolbasa.schema
 
-import kolbasa.pg.DatabaseExtensions.useConnection
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import javax.sql.DataSource

@@ -12,7 +12,7 @@ data class Message<Data>(
      * If you use a Kolbasa cluster, this identifier is unique within the cluster. There can be up to 1024 servers in a cluster,
      * but in any case, each message will have a unique ID.
      *
-     * If you do not use a Kolbase cluster, that is, you work in standalone mode, then the message is unique only within one
+     * If you do not use a Kolbasa cluster, that is, you work in standalone mode, then the message is unique only within one
      * database server, but there are no problems – you only have one server.
      */
     val id: Id,
@@ -45,7 +45,7 @@ data class Message<Data>(
      *
      * To avoid having to remember and work with magic constants (0), there is a convenient [isLastAttempt] method for checking
      *
-     * ```
+     * ```kotlin
      * fun processOneMessage(message: Message<Data, Meta>) {
      *   try {
      *     // ... business code to process the message ...

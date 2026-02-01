@@ -5,7 +5,7 @@ import io.mockk.verifySequence
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

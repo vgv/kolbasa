@@ -221,16 +221,16 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckSweepPeriod_LessThanMin() {
+    fun testCheckSweepProbability_LessThanMin() {
         assertThrows<IllegalStateException> {
-            Checks.checkSweepPeriod(SweepConfig.MIN_SWEEP_PERIOD - 1)
+            Checks.checkSweepProbability(SweepConfig.MIN_SWEEP_PROBABILITY - Math.ulp(SweepConfig.MIN_SWEEP_PROBABILITY))
         }
     }
 
     @Test
     fun testCheckSweepPeriod_MoreThanMax() {
         assertThrows<IllegalStateException> {
-            Checks.checkSweepPeriod(SweepConfig.MAX_SWEEP_PERIOD + 1)
+            Checks.checkSweepProbability(SweepConfig.MAX_SWEEP_PROBABILITY + Math.ulp(SweepConfig.MAX_SWEEP_PROBABILITY))
         }
     }
 

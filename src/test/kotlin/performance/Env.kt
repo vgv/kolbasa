@@ -1,100 +1,163 @@
 package performance
 
+import java.time.Duration
+
 object Env {
 
-    val test = System.getenv("test")
+    val test: String = System.getenv("test")
 
     // ==========================================================================
 
-    val pgHostname = System.getenv("host")
+    object Common {
+        val pgHostname: String? = System.getenv("host")
 
-    val pgPort = System.getenv("port")?.toIntOrNull() ?: 5432
+        val pgPort = System.getenv("port")?.toIntOrNull() ?: 5432
 
-    val pgDatabase = System.getenv("database")
+        val pgDatabase: String? = System.getenv("database")
 
-    val pgUser = System.getenv("user") ?: "postgres"
+        val pgUser = System.getenv("user") ?: "postgres"
 
-    val pgPassword = System.getenv("password") ?: ""
+        val pgPassword = System.getenv("password") ?: ""
 
-    val dataSourceType = System.getenv("datasource") ?: "internal"
+        val dataSourceType = System.getenv("datasource") ?: "internal"
 
-    val dataSource = if ("external" == dataSourceType) {
-        PerformanceDataSourceProvider.externalDatasource()
-    } else {
-        PerformanceDataSourceProvider.internalDatasource()
-    }
+        val dataSource = if ("external" == dataSourceType) {
+            PerformanceDataSourceProvider.externalDatasource()
+        } else {
+            PerformanceDataSourceProvider.internalDatasource()
+        }
 
-    // ==========================================================================
+        val pauseBeforeStart: Duration = Duration.ofSeconds(System.getenv("pause-before")?.toLongOrNull() ?: 0)
+        val pauseAfterFinish: Duration = Duration.ofSeconds(System.getenv("pause-after")?.toLongOrNull() ?: 0)
 
-    val pThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
-
-    val pSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
-
-    val pBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
-
-    val pDataSizeBytes = System.getenv("data_size_bytes")?.toIntOrNull() ?: 500
-
-    // ==========================================================================
-
-    val ecThreads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
-
-    // ==========================================================================
-
-    val pcProducerThreads: Int = System.getenv("producer-threads")?.toIntOrNull() ?: 1
-
-    val pcConsumerThreads: Int = System.getenv("consumer-threads")?.toIntOrNull() ?: 1
-
-    val pcQueueSizeBaseline = System.getenv("queue_size_baseline")?.toIntOrNull() ?: 0
-
-    val pcSendSize = System.getenv("send_size")?.toIntOrNull() ?: 1_000
-
-    val pcBatchSize = System.getenv("batch_size")?.toIntOrNull() ?: 500
-
-    val pcDataSizeBytes = System.getenv("data_size_bytes")?.toIntOrNull() ?: 500
-
-    val pcConsumerReceiveLimit = System.getenv("consumer_receive_limit")?.toIntOrNull() ?: 1000
-
-    // ==========================================================================
-
-    private fun generalReport() {
-        println("Test: $test")
-        println("Data source type: $dataSourceType")
-        if ("external" == dataSourceType) {
-            println("PG host: $pgHostname")
-            println("PG port: $pgPort")
-            println("PG database: $pgDatabase")
-            println("PG user: $pgUser")
+        fun report() {
+            println("Test: $test")
+            println("Pause before start: ${pauseBeforeStart.toSeconds()} seconds")
+            println("Pause after finish: ${pauseAfterFinish.toSeconds()} seconds")
+            println("Data source type: $dataSourceType")
+            if ("external" == dataSourceType) {
+                println("PG host: $pgHostname")
+                println("PG port: $pgPort")
+                println("PG database: $pgDatabase")
+                println("PG user: $pgUser")
+            }
         }
     }
 
-    fun reportProducerTestEnv() {
-        println("--------------------------------------------------")
-        generalReport()
-        println("Threads: $pThreads")
-        println("Producer send size: $pSendSize")
-        println("Producer batch size: $pBatchSize")
-        println("Data size: $pDataSizeBytes")
-        println("--------------------------------------------------")
+
+    // ==========================================================================
+
+    object OnlySend {
+        const val TEST_NAME = "only-send"
+
+        val threads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+        val totalSendCalls = System.getenv("total-send-calls")?.toLongOrNull() ?: Long.MAX_VALUE
+        val oneSendMessages = System.getenv("one-send-messages")?.toIntOrNull() ?: 1_000
+        val batchSize = System.getenv("batch-size")?.toIntOrNull() ?: 500
+        val oneMessageSizeBytes = System.getenv("one-message-size-bytes")?.toIntOrNull() ?: 500
+
+        fun report() {
+            println("--------------------------------------------------")
+            Common.report()
+            println("Threads: $threads")
+            println("Total send calls: ${if (totalSendCalls == Long.MAX_VALUE) "unlimited" else totalSendCalls}")
+            println("Messages per one send call: $oneSendMessages")
+            println("Producer batch size: $batchSize")
+            println("One message size (bytes): $oneMessageSizeBytes")
+            println("--------------------------------------------------")
+        }
     }
 
-    fun reportEmptyConsumerTestEnv() {
-        println("--------------------------------------------------")
-        generalReport()
-        println("Threads: $ecThreads")
-        println("--------------------------------------------------")
+    object OnlyReceive {
+        const val TEST_NAME = "only-receive"
+
+        val threads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+        val messages = System.getenv("messages")?.toIntOrNull() ?: 1_000_000
+        val oneMessageSizeBytes = System.getenv("one-message-size-bytes")?.toIntOrNull() ?: 500
+        val consumerReceiveLimit = System.getenv("consumer-receive-limit")?.toIntOrNull() ?: 1000
+
+        fun report() {
+            println("--------------------------------------------------")
+            Common.report()
+            println("Consumer threads: $threads")
+            println("Messages: $messages")
+            println("One message size (bytes): $oneMessageSizeBytes")
+            println("Consumer receive limit: $consumerReceiveLimit")
+            println("--------------------------------------------------")
+        }
     }
 
-    fun reportProducerConsumerTestEnv() {
-        println("--------------------------------------------------")
-        generalReport()
-        println("Producer threads: $pcProducerThreads")
-        println("Consumer threads: $pcConsumerThreads")
-        println("Queue size baseline: $pcQueueSizeBaseline")
-        println("Producer send size: $pcSendSize")
-        println("Producer batch size: $pcBatchSize")
-        println("Data size: $pcDataSizeBytes")
-        println("Consumer receive limit: $pcConsumerReceiveLimit")
-        println("--------------------------------------------------")
+    // ==========================================================================
+
+    object EmptyReceive {
+        const val TEST_NAME = "empty-receive"
+
+        val threads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+        val totalReceiveCalls = System.getenv("total-receive-calls")?.toLongOrNull() ?: Long.MAX_VALUE
+
+        fun report() {
+            println("--------------------------------------------------")
+            Common.report()
+            println("Threads: $threads")
+            println("Total receive calls: ${if (totalReceiveCalls == Long.MAX_VALUE) "unlimited" else totalReceiveCalls}")
+            println("--------------------------------------------------")
+        }
     }
 
+    object EmptyDelete {
+        const val TEST_NAME = "empty-delete"
+
+        val threads: Int = System.getenv("threads")?.toIntOrNull() ?: 1
+
+        val totalDeleteCalls = System.getenv("total-delete-calls")?.toLongOrNull() ?: Long.MAX_VALUE
+        val oneDeleteMessages = System.getenv("one-delete-messages")?.toIntOrNull() ?: 100
+
+        fun report() {
+            println("--------------------------------------------------")
+            Common.report()
+            println("Threads: $threads")
+            println("Total delete calls: ${if (totalDeleteCalls == Long.MAX_VALUE) "unlimited" else totalDeleteCalls}")
+            println("Messages per one delete call: $oneDeleteMessages")
+            println("--------------------------------------------------")
+        }
+    }
+
+    // ==========================================================================
+
+
+    object ProducerConsumer {
+        const val TEST_NAME = "producer-consumer"
+
+        val producerThreads: Int = System.getenv("producer-threads")?.toIntOrNull() ?: 1
+
+        val consumerThreads: Int = System.getenv("consumer-threads")?.toIntOrNull() ?: 1
+
+        val totalSendCalls = System.getenv("total-send-calls")?.toLongOrNull() ?: Long.MAX_VALUE
+
+        val queueSizeBaseline = System.getenv("queue-size-baseline")?.toIntOrNull() ?: 0
+
+        val oneSendMessages = System.getenv("one-send-messages")?.toIntOrNull() ?: 1_000
+
+        val batchSize = System.getenv("batch-size")?.toIntOrNull() ?: 500
+
+        val oneMessageSizeBytes = System.getenv("one-message-size-bytes")?.toIntOrNull() ?: 500
+
+        val consumerReceiveLimit = System.getenv("consumer-receive-limit")?.toIntOrNull() ?: 1000
+
+        fun report() {
+            println("--------------------------------------------------")
+            Common.report()
+            println("Producer threads: $producerThreads")
+            println("Consumer threads: $consumerThreads")
+            println("Total send calls: ${if (totalSendCalls == Long.MAX_VALUE) "unlimited" else totalSendCalls}")
+            println("Queue size baseline: $queueSizeBaseline")
+            println("Messages per one send call: $oneSendMessages")
+            println("Producer batch size: $batchSize")
+            println("One message size (bytes): $oneMessageSizeBytes")
+            println("Consumer receive limit: $consumerReceiveLimit")
+            println("--------------------------------------------------")
+        }
+    }
 }

@@ -1,7 +1,7 @@
 package performance
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -9,28 +9,27 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 
-class EmptyConsumerTest : PerformanceTest {
+class EmptyReceiveTest : PerformanceTest {
 
     override fun run() {
-        Env.reportEmptyConsumerTestEnv()
+        Env.EmptyReceive.report()
 
         // Update
-        SchemaHelpers.createOrUpdateQueues(Env.dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.dataSource.useStatement { statement ->
+        Env.Common.dataSource.useStatement { statement ->
             statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
         }
 
-        val consumeCalls = AtomicLong()
+        val receiveCalls = AtomicLong()
 
-        val consumerThreads = (1..Env.ecThreads).map {
+        val consumer = DatabaseConsumer(Env.Common.dataSource)
+
+        val consumerThreads = (1..Env.EmptyReceive.threads).map {
             thread {
-                val consumer = DatabaseConsumer(Env.dataSource)
-
-                while (true) {
+                while (receiveCalls.incrementAndGet() <= Env.EmptyReceive.totalReceiveCalls) {
                     consumer.receive(queue)
-                    consumeCalls.incrementAndGet()
                 }
             }
         }
@@ -39,11 +38,15 @@ class EmptyConsumerTest : PerformanceTest {
         thread {
             val start = System.currentTimeMillis()
 
-            while (true) {
+            while (receiveCalls.get() < Env.EmptyReceive.totalReceiveCalls) {
                 TimeUnit.SECONDS.sleep(1)
-                val currentCalls = consumeCalls.get() / ((System.currentTimeMillis() - start) / 1000)
+
                 val seconds = ((System.currentTimeMillis() - start) / 1000)
-                println("Seconds: $seconds, consumer calls: $currentCalls calls/sec")
+
+                val recvCalls = receiveCalls.get()
+                val receiveRate = recvCalls / seconds
+
+                println("Time: $seconds s, receive calls: $recvCalls ($receiveRate calls/s)")
                 println("-------------------------------------------")
             }
         }
@@ -53,12 +56,12 @@ class EmptyConsumerTest : PerformanceTest {
 
     companion object {
         private val queue = Queue.of(
-            name = "empty_consumer_test",
+            name = "empty_receive_test_queue",
             databaseDataType = PredefinedDataTypes.ByteArray
         )
     }
 }
 
 fun main() {
-    EmptyConsumerTest().run()
+    EmptyReceiveTest().run()
 }

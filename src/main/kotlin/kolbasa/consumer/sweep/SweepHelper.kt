@@ -2,20 +2,19 @@ package kolbasa.consumer.sweep
 
 import kolbasa.Kolbasa
 import kolbasa.consumer.ConsumerSchemaHelpers
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.max
 
 object SweepHelper {
 
-    fun needSweep(queue: Queue<*>): Boolean {
+    fun needSweep(): Boolean {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Sweep is disabled at all, stop all other checks
@@ -24,7 +23,7 @@ object SweepHelper {
         }
 
         // Check
-        if (!checkPeriod(queue, sweepConfig.period)) {
+        if (!checkProbability(sweepConfig.probability)) {
             return false
         }
 
@@ -51,17 +50,10 @@ object SweepHelper {
         return rawSweep(connection, queue, nodeId, messagesToSweep)
     }
 
-    internal fun checkPeriod(queue: Queue<*>, period: Int): Boolean {
-        // If we have to launch sweep at every consume, there is no reason to do any calculations
-        if (period == SweepConfig.EVERYTIME_SWEEP_PERIOD) {
-            return true
-        }
-
-        val counter = iterationsCounter.computeIfAbsent(queue.name) { _ ->
-            AtomicInteger(0)
-        }
-
-        return (counter.incrementAndGet() % period) == 0
+    internal fun checkProbability(probability: Double): Boolean = when (probability) {
+        0.0 -> false
+        1.0 -> true
+        else -> (ThreadLocalRandom.current().nextDouble() <= probability)
     }
 
     /**
@@ -88,8 +80,4 @@ object SweepHelper {
 
         return removedMessages
     }
-
-    // Queue name => Sweep period counter
-    private val iterationsCounter = ConcurrentHashMap<String, AtomicInteger>()
-
 }

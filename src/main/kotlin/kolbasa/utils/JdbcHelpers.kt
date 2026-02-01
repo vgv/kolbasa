@@ -1,4 +1,4 @@
-package kolbasa.pg
+package kolbasa.utils
 
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -6,7 +6,7 @@ import java.sql.ResultSet
 import java.sql.Statement
 import javax.sql.DataSource
 
-internal object DatabaseExtensions {
+internal object JdbcHelpers {
 
     fun <T> DataSource.useConnection(block: (Connection) -> T): T {
         return connection.use { connection ->

@@ -8,7 +8,7 @@ object Filter {
      * PostgreSQL normal equality operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID eq 42
      * ```
      * means `meta_user_id = 42`
@@ -28,7 +28,7 @@ object Filter {
      * PostgreSQL normal 'not equal' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID neq 42
      * ```
      * means `meta_user_id <> 42`
@@ -48,7 +48,7 @@ object Filter {
      * PostgreSQL 'greater than' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID greater 42
      * ```
      * means `meta_user_id > 42`
@@ -68,7 +68,7 @@ object Filter {
      * PostgreSQL 'greater than or equal to' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID greaterEq 42
      * ```
      * means `meta_user_id >= 42`
@@ -88,7 +88,7 @@ object Filter {
      * PostgreSQL 'less than' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID less 42
      * ```
      * means `meta_user_id < 42`
@@ -108,7 +108,7 @@ object Filter {
      * PostgreSQL 'less than or equal to' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID lessEq 42
      * ```
      * means `meta_user_id <= 42`
@@ -128,7 +128,7 @@ object Filter {
      * PostgreSQL 'between' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID between Pair(10, 20)
      * ```
      * means `(meta_user_id between 10 and 20)`
@@ -150,7 +150,7 @@ object Filter {
      * PostgreSQL classic like operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_NAME like "abc%"
      * ```
      * means `meta_user_name like 'abc%'`
@@ -184,7 +184,7 @@ object Filter {
      * PostgreSQL 'is null' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * isNull(USER_ID)
      * ```
      * means `meta_user_id is null`
@@ -204,7 +204,7 @@ object Filter {
      * PostgreSQL 'is not null' operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * isNotNull(USER_ID)
      * ```
      * means `meta_user_id is not null`
@@ -224,7 +224,7 @@ object Filter {
      * PostgreSQL in operator.
      *
      * Usage is the same as in SQL:
-     * ```
+     * ```kotlin
      * USER_ID in listOf(42)
      * ```
      * means `meta_user_id = ANY (42)`
@@ -252,12 +252,12 @@ object Filter {
      * class, you can use this method to create a condition with a custom SQL pattern.
      *
      * Usage
-     * ```
+     * ```kotlin
      * nativeSql("sin({0}) > 0.7 and {1}*{1}>1000", FIELD_1, FIELD_2)
      * ```
      *
      * This expression will be converted into this SQL expression:
-     * ```
+     * ```kotlin
      * sin(meta_field_1) > 0.7 and meta_field_2 * meta_field_2>1000
      * ```
      *

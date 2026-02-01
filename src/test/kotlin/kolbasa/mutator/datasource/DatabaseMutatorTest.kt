@@ -6,7 +6,7 @@ import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.SetScheduledAt
-import kolbasa.pg.DatabaseExtensions.readIntList
+import kolbasa.utils.JdbcHelpers.readIntList
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer

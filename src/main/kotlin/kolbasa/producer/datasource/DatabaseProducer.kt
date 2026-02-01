@@ -1,7 +1,7 @@
 package kolbasa.producer.datasource
 
 import kolbasa.Kolbasa
-import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.producer.SendRequest

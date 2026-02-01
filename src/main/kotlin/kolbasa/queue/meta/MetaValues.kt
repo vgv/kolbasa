@@ -3,6 +3,44 @@ package kolbasa.queue.meta
 import java.math.BigDecimal
 import java.math.BigInteger
 
+/**
+ * A container that holds a collection of [MetaValue] instances for a queue message.
+ *
+ * MetaValues groups all metadata field values together, providing type-safe access to individual
+ * values by their corresponding [MetaField] definitions.
+ *
+ * ## Creating MetaValues
+ *
+ * ```kotlin
+ * // Using vararg factory method
+ * val meta = MetaValues.of(
+ *     userId.value(12345L),
+ *     priority.value(10),
+ *     category.value("orders")
+ * )
+ *
+ * // Using list factory method
+ * val meta = MetaValues.of(listOf(userId.value(12345L)))
+ *
+ * // Empty metadata
+ * val empty = MetaValues.EMPTY
+ * ```
+ *
+ * ## Retrieving Values
+ *
+ * ```kotlin
+ * // Get value (throws if not found)
+ * val id: Long = meta.get(userId)
+ *
+ * // Get value or null
+ * val id: Long? = meta.getOrNull(userId)
+ * ```
+ *
+ * @property values the list of metadata values in this container
+ *
+ * @see MetaValue
+ * @see MetaField
+ */
 data class MetaValues(val values: List<MetaValue<*>>) {
 
     private val fieldsToValues: Map<MetaField<*>, MetaValue<*>> = values.associateBy { it.field }
@@ -40,6 +78,49 @@ data class MetaValues(val values: List<MetaValue<*>>) {
 }
 
 
+/**
+ * Represents a typed value bound to a specific [MetaField].
+ *
+ * MetaValue pairs a [MetaField] definition with an actual value, ensuring type safety
+ * between the field declaration and the data it holds. Instances are created through
+ * the [MetaField.value] method, not directly.
+ *
+ * ## Supported Types
+ *
+ * | Value Class        | Kotlin Type    |
+ * |--------------------|----------------|
+ * | [ByteValue]        | [Byte]         |
+ * | [ShortValue]       | [Short]        |
+ * | [IntValue]         | [Int]          |
+ * | [LongValue]        | [Long]         |
+ * | [BooleanValue]     | [Boolean]      |
+ * | [FloatValue]       | [Float]        |
+ * | [DoubleValue]      | [Double]       |
+ * | [StringValue]      | [String]       |
+ * | [BigIntegerValue]  | [BigInteger]   |
+ * | [BigDecimalValue]  | [BigDecimal]   |
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * // Define a meta field
+ * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ *
+ * // Create a value (binding) using the field's value() method
+ * val priorityValue: MetaValue<Int> = priority.value(10)
+ *
+ * // Access the underlying data
+ * val field: MetaField<Int> = priorityValue.field
+ * val value: Int = priorityValue.value
+ * ```
+ *
+ * @param T the type of value this instance holds
+ * @property field the metadata field definition this value belongs to
+ * @property value the actual typed value
+ *
+ * @see MetaField
+ * @see MetaValues
+ */
 sealed class MetaValue<T>(
     open val field: MetaField<T>,
     open val value: T

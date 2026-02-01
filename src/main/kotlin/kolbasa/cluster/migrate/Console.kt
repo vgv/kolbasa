@@ -2,7 +2,7 @@ package kolbasa.cluster.migrate
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.Parameter
-import kolbasa.pg.DatabaseExtensions.readString
+import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.schema.NodeId
 import org.postgresql.ds.PGSimpleDataSource
 import javax.sql.DataSource

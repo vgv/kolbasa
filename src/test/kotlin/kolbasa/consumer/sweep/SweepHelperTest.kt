@@ -3,8 +3,8 @@ package kolbasa.consumer.sweep
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.readInt
-import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -12,12 +12,15 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 class SweepHelperTest : AbstractPostgresqlTest() {
 
@@ -29,34 +32,31 @@ class SweepHelperTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testCheckPeriod_IfAlwaysOn() {
-        val queue = Queue.of("test", PredefinedDataTypes.String)
-        val iterations = 1_000_000
-
-        // Always false, if probability=0
-        (1..iterations).forEach { _ ->
-            assertTrue(SweepHelper.checkPeriod(queue, SweepConfig.EVERYTIME_SWEEP_PERIOD))
-        }
+    fun testCheckPeriod_Boundaries() {
+        assertFalse(SweepHelper.checkProbability(0.0))
+        assertTrue(SweepHelper.checkProbability(1.0))
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [3, 5, 13, 25, 143, 567, 34523])
-    fun testCheckPeriod(period: Int) {
-        val queue = Queue.of("test_$period", PredefinedDataTypes.String)
+    @ValueSource(doubles = [0.01, 0.4, 0.99])
+    fun testCheckPeriod(probability: Double) {
+        val yes = AtomicInteger(0)
+        val no = AtomicInteger(0)
 
-        // Restart iterations, find next period
-        while (!SweepHelper.checkPeriod(queue, period)) {
-            // NOP
+        val threads = (1..5).map { _ ->
+            thread {
+                (1..500_000).forEach { _ ->
+                    if (SweepHelper.checkProbability(probability))
+                        yes.incrementAndGet()
+                    else
+                        no.incrementAndGet()
+                }
+            }
         }
+        threads.forEach { it.join() }
 
-        // Test
-        (1..10).forEach { _ ->
-            var iterations = 0
-            while (!SweepHelper.checkPeriod(queue, period)) iterations++
-
-            // Test that "false"
-            assertEquals(period, iterations + 1)
-        }
+        val calculatedProbability = yes.toDouble() / (yes.get() + no.get())
+        assertEquals(probability, calculatedProbability, 0.1 * probability)
     }
 
     @Test

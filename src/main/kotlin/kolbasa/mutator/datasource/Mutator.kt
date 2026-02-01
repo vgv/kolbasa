@@ -134,11 +134,11 @@ interface Mutator {
      * Mutates all messages in one `queue` by applying `mutations` to every message that match the custom `filter` condition
      *
      * Filters can be specified using nice Kotlin lambda syntax as follows:
-     * ```
+     * ```kotlin
      * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
      * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
      *     // Type-safe DSL to filter messages
-     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }
      * ```
      *
@@ -159,11 +159,11 @@ interface Mutator {
      * Mutates all messages in one `queue` by applying `mutations` to every message that match the custom `filter` condition
      *
      * Filters can be specified using nice Kotlin lambda syntax as follows:
-     * ```
+     * ```kotlin
      * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
      * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
      *     // Type-safe DSL to filter messages
-     *     (Metadata::userId lessEq 10) or (Metadata::userId eq 78)
+     *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }
      * ```
      *
