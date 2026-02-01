@@ -32,20 +32,24 @@ enum class FieldOption {
      * Use this value if the meta field is used for record deduplication. In addition to deduplication, this option provides
      * filtering and sorting, similar to the [SEARCH] option.
      *
-     * Any message in a queue is in one of four states:
-     * 1) `PENDING` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
-     * 2) `PROCESSING` (or `IN-FLIGHT`) - a message is being processed right now. It has been received for processing by a
-     * consumer, but the processing has not yet been completed
-     * 3) `DELAYED` - similar to `PENDING`, but it has already been processed at least once; after an unsuccessful processing
-     * attempt, the message is waiting for the next attempt
-     * 4) `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue
+     * Any message in a queue is in one of six states:
+     * 1. `SCHEDULED` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
+     * and not yet visible to consumers if [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] (and other delays)
+     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `AVAILABLE`.
+     * 2. `AVAILABLE` - a message is ready to be processed, it is visible to consumers and can be received for processing.
+     * 3. `IN_FLIGHT` - a message is being processed right now. It has been received for processing by a
+     * consumer, but the processing has not yet been completed.
+     * 4. `RETRY_SCHEDULED` - similar to `SCHEDULED`, but it has already been processed at least once; after an unsuccessful
+     * processing attempt, the message is waiting for the next attempt.
+     * 5. `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue.
+     * 6. `COMPLETED` - the message has been successfully processed and removed from the queue.
      *
      * ```
-     *                                ┌───> DEAD
-     *                                │
-     *  PENDING ──────> PROCESSING ───────> COMPLETED
-     *            ↑                   │
-     *            └───── DELAYED  <───┘
+     *                                                ┌───> DEAD (remaining attempts is 0)
+     *                                                │
+     *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
+     *              ↑                                 │
+     *              └─────── RETRY_SCHEDULED <────────┘
      * ```
      *
      * For example, we have a `user_id` meta field by which we want to dedupe messages in the queue.
@@ -57,16 +61,16 @@ enum class FieldOption {
      * with `user_id = 123` in the queue. Therefore, a new message can be added without violating uniqueness.
      *
      * However, for the remaining scenarios, there are two reasonable, useful options:
-     * 1) All live messages (`PENDING` + `PROCESSING` + `DELAYED`) must be unique. If a message with `user_id = 123` is just
-     * added to the queue (`PENDING`), accepted for processing (`PROCESSING`), or awaiting the next processing attempt (`DELAYED`),
-     * it is still considered alive, since its processing has not yet been completed and we don't want duplicates with the
-     * same `user_id` in the queue.
+     * 1. All live messages (`SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`) must be unique. If a message
+     * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
+     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
+     * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
      * This is exactly how the [STRICT_UNIQUE] option works (i.e., all live messages are unique)
      *
-     * 2) Only new messages must be unique (`PENDING`). Once a message is accepted for processing for the first time, it is
-     * considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have never
-     * been processed are unique.
-     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `PENDING` messages are unique)
+     * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
+     * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
+     * never been processed are unique.
+     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
      *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
@@ -78,25 +82,29 @@ enum class FieldOption {
     STRICT_UNIQUE,
 
     /**
-     * Field is unique (for pending only messages) and searchable
+     * Field is unique (for "untouched" only messages) and searchable
      *
      * Use this value if the meta field is used for record deduplication. In addition to deduplication, this option provides
      * filtering and sorting, similar to the [SEARCH] option.
      *
-     * Any message in a queue is in one of four states:
-     * 1) `PENDING` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
-     * 2) `PROCESSING` (or `IN-FLIGHT`) - a message is being processed right now. It has been received for processing by a
-     * consumer, but the processing has not yet been completed
-     * 3) `DELAYED` - similar to `PENDING`, but it has already been processed at least once; after an unsuccessful processing
-     * attempt, the message is waiting for the next attempt
-     * 4) `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue
+     * Any message in a queue is in one of six states:
+     * 1. `SCHEDULED` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
+     * and not yet visible to consumers if [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] (and other delays)
+     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `AVAILABLE`.
+     * 2. `AVAILABLE` - a message is ready to be processed, it is visible to consumers and can be received for processing.
+     * 3. `IN_FLIGHT` - a message is being processed right now. It has been received for processing by a
+     * consumer, but the processing has not yet been completed.
+     * 4. `RETRY_SCHEDULED` - similar to `SCHEDULED`, but it has already been processed at least once; after an unsuccessful
+     * processing attempt, the message is waiting for the next attempt.
+     * 5. `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue.
+     * 6. `COMPLETED` - the message has been successfully processed and removed from the queue.
      *
      * ```
-     *                                ┌───> DEAD
-     *                                │
-     *  PENDING ──────> PROCESSING ───────> COMPLETED
-     *            ↑                   │
-     *            └───── DELAYED  <───┘
+     *                                                ┌───> DEAD (remaining attempts is 0)
+     *                                                │
+     *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
+     *              ↑                                 │
+     *              └─────── RETRY_SCHEDULED <────────┘
      * ```
      *
      * For example, we have a `user_id` meta field by which we want to dedupe messages in the queue.
@@ -108,16 +116,16 @@ enum class FieldOption {
      * with `user_id = 123` in the queue. Therefore, a new message can be added without violating uniqueness.
      *
      * However, for the remaining scenarios, there are two reasonable, useful options:
-     * 1) All live messages (`PENDING` + `PROCESSING` + `DELAYED`) must be unique. If a message with `user_id = 123` is just
-     * added to the queue (`PENDING`), accepted for processing (`PROCESSING`), or awaiting the next processing attempt (`DELAYED`),
-     * it is still considered alive, since its processing has not yet been completed and we don't want duplicates with the
-     * same `user_id` in the queue.
+     * 1. All live messages (`SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`) must be unique. If a message
+     * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
+     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
+     * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
      * This is exactly how the [STRICT_UNIQUE] option works (i.e., all live messages are unique)
      *
-     * 2) Only new messages must be unique (`PENDING`). Once a message is accepted for processing for the first time, it is
-     * considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have never
-     * been processed are unique.
-     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `PENDING` messages are unique)
+     * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
+     * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
+     * never been processed are unique.
+     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
      *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
