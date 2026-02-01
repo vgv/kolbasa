@@ -50,20 +50,20 @@ class ProducerSchemaHelpersTest {
 
     @Test
     fun testCalculateDeduplicationMode_SendOptionsDefined() {
-        val sendOptions = SendOptions(deduplicationMode = DeduplicationMode.ERROR)
-        val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+        val sendOptions = SendOptions(deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE)
+        val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
 
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, sendOptions)
-        assertEquals(DeduplicationMode.ERROR, deduplicationMode)
+        assertEquals(DeduplicationMode.FAIL_ON_DUPLICATE, deduplicationMode)
     }
 
     @Test
     fun testCalculateDeduplicationMode_SendOptionsNotDefined() {
         val sendOptions = SendOptions.DEFAULT
-        val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+        val producerOptions = ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
 
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, sendOptions)
-        assertEquals(DeduplicationMode.IGNORE_DUPLICATES, deduplicationMode)
+        assertEquals(DeduplicationMode.IGNORE_DUPLICATE, deduplicationMode)
     }
 
     @Test

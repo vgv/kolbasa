@@ -101,7 +101,7 @@ data class ProducerOptions(
      * table and no errors will be thrown. For example, if you try to send 10,000 messages and 100 of them have duplicated
      * unique keys, only 9,900 messages will be inserted into the queue table.
      */
-    val deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR,
+    val deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE,
 
     /**
      * Batch size for sending messages. Default value is 500.
@@ -166,7 +166,7 @@ data class ProducerOptions(
         private var delay: Duration? = null
         private var attempts: Int? = null
         private var producer: String? = null
-        private var deduplicationMode: DeduplicationMode = DeduplicationMode.ERROR
+        private var deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
         private var batchSize: Int = DEFAULT_BATCH_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
         private var shard: Int? = null

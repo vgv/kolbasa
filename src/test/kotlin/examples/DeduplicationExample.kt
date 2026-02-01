@@ -35,10 +35,10 @@ fun main() {
 
     // -------------------------------------------------------------------------------------------
     // Create producer and send 10 messages with meta information with duplicated userId field.
-    // By default, the deduplication mode is set to ERROR, so, if you try to send a message with the existing
+    // By default, the deduplication mode is set to FAIL_ON_DUPLICATE, so, if you try to send a message with the existing
     // userId, an exception will be thrown.
     // However, depending on your task, it may be useful to simply ignore these errors and insert only those messages
-    // where there are no duplicates. There is a mode of operation for this IGNORE_DUPLICATES
+    // where there are no duplicates. There is a mode of operation for this IGNORE_DUPLICATE
     // Here we will use this mode and create 10 messages with only 5 unique userId values and make sure that send() call
     // does not throw an exception.
     val producer = DatabaseProducer(dataSource)
@@ -50,7 +50,7 @@ fun main() {
         queue = queue,
         request = SendRequest(
             data = messagesToSend,
-            sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+            sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
         )
     )
 

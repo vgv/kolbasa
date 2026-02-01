@@ -89,14 +89,14 @@ For simplicity, this example is broken into two parts:
 ### Deduplication
 Kolbasa has the ability to use deduplication when sending messages to the queue.
 
-There are two different modes ([DeduplicationMode](src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `ERROR` and `IGNORE_DUPLICATES`
+There are two different modes ([DeduplicationMode](src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `FAIL_ON_DUPLICATE` and `IGNORE_DUPLICATE`
 
-The `ERROR` mode is the default. If you try to send a message with an existing unique key, the operation will fail and,
+The `FAIL_ON_DUPLICATE` mode is the default. If you try to send a message with an existing unique key, the operation will fail and,
 depending on the [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, only part of the messages (or none)
 will be sent. In business code, you can handle this error and, for example, write to log, postpone sending the message or change
-the unique key. Since this mode is trivial, in this example we will consider the second option, the more interesting `IGNORE_DUPLICATES` mode.
+the unique key. Since this mode is trivial, in this example we will consider the second option, the more interesting `IGNORE_DUPLICATE` mode.
 
-The `IGNORE_DUPLICATES` mode allows you to simply silently ignore uniqueness errors and add to the queue only those messages that
+The `IGNORE_DUPLICATE` mode allows you to simply silently ignore uniqueness errors and add to the queue only those messages that
 are not already in the queue. For example, you send 100 messages, 5 of which are duplicates of existing messages in the queue.
 In this case, only 95 messages will be added to the queue and no errors will occur.
 
