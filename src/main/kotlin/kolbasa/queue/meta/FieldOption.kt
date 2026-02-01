@@ -1,5 +1,79 @@
 package kolbasa.queue.meta
 
+/**
+ * Specifies indexing and uniqueness behavior for a [MetaField].
+ *
+ * Each meta field attached to a queue can have different storage and indexing characteristics.
+ * The field option you choose affects performance, filtering/sorting capabilities, and deduplication behavior.
+ *
+ * ## Options Overview
+ *
+ * | Option              | Index    | Unique | Filter/Sort | Use Case                                    |
+ * |---------------------|----------|--------|-------------|---------------------------------------------|
+ * | [NONE]              | No       | No     | No          | Store-only data, no queries needed          |
+ * | [SEARCH]            | Yes      | No     | Yes         | Fields used for filtering or sorting        |
+ * | [ALL_LIVE_UNIQUE]   | Unique   | Yes    | Yes         | Deduplication across all live messages      |
+ * | [UNTOUCHED_UNIQUE]  | Unique   | Yes    | Yes         | Deduplication only for unprocessed messages |
+ *
+ * ## Message States
+ *
+ * To understand uniqueness options, it helps to know the message lifecycle states:
+ *
+ * ```
+ *                                                ┌───> DEAD (remaining attempts is 0)
+ *                                                │
+ *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
+ *              ↑                                 │
+ *              └─────── RETRY_SCHEDULED <────────┘
+ * ```
+ *
+ * - **SCHEDULED** — message is waiting, not yet visible to consumers (if delay > 0)
+ * - **AVAILABLE** — message is ready for processing
+ * - **IN_FLIGHT** — message is currently being processed
+ * - **RETRY_SCHEDULED** — message failed processing, waiting for retry
+ * - **DEAD** — all attempts exhausted, message is logically removed
+ * - **COMPLETED** — successfully processed and removed
+ *
+ * The uniqueness options differ in which states are considered "live" for deduplication:
+ * - [ALL_LIVE_UNIQUE]: `SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`
+ * - [UNTOUCHED_UNIQUE]: `SCHEDULED` + `AVAILABLE` only
+ *
+ * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * // Store-only field (no queries)
+ * val justData = MetaField.string("just_data", FieldOption.NONE)
+ *
+ * // Searchable field for filtering/sorting
+ * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ *
+ * // Unique field for deduplication (all live messages)
+ * val accountId = MetaField.long("account_id", FieldOption.ALL_LIVE_UNIQUE)
+ *
+ * // Unique field for deduplication (untouched messages only)
+ * val requestId = MetaField.string("request_id", FieldOption.UNTOUCHED_UNIQUE)
+ *
+ * // Create queue with meta fields
+ * val queue = Queue.of(
+ *     name = "notifications",
+ *     dataType = PredefinedDataTypes.String,
+ *     metadata = Metadata.of(justData, priority, accountId, requestId)
+ * )
+ * ```
+ *
+ * ## Performance Considerations
+ *
+ * - [NONE] is most efficient — no index overhead
+ * - [SEARCH], [ALL_LIVE_UNIQUE], and [UNTOUCHED_UNIQUE] create database indexes
+ * - More indexes = slower inserts, but necessary for filtering/sorting/deduplication
+ * - Choose the minimal option that meets your requirements
+ *
+ * @see MetaField
+ * @see kolbasa.producer.DeduplicationMode for controlling duplicate handling behavior
+ * @see kolbasa.producer.ProducerOptions.deduplicationMode
+ */
 enum class FieldOption {
     /**
      * No special options
@@ -82,6 +156,7 @@ enum class FieldOption {
      * strange and fragile workarounds.
      */
     ALL_LIVE_UNIQUE,
+    @Deprecated("Use ALL_LIVE_UNIQUE instead", ReplaceWith("ALL_LIVE_UNIQUE"))
     STRICT_UNIQUE,
 
     /**
@@ -139,7 +214,9 @@ enum class FieldOption {
      * If your application truly requires a queue with deduplication for one or more meta fields, add them; don't build
      * strange and fragile workarounds.
      */
-    PENDING_ONLY_UNIQUE,
     UNTOUCHED_UNIQUE,
+    @Deprecated("Use UNTOUCHED_UNIQUE instead", ReplaceWith("UNTOUCHED_UNIQUE"))
+    PENDING_ONLY_UNIQUE,
+
 }
 
