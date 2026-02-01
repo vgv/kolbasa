@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 
 class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.STRICT_UNIQUE)
+    private val FIELD = MetaField.int("field", FieldOption.ALL_LIVE_UNIQUE)
 
     private val queue = Queue.of("local", PredefinedDataTypes.String, metadata = Metadata.of(FIELD))
 

@@ -65,12 +65,12 @@ enum class FieldOption {
      * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
      * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
      * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
-     * This is exactly how the [STRICT_UNIQUE] option works (i.e., all live messages are unique)
+     * This is exactly how the [ALL_LIVE_UNIQUE] option works (i.e., all live messages are unique)
      *
      * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
      * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
      * never been processed are unique.
-     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
+     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
      *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
@@ -79,6 +79,7 @@ enum class FieldOption {
      * If your application truly requires a queue with deduplication for one or more meta fields, add them; don't build
      * strange and fragile workarounds.
      */
+    ALL_LIVE_UNIQUE,
     STRICT_UNIQUE,
 
     /**
@@ -120,12 +121,12 @@ enum class FieldOption {
      * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
      * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
      * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
-     * This is exactly how the [STRICT_UNIQUE] option works (i.e., all live messages are unique)
+     * This is exactly how the [ALL_LIVE_UNIQUE] option works (i.e., all live messages are unique)
      *
      * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
      * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
      * never been processed are unique.
-     * This is exactly how the [PENDING_ONLY_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
+     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
      *
      * Implementation details:
      * An unique index is created in the database for each such field. The general rule is that the more indexes, the
@@ -134,6 +135,7 @@ enum class FieldOption {
      * If your application truly requires a queue with deduplication for one or more meta fields, add them; don't build
      * strange and fragile workarounds.
      */
-    PENDING_ONLY_UNIQUE
+    PENDING_ONLY_UNIQUE,
+    UNTOUCHED_UNIQUE,
 }
 

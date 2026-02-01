@@ -25,8 +25,8 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     private val STRING_FIELD = MetaField.string("string_value")
     private val LONG_FIELD = MetaField.long("long_value", FieldOption.SEARCH)
-    private val INT_FIELD = MetaField.int("int_value", FieldOption.STRICT_UNIQUE)
-    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.PENDING_ONLY_UNIQUE)
+    private val INT_FIELD = MetaField.int("int_value", FieldOption.ALL_LIVE_UNIQUE)
+    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.UNTOUCHED_UNIQUE)
     private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
     private val DOUBLE_FIELD = MetaField.double("double_value")
     private val FLOAT_FIELD = MetaField.float("float_value")

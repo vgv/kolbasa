@@ -22,7 +22,7 @@ import org.junit.jupiter.api.assertNotNull
 
 class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.STRICT_UNIQUE)
+    private val FIELD = MetaField.int("field", FieldOption.ALL_LIVE_UNIQUE)
 
     private val queue = Queue.of(
         "local",

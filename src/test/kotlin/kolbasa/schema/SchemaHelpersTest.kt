@@ -198,8 +198,8 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
 
     private fun createRandomQueue(number: Int): Queue<*> {
         val first = MetaField.int("first", FieldOption.SEARCH)
-        val second = MetaField.long("second", FieldOption.STRICT_UNIQUE)
-        val third = MetaField.string("third", FieldOption.PENDING_ONLY_UNIQUE)
+        val second = MetaField.long("second", FieldOption.ALL_LIVE_UNIQUE)
+        val third = MetaField.string("third", FieldOption.UNTOUCHED_UNIQUE)
         val fourth = MetaField.boolean("fourth")
 
         val databaseType = when (Random.nextInt(4)) {

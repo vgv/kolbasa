@@ -14,7 +14,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-private val USER_ID = MetaField.int("user_id", FieldOption.STRICT_UNIQUE)
+private val USER_ID = MetaField.int("user_id", FieldOption.ALL_LIVE_UNIQUE)
 
 fun main() {
     // Define queue with name `test_queue`, varchar type as data storage and metadata
