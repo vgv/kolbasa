@@ -9,7 +9,7 @@ import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.MutatorSchemaHelpers
 import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.connection.ConnectionAwareMutator
-import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture

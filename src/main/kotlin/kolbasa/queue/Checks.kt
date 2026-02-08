@@ -108,9 +108,9 @@ internal object Checks {
         }
     }
 
-    fun checkSweepPeriod(period: Int) {
-        check(period in SweepConfig.MIN_SWEEP_PERIOD..SweepConfig.MAX_SWEEP_PERIOD) {
-            "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PERIOD}..${SweepConfig.MAX_SWEEP_PERIOD}] range"
+    fun checkSweepProbability(probability: Double) {
+        check(probability in SweepConfig.MIN_SWEEP_PROBABILITY..SweepConfig.MAX_SWEEP_PROBABILITY) {
+            "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PROBABILITY}..${SweepConfig.MAX_SWEEP_PROBABILITY}] range"
         }
     }
 

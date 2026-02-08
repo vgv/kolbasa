@@ -4,6 +4,29 @@ import kolbasa.queue.Checks
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 
+/**
+ * Configuration options for a [Producer][kolbasa.producer.datasource.Producer] instance.
+ *
+ * ProducerOptions defines default behavior for all messages sent through a specific producer.
+ * These settings serve as defaults that can be overridden at more granular levels.
+ *
+ * ## Options Hierarchy
+ *
+ * Kolbasa uses a layered configuration system where more specific settings override general ones.
+ * For producer-related settings (`delay`, `attempts`, etc.), the priority order is:
+ *
+ * ```
+ * QueueOptions (lowest) → ProducerOptions → SendOptions → MessageOptions (highest)
+ * ```
+ *
+ * For example, if [QueueOptions][kolbasa.queue.QueueOptions] sets `delay = 10 min` and ProducerOptions
+ * sets `delay = 5 min`, messages from this producer will use the 5-minute delay. You can read more about the override hierarchy
+ * in the documentation of individual options.
+ *
+ * @see SendOptions for per-send() call overrides
+ * @see MessageOptions for per-message overrides
+ * @see kolbasa.queue.QueueOptions for queue-wide defaults
+ */
 data class ProducerOptions(
     /**
      * Delay before message will be visible to consumers.

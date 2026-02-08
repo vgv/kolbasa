@@ -26,9 +26,9 @@ object PerformanceDataSourceProvider {
      */
     fun externalDatasource(): DataSource {
         return HikariDataSource().apply {
-            jdbcUrl = "jdbc:postgresql://${Env.pgHostname}:${Env.pgPort}/${Env.pgDatabase}"
-            username = Env.pgUser
-            password = Env.pgPassword
+            jdbcUrl = "jdbc:postgresql://${Env.Common.pgHostname}:${Env.Common.pgPort}/${Env.Common.pgDatabase}"
+            username = Env.Common.pgUser
+            password = Env.Common.pgPassword
         }
     }
 

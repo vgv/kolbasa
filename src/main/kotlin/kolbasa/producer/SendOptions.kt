@@ -4,6 +4,42 @@ import kolbasa.queue.Checks
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 
+/**
+ * Configuration options for a single `send()` call.
+ *
+ * SendOptions allows overriding [ProducerOptions] for a specific `send()` invocation.
+ * This is useful when you need different behavior for certain batches of messages
+ * without creating multiple producer instances.
+ *
+ * ## Options Hierarchy
+ *
+ * Kolbasa uses a layered configuration system where more specific settings override general ones.
+ * For producer-related settings (`delay`, `attempts`, etc.), the priority order is:
+ *
+ * ```
+ * QueueOptions (lowest) → ProducerOptions → SendOptions → MessageOptions (highest)
+ * ```
+ *
+ * For example, if [ProducerOptions] sets `delay = 5 min` and SendOptions sets `delay = 2 min`,
+ * messages in this specific `send()` call will use the 2-minute delay.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = SendOptions(
+ *     delay = Duration.ofMinutes(2),
+ *     attempts = 10,
+ *     shard = 42
+ * )
+ *
+ * // Use options in send() call
+ * producer.send(queue, SendRequest(data = messages, sendOptions = options))
+ * ```
+ *
+ * @see ProducerOptions for producer-level defaults
+ * @see MessageOptions for per-message overrides (highest priority)
+ * @see kolbasa.queue.QueueOptions for queue-wide defaults
+ */
 data class SendOptions(
     /**
      * Delay before message will be visible to consumers.

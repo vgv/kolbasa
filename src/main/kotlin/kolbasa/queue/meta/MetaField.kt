@@ -9,6 +9,70 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
 
+/**
+ * Represents a typed metadata field that can be attached to queue message.
+ *
+ * Meta fields allow you to store additional typed information alongside your queue messages.
+ * This metadata can be used for filtering, sorting, and deduplication of messages without
+ * deserializing the message payload (which can be quite expensive).
+ *
+ * ## Supported Types
+ *
+ * | Factory Method   | Kotlin Type    | PostgreSQL Type        |
+ * |------------------|----------------|------------------------|
+ * | [byte]           | [Byte]         | `smallint`             |
+ * | [short]          | [Short]        | `smallint`             |
+ * | [int]            | [Int]          | `int`                  |
+ * | [long]           | [Long]         | `bigint`               |
+ * | [boolean]        | [Boolean]      | `boolean`              |
+ * | [float]          | [Float]        | `real`                 |
+ * | [double]         | [Double]       | `double precision`     |
+ * | [string]         | [String]       | `varchar`              |
+ * | [bigInteger]     | [BigInteger]   | `numeric`              |
+ * | [bigDecimal]     | [BigDecimal]   | `numeric`              |
+ *
+ * ## Field Options
+ *
+ * Each field can be created with a [FieldOption] that controls indexing and uniqueness:
+ * - [FieldOption.NONE] - No index, just stores data (most efficient)
+ * - [FieldOption.SEARCH] - Creates an index for filtering/sorting
+ * - [FieldOption.STRICT_UNIQUE] - Unique constraint across all live messages (PENDING + PROCESSING + DELAYED)
+ * - [FieldOption.PENDING_ONLY_UNIQUE] - Unique constraint only for PENDING messages
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * // Define meta fields
+ * val accountId = MetaField.long("account_id", FieldOption.SEARCH)
+ * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ * val deduplicationKey = MetaField.string("deduplication_key", FieldOption.STRICT_UNIQUE)
+ *
+ * // Create queue with meta fields
+ * val queue = Queue.of(
+ *     name = "orders",
+ *     metadata = listOf(userId, priority, deduplicationKey),
+ *     ...
+ * )
+ *
+ * // Send message with meta values
+ * producer.send(
+ *     queue,
+ *     SendMessage("payload_data", meta = MetaValues.of(
+ *         userId.value(12345L),
+ *         priority.value(10),
+ *         deduplicationKey.value("unique-key-001")
+ *     ))
+ * )
+ * ```
+ *
+ * @param T the type of value this field holds
+ * @property name the field name, used as the base to generate a column name in a database
+ * @property option the field option controlling indexing and uniqueness behavior
+ *
+ * @see Metadata
+ * @see FieldOption
+ * @see MetaValue
+ */
 sealed class MetaField<T>(
     open val name: String,
     open val option: FieldOption,

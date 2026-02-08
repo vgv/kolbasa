@@ -2,6 +2,19 @@ package kolbasa.queue
 
 import java.time.Duration
 
+/**
+ * Global queue options
+ *
+ * Default options for a queue, which can be overridden at various levels, from producer and consumer options
+ * to individual `send()` and `receive()` calls, and finally to individual messages.
+ *
+ * For more details on how options can be overridden, see the documentation for these classes:
+ * 1. [ProducerOptions][kolbasa.producer.ProducerOptions]
+ * 2. [ConsumerOptions][kolbasa.consumer.ConsumerOptions]
+ * 3. [SendOptions][kolbasa.producer.SendOptions]
+ * 4. [MessageOptions][kolbasa.producer.MessageOptions]
+ * 5. [ReceiveOptions][kolbasa.consumer.ReceiveOptions]
+ */
 data class QueueOptions(
     /**
      * Default queue delay, before message will be visible to consumers.
@@ -87,7 +100,8 @@ data class QueueOptions(
 
         fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
         fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
-        fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) = apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
+        fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
+            apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
         fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout)
     }

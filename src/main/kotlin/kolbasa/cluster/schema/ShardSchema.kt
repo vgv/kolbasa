@@ -1,9 +1,9 @@
 package kolbasa.cluster.schema
 
 import kolbasa.cluster.Shard
-import kolbasa.pg.DatabaseExtensions.readBoolean
-import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.readBoolean
+import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node

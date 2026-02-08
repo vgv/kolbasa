@@ -1,7 +1,7 @@
 package kolbasa.cluster.migrate
 
-import kolbasa.pg.DatabaseExtensions.usePreparedStatement
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.*
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement

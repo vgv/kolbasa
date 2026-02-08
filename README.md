@@ -33,14 +33,14 @@ version 10 and above.
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.169.0"
+implementation "io.github.vgv:kolbasa:0.184.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.169.0</version>
+    <version>0.184.0</version>
 </dependency>
 ```
 

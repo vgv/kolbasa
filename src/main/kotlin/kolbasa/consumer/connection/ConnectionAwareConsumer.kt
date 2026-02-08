@@ -30,7 +30,7 @@ import java.sql.Connection
  * current active JDBC connection to every `receive` method.
  *
  * In case of Hibernate, it may look like this
- * ```
+ * ```kotlin
  * session.doWork { connection ->
  *    consumer.receive(queue)?.let { message ->
  *       // business logic
@@ -66,7 +66,7 @@ interface ConnectionAwareConsumer {
      * Receives one message from the queue using custom filters, if any. Returns null if no message matches the filters.
      *
      * Filters can be specified using nice Kotlin lambda syntax as follows:
-     * ```
+     * ```kotlin
      * // Try to read a message with (userId<=10 OR userId=78) from the queue
      * val message = consumer.receive(queue) {
      *     // Type-safe DSL to filter messages
@@ -126,7 +126,7 @@ interface ConnectionAwareConsumer {
      * matches the filters.
      *
      * Filters can be specified using nice Kotlin lambda syntax as follows:
-     * ```
+     * ```kotlin
      * // Try to read up to 100 messages with (userId<=10 OR userId=78) from the queue
      * val messages = consumer.receive(queue, 100) {
      *     // Type-safe DSL to filter messages

@@ -1,7 +1,7 @@
 package kolbasa.producer.datasource
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.pg.DatabaseExtensions.readInt
+import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions

@@ -3,6 +3,29 @@ package kolbasa.consumer
 import kolbasa.queue.Checks
 import java.time.Duration
 
+/**
+ * Configuration options for a [Consumer][kolbasa.consumer.datasource.Consumer] instance.
+ *
+ * ConsumerOptions defines default behavior for all messages received through a specific consumer.
+ * These settings serve as defaults that can be overridden by [ReceiveOptions] for individual
+ * `receive()` calls.
+ *
+ * ## Options Hierarchy
+ *
+ * Kolbasa uses a layered configuration system where more specific settings override general ones.
+ * For consumer-related settings, the priority order is:
+ *
+ * ```
+ * QueueOptions (lowest) → ConsumerOptions → ReceiveOptions (highest)
+ * ```
+ *
+ * For example, if [QueueOptions][kolbasa.queue.QueueOptions] sets `visibilityTimeout = 10 min`
+ * and ConsumerOptions sets `visibilityTimeout = 5 min`, messages received by this consumer
+ * will use the 5-minute timeout. You can read more about the override hierarchy in the documentation of individual options.
+ *
+ * @see ReceiveOptions for per-receive() call overrides
+ * @see kolbasa.queue.QueueOptions for queue-wide defaults
+ */
 data class ConsumerOptions(
     /**
      * Arbitrary consumer name. Every message, consumed by this consumer will have this name in the 'consumer' column of

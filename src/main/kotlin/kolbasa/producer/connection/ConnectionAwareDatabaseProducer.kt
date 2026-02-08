@@ -1,7 +1,7 @@
 package kolbasa.producer.connection
 
-import kolbasa.pg.DatabaseExtensions.usePreparedStatement
-import kolbasa.pg.DatabaseExtensions.useSavepoint
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId

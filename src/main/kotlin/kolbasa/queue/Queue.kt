@@ -45,6 +45,24 @@ data class Queue<Data> @JvmOverloads constructor(
      * Metadata is a set of fields that will be stored in the database along with the message. Each message has
      * its own metadata values. Metadata is not required and can be empty.
      * It's useful if you want to filter messages by some fields or sort by them.
+     *
+     * It may not be entirely obvious at first whether you should store a specific data in the message body or in metadata.
+     * A few simple questions can help clarify this. Let's use the abstract field `account_id int` as an example. Should this
+     * field be part of the message body along with the rest of the data or stored separately as metadata?
+     *
+     * 1. Do you plan to filter or sort by this field? If the answer is "Yes," it is metadata.
+     * 2. Have you built complex, custom message routing between different clusters/queues based on filtering by this field?
+     * Not necessarily using Kolbasa alone, perhaps involving third-party DBMS utilities for replication/monitoring? If the
+     * answer is "Yes," there's a 99% chance this field should be metadata.
+     * 3. Have you implemented monitoring/alerting based on this field using external utils (psql, Zabbix, Nagios)?
+     * For example, alerts for high message volume for a specific `account_id`? If the answer is "Yes", it's very likely this
+     * field is metadata.
+     * 4. Is this field part of business logic? Is it involved in any business code? If the answer is "Yes," it is the message body.
+     * 5. For everything to work, do you need to pass not only the message body but also this field from the metadata to the
+     * business code?  If the answer is "Yes, this is 99% likely a mistake, and in this case, this field should be part of the
+     * message body.
+     * 6. If you disable metadata retrieval, will the business logic break? If the answer is "Yes," you've placed the business
+     * data in the wrong place (metadata); it should be part of the message body.
      */
     val metadata: Metadata = Metadata.EMPTY
 ) {

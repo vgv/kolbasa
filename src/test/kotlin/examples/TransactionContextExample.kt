@@ -1,8 +1,8 @@
 package examples
 
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.useConnection
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue

@@ -1,9 +1,9 @@
 package kolbasa.schema
 
-import kolbasa.pg.DatabaseExtensions.readBoolean
-import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
-import kolbasa.pg.DatabaseExtensions.usePreparedStatement
-import kolbasa.pg.DatabaseExtensions.useStatement
+import kolbasa.utils.JdbcHelpers.readBoolean
+import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.PreparedStatement
 import java.sql.Statement
 import javax.sql.DataSource

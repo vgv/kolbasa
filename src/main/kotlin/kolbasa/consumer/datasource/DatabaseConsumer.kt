@@ -5,7 +5,7 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareConsumer
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
-import kolbasa.pg.DatabaseExtensions.useConnection
+import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource

@@ -32,7 +32,7 @@ import java.time.Duration
  * current active JDBC connection to every `mutate` method.
  *
  * In case of Hibernate, it may look like this
- * ```
+ * ```kotlin
  * session.doWork { connection ->
  *    consumer.receive(queue)?.let { message ->
  *       val orderIsPaid = << request to 3rd-party system >>
@@ -173,7 +173,7 @@ interface ConnectionAwareMutator {
      * Mutates all messages in one `queue` by applying `mutations` to every message that match the custom `filter` condition
      *
      * Filters can be specified using nice Kotlin lambda syntax as follows:
-     * ```
+     * ```kotlin
      * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
      * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
      *     // Type-safe DSL to filter messages
