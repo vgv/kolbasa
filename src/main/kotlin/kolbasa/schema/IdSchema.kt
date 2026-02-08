@@ -28,7 +28,7 @@ internal object IdSchema {
     private val CREATE_TABLE_STATEMENT = """
         create table if not exists $NODE_TABLE_NAME(
                $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
-               $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH),
+               $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH) not null,
                $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp,
                $IDENTIFIERS_BUCKET_COLUMN_NAME int not null
         )
@@ -68,6 +68,7 @@ internal object IdSchema {
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
+            "alter table $NODE_TABLE_NAME alter $ID_COLUMN_NAME set not null", // remove after few releases
             INIT_TABLE_STATEMENT,
         )
 
