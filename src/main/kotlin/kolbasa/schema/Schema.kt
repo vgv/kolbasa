@@ -43,9 +43,30 @@ internal data class Table(
     val name: String,
     val columns: Set<Column>,
     val indexes: Set<String>,
-    val identity: Identity
+    val identity: Identity?
 ) {
     fun findColumn(name: String): Column? = columns.find { it.name == name }
+
+    fun isQueueTable(): Boolean {
+        if (identity == null) {
+            // every queue table should have an identity on 'id' column
+            return false
+        }
+
+        val allRequiredColumnsExist = REQUIRED_QUEUE_COLUMNS.all { requiredColumn ->
+            val currentColumn = columns.find { it.name == requiredColumn.key }
+            currentColumn != null && currentColumn.type == requiredColumn.value
+        }
+
+        if (!allRequiredColumnsExist) {
+            return false
+        }
+
+        // For 'data' column we can't check a type, because it can have different types
+        // Check only the name
+        val dataColumn = columns.find { it.name == Const.DATA_COLUMN_NAME }
+        return dataColumn != null
+    }
 
     companion object {
         fun Table?.hasIndex(name: String): Boolean {
@@ -95,4 +116,18 @@ internal data class Identity(
     val increment: Long,
     val cycles: Boolean,
     val cache: Long
+)
+
+// Every queue table should have these columns
+private val REQUIRED_QUEUE_COLUMNS = mapOf(
+    Const.ID_COLUMN_NAME to ColumnType.BIGINT,
+    Const.USELESS_COUNTER_COLUMN_NAME to ColumnType.INT,
+    Const.OPENTELEMETRY_COLUMN_NAME to ColumnType.VARCHAR_ARRAY,
+    Const.SHARD_COLUMN_NAME to ColumnType.INT,
+    Const.CREATED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
+    Const.SCHEDULED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
+    Const.PROCESSING_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
+    Const.PRODUCER_COLUMN_NAME to ColumnType.VARCHAR,
+    Const.CONSUMER_COLUMN_NAME to ColumnType.VARCHAR,
+    Const.REMAINING_ATTEMPTS_COLUMN_NAME to ColumnType.INT
 )

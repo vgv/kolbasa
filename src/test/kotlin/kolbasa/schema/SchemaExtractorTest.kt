@@ -75,6 +75,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             assertEquals(ColumnType.BIGINT, idColumn.type)
             assertFalse(idColumn.nullable)
         }
+        assertNotNull(testTable.identity)
         assertEquals(minValue, testTable.identity.min)
         assertEquals(minValue, testTable.identity.start)
         assertEquals(maxValue, testTable.identity.max)

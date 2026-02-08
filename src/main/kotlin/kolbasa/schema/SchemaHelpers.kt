@@ -28,7 +28,9 @@ object SchemaHelpers {
             IdRange.LOCAL_RANGE
         }
 
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
@@ -86,7 +88,9 @@ object SchemaHelpers {
         queues: List<Queue<*>>,
         renameFunction: (Queue<*>) -> String
     ): Map<Queue<*>, Schema> {
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
@@ -140,7 +144,9 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateDeleteStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]

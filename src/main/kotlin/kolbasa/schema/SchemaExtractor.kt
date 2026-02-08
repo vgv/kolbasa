@@ -4,7 +4,6 @@ import kolbasa.utils.JdbcHelpers
 import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
-import java.sql.DatabaseMetaData
 import javax.sql.DataSource
 
 // Just to make a difference between different String usages
@@ -18,22 +17,17 @@ internal object SchemaExtractor {
      * Extracts raw schema information from the database
      *
      * @param dataSource data source to extract schema from
-     * @param queueNames if specified, only tables with these names will be extracted, otherwise all queue tables will be extracted
+     * @param tableNames if specified, only tables with these names will be extracted, otherwise all tables will be extracted
      * @return map of table name to table definition
      */
-    internal fun extractRawSchema(dataSource: DataSource, queueNames: Set<String>? = null): Map<TableName, Table> {
+    internal fun extractRawSchema(dataSource: DataSource, tableNames: Set<String>? = null): Map<TableName, Table> {
         return dataSource.useConnection { connection ->
             val tablesAndColumns = mutableMapOf<TableName, Set<Column>>()
 
-            // Collect all the names of tables that are queues
-            for ((tableName, columns) in getAllColumns(connection.schema, connection.metaData)) {
-                if (queueNames != null && tableName !in queueNames) {
+            // Collect all the names of tables
+            for ((tableName, columns) in getAllColumns(connection, connection.schema, tableNames)) {
+                if (tableNames != null && tableName !in tableNames) {
                     // continue only for specific tables
-                    continue
-                }
-
-                if (!isQueueTable(columns)) {
-                    // table columns don't look like a queue table
                     continue
                 }
 
@@ -46,12 +40,8 @@ internal object SchemaExtractor {
 
             val result = mutableMapOf<TableName, Table>()
             for ((tableName, columns) in tablesAndColumns) {
+                val indexes = allIndexes[tableName] ?: emptySet()
                 val identity = allIdentities[tableName]
-                    ?: continue // every queue table should have an identity column
-
-                val indexes = allIndexes[tableName]
-                    ?: continue // every queue table should have indexes
-
                 result[tableName] = Table(tableName, columns, indexes, identity)
             }
             result
@@ -59,31 +49,49 @@ internal object SchemaExtractor {
     }
 
     private fun getAllColumns(
+        connection: Connection,
         schemaName: String?,
-        databaseMetaData: DatabaseMetaData
+        tableNames: Set<TableName>?
     ): Map<TableName, Set<Column>> {
-        // only tables that match the queue name pattern to reduce the amount of data we need to process
-        val tableNamePattern = Const.QUEUE_TABLE_NAME_PREFIX + "%"
-
         val result = mutableMapOf<TableName, MutableSet<Column>>()
 
-        val columnsResultSet = databaseMetaData.getColumns(null, schemaName, tableNamePattern, null)
-        while (columnsResultSet.next()) {
-            val tableName = columnsResultSet.getString("TABLE_NAME")
-            val columnName = columnsResultSet.getString("COLUMN_NAME")
-            val columnType = columnsResultSet.getString("TYPE_NAME")
-            val columnDefault = columnsResultSet.getString("COLUMN_DEF")
-            val columnNullable = columnsResultSet.getInt("NULLABLE")
+        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
+        val tableNamesClause = if (!tableNames.isNullOrEmpty()) {
+            "and table_name in (${tableNames.joinToString(separator = ",") { "'$it'" }})"
+        } else {
+            ""
+        }
 
-            val parsedColumnType = ColumnType.fromDbType(columnType)
-            if (parsedColumnType != null) {
-                val column = Column(columnName, parsedColumnType, columnNullable == 1, columnDefault)
-                result.compute(tableName) { _, existingColumns ->
-                    if (existingColumns == null) {
-                        mutableSetOf(column)
-                    } else {
-                        existingColumns.add(column)
-                        existingColumns
+        val sql = """
+            select
+                table_name,
+                column_name,
+                udt_name,
+                column_default,
+                is_nullable
+            from information_schema.columns
+            where
+                table_schema='$realSchemaName' $tableNamesClause
+        """
+
+        connection.useStatement(sql) { resultSet ->
+            while (resultSet.next()) {
+                val tableName = resultSet.getString("table_name")
+                val columnName = resultSet.getString("column_name")
+                val columnType = resultSet.getString("udt_name")
+                val columnDefault = resultSet.getString("column_default")
+                val columnNullable = resultSet.getString("is_nullable")
+
+                val parsedColumnType = ColumnType.fromDbType(columnType)
+                if (parsedColumnType != null) {
+                    val column = Column(columnName, parsedColumnType, columnNullable == "YES", columnDefault)
+                    result.compute(tableName) { _, existingColumns ->
+                        if (existingColumns == null) {
+                            mutableSetOf(column)
+                        } else {
+                            existingColumns.add(column)
+                            existingColumns
+                        }
                     }
                 }
             }
@@ -128,15 +136,21 @@ internal object SchemaExtractor {
         return result
     }
 
-    private fun getIdentities(connection: Connection, schemaName: String?, tableNames: Set<TableName>): Map<TableName, Identity> {
+    private fun getIdentities(
+        connection: Connection,
+        schemaName: String?,
+        tableNames: Set<TableName>
+    ): Map<TableName, Identity> {
         if (tableNames.isEmpty()) {
             return emptyMap()
         }
 
-        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
-
         val sequenceNames = findSequences(connection, schemaName, tableNames)
+        if (sequenceNames.isEmpty()) {
+            return emptyMap()
+        }
 
+        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
         val sequenceQuery = """
             select
                 pg_class.relname as sequence_name,
@@ -203,40 +217,12 @@ internal object SchemaExtractor {
         connection.useStatement(allSequenceNamesQuery) { resultSet ->
             while (resultSet.next()) {
                 val tableName = resultSet.getString(1)
-                val sequenceName = resultSet.getString(2).removePrefix(realSchemaNameWithDot)
-                sequenceNames[tableName] = sequenceName
+                val sequenceName = resultSet.getString(2)
+                if (sequenceName != null) {
+                    sequenceNames[tableName] = sequenceName.removePrefix(realSchemaNameWithDot)
+                }
             }
         }
         return sequenceNames
     }
-
-    private fun isQueueTable(columns: Set<Column>): Boolean {
-        val allRequiredColumnsExist = REQUIRED_QUEUE_COLUMNS.all { requiredColumn ->
-            val currentColumn = columns.find { it.name == requiredColumn.key }
-            currentColumn != null && currentColumn.type == requiredColumn.value
-        }
-
-        if (!allRequiredColumnsExist) {
-            return false
-        }
-
-        // For 'data' column we can't check a type, because it can have different types
-        // Check only the name
-        val dataColumn = columns.find { it.name == Const.DATA_COLUMN_NAME }
-        return dataColumn != null
-    }
-
-    // Every queue table should have these columns
-    private val REQUIRED_QUEUE_COLUMNS = mapOf(
-        Const.ID_COLUMN_NAME to ColumnType.BIGINT,
-        Const.USELESS_COUNTER_COLUMN_NAME to ColumnType.INT,
-        Const.OPENTELEMETRY_COLUMN_NAME to ColumnType.VARCHAR_ARRAY,
-        Const.SHARD_COLUMN_NAME to ColumnType.INT,
-        Const.CREATED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-        Const.SCHEDULED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-        Const.PROCESSING_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-        Const.PRODUCER_COLUMN_NAME to ColumnType.VARCHAR,
-        Const.CONSUMER_COLUMN_NAME to ColumnType.VARCHAR,
-        Const.REMAINING_ATTEMPTS_COLUMN_NAME to ColumnType.INT
-    )
 }
