@@ -2,9 +2,7 @@ package kolbasa.schema
 
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
-import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
-import java.sql.PreparedStatement
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -27,50 +25,35 @@ internal object IdSchema {
 
     private val CREATE_TABLE_STATEMENT = """
         create table if not exists $NODE_TABLE_NAME(
-               $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
-               $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH) not null,
-               $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp,
-               $IDENTIFIERS_BUCKET_COLUMN_NAME int not null
+            $STATUS_COLUMN_NAME varchar($STATUS_COLUMN_LENGTH) not null primary key,
+            $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH) not null,
+            $CREATED_AT_COLUMN_NAME timestamp not null default current_timestamp,
+            $IDENTIFIERS_BUCKET_COLUMN_NAME int not null
         )
     """.trimIndent()
 
-    private val INIT_TABLE_STATEMENT: String
-        get() {
-            val randomNodeId = Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET)
-            return """
-                    insert into $NODE_TABLE_NAME
-                        ($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
-                    values
-                        ('$ACTIVE_STATUS', '$randomNodeId', ${Node.randomBucket()})
-                    on conflict do nothing
-                """.trimIndent()
+    fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET) {
+        val ddlStatements = mutableListOf<String>()
+
+        val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME))[NODE_TABLE_NAME]
+        if (existingTable == null) {
+            ddlStatements += CREATE_TABLE_STATEMENT
+
+            ddlStatements += """
+                insert into $NODE_TABLE_NAME($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+                values
+                    ('$ACTIVE_STATUS', '${Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET)}', $identifierBucket)
+                on conflict do nothing
+            """
         }
 
-    private val SELECT_NODE_INFO_STATEMENT = """
-        select
-            $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME
-        from
-            $NODE_TABLE_NAME
-        where
-            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS'
-    """.trimIndent()
-
-    private val UPDATE_NODE_INFO_STATEMENT = """
-        update
-            $NODE_TABLE_NAME
-        set
-            $IDENTIFIERS_BUCKET_COLUMN_NAME = ?
-        where
-            $STATUS_COLUMN_NAME = '$ACTIVE_STATUS' and
-            $IDENTIFIERS_BUCKET_COLUMN_NAME = ?
-    """.trimIndent()
-
-    fun createAndInitIdTable(dataSource: DataSource) {
-        val ddlStatements = listOf(
-            CREATE_TABLE_STATEMENT,
-            "alter table $NODE_TABLE_NAME alter $ID_COLUMN_NAME set not null", // remove after few releases
-            INIT_TABLE_STATEMENT,
-        )
+        // remove after few releases
+        if (existingTable != null) {
+            val idColumn = existingTable.findColumn(ID_COLUMN_NAME)
+            if (idColumn != null && idColumn.nullable) {
+                ddlStatements += "alter table $NODE_TABLE_NAME alter $ID_COLUMN_NAME set not null"
+            }
+        }
 
         dataSource.useConnectionWithAutocommit { connection ->
             // separate transaction for each statement
@@ -82,33 +65,31 @@ internal object IdSchema {
         }
     }
 
-    fun readNodeInfo(dataSource: DataSource): Node? {
-        try {
-            return dataSource.useStatement { statement: Statement ->
-                statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
-                    if (resultSet.next()) {
-                        val nodeId = resultSet.getString(1)
-                        val identifiersBucket: Int = resultSet.getInt(2)
+    fun readNodeInfo(dataSource: DataSource): Node {
+        val sql =
+            "select $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME from $NODE_TABLE_NAME where $STATUS_COLUMN_NAME='$ACTIVE_STATUS'"
 
-                        Node(NodeId(nodeId), identifiersBucket)
-                    } else {
-                        null
-                    }
+        return dataSource.useStatement { statement: Statement ->
+            statement.executeQuery(sql).use { resultSet ->
+                require(resultSet.next()) {
+                    "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
+                        "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$sql'"
                 }
+
+                val nodeId = resultSet.getString(1)
+                val identifiersBucket: Int = resultSet.getInt(2)
+
+                Node(NodeId(nodeId), identifiersBucket)
             }
-        } catch (_: Exception) {
-            // exception doesn't matter
-            return null
         }
     }
 
     fun updateIdentifiersBucket(dataSource: DataSource, oldBucket: Int, newBucket: Int): Boolean {
-        val rowsUpdated = dataSource.usePreparedStatement(UPDATE_NODE_INFO_STATEMENT) { preparedStatement: PreparedStatement ->
-            preparedStatement.setInt(1, newBucket)
-            preparedStatement.setInt(2, oldBucket)
+        val sql = """
+            update $NODE_TABLE_NAME set $IDENTIFIERS_BUCKET_COLUMN_NAME=$newBucket
+            where $STATUS_COLUMN_NAME='$ACTIVE_STATUS' and $IDENTIFIERS_BUCKET_COLUMN_NAME=$oldBucket"""
 
-            preparedStatement.executeUpdate()
-        }
+        val rowsUpdated = dataSource.useStatement { statement -> statement.executeUpdate(sql) }
 
         return rowsUpdated > 0
     }

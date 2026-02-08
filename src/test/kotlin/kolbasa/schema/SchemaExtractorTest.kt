@@ -18,8 +18,8 @@ import java.time.Duration
 internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     private val queueName = "test_queue"
-    private val minValue = 0.toLong()
-    private val maxValue = 9223372036854775807
+    private val minValue = IdRange.generateRange(Node.MIN_BUCKET).min
+    private val maxValue = IdRange.generateRange(Node.MIN_BUCKET).max
     private val cacheValue = 1000.toLong()
     private val incrementValue = 1.toLong()
 
@@ -61,7 +61,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         // here we have to find objects (tables, indexes etc.) only from 'public' schema
         val tables = SchemaExtractor.extractRawSchema(dataSource)
 
-        assertEquals(1, tables.size, "Tables: ${tables.keys}")
+        assertEquals(2, tables.size, "Tables: ${tables.keys}")
 
         val testTable = requireNotNull(tables[testQueue.dbTableName]) {
             "Table not found, tables: ${tables.keys}"

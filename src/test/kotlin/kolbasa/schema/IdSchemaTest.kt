@@ -1,13 +1,8 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 
 class IdSchemaTest : AbstractPostgresqlTest() {
 
@@ -37,17 +32,11 @@ class IdSchemaTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testReadNodeInfo_NullWithoutInit() {
-        assertNull(IdSchema.readNodeInfo(dataSource))
-    }
-
-    @Test
     fun testUpdateIdentifiersBucketValue_Success() {
         IdSchema.createAndInitIdTable(dataSource)
 
         // Initial identifiers bucket state is null
         val id = IdSchema.readNodeInfo(dataSource)
-        assertNotNull(id)
         assertTrue(id.identifiersBucket in Node.MIN_BUCKET .. Node.MAX_BUCKET, "$id")
 
         var newBucketValue = Node.randomBucket()
@@ -65,7 +54,6 @@ class IdSchemaTest : AbstractPostgresqlTest() {
 
         // Check
         val again = IdSchema.readNodeInfo(dataSource)
-        assertNotNull(again)
         assertEquals(id.id, again.id)
         assertEquals(newBucketValue, again.identifiersBucket)
     }
@@ -76,7 +64,6 @@ class IdSchemaTest : AbstractPostgresqlTest() {
 
         // Initial identifiers bucket state is null
         val id = IdSchema.readNodeInfo(dataSource)
-        assertNotNull(id)
         assertTrue(id.identifiersBucket in Node.MIN_BUCKET .. Node.MAX_BUCKET, "$id")
 
         var oldBucketValue = Node.randomBucket()

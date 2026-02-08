@@ -47,7 +47,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         assertNotNull(existingTable)
 
         // we don't expect anything because schema is actual
-        val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.LOCAL_RANGE)
+        val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.generateRange(Node.MIN_BUCKET))
         assertTrue(schema.isEmpty, "Required object: $schema")
         assertEquals(0, schema.size, "Required object: $schema")
     }

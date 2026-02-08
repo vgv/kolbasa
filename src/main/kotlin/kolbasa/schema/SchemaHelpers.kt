@@ -18,15 +18,10 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateCreateOrUpdateStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
+        // Init system tables
+        IdSchema.createAndInitIdTable(dataSource)
         val node = IdSchema.readNodeInfo(dataSource)
-        val idRange = if (node != null) {
-            // This server is a part of a clustered environment, currently or in the past
-            // We can't know for sure, but we have to restrict the range of identifiers
-            IdRange.generateRange(node.identifiersBucket)
-        } else {
-            // This server is not a part of a clustered environment, so, we can use all [0...Long.MAX_VALUE] range
-            IdRange.LOCAL_RANGE
-        }
+        val idRange = IdRange.generateRange(node.identifiersBucket)
 
         val existingTables = SchemaExtractor
             .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
