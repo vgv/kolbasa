@@ -1,6 +1,7 @@
 package kolbasa.cluster.schema
 
 import kolbasa.cluster.Shard
+import kolbasa.pg.DatabaseExtensions.readBoolean
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.useStatement
 import kolbasa.schema.Const
@@ -47,6 +48,14 @@ internal object ShardSchema {
         val ddlStatements = listOf(
             CREATE_SHARD_TABLE_STATEMENT,
         )
+
+        // temp solution to avoid unnecessary DDL
+        val checkTableExistsSql =
+            "select exists (select from information_schema.tables where table_schema='public' and table_name='$SHARD_TABLE_NAME')"
+        if (dataSource.readBoolean(checkTableExistsSql)) {
+            // table exists, no need to execute DDL statements
+            return
+        }
 
         dataSource.useConnectionWithAutocommit { connection ->
             // separate transaction for each statement

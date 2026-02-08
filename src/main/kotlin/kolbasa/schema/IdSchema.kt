@@ -1,5 +1,6 @@
 package kolbasa.schema
 
+import kolbasa.pg.DatabaseExtensions.readBoolean
 import kolbasa.pg.DatabaseExtensions.useConnectionWithAutocommit
 import kolbasa.pg.DatabaseExtensions.usePreparedStatement
 import kolbasa.pg.DatabaseExtensions.useStatement
@@ -72,6 +73,14 @@ internal object IdSchema {
             INIT_TABLE_STATEMENT,
         )
 
+        // temp solution to avoid unnecessary DDL
+        val checkTableExistsSql =
+            "select exists (select from information_schema.tables where table_schema='public' and table_name='$NODE_TABLE_NAME')"
+        if (dataSource.readBoolean(checkTableExistsSql)) {
+            // table exists, no need to execute DDL statements
+            return
+        }
+
         dataSource.useConnectionWithAutocommit { connection ->
             // separate transaction for each statement
             connection.createStatement().use { statement ->
@@ -82,7 +91,7 @@ internal object IdSchema {
         }
     }
 
-    fun  readNodeInfo(dataSource: DataSource): Node? {
+    fun readNodeInfo(dataSource: DataSource): Node? {
         try {
             return dataSource.useStatement { statement: Statement ->
                 statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
