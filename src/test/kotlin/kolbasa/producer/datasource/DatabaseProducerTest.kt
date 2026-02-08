@@ -59,8 +59,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
-        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
+        assertEquals(IdRange.MIN_RANGE.min, id1.localId)
+        assertEquals(IdRange.MIN_RANGE.min + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -99,9 +99,9 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
-        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
-        assertEquals(IdRange.LOCAL_RANGE.min + 2, id3.localId)
+        assertEquals(IdRange.MIN_RANGE.min, id1.localId)
+        assertEquals(IdRange.MIN_RANGE.min + 1, id2.localId)
+        assertEquals(IdRange.MIN_RANGE.min + 2, id3.localId)
 
         // check database
         assertEquals(3, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
@@ -142,8 +142,8 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
             result.onlySuccessful().first().id
         }
 
-        assertEquals(IdRange.LOCAL_RANGE.min, id1.localId)
-        assertEquals(IdRange.LOCAL_RANGE.min + 1, id2.localId)
+        assertEquals(IdRange.MIN_RANGE.min, id1.localId)
+        assertEquals(IdRange.MIN_RANGE.min + 1, id2.localId)
 
         // check database
         assertEquals(2, dataSource.readInt("select count(*) from ${queue.dbTableName}"))

@@ -23,7 +23,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
     @Test
     fun testExtractSchema_CreateOrUpdate_Check_Statements_If_No_Tables_At_All() {
-        val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.LOCAL_RANGE)
+        val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.MIN_RANGE)
 
         // Table DDL
         val createTableStatements = 1
