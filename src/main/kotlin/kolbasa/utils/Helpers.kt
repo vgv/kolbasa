@@ -42,5 +42,16 @@ internal object Helpers {
         return md5Hash(input).take(10)
     }
 
+    /**
+     * Generates a random string of the specified length using characters from the specified alphabet.
+     */
+    fun randomString(length: Int, alphabet: String): String {
+        val sb = StringBuilder(length)
+        (1..length).forEach { _ ->
+            sb.append(alphabet.random())
+        }
+        return sb.toString()
+    }
+
 
 }

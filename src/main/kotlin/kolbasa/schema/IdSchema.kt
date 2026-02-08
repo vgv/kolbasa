@@ -1,5 +1,6 @@
 package kolbasa.schema
 
+import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -10,7 +11,7 @@ import javax.sql.DataSource
 internal object IdSchema {
 
     private const val NODE_ID_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    private const val NODE_ID_DEFAULT_LENGTH = 12
+    private const val NODE_ID_DEFAULT_LENGTH = 16
 
     // q__node
     const val NODE_TABLE_NAME = Const.INTERNAL_KOLBASA_TABLE_PREFIX + "node"
@@ -35,11 +36,12 @@ internal object IdSchema {
 
     private val INIT_TABLE_STATEMENT: String
         get() {
+            val randomNodeId = Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET)
             return """
                     insert into $NODE_TABLE_NAME
                         ($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
                     values
-                        ('$ACTIVE_STATUS', '${generateNodeId()}', ${Node.randomBucket()})
+                        ('$ACTIVE_STATUS', '$randomNodeId', ${Node.randomBucket()})
                     on conflict do nothing
                 """.trimIndent()
         }
@@ -79,7 +81,7 @@ internal object IdSchema {
         }
     }
 
-    fun  readNodeInfo(dataSource: DataSource): Node? {
+    fun readNodeInfo(dataSource: DataSource): Node? {
         try {
             return dataSource.useStatement { statement: Statement ->
                 statement.executeQuery(SELECT_NODE_INFO_STATEMENT).use { resultSet ->
@@ -110,11 +112,4 @@ internal object IdSchema {
         return rowsUpdated > 0
     }
 
-    private fun generateNodeId(): String {
-        val sb = StringBuilder(NODE_ID_DEFAULT_LENGTH)
-        (1..NODE_ID_DEFAULT_LENGTH).forEach { _ ->
-            sb.append(NODE_ID_ALPHABET.random())
-        }
-        return sb.toString()
-    }
 }

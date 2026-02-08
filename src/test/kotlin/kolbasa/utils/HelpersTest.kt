@@ -40,4 +40,14 @@ class HelpersTest {
         assertEquals(expectedHash, actualHash)
     }
 
+    @Test
+    fun testRandomString() {
+        val length = 10
+        val alphabet = "abc"
+
+        val randomStr = Helpers.randomString(length, alphabet)
+        assertEquals(length, randomStr.length)
+        assert(randomStr.all { it in alphabet })
+    }
+
 }
