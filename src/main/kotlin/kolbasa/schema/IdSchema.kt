@@ -16,7 +16,6 @@ internal object IdSchema {
     const val NODE_TABLE_NAME = Const.INTERNAL_KOLBASA_TABLE_PREFIX + "node"
     private const val STATUS_COLUMN_NAME = "status"
     private const val STATUS_COLUMN_LENGTH = 100
-    const val SERVER_ID_COLUMN_NAME = "server_id"
     const val ID_COLUMN_NAME = "id"
     const val ID_COLUMN_LENGTH = 100
     private const val CREATED_AT_COLUMN_NAME = "created_at"
@@ -67,8 +66,6 @@ internal object IdSchema {
     fun createAndInitIdTable(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_TABLE_STATEMENT,
-            "alter table $NODE_TABLE_NAME add column if not exists $ID_COLUMN_NAME varchar($ID_COLUMN_LENGTH)",
-            "alter table $NODE_TABLE_NAME drop column if exists $SERVER_ID_COLUMN_NAME",
             INIT_TABLE_STATEMENT,
         )
 
