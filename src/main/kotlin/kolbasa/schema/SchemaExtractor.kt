@@ -1,5 +1,6 @@
 package kolbasa.schema
 
+import kolbasa.utils.JdbcHelpers
 import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
@@ -102,7 +103,7 @@ internal object SchemaExtractor {
 
         val result = mutableMapOf<TableName, MutableSet<IndexName>>()
 
-        val realSchemaName = schemaName ?: "public"
+        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
         val sql = """
             select tablename,indexname from pg_indexes where
                 schemaname='$realSchemaName' and
@@ -132,7 +133,7 @@ internal object SchemaExtractor {
             return emptyMap()
         }
 
-        val realSchemaName = schemaName ?: "public"
+        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
 
         val sequenceNames = findSequences(connection, schemaName, tableNames)
 
@@ -192,12 +193,7 @@ internal object SchemaExtractor {
             return emptyMap()
         }
 
-        val realSchemaNameWithDot = if (schemaName == null) {
-            "public."
-        } else {
-            "${schemaName}."
-        }
-
+        val realSchemaNameWithDot = "${JdbcHelpers.schemaNameOrDefault(schemaName)}."
         val allSequenceNamesQuery = """
             with tbl_names(table_name) as (values ${tableNames.joinToString(separator = ",") { "('$it')" }})
             select table_name, pg_get_serial_sequence(table_name,'${Const.ID_COLUMN_NAME}') from (table tbl_names) as tbl_names
