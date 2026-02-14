@@ -36,8 +36,8 @@ import java.sql.Types
  * Each field can be created with a [FieldOption] that controls indexing and uniqueness:
  * - [FieldOption.NONE] - No index, just stores data (most efficient)
  * - [FieldOption.SEARCH] - Creates an index for filtering/sorting
- * - [FieldOption.ALL_LIVE_UNIQUE] - Unique constraint across all live messages (`SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`)
- * - [FieldOption.UNTOUCHED_UNIQUE] - Unique constraint only for "untouched" messages (`SCHEDULED` + `AVAILABLE`)
+ * - [FieldOption.ALL_LIVE_UNIQUE] - Unique constraint across all live messages (`SCHEDULED` + `READY` + `IN_FLIGHT` + `RETRY`)
+ * - [FieldOption.UNTOUCHED_UNIQUE] - Unique constraint only for "untouched" messages (`SCHEDULED` + `READY`)
  *
  * ## Usage Example
  *

@@ -20,23 +20,23 @@ package kolbasa.queue.meta
  * To understand uniqueness options, it helps to know the message lifecycle states:
  *
  * ```
- *                                                ┌───> DEAD (remaining attempts is 0)
- *                                                │
- *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
- *              ↑                                 │
- *              └─────── RETRY_SCHEDULED <────────┘
+ *                                           ┌───> DEAD (remaining attempts is 0)
+ *                                           │
+ *  SCHEDULED ──> READY ──────> IN_FLIGHT ───────> COMPLETED
+ *                         ↑                 │
+ *                         └───── RETRY <────┘
  * ```
  *
  * - **SCHEDULED** — message is waiting, not yet visible to consumers (if delay > 0)
- * - **AVAILABLE** — message is ready for processing
+ * - **READY** — message is ready for processing, has never been attempted
  * - **IN_FLIGHT** — message is currently being processed
- * - **RETRY_SCHEDULED** — message failed processing, waiting for retry
- * - **DEAD** — all attempts exhausted, message is logically removed
+ * - **RETRY** — processing attempt failed; message is available for the next attempt
+ * - **DEAD** — all attempts exhausted, message is logically removed (but still physically present until sweep)
  * - **COMPLETED** — successfully processed and removed
  *
  * The uniqueness options differ in which states are considered "live" for deduplication:
- * - [ALL_LIVE_UNIQUE]: `SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`
- * - [UNTOUCHED_UNIQUE]: `SCHEDULED` + `AVAILABLE` only
+ * - [ALL_LIVE_UNIQUE]: `SCHEDULED` + `READY` + `IN_FLIGHT` + `RETRY`
+ * - [UNTOUCHED_UNIQUE]: `SCHEDULED` + `READY` only
  *
  * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
  *
@@ -109,21 +109,23 @@ enum class FieldOption {
      * Any message in a queue is in one of six states:
      * 1. `SCHEDULED` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
      * and not yet visible to consumers if [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] (and other delays)
-     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `AVAILABLE`.
-     * 2. `AVAILABLE` - a message is ready to be processed, it is visible to consumers and can be received for processing.
+     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `READY`.
+     * 2. `READY` - a message is ready to be processed, it is visible to consumers and can be received for processing. The
+     * message has not been processed before; this will be the first attempt.
      * 3. `IN_FLIGHT` - a message is being processed right now. It has been received for processing by a
      * consumer, but the processing has not yet been completed.
-     * 4. `RETRY_SCHEDULED` - similar to `SCHEDULED`, but it has already been processed at least once; after an unsuccessful
-     * processing attempt, the message is waiting for the next attempt.
+     * 4. `RETRY` - the processing attempt failed (the visibility timeout expired); the message is available
+     * for the next attempt. Like `READY` the message is available for processing; unlike `READY`, there was at least one
+     * attempt to process the message.
      * 5. `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue.
      * 6. `COMPLETED` - the message has been successfully processed and removed from the queue.
      *
      * ```
-     *                                                ┌───> DEAD (remaining attempts is 0)
-     *                                                │
-     *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
-     *              ↑                                 │
-     *              └─────── RETRY_SCHEDULED <────────┘
+     *                                           ┌───> DEAD (remaining attempts is 0)
+     *                                           │
+     *  SCHEDULED ──> READY ──────> IN_FLIGHT ───────> COMPLETED
+     *                         ↑                 │
+     *                         └───── RETRY <────┘
      * ```
      *
      * For example, we have a `user_id` meta field by which we want to dedupe messages in the queue.
@@ -135,16 +137,16 @@ enum class FieldOption {
      * with `user_id = 123` in the queue. Therefore, a new message can be added without violating uniqueness.
      *
      * However, for the remaining scenarios, there are two reasonable, useful options:
-     * 1. All live messages (`SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`) must be unique. If a message
-     * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
-     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
+     * 1. All live messages (`SCHEDULED` + `READY` + `IN_FLIGHT` + `RETRY`) must be unique. If a message
+     * with `user_id = 123` is just added to the queue (`SCHEDULED`), ready for processing (`READY`), accepted for
+     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY`), it is still considered alive,
      * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
      * This is exactly how the [ALL_LIVE_UNIQUE] option works (i.e., all live messages are unique)
      *
-     * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
+     * 2. Only new messages must be unique (`SCHEDULED` + `READY`). Once a message is accepted for processing for the first
      * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
      * never been processed are unique.
-     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
+     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `READY` messages are unique)
      *
      * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
      *
@@ -168,21 +170,23 @@ enum class FieldOption {
      * Any message in a queue is in one of six states:
      * 1. `SCHEDULED` - a message has been placed in the queue, but no attempt has been made to process it; it is still waiting
      * and not yet visible to consumers if [QueueOptions.defaultDelay][kolbasa.queue.QueueOptions.defaultDelay] (and other delays)
-     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `AVAILABLE`.
-     * 2. `AVAILABLE` - a message is ready to be processed, it is visible to consumers and can be received for processing.
+     * is set to greater than zero. If delay is zero, the message is immediately moved to the next state `READY`.
+     * 2. `READY` - a message is ready to be processed, it is visible to consumers and can be received for processing. The
+     * message has not been processed before; this will be the first attempt.
      * 3. `IN_FLIGHT` - a message is being processed right now. It has been received for processing by a
      * consumer, but the processing has not yet been completed.
-     * 4. `RETRY_SCHEDULED` - similar to `SCHEDULED`, but it has already been processed at least once; after an unsuccessful
-     * processing attempt, the message is waiting for the next attempt.
+     * 4. `RETRY` - the processing attempt failed (the visibility timeout expired); the message is available
+     * for the next attempt. Like `READY` the message is available for processing; unlike `READY`, there was at least one
+     * attempt to process the message.
      * 5. `DEAD` - all attempts to process it were unsuccessful; the message is waiting for sweep to clear it from the queue.
      * 6. `COMPLETED` - the message has been successfully processed and removed from the queue.
      *
      * ```
-     *                                                ┌───> DEAD (remaining attempts is 0)
-     *                                                │
-     *  SCHEDULED ─────> AVAILABLE ─────> IN_FLIGHT ─────> COMPLETED
-     *              ↑                                 │
-     *              └─────── RETRY_SCHEDULED <────────┘
+     *                                           ┌───> DEAD (remaining attempts is 0)
+     *                                           │
+     *  SCHEDULED ──> READY ──────> IN_FLIGHT ───────> COMPLETED
+     *                         ↑                 │
+     *                         └───── RETRY <────┘
      * ```
      *
      * For example, we have a `user_id` meta field by which we want to dedupe messages in the queue.
@@ -194,16 +198,16 @@ enum class FieldOption {
      * with `user_id = 123` in the queue. Therefore, a new message can be added without violating uniqueness.
      *
      * However, for the remaining scenarios, there are two reasonable, useful options:
-     * 1. All live messages (`SCHEDULED` + `AVAILABLE` + `IN_FLIGHT` + `RETRY_SCHEDULED`) must be unique. If a message
-     * with `user_id = 123` is just added to the queue (`SCHEDULED`), available for processing (`AVAILABLE`), accepted for
-     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY_SCHEDULED`), it is still considered alive,
+     * 1. All live messages (`SCHEDULED` + `READY` + `IN_FLIGHT` + `RETRY`) must be unique. If a message
+     * with `user_id = 123` is just added to the queue (`SCHEDULED`), ready for processing (`READY`), accepted for
+     * processing (`IN_FLIGHT`), or awaiting the next processing attempt (`RETRY`), it is still considered alive,
      * since its processing has not yet been completed and we don't want duplicates with the same `user_id` in the queue.
      * This is exactly how the [ALL_LIVE_UNIQUE] option works (i.e., all live messages are unique)
      *
-     * 2. Only new messages must be unique (`SCHEDULED` + `AVAILABLE`). Once a message is accepted for processing for the first
+     * 2. Only new messages must be unique (`SCHEDULED` + `READY`). Once a message is accepted for processing for the first
      * time, it is considered "touched" and is no longer subject to uniqueness checks. In this scenario, only messages that have
      * never been processed are unique.
-     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `AVAILABLE` messages are unique)
+     * This is exactly how the [UNTOUCHED_UNIQUE] option works (i.e., only `SCHEDULED` + `READY` messages are unique)
      *
      * Read more about message states, transitions and deduplication modes in `docs/Message state transitions.md`
      *
