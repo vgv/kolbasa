@@ -2,6 +2,7 @@ package kolbasa.queue
 
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
+import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutationField
 import kolbasa.schema.Const
@@ -123,6 +124,17 @@ internal object Checks {
     fun checkClusterStateUpdateInterval(interval: Duration) {
         check(interval >= ClusterStateUpdateConfig.MIN_INTERVAL) {
             "Cluster state update interval must be greater than or equal to ${ClusterStateUpdateConfig.MIN_INTERVAL} (current: $interval)"
+        }
+    }
+
+    fun checkSamplePercent(samplePercent: Float) {
+        if (samplePercent == CountOptions.YOU_KNOW_BETTER) {
+            // special case
+            return
+        }
+
+        check(samplePercent > 0.0 && samplePercent <= 100.0) {
+            "Sample percent must be in the (0.0, 100.0] range (current: $samplePercent)"
         }
     }
 
