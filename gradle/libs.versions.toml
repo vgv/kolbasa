@@ -6,23 +6,23 @@ nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "n
 
 [versions]
 
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 nebula = "20.2.0"
 nexus = "2.0.0"
 
 prometheus = "1.4.3"
-opentelemetry = "1.58.0"
+opentelemetry = "1.59.0"
 opentelemetry-instrumentation = "2.24.0"
 opentelemetry-instrumentation-incubator = "2.24.0-alpha"
-opentelemetry-semconv = "1.37.0"
+opentelemetry-semconv = "1.39.0"
 hikaricp = "7.0.2"
 postgresql = "42.7.9"
 jcommander = "1.82"
 
-logback = "1.5.26"
+logback = "1.5.28"
 testcontainers = "2.0.3"
 junit = "6.0.2"
-mockk = "1.14.7"
+mockk = "1.14.9"
 
 [libraries]
 
