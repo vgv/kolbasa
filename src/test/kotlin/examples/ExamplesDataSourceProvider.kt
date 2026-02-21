@@ -11,7 +11,7 @@ object ExamplesDataSourceProvider {
      * Launch PostgreSQL in Docker container using TestContainers
      */
     fun getDataSource(): DataSource {
-        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE.dockerImage)
+        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE)
 
         // Start PG container
         pgContainer.start()

@@ -9,7 +9,6 @@ import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.PrometheusConfig
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -233,17 +232,6 @@ internal class ChecksTest {
     fun testCheckSweepPeriod_MoreThanMax() {
         assertThrows<IllegalStateException> {
             Checks.checkSweepProbability(SweepConfig.MAX_SWEEP_PROBABILITY + Math.ulp(SweepConfig.MAX_SWEEP_PROBABILITY))
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
-
-    @Test
-    fun testCheckCustomQueueSizeMeasureInterval() {
-        assertThrows<IllegalStateException> {
-            val ulp = Duration.ofNanos(1)
-            val aBitSmaller = PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
-            Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
         }
     }
 

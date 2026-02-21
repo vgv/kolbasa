@@ -6,7 +6,6 @@ import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutationField
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.PrometheusConfig
 import java.time.Duration
 
 internal object Checks {
@@ -112,12 +111,6 @@ internal object Checks {
     fun checkSweepProbability(probability: Double) {
         check(probability in SweepConfig.MIN_SWEEP_PROBABILITY..SweepConfig.MAX_SWEEP_PROBABILITY) {
             "Sweep period must be in the [${SweepConfig.MIN_SWEEP_PROBABILITY}..${SweepConfig.MAX_SWEEP_PROBABILITY}] range"
-        }
-    }
-
-    fun checkCustomQueueSizeMeasureInterval(queueName: String, customDuration: Duration) {
-        check(customDuration >= PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL) {
-            "Custom queue size measure interval must be greater than or equal to ${PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL} (current: $customDuration, queue=$queueName)"
         }
     }
 

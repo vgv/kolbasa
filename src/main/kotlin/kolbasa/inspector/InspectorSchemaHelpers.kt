@@ -88,7 +88,7 @@ internal object InspectorSchemaHelpers {
                  from ${queue.dbTableName}
                  where ${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0
                  order by ${Const.SCHEDULED_AT_COLUMN_NAME} asc
-                 limit 1) as longest_wait_message_age
+                 limit 1) as oldest_ready_message_age
                  """.trimIndent()
     }
 

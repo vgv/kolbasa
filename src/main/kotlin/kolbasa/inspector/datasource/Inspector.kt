@@ -117,7 +117,7 @@ interface Inspector {
      * making constantly anyway.
      *
      * @param queue the queue to inspect
-     * @return a [MessageAge] with the age of the oldest, newest, and longest-waiting message
+     * @return a [MessageAge] with the age of the oldest, newest, and oldest ready message
      */
     fun messageAge(queue: Queue<*>): MessageAge
 

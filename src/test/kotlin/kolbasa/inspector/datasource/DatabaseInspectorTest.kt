@@ -217,7 +217,7 @@ class DatabaseInspectorTest : AbstractPostgresqlTest() {
 
         assertNull(age.oldest)
         assertNull(age.newest)
-        assertNull(age.longestWait)
+        assertNull(age.oldestReady)
     }
 
     @Test
@@ -233,7 +233,7 @@ class DatabaseInspectorTest : AbstractPostgresqlTest() {
 
         assertTrue(assertNotNull(age.oldest).toMillis() >= 0)
         assertTrue(assertNotNull(age.newest).toMillis() >= 0)
-        assertTrue(assertNotNull(age.longestWait).toMillis() >= 0)
+        assertTrue(assertNotNull(age.oldestReady).toMillis() >= 0)
     }
 
 }

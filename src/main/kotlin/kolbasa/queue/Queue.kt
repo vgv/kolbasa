@@ -7,9 +7,9 @@ import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
 import kolbasa.stats.opentelemetry.QueueTracing
 import kolbasa.stats.prometheus.PrometheusConfig
-import kolbasa.stats.prometheus.metrics.EmptyQueueMetrics
-import kolbasa.stats.prometheus.metrics.PrometheusQueueMetrics
-import kolbasa.stats.prometheus.metrics.QueueMetrics
+import kolbasa.stats.prometheus.EmptyQueueMetrics
+import kolbasa.stats.prometheus.PrometheusQueueMetrics
+import kolbasa.stats.prometheus.QueueMetrics
 
 data class Queue<Data> @JvmOverloads constructor(
     /**
@@ -81,7 +81,7 @@ data class Queue<Data> @JvmOverloads constructor(
             // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
             // and cache it in the queue object to avoid excessive allocations.
             // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
-            is PrometheusConfig.Config -> PrometheusQueueMetrics(name, config)
+            is PrometheusConfig.Config -> PrometheusQueueMetrics(this, config)
         }
     }
 

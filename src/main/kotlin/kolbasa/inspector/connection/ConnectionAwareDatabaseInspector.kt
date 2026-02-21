@@ -97,10 +97,10 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
             val newestSeconds = rs.getDouble(2)
             val newest = if (rs.wasNull()) null else Duration.ofMillis((newestSeconds * 1000).toLong())
 
-            val longestWaitSeconds = rs.getDouble(3)
-            val longestWait = if (rs.wasNull()) null else Duration.ofMillis((longestWaitSeconds * 1000).toLong())
+            val oldestReadySeconds = rs.getDouble(3)
+            val oldestReady = if (rs.wasNull()) null else Duration.ofMillis((oldestReadySeconds * 1000).toLong())
 
-            MessageAge(oldest, newest, longestWait)
+            MessageAge(oldest, newest, oldestReady)
         }
     }
 

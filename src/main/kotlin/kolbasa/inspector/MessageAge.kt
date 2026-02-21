@@ -22,5 +22,5 @@ data class MessageAge(
     /**
      * Age of the oldest message that is ready to be processed (in `READY` or `RETRY` state).
      */
-    val longestWait: Duration?
+    val oldestReady: Duration?
 )

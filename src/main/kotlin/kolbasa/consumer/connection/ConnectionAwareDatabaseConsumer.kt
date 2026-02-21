@@ -1,16 +1,18 @@
 package kolbasa.consumer.connection
 
 import kolbasa.cluster.Shards
-import kolbasa.consumer.*
+import kolbasa.consumer.ConsumerOptions
+import kolbasa.consumer.ConsumerSchemaHelpers
+import kolbasa.consumer.Message
+import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.sweep.SweepHelper
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.LruCache
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
@@ -84,7 +86,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
             receivedMessages = result.size,
             executionNanos = execution.durationNanos,
             approxBytes = approxBytesCounter.get(),
-            queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
+            connection = connection
         )
 
         return result
@@ -109,7 +111,8 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         queue.queueMetrics.consumerDeleteMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,
-            executionNanos = execution.durationNanos
+            executionNanos = execution.durationNanos,
+            connection = connection
         )
 
         return removedMessages

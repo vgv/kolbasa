@@ -4,10 +4,7 @@ import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-import kolbasa.queue.Checks
-import kolbasa.queue.Queue
 import kolbasa.stats.prometheus.metrics.Const
-import java.time.Duration
 
 sealed class PrometheusConfig {
 
@@ -21,25 +18,32 @@ sealed class PrometheusConfig {
         val preciseStringSize: Boolean = false,
 
         /**
-         * By default, kolbasa measures the queue size every
-         * [DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL][PrometheusConfig.Config.DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL], however, if
-         * you want to measure more/less often for specific queues – you can change the default measurement interval here.
-         *
-         * Please note that current implementation relies on PostgreSQL vacuum statistics, so, if you don't run vacuum every
-         * five seconds (for example) it's almost nonsense to measure the queue size every five seconds.
-         *
-         * Map key: Queue name
-         * Map value: Interval
-         */
-        val customQueueSizeMeasureInterval: Map<String, Duration> = emptyMap(),
-
-        /**
          * Prometheus registry. By default, [PrometheusRegistry.defaultRegistry] is used.
          * You can use your custom registry, but you need to change the registry before any
          * other queue operations (at application startup, for example).
          */
         val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
     ) : PrometheusConfig() {
+
+        // ----------------------------------------------------------------------------
+        // Queue metrics
+        internal val queueMessagesGauge: Gauge = Gauge.builder()
+            .name("kolbasa_queue_messages")
+            .help("Amount of messages in the queue in different states (scheduled, ready, in-flight, retry, dead)")
+            .labelNames("queue", "state", "node_id")
+            .register(registry)
+
+        internal val queueMessageAgesGauge: Gauge = Gauge.builder()
+            .name("kolbasa_queue_message_age_seconds")
+            .help("Queue messages ages in seconds – oldest, newest and oldest ready")
+            .labelNames("queue", "type", "node_id")
+            .register(registry)
+
+        internal val queueSizeGauge: Gauge = Gauge.builder()
+            .name("kolbasa_queue_size")
+            .help("Queue size in bytes")
+            .labelNames("queue", "node_id")
+            .register(registry)
 
         // ----------------------------------------------------------------------------
         // Producer metrics
@@ -66,19 +70,13 @@ sealed class PrometheusConfig {
             .help("Producer send() calls duration")
             .labelNames("queue", "partial_insert_type", "node_id")
             .classicOnly()
-            .classicUpperBounds(*Const.histogramBuckets())
+            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
         internal val producerSendBytesCounter: Counter = Counter.builder()
             .name("kolbasa_producer_send_bytes")
             .help("Amount of bytes sent by producer send() calls")
             .labelNames("queue", "partial_insert_type", "node_id")
-            .register(registry)
-
-        internal val producerQueueSizeGauge: Gauge = Gauge.builder()
-            .name("kolbasa_producer_queue_size")
-            .help("Producer queue size")
-            .labelNames("queue", "node_id")
             .register(registry)
 
         // ----------------------------------------------------------------------------
@@ -107,7 +105,7 @@ sealed class PrometheusConfig {
             .help("Consumer receive() calls duration")
             .labelNames("queue", "node_id")
             .classicOnly()
-            .classicUpperBounds(*Const.histogramBuckets())
+            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
         // Delete
@@ -128,13 +126,7 @@ sealed class PrometheusConfig {
             .help("Consumer delete() calls duration")
             .labelNames("queue", "node_id")
             .classicOnly()
-            .classicUpperBounds(*Const.histogramBuckets())
-            .register(registry)
-
-        internal val consumerQueueSizeGauge: Gauge = Gauge.builder()
-            .name("kolbasa_consumer_queue_size")
-            .help("Consumer queue size")
-            .labelNames("queue", "node_id")
+            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
         // ----------------------------------------------------------------------------
@@ -156,7 +148,7 @@ sealed class PrometheusConfig {
             .help("Sweep duration")
             .labelNames("queue", "node_id")
             .classicOnly()
-            .classicUpperBounds(*Const.histogramBuckets())
+            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
         // ----------------------------------------------------------------------------
@@ -184,37 +176,20 @@ sealed class PrometheusConfig {
             .help("Mutate duration")
             .labelNames("queue", "node_id", "type")
             .classicOnly()
-            .classicUpperBounds(*Const.histogramBuckets())
+            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
-
-        init {
-            customQueueSizeMeasureInterval.forEach { (queueName, customInterval) ->
-                Checks.checkCustomQueueSizeMeasureInterval(queueName, customInterval)
-            }
-        }
 
         class Builder internal constructor() {
             private var preciseStringSize: Boolean = false
-            private var customQueueSizeMeasureInterval: MutableMap<String, Duration> = mutableMapOf()
             private var registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
-
-            fun customQueueSizeMeasureInterval(queueName: String, customInterval: Duration) = apply {
-                customQueueSizeMeasureInterval[queueName] = customInterval
-            }
-
-            fun customQueueSizeMeasureInterval(queue: Queue<*>, customInterval: Duration) =
-                customQueueSizeMeasureInterval(queue.name, customInterval)
 
             fun preciseStringSize(preciseStringSize: Boolean) = apply { this.preciseStringSize = preciseStringSize }
             fun registry(registry: PrometheusRegistry) = apply { this.registry = registry }
 
-            fun build() = Config(preciseStringSize, customQueueSizeMeasureInterval, registry)
+            fun build() = Config(preciseStringSize, registry)
         }
 
         companion object {
-            internal val MIN_QUEUE_SIZE_MEASURE_INTERVAL = Duration.ofSeconds(1)
-            internal val DEFAULT_QUEUE_SIZE_MEASURE_INTERVAL = Duration.ofSeconds(15)
-
             @JvmStatic
             fun builder(): Builder = Builder()
         }

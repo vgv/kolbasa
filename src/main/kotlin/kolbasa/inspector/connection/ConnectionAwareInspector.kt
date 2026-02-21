@@ -119,7 +119,7 @@ interface ConnectionAwareInspector {
      *
      * @param connection the database connection to use
      * @param queue the queue to inspect
-     * @return a [MessageAge] with the age of the oldest, newest, and longest-waiting message
+     * @return a [MessageAge] with the age of the oldest, newest, and oldest ready message
      */
     fun messageAge(connection: Connection, queue: Queue<*>): MessageAge
 

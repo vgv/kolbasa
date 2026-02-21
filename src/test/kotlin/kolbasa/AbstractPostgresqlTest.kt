@@ -14,7 +14,7 @@ import javax.sql.DataSource
 abstract class AbstractPostgresqlTest {
 
     @Container
-    protected val pgContainer = PostgreSQLContainer(RANDOM_POSTGRES_IMAGE.dockerImage)
+    protected val pgContainer = PostgreSQLContainer(RANDOM_POSTGRES_IMAGE)
 
     protected lateinit var dataSource: DataSource
     protected lateinit var dataSourceFirstSchema: DataSource
@@ -100,27 +100,25 @@ abstract class AbstractPostgresqlTest {
         const val FIRST_SCHEMA_NAME = "first"
         const val SECOND_SCHEMA_NAME = "second"
 
-        data class Postgres(val dockerImage: String, val modernVacuumStats: Boolean)
-
         // All PG images to run tests
         // Choose random image at every run
         private val POSTGRES_IMAGES = setOf(
-            Postgres("postgres:10.23-alpine", false),
-            Postgres("postgres:11.22-alpine", false),
-            Postgres("postgres:12.22-alpine", false),
-            Postgres("postgres:13.22-alpine", false),
-            Postgres("postgres:14.20-alpine", true),
-            Postgres("postgres:15.15-alpine", true),
-            Postgres("postgres:16.11-alpine", true),
-            Postgres("postgres:17.7-alpine", true),
-            Postgres("postgres:18.1-alpine", true)
+            "postgres:10.23-alpine",
+            "postgres:11.22-alpine",
+            "postgres:12.22-alpine",
+            "postgres:13.23-alpine",
+            "postgres:14.21-alpine",
+            "postgres:15.16-alpine",
+            "postgres:16.12-alpine",
+            "postgres:17.8-alpine",
+            "postgres:18.2-alpine"
         )
 
         val RANDOM_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
         val NEWEST_POSTGRES_IMAGE = POSTGRES_IMAGES.last()
 
         init {
-            println("PostgreSQL docker image: ${RANDOM_POSTGRES_IMAGE.dockerImage}")
+            println("PostgreSQL docker image: $RANDOM_POSTGRES_IMAGE")
         }
     }
 

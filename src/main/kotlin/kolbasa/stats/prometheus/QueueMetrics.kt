@@ -1,7 +1,8 @@
-package kolbasa.stats.prometheus.metrics
+package kolbasa.stats.prometheus
 
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
+import java.sql.Connection
 
 internal interface QueueMetrics {
 
@@ -14,7 +15,7 @@ internal interface QueueMetrics {
         failedMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
+        connection: Connection? = null
     )
 
     fun consumerReceiveMetrics(
@@ -22,19 +23,21 @@ internal interface QueueMetrics {
         receivedMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
-        queueSizeCalcFunc: () -> Long
+        connection: Connection? = null
     )
 
     fun consumerDeleteMetrics(
         nodeId: NodeId,
         removedMessages: Int,
-        executionNanos: Long
+        executionNanos: Long,
+        connection: Connection? = null
     )
 
     fun sweepMetrics(
         nodeId: NodeId,
         removedMessages: Int,
-        executionNanos: Long
+        executionNanos: Long,
+        connection: Connection? = null
     )
 
     fun mutatorMetrics(
@@ -42,6 +45,7 @@ internal interface QueueMetrics {
         iterations: Int,
         mutatedMessages: Int,
         executionNanos: Long,
-        byId: Boolean
+        byId: Boolean,
+        connection: Connection? = null
     )
 }
