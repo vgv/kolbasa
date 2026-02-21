@@ -53,5 +53,23 @@ internal object Helpers {
         return sb.toString()
     }
 
+    fun utf8ByteLength(value: String): Int {
+        var count = 0
+        var i = 0
+        while (i < value.length) {
+            val ch = value[i]
+            when {
+                ch.code <= 0x7F -> count += 1        // ASCII
+                ch.code <= 0x7FF -> count += 2        // 2-byte
+                ch.isHighSurrogate() -> {
+                    count += 4                         // surrogate pair → 4 bytes
+                    i++                                // skip low surrogate
+                }
+                else -> count += 3                     // BMP (3-byte)
+            }
+            i++
+        }
+        return count
+    }
 
 }
