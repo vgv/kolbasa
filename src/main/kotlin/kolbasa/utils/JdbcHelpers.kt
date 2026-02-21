@@ -263,4 +263,13 @@ internal object JdbcHelpers {
         }
     }
 
+    // -------------------------------------------------------------------------------------------
+    fun schemaNameOrDefault(schemaName: String?): String {
+        return if (schemaName.isNullOrBlank()) {
+            "public"
+        } else {
+            schemaName
+        }
+    }
+
 }

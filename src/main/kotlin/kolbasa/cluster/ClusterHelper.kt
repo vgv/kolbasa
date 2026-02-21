@@ -9,8 +9,8 @@ import javax.sql.DataSource
 internal object ClusterHelper {
 
     fun readNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        val allNodes = dataSources.map { dataSource ->
-            IdSchema.createAndInitIdTable(dataSource)
+        val allNodes = dataSources.mapIndexed { index, dataSource ->
+            IdSchema.createAndInitIdTable(dataSource, identifierBucket = Node.MIN_BUCKET + index)
             val node = requireNotNull(IdSchema.readNodeInfo(dataSource)) {
                 "Node info is not found, dataSource: $dataSource"
             }

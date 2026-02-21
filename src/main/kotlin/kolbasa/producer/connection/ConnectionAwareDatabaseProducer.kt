@@ -5,7 +5,6 @@ import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.stats.prometheus.queuesize.QueueSizeHelper
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
@@ -52,7 +51,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             failedMessages = result.failedMessages,
             executionNanos = execution.durationNanos,
             approxBytes = approxStatsBytes.get(),
-            queueSizeCalcFunc = { QueueSizeHelper.calculateQueueLength(connection, queue) }
+            connection = connection
         )
 
         return result
@@ -172,12 +171,12 @@ class ConnectionAwareDatabaseProducer internal constructor(
                         val localId = resultSet.getLong(1)
 
                         when (deduplicationMode) {
-                            DeduplicationMode.ERROR -> {
+                            DeduplicationMode.FAIL_ON_DUPLICATE -> {
                                 val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
-                            DeduplicationMode.IGNORE_DUPLICATES -> {
+                            DeduplicationMode.IGNORE_DUPLICATE -> {
                                 val realIndex = resultSet.getInt(2)
                                 while (currentIndex < realIndex) {
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])

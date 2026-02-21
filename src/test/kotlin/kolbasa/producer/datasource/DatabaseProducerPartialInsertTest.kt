@@ -22,7 +22,7 @@ import org.junit.jupiter.api.assertNotNull
 
 class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.STRICT_UNIQUE)
+    private val FIELD = MetaField.int("field", FieldOption.ALL_LIVE_UNIQUE)
 
     private val queue = Queue.of(
         "local",
@@ -96,7 +96,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertInstanceOf<MessageResult.Success<String>>(result.messages[index]).let {
-                assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
+                assertEquals(index + IdRange.MIN_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -126,7 +126,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
         // first 5 items are good
         first.forEachIndexed { index, sendMessage ->
             assertInstanceOf<MessageResult.Success<String>>(result.messages[index]).let {
-                assertEquals(index + IdRange.LOCAL_RANGE.min, it.id.localId)
+                assertEquals(index + IdRange.MIN_RANGE.min, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }
@@ -139,7 +139,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
         // Next 5 are good again
         third.forEachIndexed { index, sendMessage ->
             assertInstanceOf<MessageResult.Success<String>>(result.messages[index + 6]).let {
-                assertEquals(index + IdRange.LOCAL_RANGE.min + 8, it.id.localId)
+                assertEquals(index + IdRange.MIN_RANGE.min + 8, it.id.localId)
                 assertEquals(sendMessage, it.message)
             }
         }

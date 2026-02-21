@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 
 class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.STRICT_UNIQUE)
+    private val FIELD = MetaField.int("field", FieldOption.ALL_LIVE_UNIQUE)
 
     private val queue = Queue.of("local", PredefinedDataTypes.String, metadata = Metadata.of(FIELD))
 
@@ -31,11 +31,11 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_ERROR_SingleMessage() {
+    fun testDeduplication_FAIL_ON_DUPLICATE_SingleMessage() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.ERROR)
+            ProducerOptions(deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE)
         )
 
         // First send – success
@@ -54,11 +54,11 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_ERROR_MessagesList() {
+    fun testDeduplication_FAIL_ON_DUPLICATE_MessagesList() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.ERROR, batchSize = 1000)
+            ProducerOptions(deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE, batchSize = 1000)
         )
 
         // First send – success
@@ -81,11 +81,11 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_IGNORE_DUPLICATES_SingleMessage() {
+    fun testDeduplication_IGNORE_DUPLICATE_SingleMessage() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES)
+            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
         )
 
         // First send – success
@@ -104,11 +104,11 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_IGNORE_DUPLICATES_MessagesList() {
+    fun testDeduplication_IGNORE_DUPLICATE_MessagesList() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATES, batchSize = 1000)
+            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE, batchSize = 1000)
         )
 
         // First send – success

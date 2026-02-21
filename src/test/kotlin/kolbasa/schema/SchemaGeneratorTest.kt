@@ -12,7 +12,7 @@ import org.junit.jupiter.api.assertNotNull
 class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
     private val FIRST = MetaField.int("first", FieldOption.SEARCH)
-    private val SECOND = MetaField.long("second", FieldOption.STRICT_UNIQUE)
+    private val SECOND = MetaField.long("second", FieldOption.ALL_LIVE_UNIQUE)
     private val THIRD = MetaField.string("third")
 
     private val queue = Queue.of(
@@ -23,7 +23,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
     @Test
     fun testExtractSchema_CreateOrUpdate_Check_Statements_If_No_Tables_At_All() {
-        val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.LOCAL_RANGE)
+        val schema = SchemaGenerator.generateTableSchema(queue, null, IdRange.MIN_RANGE)
 
         // Table DDL
         val createTableStatements = 1
@@ -47,7 +47,7 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         assertNotNull(existingTable)
 
         // we don't expect anything because schema is actual
-        val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.LOCAL_RANGE)
+        val schema = SchemaGenerator.generateTableSchema(queue, existingTable, IdRange.generateRange(Node.MIN_BUCKET))
         assertTrue(schema.isEmpty, "Required object: $schema")
         assertEquals(0, schema.size, "Required object: $schema")
     }

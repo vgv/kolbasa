@@ -79,7 +79,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // deduplication
-        if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATE) {
             columns += Const.USELESS_COUNTER_COLUMN_NAME
             request.data.forEachIndexed { index, _ ->
                 // just a sequence 0, 1, 2 etc.
@@ -98,12 +98,12 @@ internal object ProducerSchemaHelpers {
         val valuesStr = values.joinToString(separator = ",") {
             it.joinToString(separator = ",", prefix = "(", postfix = ")")
         }
-        val onConflictStr = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        val onConflictStr = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATE) {
             "on conflict do nothing"
         } else {
             ""
         }
-        val returningColumns = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATES) {
+        val returningColumns = if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATE) {
             "${Const.ID_COLUMN_NAME}, ${Const.USELESS_COUNTER_COLUMN_NAME}"
         } else {
             Const.ID_COLUMN_NAME

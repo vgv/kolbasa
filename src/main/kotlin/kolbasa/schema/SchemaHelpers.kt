@@ -18,17 +18,14 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateCreateOrUpdateStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
+        // Init system tables
+        IdSchema.createAndInitIdTable(dataSource)
         val node = IdSchema.readNodeInfo(dataSource)
-        val idRange = if (node != null) {
-            // This server is a part of a clustered environment, currently or in the past
-            // We can't know for sure, but we have to restrict the range of identifiers
-            IdRange.generateRange(node.identifiersBucket)
-        } else {
-            // This server is not a part of a clustered environment, so, we can use all [0...Long.MAX_VALUE] range
-            IdRange.LOCAL_RANGE
-        }
+        val idRange = IdRange.generateRange(node.identifiersBucket)
 
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
@@ -86,7 +83,9 @@ object SchemaHelpers {
         queues: List<Queue<*>>,
         renameFunction: (Queue<*>) -> String
     ): Map<Queue<*>, Schema> {
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
@@ -140,7 +139,9 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateDeleteStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
-        val existingTables = SchemaExtractor.extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+        val existingTables = SchemaExtractor
+            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .filter { it.value.isQueueTable() }
 
         return queues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
@@ -236,20 +237,3 @@ object SchemaHelpers {
     private const val DEFAULT_CHUNK_SIZE = 25
 
 }
-
-data class SchemaResult(
-    val schema: Schema,
-    val failedStatements: Int,
-    val failedTableStatements: List<FailedStatement>,
-    val failedIndexStatements: List<FailedStatement>
-) {
-    init {
-        check(failedTableStatements.size + failedIndexStatements.size == failedStatements) {
-            "Inconsistent schema result: failedStatements=$failedStatements, " +
-                "failedTableStatements=${failedTableStatements.size}, " +
-                "failedIndexStatements=${failedIndexStatements.size}"
-        }
-    }
-}
-
-data class FailedStatement(val statement: String, val error: Exception)

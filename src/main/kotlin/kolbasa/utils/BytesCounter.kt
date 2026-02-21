@@ -22,7 +22,7 @@ internal class BytesCounter(private val precise: Boolean) {
 
     fun addString(value: String) {
         bytes += if (precise) {
-            value.toByteArray().size
+            Helpers.utf8ByteLength(value)
         } else {
             value.length
         }

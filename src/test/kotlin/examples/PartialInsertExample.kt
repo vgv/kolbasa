@@ -10,7 +10,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-private val UNIQUE_KEY = MetaField.int("unique_key", FieldOption.STRICT_UNIQUE)
+private val UNIQUE_KEY = MetaField.int("unique_key", FieldOption.ALL_LIVE_UNIQUE)
 
 fun main() {
     // Define three queues to demonstrate different PartialInsert modes
@@ -61,7 +61,7 @@ fun main() {
             sendOptions = SendOptions(
                 partialInsert = PartialInsert.PROHIBITED,
                 batchSize = 2,
-                deduplicationMode = DeduplicationMode.ERROR
+                deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
     ).let { sendResult -> dumpResult(sendResult) }
@@ -82,7 +82,7 @@ fun main() {
             sendOptions = SendOptions(
                 partialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
                 batchSize = 2,
-                deduplicationMode = DeduplicationMode.ERROR
+                deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
     ).let { sendResult -> dumpResult(sendResult) }
@@ -103,7 +103,7 @@ fun main() {
             sendOptions = SendOptions(
                 partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE,
                 batchSize = 2,
-                deduplicationMode = DeduplicationMode.ERROR
+                deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
     ).let { sendResult ->

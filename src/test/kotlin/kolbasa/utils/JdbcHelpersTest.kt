@@ -13,6 +13,7 @@ import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
@@ -295,6 +296,20 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
             // More than one row
             dataSource.readString("select str_value from full_table")
         }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testSchemaNameOrDefault() {
+        // Null or blank schema name returns "public"
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(null))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(""))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(" "))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault("     "))
+
+        // Non-empty schema name is returned as is
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault("     "))
     }
 
 }

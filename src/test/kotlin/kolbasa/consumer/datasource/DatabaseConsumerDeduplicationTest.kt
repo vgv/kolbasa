@@ -22,8 +22,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 
-private val STRICT_FIELD = MetaField.int("strict_field", FieldOption.STRICT_UNIQUE)
-private val PENDING_ONLY_FIELD = MetaField.int("pending_only_field", FieldOption.PENDING_ONLY_UNIQUE)
+private val STRICT_FIELD = MetaField.int("strict_field", FieldOption.ALL_LIVE_UNIQUE)
+private val PENDING_ONLY_FIELD = MetaField.int("pending_only_field", FieldOption.UNTOUCHED_UNIQUE)
 
 class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 
@@ -107,7 +107,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
             assertEquals(1, result.onlyFailed().size)
         }
 
-        // ... but, if we read this message, it will move message from PENDING state to PROCESSING
+        // ... but, if we read this message, it will move message from AVAILABLE state to IN_FLIGHT
         // technically, it will set processingAt to non-null or, in other words, message will be "touched"
         // in this case, we have to be able to send the message with the same meta field again, even if it has unique constraint
         // Read message and NOT DELETE IT

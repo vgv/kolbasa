@@ -2,12 +2,13 @@ package kolbasa.queue
 
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
+import kolbasa.inspector.CountOptions
+import kolbasa.inspector.DistinctValuesOptions
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.PrometheusConfig
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -237,23 +238,32 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckCustomQueueSizeMeasureInterval() {
-        assertThrows<IllegalStateException> {
-            val ulp = Duration.ofNanos(1)
-            val aBitSmaller = PrometheusConfig.Config.MIN_QUEUE_SIZE_MEASURE_INTERVAL - ulp
-            Checks.checkCustomQueueSizeMeasureInterval("some_queue", aBitSmaller)
-        }
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
-
-    @Test
     fun testCheckClusterStateUpdateInterval() {
         assertThrows<IllegalStateException> {
             val ulp = Duration.ofNanos(1)
             val aBitSmaller = ClusterStateUpdateConfig.MIN_INTERVAL - ulp
             Checks.checkClusterStateUpdateInterval(aBitSmaller)
         }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckSamplePercent_ValidValues() {
+        // special cases
+        assertDoesNotThrow { Checks.checkSamplePercent(CountOptions.YOU_KNOW_BETTER) }
+        assertDoesNotThrow { Checks.checkSamplePercent(DistinctValuesOptions.YOU_KNOW_BETTER) }
+
+        assertDoesNotThrow { Checks.checkSamplePercent(0.0001f) }
+        assertDoesNotThrow { Checks.checkSamplePercent(50.0f) }
+        assertDoesNotThrow { Checks.checkSamplePercent(100.0f) }
+    }
+
+    @Test
+    fun testCheckSamplePercent_InvalidValues() {
+        assertThrows<IllegalStateException> { Checks.checkSamplePercent(0.0f) }
+        assertThrows<IllegalStateException> { Checks.checkSamplePercent(-1.0f) }
+        assertThrows<IllegalStateException> { Checks.checkSamplePercent(100.01f) }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

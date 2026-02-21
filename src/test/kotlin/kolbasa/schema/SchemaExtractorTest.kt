@@ -18,15 +18,15 @@ import java.time.Duration
 internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
     private val queueName = "test_queue"
-    private val minValue = 0.toLong()
-    private val maxValue = 9223372036854775807
+    private val minValue = IdRange.generateRange(Node.MIN_BUCKET).min
+    private val maxValue = IdRange.generateRange(Node.MIN_BUCKET).max
     private val cacheValue = 1000.toLong()
     private val incrementValue = 1.toLong()
 
     private val STRING_FIELD = MetaField.string("string_value")
     private val LONG_FIELD = MetaField.long("long_value", FieldOption.SEARCH)
-    private val INT_FIELD = MetaField.int("int_value", FieldOption.STRICT_UNIQUE)
-    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.PENDING_ONLY_UNIQUE)
+    private val INT_FIELD = MetaField.int("int_value", FieldOption.ALL_LIVE_UNIQUE)
+    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.UNTOUCHED_UNIQUE)
     private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
     private val DOUBLE_FIELD = MetaField.double("double_value")
     private val FLOAT_FIELD = MetaField.float("float_value")
@@ -61,7 +61,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         // here we have to find objects (tables, indexes etc.) only from 'public' schema
         val tables = SchemaExtractor.extractRawSchema(dataSource)
 
-        assertEquals(1, tables.size, "Tables: ${tables.keys}")
+        assertEquals(2, tables.size, "Tables: ${tables.keys}")
 
         val testTable = requireNotNull(tables[testQueue.dbTableName]) {
             "Table not found, tables: ${tables.keys}"
@@ -75,6 +75,7 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
             assertEquals(ColumnType.BIGINT, idColumn.type)
             assertFalse(idColumn.nullable)
         }
+        assertNotNull(testTable.identity)
         assertEquals(minValue, testTable.identity.min)
         assertEquals(minValue, testTable.identity.start)
         assertEquals(maxValue, testTable.identity.max)

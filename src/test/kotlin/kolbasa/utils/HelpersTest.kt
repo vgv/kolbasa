@@ -40,4 +40,36 @@ class HelpersTest {
         assertEquals(expectedHash, actualHash)
     }
 
+    @Test
+    fun testRandomString() {
+        val length = 10
+        val alphabet = "abc"
+
+        val randomStr = Helpers.randomString(length, alphabet)
+        assertEquals(length, randomStr.length)
+        assert(randomStr.all { it in alphabet })
+    }
+
+    @Test
+    fun testUtf8ByteLength() {
+        val testStrings = listOf(
+            "",                                                                     // empty
+            "Hello, World!",                                                        // ASCII (1 byte per char)
+            "Привет, мир!",                                                         // Cyrillic (2 bytes per char)
+            "مرحبا بالعالم",                                                        // Arabic (2 bytes per char)
+            "你好世界",                                                              // CJK (3 bytes per char)
+            "สวัสดีชาวโลก",                                                           // Thai (3 bytes per char)
+            "\uD83D\uDE00\uD83D\uDE80\uD83C\uDF1F",                                 // Emoji 😀🚀🌟 (4 bytes per char)
+            "\uD834\uDD1E\uD834\uDD2B",                                             // Musical symbols 𝄞𝄫 (4 bytes per char)
+            "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66",   // ZWJ family emoji 👨‍👩‍👧‍👦
+            "àéîõü ñ ç ž š",                                                        // Latin with diacritics
+            "Hi Мир 世界 \uD83D\uDE00",                                              // Mix of 1b, 2b, 3b, 4b
+        )
+
+        for (str in testStrings) {
+            val expectedSize = str.toByteArray(Charsets.UTF_8).size
+            assertEquals(expectedSize, Helpers.utf8ByteLength(str), "Failed for: $str")
+        }
+    }
+
 }

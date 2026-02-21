@@ -75,7 +75,8 @@ object SweepHelper {
         queue.queueMetrics.sweepMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,
-            executionNanos = execution.durationNanos
+            executionNanos = execution.durationNanos,
+            connection = connection
         )
 
         return removedMessages

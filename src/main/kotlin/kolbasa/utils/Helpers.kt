@@ -42,5 +42,34 @@ internal object Helpers {
         return md5Hash(input).take(10)
     }
 
+    /**
+     * Generates a random string of the specified length using characters from the specified alphabet.
+     */
+    fun randomString(length: Int, alphabet: String): String {
+        val sb = StringBuilder(length)
+        (1..length).forEach { _ ->
+            sb.append(alphabet.random())
+        }
+        return sb.toString()
+    }
+
+    fun utf8ByteLength(value: String): Int {
+        var count = 0
+        var i = 0
+        while (i < value.length) {
+            val ch = value[i]
+            when {
+                ch.code <= 0x7F -> count += 1        // ASCII
+                ch.code <= 0x7FF -> count += 2        // 2-byte
+                ch.isHighSurrogate() -> {
+                    count += 4                         // surrogate pair → 4 bytes
+                    i++                                // skip low surrogate
+                }
+                else -> count += 3                     // BMP (3-byte)
+            }
+            i++
+        }
+        return count
+    }
 
 }

@@ -19,8 +19,8 @@ internal data class IdRange(
         const val MIN_ID = 0.toLong()
         const val MAX_ID = Long.MAX_VALUE
 
-        // Range for non-clustered environment
-        val LOCAL_RANGE = IdRange(MIN_ID, MAX_ID)
+        // Min range for bucket 0, just to have it pre-generated for tests
+        val MIN_RANGE = generateRange(Node.MIN_BUCKET)
     }
 
 }

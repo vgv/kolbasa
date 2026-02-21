@@ -8,7 +8,7 @@ import javax.sql.DataSource
 object PerformanceDataSourceProvider {
 
     fun internalDatasource(): DataSource {
-        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE.dockerImage)
+        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE)
 
         // Start PG container
         pgContainer.start()

@@ -86,6 +86,13 @@ internal object SchemaGenerator {
             return
         }
 
+        requireNotNull(existingTable.identity) {
+            // This should not happen in normal circumstances, because if the table exists, it should have an identity column
+            "Queue table ${existingTable.name} exists but does not have an identity column. This likely means that the table " +
+                "was not created by Kolbasa or was modified in a non-compatible way. Please check the existing table schema " +
+                "and adjust it manually to match the expected schema, or drop the existing table if it is not needed."
+        }
+
         val needToAlterIdentity = (existingTable.identity.min != idRange.min) ||
             (existingTable.identity.max != idRange.max) ||
             (existingTable.identity.cache != idRange.cache)
@@ -223,7 +230,7 @@ internal object SchemaGenerator {
                 }
             }
 
-            MetaIndexType.STRICT_UNIQUE_INDEX -> {
+            MetaIndexType.ALL_LIVE_UNIQUE_INDEX -> {
                 val createIndexStatement = """
                     create unique index concurrently if not exists $strictUniqueIndexName
                     on ${queue.dbTableName}(${metaField.dbColumnName})
@@ -241,7 +248,7 @@ internal object SchemaGenerator {
                 }
             }
 
-            MetaIndexType.PENDING_UNIQUE_INDEX -> {
+            MetaIndexType.UNTOUCHED_UNIQUE_INDEX -> {
                 val createIndexStatement = """
                     create unique index concurrently if not exists $pendingUniqueIndexName
                     on ${queue.dbTableName}(${metaField.dbColumnName})

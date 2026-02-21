@@ -110,7 +110,8 @@ class ConnectionAwareDatabaseMutator internal constructor(
             iterations = iterations,
             mutatedMessages = mutatedMessagesCount,
             executionNanos = execution.durationNanos,
-            byId = false
+            byId = false,
+            connection = connection
         )
 
         return MutateResult(mutatedMessages = mutatedMessagesCount, truncated = truncated, mutatedMessages)
@@ -148,7 +149,8 @@ class ConnectionAwareDatabaseMutator internal constructor(
             iterations = 1,
             mutatedMessages = mutateResult.size,
             executionNanos = execution.durationNanos,
-            byId = true
+            byId = true,
+            connection = connection
         )
 
         return mutateResult

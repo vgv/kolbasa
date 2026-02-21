@@ -36,8 +36,8 @@ import java.sql.Types
  * Each field can be created with a [FieldOption] that controls indexing and uniqueness:
  * - [FieldOption.NONE] - No index, just stores data (most efficient)
  * - [FieldOption.SEARCH] - Creates an index for filtering/sorting
- * - [FieldOption.STRICT_UNIQUE] - Unique constraint across all live messages (PENDING + PROCESSING + DELAYED)
- * - [FieldOption.PENDING_ONLY_UNIQUE] - Unique constraint only for PENDING messages
+ * - [FieldOption.ALL_LIVE_UNIQUE] - Unique constraint across all live messages (`SCHEDULED` + `READY` + `IN_FLIGHT` + `RETRY`)
+ * - [FieldOption.UNTOUCHED_UNIQUE] - Unique constraint only for "untouched" messages (`SCHEDULED` + `READY`)
  *
  * ## Usage Example
  *
@@ -45,7 +45,7 @@ import java.sql.Types
  * // Define meta fields
  * val accountId = MetaField.long("account_id", FieldOption.SEARCH)
  * val priority = MetaField.int("priority", FieldOption.SEARCH)
- * val deduplicationKey = MetaField.string("deduplication_key", FieldOption.STRICT_UNIQUE)
+ * val deduplicationKey = MetaField.string("deduplication_key", FieldOption.ALL_LIVE_UNIQUE)
  *
  * // Create queue with meta fields
  * val queue = Queue.of(
