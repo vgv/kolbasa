@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.consumer.datasource.Consumer
+import kolbasa.inspector.datasource.Inspector
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.datasource.Producer
 import kolbasa.schema.NodeId
@@ -94,6 +95,10 @@ internal data class ClusterState(
     }
 
     private val allMutators: ConcurrentMap<ClusterMutator, ConcurrentMap<NodeId, Mutator>> by lazy {
+        ConcurrentHashMap()
+    }
+
+    private val allInspectors: ConcurrentMap<ClusterInspector, ConcurrentMap<NodeId, Inspector>> by lazy {
         ConcurrentHashMap()
     }
 
@@ -222,6 +227,23 @@ internal data class ClusterState(
         }
 
         return mutators
+    }
+
+    fun getInspectors(
+        clusterInspector: ClusterInspector,
+        generateInspector: (NodeId, DataSource) -> Inspector
+    ): List<Inspector> {
+        val nodesToInspectors = allInspectors.computeIfAbsent(clusterInspector) { _ ->
+            ConcurrentHashMap()
+        }
+
+        val inspectors = nodes.map { (node, dataSource) ->
+            nodesToInspectors.computeIfAbsent(node) { _ ->
+                generateInspector(node, dataSource)
+            }
+        }
+
+        return inspectors
     }
 
     companion object {

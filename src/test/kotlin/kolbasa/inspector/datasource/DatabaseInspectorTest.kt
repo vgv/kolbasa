@@ -181,31 +181,35 @@ class DatabaseInspectorTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testIsEmpty_True() {
+    fun testIsEmpty() {
         val inspector = DatabaseInspector(dataSource)
-        assertTrue(inspector.isEmpty(queue))
-    }
 
-    @Test
-    fun testIsEmpty_False() {
+        // Initially, the queue should be empty
+        assertTrue(inspector.isEmpty(queue))
+
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, SendMessage("data", MetaValues.of(FIELD.value(1))))
 
-        val inspector = DatabaseInspector(dataSource)
+        // After sending a message, the queue should no longer be empty
         assertFalse(inspector.isEmpty(queue))
     }
 
     @Test
     fun testIsEmpty_WithOnlyDeadMessages_ReturnsFalse() {
-        // Send a message with 1 attempt, receive with zero visibility timeout → remaining_attempts becomes 0 → DEAD
+        val inspector = DatabaseInspector(dataSource)
+
+        // Initially, the queue should be empty
+        assertTrue(inspector.isEmpty(queue))
+
+        // Send a message with 1 attempt, receive with zero visibility timeout -> remaining_attempts becomes 0 -> DEAD
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, SendMessage("data", MetaValues.of(FIELD.value(1)), MessageOptions(attempts = 1)))
 
         val consumer = DatabaseConsumer(dataSource)
         consumer.receive(queue, 1, ReceiveOptions(visibilityTimeout = Duration.ZERO))
 
-        val inspector = DatabaseInspector(dataSource)
         assertFalse(inspector.isEmpty(queue))
+        assertTrue(inspector.isDeadOrEmpty(queue))
     }
 
     @Test
