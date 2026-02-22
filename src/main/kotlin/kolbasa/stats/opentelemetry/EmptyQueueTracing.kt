@@ -3,6 +3,7 @@ package kolbasa.stats.opentelemetry
 import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
+import kolbasa.schema.NodeId
 
 internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
 
@@ -11,6 +12,7 @@ internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
     }
 
     override fun makeProducerCall(
+        nodeId: NodeId,
         request: SendRequest<Data>,
         businessCall: () -> SendResult<Data>
     ): SendResult<Data> {
@@ -18,7 +20,7 @@ internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
         return businessCall()
     }
 
-    override fun makeConsumerCall(businessCall: () -> List<Message<Data>>): List<Message<Data>> {
+    override fun makeConsumerCall(nodeId: NodeId, businessCall: () -> List<Message<Data>>): List<Message<Data>> {
         // default trivial implementation
         return businessCall()
     }

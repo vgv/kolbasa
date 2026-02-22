@@ -26,7 +26,7 @@ class ClusterProducer(
         val currentState = cluster.getState()
         val producer = currentState.getProducer(this, request.effectiveShard) { nodeId, dataSource ->
             val p = ConnectionAwareDatabaseProducer(nodeId, producerOptions)
-            DatabaseProducer(dataSource, p)
+            DatabaseProducer(nodeId, dataSource, p)
         }
 
         return producer.send(queue, request)

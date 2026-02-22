@@ -3,16 +3,15 @@ package kolbasa.stats.opentelemetry
 import io.opentelemetry.context.propagation.TextMapGetter
 import io.opentelemetry.context.propagation.TextMapSetter
 import kolbasa.consumer.Message
-import kolbasa.producer.SendRequest
 
-internal class ContextToMessageSetter<Data> : TextMapSetter<SendRequest<Data>> {
+internal class ContextToMessageSetter<Data> : TextMapSetter<ProducerCall<Data>> {
 
-    override fun set(carrier: SendRequest<Data>?, key: String, value: String) {
+    override fun set(carrier: ProducerCall<Data>?, key: String, value: String) {
         if (carrier == null) {
             return
         }
 
-        carrier.addOpenTelemetryContext(key, value)
+        carrier.request.addOpenTelemetryContext(key, value)
     }
 }
 

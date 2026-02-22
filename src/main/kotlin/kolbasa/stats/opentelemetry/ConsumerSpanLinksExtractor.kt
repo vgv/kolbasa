@@ -11,11 +11,11 @@ import kolbasa.consumer.Message
 internal class ConsumerSpanLinksExtractor<Data>(
     private val propagator: TextMapPropagator,
     private val extractor: TextMapGetter<Message<Data>>
-) : SpanLinksExtractor<List<Message<Data>>> {
+) : SpanLinksExtractor<ConsumerCall<Data>> {
 
-    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: List<Message<Data>>) {
+    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: ConsumerCall<Data>) {
         // Extract all context information from all messages and add them as links
-        request.forEach { req ->
+        request.messages.forEach { req ->
             val context = propagator.extract(Context.root(), req, extractor)
             spanLinks.addLink(Span.fromContext(context).spanContext)
         }

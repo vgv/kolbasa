@@ -19,8 +19,8 @@ class ClusterConsumer(
         val latestState = cluster.getState()
 
         val consumer = latestState.getActiveConsumer(this) { nodeId, dataSource, shards ->
-            val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, shards)
-            DatabaseConsumer(dataSource, c)
+            val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, shards)
+            DatabaseConsumer(nodeId, dataSource, peer)
         }
 
         // No active consumers at all:
@@ -46,8 +46,8 @@ class ClusterConsumer(
                 }
 
                 val consumer = latestState.getConsumer(this, node) { nodeId, dataSource ->
-                    val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
-                    DatabaseConsumer(dataSource, c)
+                    val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                    DatabaseConsumer(nodeId, dataSource, peer)
                 }
 
                 consumer.delete(queue, ids)
@@ -55,8 +55,8 @@ class ClusterConsumer(
 
         if (deleted < messageIds.size) {
             val consumers = latestState.getConsumers(this) { nodeId, dataSource: DataSource ->
-                val c = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
-                DatabaseConsumer(dataSource, c)
+                val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                DatabaseConsumer(nodeId, dataSource, peer)
             }
 
             consumers.forEach { consumer ->
