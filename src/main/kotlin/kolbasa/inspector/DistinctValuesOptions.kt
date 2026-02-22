@@ -1,6 +1,7 @@
 package kolbasa.inspector
 
 import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.order.SortOrder
 import kolbasa.queue.Checks
 
 /**
@@ -18,6 +19,12 @@ data class DistinctValuesOptions(
      * When `null` (the default), all messages are considered.
      */
     val filter: Condition? = null,
+
+    /**
+     * An optional sort order for the results, sorted by count.
+     * When `null` (the default), no ordering is applied.
+     */
+    val order: SortOrder? = null,
 ) {
 
     init {

@@ -35,7 +35,7 @@ class DatabaseInspector(
         metaField: MetaField<V>,
         limit: Int,
         options: DistinctValuesOptions
-    ): List<V?> {
+    ): Map<V?, Long> {
         return dataSource.useConnection { connection ->
             peer.distinctValues(connection, queue, metaField, limit, options)
         }

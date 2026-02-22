@@ -30,14 +30,17 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
                 condition.fillPreparedQuery(ps, columnIndex)
             }
 
-            ps.executeQuery().use { rs ->
-                rs.next()
+            ps.executeQuery().use { resultSet ->
+                require(resultSet.next()) {
+                    "Query didn't return any results, it shouldn't happen. Query: '$query'"
+                }
+
                 Messages(
-                    scheduled = rs.getLong(1).normalize(samplePercent),
-                    ready = rs.getLong(2).normalize(samplePercent),
-                    inFlight = rs.getLong(3).normalize(samplePercent),
-                    retry = rs.getLong(4).normalize(samplePercent),
-                    dead = rs.getLong(5).normalize(samplePercent),
+                    scheduled = resultSet.getLong(1).normalize(samplePercent),
+                    ready = resultSet.getLong(2).normalize(samplePercent),
+                    inFlight = resultSet.getLong(3).normalize(samplePercent),
+                    retry = resultSet.getLong(4).normalize(samplePercent),
+                    dead = resultSet.getLong(5).normalize(samplePercent),
                 )
             }
         }
@@ -50,10 +53,16 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
         metaField: MetaField<V>,
         limit: Int,
         options: DistinctValuesOptions
-    ): List<V?> {
-        val (query, _) = InspectorSchemaHelpers.generateDistinctValuesQuery(connection, queue, metaField, limit, options)
+    ): Map<V?, Long> {
+        val (query, samplePercent) = InspectorSchemaHelpers.generateDistinctValuesQuery(
+            connection,
+            queue,
+            metaField,
+            limit,
+            options
+        )
 
-        val result = ArrayList<V?>(limit)
+        val result = LinkedHashMap<V?, Long>(limit)
         connection.usePreparedStatement(query) { ps ->
             // Fill prepared statement parameters for the filter condition, if exists
             options.filter?.let { condition ->
@@ -64,7 +73,8 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
             ps.executeQuery().use { rs ->
                 while (rs.next()) {
                     val value = metaField.readValue(rs, 1)
-                    result += value?.value
+                    val count = rs.getLong(2).normalize(samplePercent)
+                    result[value?.value] = count
                 }
             }
         }
@@ -88,17 +98,19 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
 
     override fun messageAge(connection: Connection, queue: Queue<*>): MessageAge {
         val query = InspectorSchemaHelpers.generateMessageAgeQuery(queue)
-        return connection.useStatement(query) { rs ->
-            rs.next()
+        return connection.useStatement(query) { resultSet ->
+            require(resultSet.next()) {
+                "Query didn't return any results, it shouldn't happen. Query: '$query'"
+            }
 
-            val oldestSeconds = rs.getDouble(1)
-            val oldest = if (rs.wasNull()) null else Duration.ofMillis((oldestSeconds * 1000).toLong())
+            val oldestSeconds = resultSet.getDouble(1)
+            val oldest = if (resultSet.wasNull()) null else Duration.ofMillis((oldestSeconds * 1000).toLong())
 
-            val newestSeconds = rs.getDouble(2)
-            val newest = if (rs.wasNull()) null else Duration.ofMillis((newestSeconds * 1000).toLong())
+            val newestSeconds = resultSet.getDouble(2)
+            val newest = if (resultSet.wasNull()) null else Duration.ofMillis((newestSeconds * 1000).toLong())
 
-            val oldestReadySeconds = rs.getDouble(3)
-            val oldestReady = if (rs.wasNull()) null else Duration.ofMillis((oldestReadySeconds * 1000).toLong())
+            val oldestReadySeconds = resultSet.getDouble(3)
+            val oldestReady = if (resultSet.wasNull()) null else Duration.ofMillis((oldestReadySeconds * 1000).toLong())
 
             MessageAge(oldest, newest, oldestReady)
         }

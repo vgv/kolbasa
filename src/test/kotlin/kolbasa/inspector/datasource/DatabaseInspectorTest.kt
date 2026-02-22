@@ -150,36 +150,66 @@ class DatabaseInspectorTest : AbstractPostgresqlTest() {
         val inspector = DatabaseInspector(dataSource)
         val values = inspector.distinctValues(queue, FIELD, 100)
 
-        // compare sets because the order is not guaranteed
-        assertEquals(setOf(1, 2, 3), values.toSet())
+        // check keys (order not guaranteed)
+        assertEquals(setOf(1, 2, 3), values.keys)
+        // each value appears exactly twice
+        assertEquals(2L, values[1])
+        assertEquals(2L, values[2])
+        assertEquals(2L, values[3])
     }
 
     @Test
-    fun testIsEmpty_True() {
+    fun testDistinctValues_WithNullValues() {
+        val producer = DatabaseProducer(dataSource)
+        // Send 3 messages with FIELD=1, 2 messages with FIELD=2, and 2 messages without FIELD (null)
+        val withField = listOf(1, 1, 1, 2, 2).map {
+            SendMessage(it.toString(), MetaValues.of(FIELD.value(it)))
+        }
+        val withoutField = listOf("a", "b").map {
+            SendMessage(it) // no meta → FIELD column is NULL
+        }
+        producer.send(queue, withField + withoutField)
+
         val inspector = DatabaseInspector(dataSource)
-        assertTrue(inspector.isEmpty(queue))
+        val values = inspector.distinctValues(queue, FIELD, 100)
+
+        // Should contain 3 keys: 1, 2, and null
+        assertEquals(3, values.size)
+        assertEquals(3L, values[1])
+        assertEquals(2L, values[2])
+        assertEquals(2L, values[null])
     }
 
     @Test
-    fun testIsEmpty_False() {
+    fun testIsEmpty() {
+        val inspector = DatabaseInspector(dataSource)
+
+        // Initially, the queue should be empty
+        assertTrue(inspector.isEmpty(queue))
+
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, SendMessage("data", MetaValues.of(FIELD.value(1))))
 
-        val inspector = DatabaseInspector(dataSource)
+        // After sending a message, the queue should no longer be empty
         assertFalse(inspector.isEmpty(queue))
     }
 
     @Test
     fun testIsEmpty_WithOnlyDeadMessages_ReturnsFalse() {
-        // Send a message with 1 attempt, receive with zero visibility timeout → remaining_attempts becomes 0 → DEAD
+        val inspector = DatabaseInspector(dataSource)
+
+        // Initially, the queue should be empty
+        assertTrue(inspector.isEmpty(queue))
+
+        // Send a message with 1 attempt, receive with zero visibility timeout -> remaining_attempts becomes 0 -> DEAD
         val producer = DatabaseProducer(dataSource)
         producer.send(queue, SendMessage("data", MetaValues.of(FIELD.value(1)), MessageOptions(attempts = 1)))
 
         val consumer = DatabaseConsumer(dataSource)
         consumer.receive(queue, 1, ReceiveOptions(visibilityTimeout = Duration.ZERO))
 
-        val inspector = DatabaseInspector(dataSource)
         assertFalse(inspector.isEmpty(queue))
+        assertTrue(inspector.isDeadOrEmpty(queue))
     }
 
     @Test
