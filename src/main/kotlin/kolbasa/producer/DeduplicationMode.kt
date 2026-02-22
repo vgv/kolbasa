@@ -75,6 +75,8 @@ enum class DeduplicationMode {
      * @see PartialInsert for controlling batch failure granularity
      */
     FAIL_ON_DUPLICATE,
+    @Deprecated("Use FAIL_ON_DUPLICATE instead", ReplaceWith("FAIL_ON_DUPLICATE"))
+    ERROR,
 
     /**
      * Silently skip messages with duplicate unique keys.
@@ -106,5 +108,7 @@ enum class DeduplicationMode {
      * result.failedMessages         // 0 - no failed messages
      * ```
      */
-    IGNORE_DUPLICATE
+    IGNORE_DUPLICATE,
+    @Deprecated("Use IGNORE_DUPLICATE instead", ReplaceWith("IGNORE_DUPLICATE"))
+    IGNORE_DUPLICATES,
 }
