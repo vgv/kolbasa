@@ -8,12 +8,14 @@ import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 /**
  * Default implementation of [Consumer]
  */
 class DatabaseConsumer internal constructor(
+    private val nodeId: NodeId,
     private val dataSource: DataSource,
     private val peer: ConnectionAwareConsumer
 ) : Consumer {
@@ -23,6 +25,7 @@ class DatabaseConsumer internal constructor(
         dataSource: DataSource,
         consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
     ) : this(
+        nodeId = NodeId.EMPTY_NODE_ID,
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseConsumer(consumerOptions)
     )
@@ -31,7 +34,7 @@ class DatabaseConsumer internal constructor(
         // Do we need to read OT data?
         receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
-        return queue.queueTracing.makeConsumerCall {
+        return queue.queueTracing.makeConsumerCall(nodeId) {
             dataSource.useConnection { peer.receive(it, queue, limit, receiveOptions) }
         }
     }

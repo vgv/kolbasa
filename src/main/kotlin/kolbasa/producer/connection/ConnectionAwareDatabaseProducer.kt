@@ -34,7 +34,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
 
         val (execution, result) = TimeHelper.measure {
-            queue.queueTracing.makeProducerCall(request) {
+            queue.queueTracing.makeProducerCall(nodeId, request) {
                 when (partialInsert) {
                     PartialInsert.PROHIBITED -> sendProhibited(connection, queue, approxStatsBytes, request)
                     PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, queue, approxStatsBytes, request)
