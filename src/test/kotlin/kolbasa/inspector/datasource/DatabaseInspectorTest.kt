@@ -150,8 +150,34 @@ class DatabaseInspectorTest : AbstractPostgresqlTest() {
         val inspector = DatabaseInspector(dataSource)
         val values = inspector.distinctValues(queue, FIELD, 100)
 
-        // compare sets because the order is not guaranteed
-        assertEquals(setOf(1, 2, 3), values.toSet())
+        // check keys (order not guaranteed)
+        assertEquals(setOf(1, 2, 3), values.keys)
+        // each value appears exactly twice
+        assertEquals(2L, values[1])
+        assertEquals(2L, values[2])
+        assertEquals(2L, values[3])
+    }
+
+    @Test
+    fun testDistinctValues_WithNullValues() {
+        val producer = DatabaseProducer(dataSource)
+        // Send 3 messages with FIELD=1, 2 messages with FIELD=2, and 2 messages without FIELD (null)
+        val withField = listOf(1, 1, 1, 2, 2).map {
+            SendMessage(it.toString(), MetaValues.of(FIELD.value(it)))
+        }
+        val withoutField = listOf("a", "b").map {
+            SendMessage(it) // no meta → FIELD column is NULL
+        }
+        producer.send(queue, withField + withoutField)
+
+        val inspector = DatabaseInspector(dataSource)
+        val values = inspector.distinctValues(queue, FIELD, 100)
+
+        // Should contain 3 keys: 1, 2, and null
+        assertEquals(3, values.size)
+        assertEquals(3L, values[1])
+        assertEquals(2L, values[2])
+        assertEquals(2L, values[null])
     }
 
     @Test

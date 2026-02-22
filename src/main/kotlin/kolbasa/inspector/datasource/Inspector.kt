@@ -53,18 +53,20 @@ interface Inspector {
      *
      * You can also provide an optional filter condition [DistinctValuesOptions.filter] to restrict which messages are counted.
      *
+     * Results can be sorted by count using [DistinctValuesOptions.order].
+     *
      * @param queue the queue to inspect
      * @param metaField the meta-field whose distinct values to retrieve
      * @param limit maximum number of distinct values to return
-     * @param options options such as sample percent and an optional filter condition
-     * @return a list of distinct values (may contain `null` if the meta-field is nullable)
+     * @param options options such as sample percent, an optional filter condition and sort order
+     * @return a map of distinct values to their (approximate) counts (may contain `null` key because meta-field may be missing)
      */
     fun <V> distinctValues(
         queue: Queue<*>,
         metaField: MetaField<V>,
         limit: Int,
         options: DistinctValuesOptions = DistinctValuesOptions.DEFAULT
-    ): List<V?>
+    ): Map<V?, Long>
 
     /**
      * Returns the total size of the queue table in bytes, including indexes, TOAST data, and other

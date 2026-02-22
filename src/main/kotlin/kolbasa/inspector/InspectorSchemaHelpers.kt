@@ -52,9 +52,13 @@ internal object InspectorSchemaHelpers {
     ): QueryAndSample {
         val samplePercent = effectiveSamplePercent(connection, queue, options.samplePercent)
 
-        var query = "select distinct ${metaField.dbColumnName} from ${queue.dbTableName} tablesample system ($samplePercent)"
+        var query = "select ${metaField.dbColumnName}, count(*) from ${queue.dbTableName} tablesample system ($samplePercent)"
         if (options.filter != null) {
             query += " where ${options.filter.toSqlClause()}"
+        }
+        query += " group by ${metaField.dbColumnName}"
+        if (options.order != null) {
+            query += " order by count(*) ${options.order.sql}"
         }
         query += " limit $limit"
 
