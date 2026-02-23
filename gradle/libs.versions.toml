@@ -16,7 +16,7 @@ opentelemetry-instrumentation = "2.24.0"
 opentelemetry-instrumentation-incubator = "2.24.0-alpha"
 opentelemetry-semconv = "1.40.0"
 hikaricp = "7.0.2"
-postgresql = "42.7.9"
+postgresql = "42.7.10"
 jcommander = "1.82"
 
 logback = "1.5.32"
