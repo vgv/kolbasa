@@ -50,7 +50,7 @@ internal object ConsumerSchemaHelpers {
 
         // 'where' clauses
         val whereClauses = mutableListOf(
-            "${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()",
+            "${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         if (shards != Shards.ALL_SHARDS) {
@@ -61,21 +61,18 @@ internal object ConsumerSchemaHelpers {
         }
 
         // ----------------------------------------------------------
-        val sortColumns = mutableListOf(
-            Const.ID_COLUMN_NAME,
-            Const.SCHEDULED_AT_COLUMN_NAME
-        )
-
         // 'order by' clauses
+        val customColumnsForOrdering = mutableListOf<String>()
         val orderByClauses = mutableListOf<String>()
         // custom ordering clauses first, if any
         receiveOptions.order?.forEach { order ->
             orderByClauses += order.dbOrderClause
-            sortColumns += order.field.dbColumnName
+            if (order.field.dbColumnName !in dataColumns) {
+                customColumnsForOrdering += order.field.dbColumnName
+            }
         }
         // after custom clauses – standard
         orderByClauses += Const.SCHEDULED_AT_COLUMN_NAME
-        orderByClauses += Const.CREATED_AT_COLUMN_NAME
 
         // ----------------------------------------------------------
 
@@ -83,28 +80,24 @@ internal object ConsumerSchemaHelpers {
 
         return """
             with
-            id_to_update as (
-                select ${sortColumns.joinToString(separator = ",")}
-                from ${queue.dbTableName}
-                where
-                    ${whereClauses.joinToString(separator = " and ")}
-                order by
-                    ${orderByClauses.joinToString(separator = ",")}
+            id_to_update_cte as (
+                select ${Const.ID_COLUMN_NAME} as id_value from ${queue.dbTableName}
+                where ${whereClauses.joinToString(separator = " and ")}
+                order by ${orderByClauses.joinToString(separator = ",")}
                 limit $limit
                 for update skip locked
             ),
-            updated as (
+            updated_cte as (
                 update ${queue.dbTableName}
                 set
-                    ${Const.PROCESSING_AT_COLUMN_NAME}=clock_timestamp(),
-                    ${Const.SCHEDULED_AT_COLUMN_NAME}=clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
+                    ${Const.PROCESSING_AT_COLUMN_NAME}=current_timestamp,
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=current_timestamp + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
-                where ${Const.ID_COLUMN_NAME} in (select ${Const.ID_COLUMN_NAME} from id_to_update)
-                returning ${dataColumns.joinToString(separator = ",")}
+                from id_to_update_cte where ${Const.ID_COLUMN_NAME} = id_to_update_cte.id_value
+                returning ${(dataColumns + customColumnsForOrdering).joinToString(separator = ",")}
             )
-            select updated.* from updated
-                inner join id_to_update on (updated.${Const.ID_COLUMN_NAME}=id_to_update.${Const.ID_COLUMN_NAME})
+            select ${dataColumns.joinToString(separator = ",")} from updated_cte
             order by ${orderByClauses.joinToString(separator = ",")}
         """.trimIndent()
     }
