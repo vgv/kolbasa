@@ -171,12 +171,12 @@ class ConnectionAwareDatabaseProducer internal constructor(
                         val localId = resultSet.getLong(1)
 
                         when (deduplicationMode) {
-                            DeduplicationMode.FAIL_ON_DUPLICATE, DeduplicationMode.ERROR -> {
+                            DeduplicationMode.FAIL_ON_DUPLICATE -> {
                                 val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
-                            DeduplicationMode.IGNORE_DUPLICATE, DeduplicationMode.IGNORE_DUPLICATES -> {
+                            DeduplicationMode.IGNORE_DUPLICATE -> {
                                 val realIndex = resultSet.getInt(2)
                                 while (currentIndex < realIndex) {
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])

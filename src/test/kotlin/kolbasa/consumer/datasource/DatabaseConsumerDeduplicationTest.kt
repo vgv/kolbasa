@@ -22,15 +22,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 
-private val STRICT_FIELD = MetaField.int("strict_field", FieldOption.ALL_LIVE_UNIQUE)
-private val PENDING_ONLY_FIELD = MetaField.int("pending_only_field", FieldOption.UNTOUCHED_UNIQUE)
+private val ALL_LIVE_FIELD = MetaField.int("all_live_unique_field", FieldOption.ALL_LIVE_UNIQUE)
+private val UNTOUCHED_FIELD = MetaField.int("untouched_unique_field", FieldOption.UNTOUCHED_UNIQUE)
 
 class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 
     private val queue = Queue.of(
         "local",
         PredefinedDataTypes.String,
-        metadata = Metadata.of(STRICT_FIELD, PENDING_ONLY_FIELD)
+        metadata = Metadata.of(ALL_LIVE_FIELD, UNTOUCHED_FIELD)
     )
 
     @BeforeEach
@@ -39,9 +39,9 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testDeduplication_Strict_Unique() {
+    fun testDeduplication_All_Live_Unique() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data = data, meta = MetaValues.of(STRICT_FIELD.value(1)), messageOptions = MessageOptions(attempts = 1))
+        val messageToSend = SendMessage(data = data, meta = MetaValues.of(ALL_LIVE_FIELD.value(1)), messageOptions = MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource)
@@ -80,14 +80,14 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 
         // Very dirty, raw check directly in the database that we really have two messages
         // with the same meta field value
-        val rawValuesInDatabase = dataSource.readInt("select count(*) from ${queue.dbTableName} where meta_strict_field=1")
+        val rawValuesInDatabase = dataSource.readInt("select count(*) from ${queue.dbTableName} where ${ALL_LIVE_FIELD.dbColumnName}=1")
         assertEquals(2, rawValuesInDatabase)
     }
 
     @Test
-    fun testDeduplication_Pending_Only_Unique() {
+    fun testDeduplication_Untouched_Unique() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data = data, meta = MetaValues.of(PENDING_ONLY_FIELD.value(1)), messageOptions = MessageOptions(attempts = 10))
+        val messageToSend = SendMessage(data = data, meta = MetaValues.of(UNTOUCHED_FIELD.value(1)), messageOptions = MessageOptions(attempts = 10))
 
         val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource)
@@ -127,7 +127,8 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 
         // Very dirty, raw check directly in the database that we really have two messages
         // with the same meta field value
-        val rawValuesInDatabase = dataSource.readInt("select count(*) from ${queue.dbTableName} where meta_pending_only_field=1")
+
+        val rawValuesInDatabase = dataSource.readInt("select count(*) from ${queue.dbTableName} where ${UNTOUCHED_FIELD.dbColumnName}=1")
         assertEquals(2, rawValuesInDatabase)
     }
 }
