@@ -1,13 +1,14 @@
 package kolbasa.producer.connection
 
-import kolbasa.utils.JdbcHelpers.usePreparedStatement
-import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.producer.*
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useSavepoint
+import kolbasa.utils.LruCache
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
@@ -152,15 +153,27 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, request.sendOptions)
-        val query = ProducerSchemaHelpers.generateInsertPreparedQuery(queue, producerOptions, deduplicationMode, request)
+
+        val cacheKey =
+            CacheKey(queue, producerOptions, deduplicationMode, request.sendOptions, request.openTelemetryContext != null)
+        val query = sendQueryCache.getOrPut(cacheKey) {
+            ProducerSchemaHelpers.generateInsertPreparedQuery(
+                queue = queue,
+                producerOptions = producerOptions,
+                deduplicationMode = deduplicationMode,
+                sendOptions = request.sendOptions,
+                hasOpenTelemetry = request.openTelemetryContext != null
+            )
+        }
 
         val (execution, result) = TimeHelper.measure {
             connection.usePreparedStatement(query) { preparedStatement ->
                 ProducerSchemaHelpers.fillInsertPreparedQuery(
-                    queue,
-                    request,
-                    preparedStatement,
-                    approxStatsBytes
+                    queue = queue,
+                    producerOptions = producerOptions,
+                    request = request,
+                    preparedStatement = preparedStatement,
+                    approxBytesCounter = approxStatsBytes
                 )
 
                 val result = ArrayList<MessageResult<Data>>(request.data.size)
@@ -201,5 +214,17 @@ class ConnectionAwareDatabaseProducer internal constructor(
         SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution, result.size)
 
         return result
+    }
+
+    private companion object {
+        data class CacheKey(
+            val queue: Queue<*>,
+            val producerOptions: ProducerOptions,
+            val deduplicationMode: DeduplicationMode,
+            val sendOptions: SendOptions,
+            val hasOpenTelemetry: Boolean
+        )
+
+        val sendQueryCache = LruCache<CacheKey, String>(capacity = 1000)
     }
 }

@@ -77,6 +77,7 @@ sealed class MetaField<T>(
     open val name: String,
     open val option: FieldOption,
     internal val dbColumnType: String,
+    internal val dbColumnArrayBaseType: String,
     internal val sqlColumnType: Int
 ) {
 
@@ -117,7 +118,7 @@ sealed class MetaField<T>(
         if (propertyValues == null) {
             ps.setNull(columnIndex, sqlColumnType)
         } else {
-            val sqlArray = ps.connection.createArrayOf(dbColumnType, propertyValues.toTypedArray())
+            val sqlArray = ps.connection.createArrayOf(dbColumnArrayBaseType, propertyValues.toTypedArray())
             ps.setArray(columnIndex, sqlArray)
         }
     }
@@ -160,7 +161,13 @@ sealed class MetaField<T>(
 data class ByteField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Byte>(name, option, "smallint", Types.SMALLINT) {
+) : MetaField<Byte>(
+    name = name,
+    option = option,
+    dbColumnType = "smallint",
+    dbColumnArrayBaseType = "smallint",
+    sqlColumnType = Types.SMALLINT
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -183,7 +190,13 @@ data class ByteField internal constructor(
 data class ShortField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Short>(name, option, "smallint", Types.SMALLINT) {
+) : MetaField<Short>(
+    name = name,
+    option = option,
+    dbColumnType = "smallint",
+    dbColumnArrayBaseType = "smallint",
+    sqlColumnType = Types.SMALLINT
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -206,7 +219,13 @@ data class ShortField internal constructor(
 data class IntField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Int>(name, option, "int", Types.INTEGER) {
+) : MetaField<Int>(
+    name = name,
+    option = option,
+    dbColumnType = "int",
+    dbColumnArrayBaseType = "int",
+    sqlColumnType = Types.INTEGER
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -229,7 +248,13 @@ data class IntField internal constructor(
 data class LongField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Long>(name, option, "bigint", Types.BIGINT) {
+) : MetaField<Long>(
+    name = name,
+    option = option,
+    dbColumnType = "bigint",
+    dbColumnArrayBaseType = "bigint",
+    sqlColumnType = Types.BIGINT
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -252,7 +277,13 @@ data class LongField internal constructor(
 data class BooleanField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Boolean>(name, option, "boolean", Types.BOOLEAN) {
+) : MetaField<Boolean>(
+    name = name,
+    option = option,
+    dbColumnType = "boolean",
+    dbColumnArrayBaseType = "boolean",
+    sqlColumnType = Types.BOOLEAN
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -275,7 +306,13 @@ data class BooleanField internal constructor(
 data class FloatField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Float>(name, option, "real", Types.REAL) {
+) : MetaField<Float>(
+    name = name,
+    option = option,
+    dbColumnType = "real",
+    dbColumnArrayBaseType = "real",
+    sqlColumnType = Types.REAL
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -298,7 +335,13 @@ data class FloatField internal constructor(
 data class DoubleField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<Double>(name, option, "double precision", Types.DOUBLE) {
+) : MetaField<Double>(
+    name = name,
+    option = option,
+    dbColumnType = "double precision",
+    dbColumnArrayBaseType = "double precision",
+    sqlColumnType = Types.DOUBLE
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -321,7 +364,13 @@ data class DoubleField internal constructor(
 data class StringField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<String>(name, option, "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})", Types.VARCHAR) {
+) : MetaField<String>(
+    name = name,
+    option = option,
+    dbColumnType = "varchar(${Const.META_FIELD_STRING_TYPE_MAX_LENGTH})",
+    dbColumnArrayBaseType = "varchar",
+    sqlColumnType = Types.VARCHAR
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -344,7 +393,13 @@ data class StringField internal constructor(
 data class BigIntegerField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<BigInteger>(name, option, "numeric", Types.NUMERIC) {
+) : MetaField<BigInteger>(
+    name = name,
+    option = option,
+    dbColumnType = "numeric",
+    dbColumnArrayBaseType = "numeric",
+    sqlColumnType = Types.NUMERIC
+) {
 
     init {
         Checks.checkMetaFieldName(name)
@@ -367,7 +422,13 @@ data class BigIntegerField internal constructor(
 data class BigDecimalField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
-) : MetaField<BigDecimal>(name, option, "numeric", Types.NUMERIC) {
+) : MetaField<BigDecimal>(
+    name = name,
+    option = option,
+    dbColumnType = "numeric",
+    dbColumnArrayBaseType = "numeric",
+    sqlColumnType = Types.NUMERIC
+) {
 
     init {
         Checks.checkMetaFieldName(name)
