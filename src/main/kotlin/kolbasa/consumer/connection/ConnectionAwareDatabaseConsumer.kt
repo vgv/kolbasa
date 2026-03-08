@@ -58,7 +58,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         // read
         val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
-        val query = receiveQueryCache.getOrPut(CacheKey(queue.name, consumerOptions, shards, receiveOptions, limit)) {
+        val query = receiveQueryCache.getOrPut(CacheKey(queue, consumerOptions, shards, receiveOptions, limit)) {
             ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, shards, receiveOptions, limit)
         }
 
@@ -121,7 +121,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
     private companion object {
 
         data class CacheKey(
-            val queueName: String,
+            val queue: Queue<*>,
             val consumerOptions: ConsumerOptions,
             val shards: Shards,
             val receiveOptions: ReceiveOptions,
