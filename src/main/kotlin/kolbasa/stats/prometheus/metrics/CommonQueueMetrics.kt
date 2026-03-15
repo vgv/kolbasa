@@ -31,15 +31,9 @@ internal class CommonQueueMetrics(
         queueSizeGauge.setLong(queueSizeBytes)
 
         // ages
-        if (messageAge.oldest != null) {
-            queueMessageAgesGaugeOldest.set(messageAge.oldest.asSeconds())
-        }
-        if (messageAge.newest != null) {
-            queueMessageAgesGaugeNewest.set(messageAge.newest.asSeconds())
-        }
-        if (messageAge.oldestReady != null) {
-            queueMessageAgesGaugeOldestReady.set(messageAge.oldestReady.asSeconds())
-        }
+        queueMessageAgesGaugeOldest.set(messageAge.oldest?.asSeconds() ?: 0.0)
+        queueMessageAgesGaugeNewest.set(messageAge.newest?.asSeconds() ?: 0.0)
+        queueMessageAgesGaugeOldestReady.set(messageAge.oldestReady?.asSeconds() ?: 0.0)
     }
 
     private val queueMessagesGaugeScheduled = prometheusConfig.queueMessagesGauge
