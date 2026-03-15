@@ -158,8 +158,6 @@ enum class FieldOption {
      * strange and fragile workarounds.
      */
     ALL_LIVE_UNIQUE,
-    @Deprecated("Use ALL_LIVE_UNIQUE instead", ReplaceWith("ALL_LIVE_UNIQUE"))
-    STRICT_UNIQUE,
 
     /**
      * Field is unique (for "untouched" only messages) and searchable
@@ -218,9 +216,6 @@ enum class FieldOption {
      * If your application truly requires a queue with deduplication for one or more meta fields, add them; don't build
      * strange and fragile workarounds.
      */
-    UNTOUCHED_UNIQUE,
-    @Deprecated("Use UNTOUCHED_UNIQUE instead", ReplaceWith("UNTOUCHED_UNIQUE"))
-    PENDING_ONLY_UNIQUE,
-
+    UNTOUCHED_UNIQUE
 }
 

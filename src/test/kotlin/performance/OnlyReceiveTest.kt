@@ -40,7 +40,7 @@ class OnlyReceiveTest : PerformanceTest {
             var sentMessages = 0
 
             while (sentMessages < Env.OnlyReceive.messages) {
-                val data = (1..min(1000, Env.OnlyReceive.messages - sentMessages)).map {
+                val data = (1..min(10_000, Env.OnlyReceive.messages - sentMessages)).map {
                     SendMessage(randomData.random())
                 }
 
@@ -49,6 +49,7 @@ class OnlyReceiveTest : PerformanceTest {
 
                 // Increment
                 sentMessages += data.size
+                println("Test data: ${100.0 * sentMessages / Env.OnlyReceive.messages}% prepared")
             }
 
             println("Prepared $sentMessages messages in ${(System.currentTimeMillis() - start) / 1000} seconds")
@@ -63,6 +64,8 @@ class OnlyReceiveTest : PerformanceTest {
             thread {
                 while (receivedMessages.get() < Env.OnlyReceive.messages) {
                     val result = consumer.receive(queue, limit = Env.OnlyReceive.consumerReceiveLimit)
+                    consumer.delete(queue, result)
+
                     receivedMessages.addAndGet(result.size.toLong())
                     receiveCalls.incrementAndGet()
                 }
