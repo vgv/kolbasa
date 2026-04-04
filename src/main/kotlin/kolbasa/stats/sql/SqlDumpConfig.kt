@@ -51,10 +51,48 @@ data class SqlDumpConfig(
 }
 
 enum class StatementKind {
+    /**
+     * Batch INSERT of messages into a queue table
+     */
     PRODUCER_INSERT,
+
+    /**
+     * SELECT to receive messages
+     */
     CONSUMER_SELECT,
+
+    /**
+     * DELETE of successfully processed messages
+     */
     CONSUMER_DELETE,
+
+    /**
+     * Atomic DELETE (main queue) + INSERT (archive queue) that moves acknowledged messages from a main queue to its archive
+     */
+    CONSUMER_DELETE_TO_ARCHIVE,
+
+    /**
+     * DELETE of dead messages (remaining_attempts <= 0) during probabilistic sweep
+     */
     SWEEP,
+
+    /**
+     * Atomic DELETE (main queue) + INSERT (dlq) that moves dead messages from a main queue to its DLQ during sweep
+     */
+    SWEEP_TO_DLQ,
+
+    /**
+     * DELETE of expired messages from a DLQ or Archive queue based on retention duration or max message count
+     */
+    RETENTION_CLEANUP,
+
+    /**
+     * UPDATE of message fields by specific message ids
+     */
     MUTATE_BY_ID,
+
+    /**
+     * UPDATE of message fields by filter condition
+     */
     MUTATE_BY_FILTER
 }

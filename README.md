@@ -16,6 +16,8 @@ Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based
 * Supports working in "external" transaction context (send/receive messages from a queue will follow "external" transaction commit/rollback)
 * Batch send/receive to improve performance
 * Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
+* Dead Letter Queue (DLQ) for messages that exhaust all processing attempts
+* Archive queue for retaining successfully processed messages (auditing, compliance, replay)
 * Share load between different PostgreSQL servers
 
 ## Concepts
@@ -186,3 +188,63 @@ to the calling code. It works perfectly with plain JDBC or more complex framewor
 Example: [TransactionContextExample](src/test/kotlin/examples/TransactionContextExample.kt)
 
 `./gradlew example -P name=TransactionContextExample`
+
+
+### Dead Letter Queue (DLQ)
+When a message exhausts all processing attempts, it is normally deleted during the sweep cycle. With DLQ enabled,
+the message is atomically moved to a separate Dead Letter Queue instead of being permanently deleted. This allows
+failed messages to be inspected, debugged, or reprocessed later.
+
+The DLQ is a regular `Queue` object accessible via `queue.deadLetterQueue`, so it works with all existing
+APIs — `Consumer`, `Producer`, `Inspector`, `Mutator` — without any special methods. The most common pattern is
+reprocessing: consume failed messages from the DLQ and send them back to the main queue for another attempt.
+
+DLQ retention is configurable by duration and/or approximate message count. Retention cleanup runs automatically
+during the probabilistic sweep cycle of the parent queue.
+
+```kotlin
+val queue = Queue(
+    name = "orders",
+    databaseDataType = PredefinedDataTypes.String,
+    options = QueueOptions(
+        defaultAttempts = 3,
+        dlqOptions = DlqOptions(
+            retention = Duration.ofDays(14),
+            maxMessages = 100_000
+        )
+    )
+)
+```
+
+Example: [DlqExample](src/test/kotlin/examples/DlqExample.kt)
+
+`./gradlew example -P name=DlqExample`
+
+
+### Archive queue
+When a consumer deletes a message after successful processing, it is normally permanently deleted. With Archive
+enabled, the message is atomically moved to a separate Archive queue instead. This is useful for auditing,
+compliance, trailing, or replaying successfully processed messages.
+
+The Archive queue is a regular `Queue` object accessible via `queue.archiveQueue`, so it works with all existing
+APIs — you can consume archived messages for replay, inspect queue size, filter by metadata fields, and more.
+
+Archive retention is configurable by duration and/or approximate message count. Retention cleanup runs automatically
+during the probabilistic sweep cycle of the parent queue.
+
+```kotlin
+val queue = Queue(
+    name = "payments",
+    databaseDataType = PredefinedDataTypes.String,
+    options = QueueOptions(
+        archiveQueueOptions = ArchiveQueueOptions(
+            retention = Duration.ofDays(90),
+            maxMessages = 1_000_000
+        )
+    )
+)
+```
+
+Example: [ArchiveExample](src/test/kotlin/examples/ArchiveExample.kt)
+
+`./gradlew example -P name=ArchiveExample`

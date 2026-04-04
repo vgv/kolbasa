@@ -91,7 +91,7 @@ internal object MutatorSchemaHelpers {
 
             is SetScheduledAt -> {
                 val scheduledAt = Const.SCHEDULED_AT_COLUMN_NAME
-                "${scheduledAt}=clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(mutation.newValue)}"
+                "${scheduledAt}=statement_timestamp() + ${TimeHelper.generatePostgreSQLInterval(mutation.newValue)}"
             }
         }
     }

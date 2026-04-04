@@ -64,7 +64,7 @@ internal object SchemaGenerator {
                 ${Const.USELESS_COUNTER_COLUMN_NAME} int,
                 ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
                 ${Const.SHARD_COLUMN_NAME} int not null default ${Shard.MIN_SHARD},
-                ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
+                ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default statement_timestamp(),
                 ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
                 ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),

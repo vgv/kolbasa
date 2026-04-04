@@ -153,14 +153,26 @@ internal class ChecksTest {
     @Test
     fun testCheckQueueName_IfEmpty() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("")
+            Checks.checkQueueName("", QueueType.MAIN)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("", QueueType.DLQ)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("", QueueType.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidPrefix() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email")
+            Checks.checkQueueName("q_customer_email", QueueType.MAIN)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("q_customer_email_dlq", QueueType.DLQ)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("q_customer_email_arc", QueueType.ARCHIVE)
         }
     }
 
@@ -168,15 +180,165 @@ internal class ChecksTest {
     fun testCheckQueueName_TooLong() {
         val longName = "a".repeat(Const.QUEUE_NAME_MAX_LENGTH + 1)
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName)
+            Checks.checkQueueName(longName, QueueType.MAIN)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName(longName, QueueType.DLQ)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName(longName, QueueType.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidSymbols() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue$")
+            Checks.checkQueueName("queue$", QueueType.MAIN)
         }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("queue\$_dlq", QueueType.DLQ)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("queue\$_arc", QueueType.ARCHIVE)
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckQueueName_MainQueueCannotEndWithDlqSuffix() {
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("orders_dlq", QueueType.MAIN)
+        }
+    }
+
+    @Test
+    fun testCheckQueueName_MainQueueCannotEndWithArchiveSuffix() {
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("orders_arc", QueueType.MAIN)
+        }
+    }
+
+    @Test
+    fun testCheckQueueName_DlqQueueMustEndWithDlqSuffix() {
+        assertDoesNotThrow {
+            Checks.checkQueueName("orders_dlq", QueueType.DLQ)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("orders", QueueType.DLQ)
+        }
+    }
+
+    @Test
+    fun testCheckQueueName_ArchiveQueueMustEndWithArchiveSuffix() {
+        assertDoesNotThrow {
+            Checks.checkQueueName("orders_arc", QueueType.ARCHIVE)
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueName("orders", QueueType.ARCHIVE)
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckQueueType_MainCanHaveDlq() {
+        assertDoesNotThrow {
+            Checks.checkQueueType(QueueType.MAIN, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+        }
+    }
+
+    @Test
+    fun testCheckQueueType_MainCanHaveArchive() {
+        assertDoesNotThrow {
+            Checks.checkQueueType(QueueType.MAIN, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+        }
+    }
+
+    @Test
+    fun testCheckQueueType_DlqCannotHaveDlq() {
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueType(QueueType.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+        }
+    }
+
+    @Test
+    fun testCheckQueueType_ArchiveCannotHaveArchive() {
+        assertThrows<IllegalStateException> {
+            Checks.checkQueueType(QueueType.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckDlqRetention_TooShort() {
+        assertThrows<IllegalStateException> {
+            Checks.checkDlqRetention(DlqOptions.MIN_RETENTION.minusNanos(1))
+        }
+    }
+
+    @Test
+    fun testCheckDlqRetention_TooLong() {
+        assertThrows<IllegalStateException> {
+            Checks.checkDlqRetention(DlqOptions.MAX_RETENTION.plusNanos(1))
+        }
+    }
+
+    @Test
+    fun testCheckDlqRetention_Valid() {
+        assertDoesNotThrow { Checks.checkDlqRetention(DlqOptions.MIN_RETENTION) }
+        assertDoesNotThrow { Checks.checkDlqRetention(DlqOptions.MAX_RETENTION) }
+    }
+
+    @Test
+    fun testCheckArchiveQueueRetention_TooShort() {
+        assertThrows<IllegalStateException> {
+            Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MIN_RETENTION.minusNanos(1))
+        }
+    }
+
+    @Test
+    fun testCheckArchiveQueueRetention_TooLong() {
+        assertThrows<IllegalStateException> {
+            Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MAX_RETENTION.plusNanos(1))
+        }
+    }
+
+    @Test
+    fun testCheckArchiveQueueRetention_Valid() {
+        assertDoesNotThrow { Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MIN_RETENTION) }
+        assertDoesNotThrow { Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MAX_RETENTION) }
+    }
+
+    @Test
+    fun testCheckRetentionMaxMessages_Positive() {
+        assertDoesNotThrow { Checks.checkRetentionMaxMessages(1) }
+        assertDoesNotThrow { Checks.checkRetentionMaxMessages(null) }
+    }
+
+    @Test
+    fun testCheckRetentionMaxMessages_ZeroOrNegative() {
+        assertThrows<IllegalStateException> { Checks.checkRetentionMaxMessages(0) }
+        assertThrows<IllegalStateException> { Checks.checkRetentionMaxMessages(-1) }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckUserDefinedMetaFieldName_CannotEndWithReservedSuffix() {
+        assertThrows<IllegalStateException> {
+            Checks.checkUserDefinedMetaFieldName("field_dlq")
+        }
+        assertThrows<IllegalStateException> {
+            Checks.checkUserDefinedMetaFieldName("field_arc")
+        }
+    }
+
+    @Test
+    fun testCheckUserDefinedMetaFieldName_ValidNames() {
+        assertDoesNotThrow { Checks.checkUserDefinedMetaFieldName("user_id") }
+        assertDoesNotThrow { Checks.checkUserDefinedMetaFieldName("field") }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

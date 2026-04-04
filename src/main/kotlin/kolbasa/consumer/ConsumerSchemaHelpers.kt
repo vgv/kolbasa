@@ -7,6 +7,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.MetaValue
 import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.ColumnIndex
@@ -50,7 +51,7 @@ internal object ConsumerSchemaHelpers {
 
         // 'where' clauses
         val whereClauses = mutableListOf(
-            "${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp",
+            "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         if (shards != Shards.ALL_SHARDS) {
@@ -90,8 +91,8 @@ internal object ConsumerSchemaHelpers {
             updated_cte as (
                 update ${queue.dbTableName}
                 set
-                    ${Const.PROCESSING_AT_COLUMN_NAME}=current_timestamp,
-                    ${Const.SCHEDULED_AT_COLUMN_NAME}=current_timestamp + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
+                    ${Const.PROCESSING_AT_COLUMN_NAME}=statement_timestamp(),
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=statement_timestamp() + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 from id_to_update_cte where ${Const.ID_COLUMN_NAME} = id_to_update_cte.id_value
@@ -229,10 +230,151 @@ internal object ConsumerSchemaHelpers {
                 from ${queue.dbTableName}
                 where
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
-                    ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
+                    ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()
                 limit $limit
                 for update skip locked
             )
+        """.trimIndent()
+    }
+
+    fun generateMoveExpiredMessagesToDlqQuery(
+        mainQueue: Queue<*>,
+        dlq: Queue<*>,
+        limit: Int
+    ): String {
+        // Columns to read from source via RETURNING
+        val returningColumns = buildList {
+            add(Const.ID_COLUMN_NAME)
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.CREATED_AT_COLUMN_NAME)
+            add(Const.PROCESSING_AT_COLUMN_NAME)
+            add(Const.SCHEDULED_AT_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+        }
+        val returningStr = returningColumns.joinToString(",")
+
+        // Columns for DLQ insert — direct transfers + original-value meta fields
+        val dlqInsertColumns = buildList {
+            add(Const.SCHEDULED_AT_COLUMN_NAME)
+            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+            // Original-value meta fields
+            add(Metadata.DLQ_ORIGINAL_ID.dbColumnName)
+            add(Metadata.DLQ_ORIGINAL_CREATED_AT.dbColumnName)
+            add(Metadata.DLQ_ORIGINAL_PROCESSING_AT.dbColumnName)
+            add(Metadata.DLQ_ORIGINAL_SCHEDULED_AT.dbColumnName)
+        }
+        val dlqInsertColumnsStr = dlqInsertColumns.joinToString(",")
+
+        // SELECT expressions — direct transfers + epoch-millis conversions for timestamps
+        val selectExprs = buildList {
+            add("statement_timestamp()")                            // scheduled_at = now
+            add("${dlq.options.defaultAttempts}")                   // remaining_attempts
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+            // Original values
+            add(Const.ID_COLUMN_NAME)                                                                    // original id
+            add("(extract(epoch from ${Const.CREATED_AT_COLUMN_NAME}) * 1000)::bigint")                  // original created_at
+            add("(extract(epoch from ${Const.PROCESSING_AT_COLUMN_NAME}) * 1000)::bigint")               // original processing_at
+            add("(extract(epoch from ${Const.SCHEDULED_AT_COLUMN_NAME}) * 1000)::bigint")                // original scheduled_at
+        }
+        val selectStr = selectExprs.joinToString(",")
+
+        return """
+            with deleted_cte as (
+                delete from ${mainQueue.dbTableName}
+                where ctid in (
+                    select ctid
+                    from ${mainQueue.dbTableName}
+                    where
+                        ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
+                        ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()
+                    limit $limit
+                    for update skip locked
+                )
+                returning $returningStr
+            )
+            insert into ${dlq.dbTableName} ($dlqInsertColumnsStr)
+            select $selectStr
+            from deleted_cte
+        """.trimIndent()
+    }
+
+    fun generateMoveDeletedMessagesToArchiveQuery(
+        mainQueue: Queue<*>,
+        archiveQueue: Queue<*>,
+        ids: List<Id>
+    ): String {
+        check(ids.isNotEmpty()) { "ID list must not be empty" }
+
+        val idsList = ids.joinToString(separator = ",") { id -> "(${id.localId},${id.shard})" }
+
+        // Columns to read from source via RETURNING
+        val returningColumns = buildList {
+            add(Const.ID_COLUMN_NAME)
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.CREATED_AT_COLUMN_NAME)
+            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
+            add(Const.PROCESSING_AT_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.CONSUMER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+        }
+        val returningStr = returningColumns.joinToString(",")
+
+        // Columns for Archive insert
+        val arcInsertColumns = buildList {
+            add(Const.SCHEDULED_AT_COLUMN_NAME)
+            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.CONSUMER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+            // Original-value meta fields
+            add(Metadata.ARCHIVE_ORIGINAL_ID.dbColumnName)
+            add(Metadata.ARCHIVE_ORIGINAL_CREATED_AT.dbColumnName)
+            add(Metadata.ARCHIVE_ORIGINAL_REMAINING_ATTEMPTS.dbColumnName)
+            add(Metadata.ARCHIVE_ORIGINAL_PROCESSING_AT.dbColumnName)
+        }
+        val arcInsertColumnsStr = arcInsertColumns.joinToString(",")
+
+        // SELECT expressions
+        val selectExprs = buildList {
+            add("statement_timestamp()")                            // scheduled_at = now
+            add("${archiveQueue.options.defaultAttempts}")           // remaining_attempts (high value)
+            add(Const.SHARD_COLUMN_NAME)
+            add(Const.PRODUCER_COLUMN_NAME)
+            add(Const.CONSUMER_COLUMN_NAME)
+            add(Const.DATA_COLUMN_NAME)
+            mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
+            // Original values
+            add(Const.ID_COLUMN_NAME)                                                                    // original id
+            add("(extract(epoch from ${Const.CREATED_AT_COLUMN_NAME}) * 1000)::bigint")                  // original created_at
+            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)                                                    // original remaining_attempts
+            add("(extract(epoch from ${Const.PROCESSING_AT_COLUMN_NAME}) * 1000)::bigint")               // original processing_at
+        }
+        val selectStr = selectExprs.joinToString(",")
+
+        return """
+            with
+            ids_as_values(${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) as (values $idsList),
+            deleted_cte as (
+                delete from ${mainQueue.dbTableName}
+                where (${Const.ID_COLUMN_NAME}, ${Const.SHARD_COLUMN_NAME}) in (table ids_as_values)
+                returning $returningStr
+            )
+            insert into ${archiveQueue.dbTableName} ($arcInsertColumnsStr)
+            select $selectStr
+            from deleted_cte
         """.trimIndent()
     }
 

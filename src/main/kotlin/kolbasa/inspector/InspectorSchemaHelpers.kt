@@ -9,20 +9,23 @@ import java.sql.Connection
 internal object InspectorSchemaHelpers {
 
     // Message state SQL conditions
-    private const val SCHEDULED_CONDITION =
-        "${Const.PROCESSING_AT_COLUMN_NAME} is null and ${Const.SCHEDULED_AT_COLUMN_NAME} > current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
+    private const val SCHEDULED_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is null and " +
+        "${Const.SCHEDULED_AT_COLUMN_NAME} > statement_timestamp() and " +
+        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
 
-    private const val READY_CONDITION =
-        "${Const.PROCESSING_AT_COLUMN_NAME} is null and ${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
+    private const val READY_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is null and " +
+        "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
+        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
 
-    private const val IN_FLIGHT_CONDITION =
-        "${Const.PROCESSING_AT_COLUMN_NAME} is not null and ${Const.SCHEDULED_AT_COLUMN_NAME} > current_timestamp"
+    private const val IN_FLIGHT_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is not null and " +
+        "${Const.SCHEDULED_AT_COLUMN_NAME} > statement_timestamp()"
 
-    private const val RETRY_CONDITION =
-        "${Const.PROCESSING_AT_COLUMN_NAME} is not null and ${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
+    private const val RETRY_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is not null and " +
+        "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
+        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
 
-    private const val DEAD_CONDITION =
-        "${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0"
+    private const val DEAD_CONDITION = "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
+        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0"
 
     fun generateCountWithFilterQuery(connection: Connection, queue: Queue<*>, options: CountOptions): QueryAndSample {
         val samplePercent = effectiveSamplePercent(connection, queue, options.samplePercent)
@@ -80,17 +83,17 @@ internal object InspectorSchemaHelpers {
     fun generateMessageAgeQuery(queue: Queue<*>): String {
         return """
             select
-                (select extract(epoch from (current_timestamp - ${Const.CREATED_AT_COLUMN_NAME}))
+                (select extract(epoch from (statement_timestamp() - ${Const.CREATED_AT_COLUMN_NAME}))
                  from ${queue.dbTableName}
                  order by ${Const.ID_COLUMN_NAME} asc
                  limit 1) as oldest_message_age,
-                (select extract(epoch from (current_timestamp - ${Const.CREATED_AT_COLUMN_NAME}))
+                (select extract(epoch from (statement_timestamp() - ${Const.CREATED_AT_COLUMN_NAME}))
                  from ${queue.dbTableName}
                  order by ${Const.ID_COLUMN_NAME} desc
                  limit 1) as newest_message_age,
-                (select extract(epoch from (current_timestamp - ${Const.SCHEDULED_AT_COLUMN_NAME}))
+                (select extract(epoch from (statement_timestamp() - ${Const.SCHEDULED_AT_COLUMN_NAME}))
                  from ${queue.dbTableName}
-                 where ${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0
+                 where ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0
                  order by ${Const.SCHEDULED_AT_COLUMN_NAME} asc
                  limit 1) as oldest_ready_message_age
                  """.trimIndent()

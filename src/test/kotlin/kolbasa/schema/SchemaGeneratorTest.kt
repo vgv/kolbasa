@@ -1,8 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.queue.PredefinedDataTypes
-import kolbasa.queue.Queue
+import kolbasa.queue.*
 import kolbasa.queue.meta.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -107,5 +106,80 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
         // Schema should be empty
         assertTrue(schema.isEmpty, "Schema: $schema")
         assertEquals(0, schema.size, "Schema: $schema")
+    }
+
+    @Test
+    fun testCreateOrUpdate_WithDlq_IncludesCompanionTable() {
+        val dlqQueue = Queue(
+            name = "test_dlq_schema",
+            databaseDataType = PredefinedDataTypes.String,
+            metadata = Metadata.of(FIRST),
+            options = QueueOptions(dlqOptions = DlqOptions.DEFAULT)
+        )
+
+        val schemas = SchemaHelpers.generateCreateOrUpdateStatements(dataSource, dlqQueue)
+
+        // Should have schemas for both main and DLQ
+        assertEquals(2, schemas.size)
+        assertTrue(schemas.keys.any { it.queueType == QueueType.MAIN })
+        assertTrue(schemas.keys.any { it.queueType == QueueType.DLQ })
+
+        // DLQ schema should include columns for original-value meta fields
+        val dlqSchema = schemas.entries.first { it.key.queueType == QueueType.DLQ }.value
+        val allStatements = dlqSchema.tableStatements.joinToString(" ")
+        Metadata.DLQ_FIELDS.forEach { dlqOriginalFields ->
+            assertTrue(
+                allStatements.contains(dlqOriginalFields.dbColumnName),
+                "DLQ schema should contain ${dlqOriginalFields.dbColumnName} column"
+            )
+        }
+    }
+
+    @Test
+    fun testCreateOrUpdate_WithArchive_IncludesCompanionTable() {
+        val arcQueue = Queue(
+            name = "test_arc_schema",
+            databaseDataType = PredefinedDataTypes.String,
+            metadata = Metadata.of(FIRST),
+            options = QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT)
+        )
+
+        val schemas = SchemaHelpers.generateCreateOrUpdateStatements(dataSource, arcQueue)
+
+        // Should have schemas for both main and Archive
+        assertEquals(2, schemas.size)
+        assertTrue(schemas.keys.any { it.queueType == QueueType.MAIN })
+        assertTrue(schemas.keys.any { it.queueType == QueueType.ARCHIVE })
+
+        // Archive schema should include columns for original-value meta fields
+        val arcSchema = schemas.entries.first { it.key.queueType == QueueType.ARCHIVE }.value
+        val allStatements = arcSchema.tableStatements.joinToString(" ")
+        Metadata.ARCHIVE_FIELDS.forEach { archiveField ->
+            assertTrue(
+                allStatements.contains(archiveField.dbColumnName),
+                "Archive schema should contain ${archiveField.dbColumnName} column"
+            )
+        }
+    }
+
+    @Test
+    fun testCreateOrUpdate_WithBoth_IncludesAllCompanionTables() {
+        val bothQueue = Queue(
+            name = "test_both_schema",
+            databaseDataType = PredefinedDataTypes.String,
+            metadata = Metadata.of(FIRST),
+            options = QueueOptions(
+                dlqOptions = DlqOptions.DEFAULT,
+                archiveQueueOptions = ArchiveQueueOptions.DEFAULT
+            )
+        )
+
+        val schemas = SchemaHelpers.generateCreateOrUpdateStatements(dataSource, bothQueue)
+
+        // Should have schemas for main, DLQ, and Archive
+        assertEquals(3, schemas.size)
+        assertTrue(schemas.keys.any { it.queueType == QueueType.MAIN })
+        assertTrue(schemas.keys.any { it.queueType == QueueType.DLQ })
+        assertTrue(schemas.keys.any { it.queueType == QueueType.ARCHIVE })
     }
 }

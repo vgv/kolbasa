@@ -86,6 +86,22 @@ sealed class MetaField<T>(
 
     abstract fun value(value: T): MetaValue<T>
 
+    fun withOption(newOption: FieldOption): MetaField<T> {
+        @Suppress("UNCHECKED_CAST")
+        return when (this) {
+            is ByteField -> copy(option = newOption)
+            is ShortField -> copy(option = newOption)
+            is IntField -> copy(option = newOption)
+            is LongField -> copy(option = newOption)
+            is BooleanField -> copy(option = newOption)
+            is FloatField -> copy(option = newOption)
+            is DoubleField -> copy(option = newOption)
+            is StringField -> copy(option = newOption)
+            is BigIntegerField -> copy(option = newOption)
+            is BigDecimalField -> copy(option = newOption)
+        } as MetaField<T>
+    }
+
     protected abstract fun read(rs: ResultSet, columnIndex: Int): T?
 
     protected abstract fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: T)
@@ -125,35 +141,55 @@ sealed class MetaField<T>(
 
     companion object {
 
-        fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> =
-            ByteField(name, option)
+        fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return ByteField(name, option)
+        }
 
-        fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> =
-            ShortField(name, option)
+        fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return ShortField(name, option)
+        }
 
-        fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> =
-            IntField(name, option)
+        fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return IntField(name, option)
+        }
 
-        fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> =
-            LongField(name, option)
+        fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return LongField(name, option)
+        }
 
-        fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> =
-            BooleanField(name, option)
+        fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return BooleanField(name, option)
+        }
 
-        fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> =
-            FloatField(name, option)
+        fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return FloatField(name, option)
+        }
 
-        fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> =
-            DoubleField(name, option)
+        fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return DoubleField(name, option)
+        }
 
-        fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> =
-            StringField(name, option)
+        fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return StringField(name, option)
+        }
 
-        fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> =
-            BigIntegerField(name, option)
+        fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return BigIntegerField(name, option)
+        }
 
-        fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> =
-            BigDecimalField(name, option)
+        fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return BigDecimalField(name, option)
+        }
     }
 
 }

@@ -84,7 +84,49 @@ data class QueueOptions(
      * messages received in that call will be available after 2 minutes, overriding the default values for both the consumer
      * and the queue.
      */
-    val defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
+    val defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT,
+
+    /**
+     * Dead Letter Queue (DLQ) configuration — a companion queue for **failed** messages.
+     *
+     * When non-null, a companion DLQ table is created alongside the main queue table.
+     * Messages that exhaust all processing attempts (`remaining_attempts` reaches 0) are atomically
+     * moved to the DLQ during the sweep cycle instead of being permanently deleted.
+     * This allows failed messages to be inspected, debugged, or reprocessed later.
+     *
+     * The DLQ is a regular [Queue] accessible via [Queue.deadLetterQueue] and works with all existing
+     * APIs — `Consumer`, `Producer`, `Inspector`, `Mutator`.
+     *
+     * Note: DLQ is for failed messages, Archive is for successfully processed ones.
+     *
+     * Default: `null` (DLQ disabled, expired messages are deleted).
+     *
+     * @see DlqOptions
+     * @see Queue.deadLetterQueue
+     * @see archiveQueueOptions
+     */
+    val dlqOptions: DlqOptions? = null,
+
+    /**
+     * Archive queue configuration — a companion queue for **successfully processed** messages.
+     *
+     * When non-null, a companion Archive table is created alongside the main queue table.
+     * When a consumer deletes a message after successful processing, the message is atomically
+     * moved to the Archive queue instead of being permanently deleted.
+     * This is useful for auditing, compliance, trailing, or replaying successfully processed messages.
+     *
+     * The Archive queue is a regular [Queue] accessible via [Queue.archiveQueue] and works with all
+     * existing APIs — `Consumer`, `Producer`, `Inspector`, `Mutator`.
+     *
+     * Note: DLQ is for failed messages, Archive is for successfully processed ones.
+     *
+     * Default: `null` (Archive disabled, deleted messages are permanently removed).
+     *
+     * @see ArchiveQueueOptions
+     * @see Queue.archiveQueue
+     * @see dlqOptions
+     */
+    val archiveQueueOptions: ArchiveQueueOptions? = null
 ) {
 
     init {
@@ -97,13 +139,19 @@ data class QueueOptions(
         private var defaultDelay: Duration = DEFAULT_DELAY
         private var defaultAttempts: Int = DEFAULT_ATTEMPTS
         private var defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
+        private var dlqOptions: DlqOptions? = null
+        private var archiveQueueOptions: ArchiveQueueOptions? = null
 
         fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
         fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
         fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
             apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
-        fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout)
+        fun enableDlq(dlqOptions: DlqOptions = DlqOptions.DEFAULT) = apply { this.dlqOptions = dlqOptions }
+        fun enableArchiveQueue(archiveQueueOptions: ArchiveQueueOptions = ArchiveQueueOptions.DEFAULT) =
+            apply { this.archiveQueueOptions = archiveQueueOptions }
+
+        fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout, dlqOptions, archiveQueueOptions)
     }
 
     companion object {

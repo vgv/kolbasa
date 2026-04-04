@@ -1,7 +1,9 @@
 package kolbasa.queue
 
 import kolbasa.Kolbasa
+import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.Metadata
+import kolbasa.schema.Const
 import kolbasa.stats.opentelemetry.EmptyQueueTracing
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
@@ -10,8 +12,9 @@ import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.EmptyQueueMetrics
 import kolbasa.stats.prometheus.PrometheusQueueMetrics
 import kolbasa.stats.prometheus.QueueMetrics
+import java.time.Duration
 
-data class Queue<Data> @JvmOverloads constructor(
+data class Queue<Data> internal constructor(
     /**
      * Queue name. Must be unique.
      *
@@ -37,7 +40,7 @@ data class Queue<Data> @JvmOverloads constructor(
      * Producers, consumers, send request and even particular message options can override queue options. Read more
      * details in [QueueOptions]
      */
-    val options: QueueOptions = QueueOptions.DEFAULT,
+    val options: QueueOptions,
 
     /**
      * Metadata for a queue.
@@ -64,14 +67,51 @@ data class Queue<Data> @JvmOverloads constructor(
      * 6. If you disable metadata retrieval, will the business logic break? If the answer is "Yes," you've placed the business
      * data in the wrong place (metadata); it should be part of the message body.
      */
-    val metadata: Metadata = Metadata.EMPTY
+    val metadata: Metadata,
+
+    /**
+     * The role of this queue: [MAIN][QueueType.MAIN], [DLQ][QueueType.DLQ], or [ARCHIVE][QueueType.ARCHIVE].
+     *
+     * Users can only create [MAIN][QueueType.MAIN] queues directly. [DLQ][QueueType.DLQ] and
+     * [ARCHIVE][QueueType.ARCHIVE] queues are created automatically when the corresponding options
+     * are enabled in [QueueOptions].
+     */
+    val queueType: QueueType
 ) {
 
+    // Public constructor — users can only create MAIN queues
+    @JvmOverloads
+    constructor(
+        name: String,
+        databaseDataType: DatabaseQueueDataType<Data>,
+        options: QueueOptions = QueueOptions.DEFAULT,
+        metadata: Metadata = Metadata.EMPTY
+    ) : this(name, databaseDataType, options, metadata, QueueType.MAIN)
+
     init {
-        Checks.checkQueueName(name)
+        Checks.checkQueueName(name, queueType)
+        Checks.checkQueueType(queueType, options)
     }
 
     internal val dbTableName = QueueHelpers.generateQueueDbName(name)
+
+    /**
+     * Returns the Dead Letter Queue for this queue, or null if DLQ feature is not enabled.
+     * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
+     */
+    val deadLetterQueue: Queue<Data>? = if (queueType == QueueType.MAIN && options.dlqOptions != null)
+        createCompanionQueue(this, QueueType.DLQ, Const.DLQ_TABLE_NAME_SUFFIX)
+    else
+        null
+
+    /**
+     * Returns the Archive queue for this queue, or null if Archive feature is not enabled.
+     * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
+     */
+    val archiveQueue: Queue<Data>? = if (queueType == QueueType.MAIN && options.archiveQueueOptions != null)
+        createCompanionQueue(this, QueueType.ARCHIVE, Const.ARCHIVE_TABLE_NAME_SUFFIX)
+    else
+        null
 
     internal val queueMetrics: QueueMetrics by lazy {
         when (val config = Kolbasa.prometheusConfig) {
@@ -134,6 +174,44 @@ data class Queue<Data> @JvmOverloads constructor(
                 .metadata(metadata)
                 .build()
         }
+
+        // Creates a companion queue for the given MAIN queue.
+        // Right now only two companion queue types exist: DLQ and ARCHIVE.
+        private fun <Data> createCompanionQueue(
+            mainQueue: Queue<Data>,
+            type: QueueType,
+            queueNameSuffix: String
+        ): Queue<Data> {
+            // Main queue metadata with indexes stripped (no unique indexes on companions)
+            val strippedParentFields = mainQueue.metadata.fields.map { it.withOption(FieldOption.NONE) }
+
+            // Add predefined original-value meta fields
+            val companionFields = when (type) {
+                QueueType.DLQ -> Metadata.DLQ_FIELDS
+                QueueType.ARCHIVE -> Metadata.ARCHIVE_FIELDS
+                QueueType.MAIN -> error("MAIN queue cannot be a companion queue: ${mainQueue.name}")
+            }
+            val companionMetadata = Metadata(strippedParentFields + companionFields)
+
+            // Companion queues have:
+            //   - No delay (messages are already "ready")
+            //   - High attempts (we don't want DLQ/Archive messages to expire)
+            //   - No DLQ/Archive of their own (prevent recursion)
+            val companionOptions = QueueOptions(
+                defaultDelay = Duration.ZERO,
+                defaultAttempts = Int.MAX_VALUE,
+                defaultVisibilityTimeout = mainQueue.options.defaultVisibilityTimeout,
+                dlqOptions = null,
+                archiveQueueOptions = null
+            )
+
+            return Queue(
+                name = mainQueue.name + queueNameSuffix,
+                databaseDataType = mainQueue.databaseDataType,
+                options = companionOptions,
+                metadata = companionMetadata,
+                queueType = type
+            )
+        }
     }
 }
-
