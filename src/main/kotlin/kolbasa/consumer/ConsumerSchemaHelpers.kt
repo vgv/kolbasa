@@ -230,7 +230,7 @@ internal object ConsumerSchemaHelpers {
                 from ${queue.dbTableName}
                 where
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
-                    ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
+                    ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()
                 limit $limit
                 for update skip locked
             )
@@ -295,7 +295,7 @@ internal object ConsumerSchemaHelpers {
                     from ${mainQueue.dbTableName}
                     where
                         ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0 and
-                        ${Const.SCHEDULED_AT_COLUMN_NAME} <= clock_timestamp()
+                        ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()
                     limit $limit
                     for update skip locked
                 )
