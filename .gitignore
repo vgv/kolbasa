@@ -1,6 +1,12 @@
 # Gradle
 /.gradle/
 
+# Kotlin
+/.kotlin/
+
+# IntelliJ
+/.idea/
+
 # Build
 /build/
 /out/
