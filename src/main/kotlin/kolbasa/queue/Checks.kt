@@ -68,7 +68,7 @@ internal object Checks {
         }
     }
 
-    fun checkQueueName(queueName: String) {
+    fun checkQueueName(queueName: String, queueType: QueueType) {
         check(queueName.isNotEmpty()) {
             "Queue name is empty"
         }
@@ -84,6 +84,79 @@ internal object Checks {
         // check all symbols
         check(queueName.all { it in Const.QUEUE_NAME_ALLOWED_SYMBOLS_SET }) {
             "Queue name contains illegal symbols. Allowed: ${Const.QUEUE_NAME_ALLOWED_SYMBOLS} (current=$queueName)"
+        }
+
+        when (queueType) {
+            QueueType.MAIN -> {
+                // MAIN queues must not use reserved suffixes
+                check(!queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+                    "Queue name '$queueName' must not end with '${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
+                }
+                check(!queueName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+                    "Queue name '$queueName' must not end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
+                }
+            }
+
+            QueueType.DLQ -> {
+                // DLQ queues must end with the _dlq suffix
+                check(queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+                    "DLQ queue name must end with '${Const.DLQ_TABLE_NAME_SUFFIX}' (current: $queueName)"
+                }
+            }
+
+            QueueType.ARCHIVE -> {
+                // Archive queues must end with the _arc suffix
+                check(queueName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+                    "Archive queue name must end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' (current: $queueName)"
+                }
+            }
+        }
+    }
+
+    fun checkQueueType(queueType: QueueType, options: QueueOptions) {
+        // DLQ and ARCHIVE queues cannot have their own DLQ/Archive (prevent recursion)
+        if (queueType != QueueType.MAIN) {
+            check(options.dlqOptions == null) {
+                "Only MAIN queues can have a DLQ (current queue type: $queueType)"
+            }
+            check(options.archiveQueueOptions == null) {
+                "Only MAIN queues can have an Archive (current queue type: $queueType)"
+            }
+        }
+    }
+
+    fun checkDlqRetention(retention: Duration) {
+        check(retention >= DlqOptions.MIN_RETENTION) {
+            "DLQ retention must be at least ${DlqOptions.MIN_RETENTION} (current: $retention)"
+        }
+        check(retention <= DlqOptions.MAX_RETENTION) {
+            "DLQ retention must be at most ${DlqOptions.MAX_RETENTION} (current: $retention)"
+        }
+    }
+
+    fun checkArchiveQueueRetention(retention: Duration) {
+        check(retention >= ArchiveQueueOptions.MIN_RETENTION) {
+            "Archive retention must be at least ${ArchiveQueueOptions.MIN_RETENTION} (current: $retention)"
+        }
+        check(retention <= ArchiveQueueOptions.MAX_RETENTION) {
+            "Archive retention must be at most ${ArchiveQueueOptions.MAX_RETENTION} (current: $retention)"
+        }
+    }
+
+    fun checkRetentionMaxMessages(maxMessages: Long?) {
+        if (maxMessages == null) return
+
+        check(maxMessages > 0) {
+            "maxMessages must be positive (current: $maxMessages)"
+        }
+    }
+
+    fun checkUserDefinedMetaFieldName(fieldName: String) {
+        check(!fieldName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' must not end with '${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
+        }
+        check(!fieldName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' must not end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
         }
     }
 

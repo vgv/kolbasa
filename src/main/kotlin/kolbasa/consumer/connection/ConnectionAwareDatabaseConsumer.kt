@@ -97,7 +97,22 @@ class ConnectionAwareDatabaseConsumer internal constructor(
             return 0
         }
 
-        val deleteQuery = ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
+        val archiveQueue = queue.archiveQueue
+
+        val deleteQuery = if (archiveQueue != null) {
+            // Move to archive queue instead of plain delete
+            ConsumerSchemaHelpers.generateMoveDeletedMessagesToArchiveQuery(queue, archiveQueue, messageIds)
+        } else {
+            // Original behavior
+            ConsumerSchemaHelpers.generateDeleteQuery(queue, messageIds)
+        }
+
+        val statementKind = if (archiveQueue != null) {
+            StatementKind.CONSUMER_DELETE_TO_ARCHIVE
+        } else {
+            StatementKind.CONSUMER_DELETE
+        }
+
         val (execution, removedMessages) = TimeHelper.measure {
             connection.useStatement { statement ->
                 statement.executeUpdate(deleteQuery)
@@ -105,7 +120,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_DELETE, deleteQuery, execution, removedMessages)
+        SqlDumpHelper.dumpQuery(queue, statementKind, deleteQuery, execution, removedMessages)
 
         // Prometheus
         queue.queueMetrics.consumerDeleteMetrics(

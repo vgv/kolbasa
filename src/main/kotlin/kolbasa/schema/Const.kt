@@ -11,7 +11,10 @@ internal object Const {
     // ------------------------------------------------------------------------------------------------------------
     // Queue
     const val QUEUE_TABLE_NAME_PREFIX = "q_"
-    const val QUEUE_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - QUEUE_TABLE_NAME_PREFIX.length
+    const val DLQ_TABLE_NAME_SUFFIX = "_dlq"
+    const val ARCHIVE_TABLE_NAME_SUFFIX = "_arc"
+    const val QUEUE_COMPANION_SUFFIX_MAX_LENGTH = 4  // max of DLQ_TABLE_NAME_SUFFIX.length, ARCHIVE_TABLE_NAME_SUFFIX.length
+    const val QUEUE_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - QUEUE_TABLE_NAME_PREFIX.length - QUEUE_COMPANION_SUFFIX_MAX_LENGTH
     const val QUEUE_NAME_ALLOWED_SYMBOLS = "0123456789" +
         "abcdefghijklmnopqrstuvwxyz" +
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +

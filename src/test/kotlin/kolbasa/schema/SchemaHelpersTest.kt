@@ -1,13 +1,11 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgresqlTest
-import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.queue.PredefinedDataTypes
-import kolbasa.queue.Queue
-import kolbasa.queue.QueueOptions
+import kolbasa.queue.*
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
+import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -70,18 +68,14 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testRename() {
+    fun testRename_WithoutCompanions() {
         val queue = Queue.of("test_queue", PredefinedDataTypes.String)
 
         // Create queue before renaming
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         // Direct database check that table exists
-        val oldTableExistsQuery = """select count(*)
-                     from information_schema.tables
-                     where table_schema='public' and table_name='${queue.dbTableName}'
-                  """
-        assertEquals(1, dataSource.readInt(oldTableExistsQuery))
+        assertTrue(tableExists(queue.dbTableName))
 
         // --------------------------------------------------------------------------------
         // Rename queue table
@@ -90,13 +84,9 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertEquals(0, renameResult.failedStatements)
         assertEquals(1, renameResult.schema.tableStatements.size)
 
-        // More direct database checks
-        val newTableExistsQuery = """select count(*)
-                     from information_schema.tables
-                     where table_schema='public' and table_name='${queue.dbTableName + newQueueSuffix}'
-                  """
-        assertEquals(0, dataSource.readInt(oldTableExistsQuery))
-        assertEquals(1, dataSource.readInt(newTableExistsQuery))
+        // Old table should be gone, new table should exist
+        assertFalse(tableExists(queue.dbTableName))
+        assertTrue(tableExists(queue.dbTableName + newQueueSuffix))
 
         // --------------------------------------------------------------------------------
         // Try to rename again to the same name - should be no changes
@@ -104,10 +94,55 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertEquals(0, renameResult.failedStatements)
         assertTrue(renameResult.schema.isEmpty) // because queue is already renamed
 
-        // More direct database checks
-        assertEquals(0, dataSource.readInt(oldTableExistsQuery))
-        assertEquals(1, dataSource.readInt(newTableExistsQuery))
+        // Nothing should change - old table doesn't exist, new table still exists
+        assertFalse(tableExists(queue.dbTableName))
+        assertTrue(tableExists(queue.dbTableName + newQueueSuffix))
     }
+
+    @Test
+    fun testRename_With_DLQ_And_Archive() {
+        val queue = Queue(
+            name = "test_queue",
+            databaseDataType = PredefinedDataTypes.String,
+            options = QueueOptions(
+                dlqOptions = DlqOptions.DEFAULT,
+                archiveQueueOptions = ArchiveQueueOptions.DEFAULT
+            )
+        )
+        val dlq = requireNotNull(queue.deadLetterQueue)
+        val archive = requireNotNull(queue.archiveQueue)
+
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+
+        // Before renaming - all tables should exist
+        assertTrue(tableExists(queue.dbTableName))
+        assertTrue(tableExists(dlq.dbTableName))
+        assertTrue(tableExists(archive.dbTableName))
+
+        // Ok, try to rename
+        val newName = "renamed_queue"
+        val renameResult = SchemaHelpers.renameQueues(dataSource, queue) { newName }
+        assertEquals(0, renameResult.failedStatements)
+
+        // Old tables gone
+        assertFalse(tableExists(queue.dbTableName))
+        assertFalse(tableExists(dlq.dbTableName))
+        assertFalse(tableExists(archive.dbTableName))
+
+        // New tables exist
+        val newMainTable = QueueHelpers.generateQueueDbName(newName)
+        val newDlqTable = QueueHelpers.generateQueueDbName(newName + Const.DLQ_TABLE_NAME_SUFFIX)
+        val newArcTable = QueueHelpers.generateQueueDbName(newName + Const.ARCHIVE_TABLE_NAME_SUFFIX)
+        assertTrue(tableExists(newMainTable))
+        assertTrue(tableExists(newDlqTable))
+        assertTrue(tableExists(newArcTable))
+
+        // Rename again — should be no-op
+        val renameAgain = SchemaHelpers.renameQueues(dataSource, queue) { newName }
+        assertEquals(0, renameAgain.failedStatements)
+        assertTrue(renameAgain.schema.isEmpty)
+    }
+
 
     @Test
     fun testDelete() {
@@ -117,11 +152,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
         // Direct database check that table exists
-        val tableExistsQuery = """select count(*)
-                     from information_schema.tables
-                     where table_schema='public' and table_name='${queue.dbTableName}'
-                  """
-        assertEquals(1, dataSource.readInt(tableExistsQuery))
+        assertTrue(tableExists(queue.dbTableName))
 
         // --------------------------------------------------------------------------------
         // Delete queue table
@@ -130,7 +161,7 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertEquals(1, deleteResult.schema.tableStatements.size)
 
         // One more direct database check
-        assertEquals(0, dataSource.readInt(tableExistsQuery))
+        assertFalse(tableExists(queue.dbTableName))
 
         // --------------------------------------------------------------------------------
         // Try to delete again - should be no changes
@@ -139,8 +170,44 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertTrue(deleteResult.schema.isEmpty) // because queue table is already deleted
 
         // One more direct database check
-        assertEquals(0, dataSource.readInt(tableExistsQuery))
+        assertFalse(tableExists(queue.dbTableName))
     }
+
+    @Test
+    fun testDelete_With_DLQ_And_Archive() {
+        val queue = Queue(
+            name = "test_queue",
+            databaseDataType = PredefinedDataTypes.String,
+            options = QueueOptions(
+                dlqOptions = DlqOptions.DEFAULT,
+                archiveQueueOptions = ArchiveQueueOptions.DEFAULT
+            )
+        )
+        val dlq = requireNotNull(queue.deadLetterQueue)
+        val archive = requireNotNull(queue.archiveQueue)
+
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+
+        // Before deleting - all tables should exist
+        assertTrue(tableExists(queue.dbTableName))
+        assertTrue(tableExists(dlq.dbTableName))
+        assertTrue(tableExists(archive.dbTableName))
+
+        // Ok, try to delete
+        val deleteResult = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteResult.failedStatements)
+
+        // All tables should be gone
+        assertFalse(tableExists(queue.dbTableName))
+        assertFalse(tableExists(dlq.dbTableName))
+        assertFalse(tableExists(archive.dbTableName))
+
+        // Delete again — should be no-op
+        val deleteAgain = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteAgain.failedStatements)
+        assertTrue(deleteAgain.schema.isEmpty)
+    }
+
 
     @Test
     fun testGenerateSchema_CheckDurationBiggerThanMaxInt() {
@@ -195,6 +262,15 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertEquals(statements - indexFailedIndexes.size, dataSource.readInt(indexesSql))
     }
 
+    // ---- Helpers ----
+
+    private fun tableExists(tableName: String): Boolean {
+        val query = """select count(*)
+            from information_schema.tables
+            where table_schema='public' and table_name='$tableName'
+        """
+        return dataSource.readInt(query) == 1
+    }
 
     private fun createRandomQueue(number: Int): Queue<*> {
         val first = MetaField.int("first", FieldOption.SEARCH)
@@ -214,6 +290,4 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
             .metadata(Metadata.of(first, second, third, fourth))
             .build()
     }
-
-
 }

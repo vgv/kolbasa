@@ -1,8 +1,10 @@
 package kolbasa.queue
 
+import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
-import org.junit.jupiter.api.Assertions.assertEquals
+import kolbasa.schema.Const
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
@@ -74,6 +76,98 @@ class QueueTest {
             .build()
 
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testDlqCompanionQueueCreation() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String,
+            metadata = Metadata.of(USER_ID, NAME),
+            options = QueueOptions(dlqOptions = DlqOptions.DEFAULT)
+        )
+
+        assertNull(queue.archiveQueue)
+
+        val dlq = requireNotNull(queue.deadLetterQueue)
+        assertEquals("orders${Const.DLQ_TABLE_NAME_SUFFIX}", dlq.name)
+        assertEquals(QueueType.DLQ, dlq.queueType)
+        assertNull(dlq.deadLetterQueue)
+        assertNull(dlq.archiveQueue)
+
+        // DLQ should have parent fields (with NONE option) + 4 original-value fields
+        assertEquals(2 + 4, dlq.metadata.fields.size)
+
+        // Parent fields must have NONE option (indexes stripped)
+        val userId = requireNotNull(dlq.metadata.findByName(USER_ID.name))
+        assertEquals(FieldOption.NONE, userId.option)
+        val name = requireNotNull(dlq.metadata.findByName(NAME.name))
+        assertEquals(FieldOption.NONE, name.option)
+
+        // DLQ-specific original-value fields
+        assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_ID.name))
+        assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_CREATED_AT.name))
+        assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_PROCESSING_AT.name))
+        assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_SCHEDULED_AT.name))
+    }
+
+    @Test
+    fun testArchiveCompanionQueueCreation() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String,
+            metadata = Metadata.of(USER_ID, NAME),
+            options = QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT)
+        )
+
+        assertNull(queue.deadLetterQueue)
+
+        val archive = requireNotNull(queue.archiveQueue)
+        assertEquals("orders${Const.ARCHIVE_TABLE_NAME_SUFFIX}", archive.name)
+        assertEquals(QueueType.ARCHIVE, archive.queueType)
+        assertNull(archive.deadLetterQueue)
+        assertNull(archive.archiveQueue)
+
+        // Archive should have parent fields (with NONE option) + 4 original-value fields
+        assertEquals(2 + 4, archive.metadata.fields.size)
+
+        // Parent fields must have NONE option (indexes stripped)
+        val userId = requireNotNull(archive.metadata.findByName(USER_ID.name))
+        assertEquals(FieldOption.NONE, userId.option)
+        val name = requireNotNull(archive.metadata.findByName(NAME.name))
+        assertEquals(FieldOption.NONE, name.option)
+
+        // Archive-specific original-value fields
+        assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_ID.name))
+        assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_CREATED_AT.name))
+        assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_REMAINING_ATTEMPTS.name))
+        assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_PROCESSING_AT.name))
+    }
+
+    @Test
+    fun testBothCompanionQueues() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String,
+            options = QueueOptions(
+                dlqOptions = DlqOptions.DEFAULT,
+                archiveQueueOptions = ArchiveQueueOptions.DEFAULT
+            )
+        )
+
+        assertNotNull(queue.deadLetterQueue)
+        assertNotNull(queue.archiveQueue)
+    }
+
+    @Test
+    fun testNoCompanionQueuesWithoutOptions() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String
+        )
+
+        assertNull(queue.deadLetterQueue)
+        assertNull(queue.archiveQueue)
     }
 
 }

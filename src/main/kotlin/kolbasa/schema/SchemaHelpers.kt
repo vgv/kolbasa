@@ -2,6 +2,7 @@ package kolbasa.schema
 
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.queue.Queue
+import kolbasa.queue.QueueType
 import kolbasa.schema.Schema.Companion.merge
 import kolbasa.schema.SchemaHelpers.createOrUpdateQueues
 import kolbasa.schema.SchemaHelpers.deleteQueues
@@ -17,17 +18,28 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateCreateOrUpdateStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
+    fun generateCreateOrUpdateStatements(dataSource: DataSource, mainQueues: List<Queue<*>>): Map<Queue<*>, Schema> {
+        checkAllQueuesAreMain(mainQueues)
+
         // Init system tables
         IdSchema.createAndInitIdTable(dataSource)
         val node = IdSchema.readNodeInfo(dataSource)
         val idRange = IdRange.generateRange(node.identifiersBucket)
 
+        // Expand queue list to include companion queues
+        val allQueues = buildList {
+            mainQueues.forEach { queue ->
+                add(queue)
+                queue.deadLetterQueue?.let { add(it) }
+                queue.archiveQueue?.let { add(it) }
+            }
+        }
+
         val existingTables = SchemaExtractor
-            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .extractRawSchema(dataSource, allQueues.map { it.dbTableName }.toSet())
             .filter { it.value.isQueueTable() }
 
-        return queues.associateWith { queue ->
+        return allQueues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
             SchemaGenerator.generateTableSchema(queue, existingTable, idRange)
         }
@@ -37,8 +49,8 @@ object SchemaHelpers {
      * Generate all statements needed to create/update database schema but doesn't execute them
      */
     @JvmStatic
-    fun generateCreateOrUpdateStatements(dataSource: DataSource, vararg queues: Queue<*>): Map<Queue<*>, Schema> {
-        return generateCreateOrUpdateStatements(dataSource, queues.toList())
+    fun generateCreateOrUpdateStatements(dataSource: DataSource, vararg mainQueues: Queue<*>): Map<Queue<*>, Schema> {
+        return generateCreateOrUpdateStatements(dataSource, mainQueues.toList())
     }
 
     /**
@@ -57,8 +69,8 @@ object SchemaHelpers {
      * making the correct data migration for each of the above cases
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, queues: List<Queue<*>>): SchemaResult {
-        val mergedSchema = generateCreateOrUpdateStatements(dataSource, queues).values.merge()
+    fun createOrUpdateQueues(dataSource: DataSource, mainQueues: List<Queue<*>>): SchemaResult {
+        val mergedSchema = generateCreateOrUpdateStatements(dataSource, mainQueues).values.merge()
         return executeSchemaStatements(dataSource, mergedSchema)
     }
 
@@ -68,8 +80,8 @@ object SchemaHelpers {
      * See [createOrUpdateQueues] for more details
      */
     @JvmStatic
-    fun createOrUpdateQueues(dataSource: DataSource, vararg queues: Queue<*>): SchemaResult {
-        return createOrUpdateQueues(dataSource, queues.toList())
+    fun createOrUpdateQueues(dataSource: DataSource, vararg mainQueues: Queue<*>): SchemaResult {
+        return createOrUpdateQueues(dataSource, mainQueues.toList())
     }
 
     // ----------------------------------------------------------------------------------------
@@ -80,16 +92,36 @@ object SchemaHelpers {
     @JvmStatic
     fun generateRenameStatements(
         dataSource: DataSource,
-        queues: List<Queue<*>>,
+        mainQueues: List<Queue<*>>,
         renameFunction: (Queue<*>) -> String
     ): Map<Queue<*>, Schema> {
+        checkAllQueuesAreMain(mainQueues)
+
+        // Expand queue list to include companion queues
+        val allQueues = buildList {
+            mainQueues.forEach { queue ->
+                add(queue)
+                queue.deadLetterQueue?.let { add(it) }
+                queue.archiveQueue?.let { add(it) }
+            }
+        }
+
         val existingTables = SchemaExtractor
-            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .extractRawSchema(dataSource, allQueues.map { it.dbTableName }.toSet())
             .filter { it.value.isQueueTable() }
 
-        return queues.associateWith { queue ->
+        // Build rename map: for each parent queue, derive new names for it and its companions
+        val renameMap = mutableMapOf<Queue<*>, String>()
+        mainQueues.forEach { queue ->
+            val newParentName = renameFunction(queue)
+            renameMap[queue] = newParentName
+            queue.deadLetterQueue?.let { renameMap[it] = newParentName + Const.DLQ_TABLE_NAME_SUFFIX }
+            queue.archiveQueue?.let { renameMap[it] = newParentName + Const.ARCHIVE_TABLE_NAME_SUFFIX }
+        }
+
+        return allQueues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
-            val newTableName = renameFunction(queue)
+            val newTableName = renameMap.getValue(queue)
             SchemaGenerator.generateRenameTableSchema(queue, existingTable, newTableName)
         }
     }
@@ -100,10 +132,10 @@ object SchemaHelpers {
     @JvmStatic
     fun generateRenameStatements(
         dataSource: DataSource,
-        vararg queues: Queue<*>,
+        vararg mainQueues: Queue<*>,
         renameFunction: (Queue<*>) -> String
     ): Map<Queue<*>, Schema> {
-        return generateRenameStatements(dataSource, queues.toList(), renameFunction)
+        return generateRenameStatements(dataSource, mainQueues.toList(), renameFunction)
     }
 
     /**
@@ -116,8 +148,8 @@ object SchemaHelpers {
      * the [renameFunction].
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, queues: List<Queue<*>>, renameFunction: (Queue<*>) -> String): SchemaResult {
-        val mergedSchema = generateRenameStatements(dataSource, queues, renameFunction).values.merge()
+    fun renameQueues(dataSource: DataSource, mainQueues: List<Queue<*>>, renameFunction: (Queue<*>) -> String): SchemaResult {
+        val mergedSchema = generateRenameStatements(dataSource, mainQueues, renameFunction).values.merge()
         return executeSchemaStatements(dataSource, mergedSchema)
     }
 
@@ -127,8 +159,8 @@ object SchemaHelpers {
      * See [renameQueues] for more details
      */
     @JvmStatic
-    fun renameQueues(dataSource: DataSource, vararg queues: Queue<*>, renameFunction: (Queue<*>) -> String): SchemaResult {
-        return renameQueues(dataSource, queues.toList(), renameFunction)
+    fun renameQueues(dataSource: DataSource, vararg mainQueues: Queue<*>, renameFunction: (Queue<*>) -> String): SchemaResult {
+        return renameQueues(dataSource, mainQueues.toList(), renameFunction)
     }
 
 
@@ -138,12 +170,23 @@ object SchemaHelpers {
      * Generate all statements needed to rename queue tables but doesn't execute them
      */
     @JvmStatic
-    fun generateDeleteStatements(dataSource: DataSource, queues: List<Queue<*>>): Map<Queue<*>, Schema> {
+    fun generateDeleteStatements(dataSource: DataSource, mainQueues: List<Queue<*>>): Map<Queue<*>, Schema> {
+        checkAllQueuesAreMain(mainQueues)
+
+        // Expand queue list to include companion queues (companions first, then parent)
+        val allQueues = buildList {
+            mainQueues.forEach { queue ->
+                queue.deadLetterQueue?.let { add(it) }
+                queue.archiveQueue?.let { add(it) }
+                add(queue)
+            }
+        }
+
         val existingTables = SchemaExtractor
-            .extractRawSchema(dataSource, queues.map { it.dbTableName }.toSet())
+            .extractRawSchema(dataSource, allQueues.map { it.dbTableName }.toSet())
             .filter { it.value.isQueueTable() }
 
-        return queues.associateWith { queue ->
+        return allQueues.associateWith { queue ->
             val existingTable = existingTables[queue.dbTableName]
             SchemaGenerator.generateDropTableSchema(queue, existingTable)
         }
@@ -153,8 +196,8 @@ object SchemaHelpers {
      * Generate all statements needed to delete queue tables but doesn't execute them
      */
     @JvmStatic
-    fun generateDeleteStatements(dataSource: DataSource, vararg queues: Queue<*>): Map<Queue<*>, Schema> {
-        return generateDeleteStatements(dataSource, queues.toList())
+    fun generateDeleteStatements(dataSource: DataSource, vararg mainQueues: Queue<*>): Map<Queue<*>, Schema> {
+        return generateDeleteStatements(dataSource, mainQueues.toList())
     }
 
     /**
@@ -166,8 +209,8 @@ object SchemaHelpers {
      * This is a convenient method that allows you to drop the table in the database
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, queues: List<Queue<*>>): SchemaResult {
-        val mergedSchema = generateDeleteStatements(dataSource, queues).values.merge()
+    fun deleteQueues(dataSource: DataSource, mainQueues: List<Queue<*>>): SchemaResult {
+        val mergedSchema = generateDeleteStatements(dataSource, mainQueues).values.merge()
         return executeSchemaStatements(dataSource, mergedSchema)
     }
 
@@ -177,8 +220,8 @@ object SchemaHelpers {
      * See [deleteQueues] for more details
      */
     @JvmStatic
-    fun deleteQueues(dataSource: DataSource, vararg queues: Queue<*>): SchemaResult {
-        return deleteQueues(dataSource, queues.toList())
+    fun deleteQueues(dataSource: DataSource, vararg mainQueues: Queue<*>): SchemaResult {
+        return deleteQueues(dataSource, mainQueues.toList())
     }
 
 
@@ -235,5 +278,14 @@ object SchemaHelpers {
     }
 
     private const val DEFAULT_CHUNK_SIZE = 25
+
+    private fun checkAllQueuesAreMain(mainQueues: List<Queue<*>>) {
+        mainQueues.forEach { queue ->
+            check(queue.queueType == QueueType.MAIN) {
+                "Only MAIN queues are allowed, but '${queue.name}' has type ${queue.queueType}. " +
+                    "DLQ and Archive queues are managed automatically through their parent MAIN queue."
+            }
+        }
+    }
 
 }
