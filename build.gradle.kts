@@ -19,7 +19,6 @@ repositories {
 dependencies {
     // Kotlin
     implementation(libs.kotlin.stdlib)
-    //implementation(libs.kotlin.reflect)
 
     // PostgreSQL
     implementation(libs.postgresql)
