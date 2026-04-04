@@ -51,7 +51,7 @@ internal object ConsumerSchemaHelpers {
 
         // 'where' clauses
         val whereClauses = mutableListOf(
-            "${Const.SCHEDULED_AT_COLUMN_NAME} <= current_timestamp",
+            "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()",
             "${Const.REMAINING_ATTEMPTS_COLUMN_NAME}>0"
         )
         if (shards != Shards.ALL_SHARDS) {
@@ -91,8 +91,8 @@ internal object ConsumerSchemaHelpers {
             updated_cte as (
                 update ${queue.dbTableName}
                 set
-                    ${Const.PROCESSING_AT_COLUMN_NAME}=current_timestamp,
-                    ${Const.SCHEDULED_AT_COLUMN_NAME}=current_timestamp + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
+                    ${Const.PROCESSING_AT_COLUMN_NAME}=statement_timestamp(),
+                    ${Const.SCHEDULED_AT_COLUMN_NAME}=statement_timestamp() + ${TimeHelper.generatePostgreSQLInterval(visibilityTimeout)},
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 from id_to_update_cte where ${Const.ID_COLUMN_NAME} = id_to_update_cte.id_value
