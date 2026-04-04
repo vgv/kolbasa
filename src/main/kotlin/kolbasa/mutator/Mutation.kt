@@ -29,9 +29,9 @@ data class SetRemainingAttempts(val newValue: Int) : Mutation, MutationField.Rem
 data class AddScheduledAt(val delta: Duration) : Mutation, MutationField.ScheduledAtField
 
 /**
- * Sets visibility timeout of the messages to `clock_timestamp() + newValue`
+ * Sets visibility timeout of the messages to `statement_timestamp() + newValue`
  *
- * SQL: `scheduled_at = clock_timestamp() + newValue`
+ * SQL: `scheduled_at = statement_timestamp() + newValue`
  */
 data class SetScheduledAt(val newValue: Duration) : Mutation, MutationField.ScheduledAtField
 
