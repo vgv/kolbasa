@@ -1,4 +1,4 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
 import io.mockk.mockk
 import io.mockk.verifySequence
@@ -25,7 +25,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.random.Random
 
-internal class MigrateOneTableTest : AbstractPostgresqlTest() {
+internal class MoveOneTableTest : AbstractPostgresqlTest() {
 
     val itemsToMove = 20_000
     val migrateBatchSize = 1000
@@ -70,7 +70,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun migrate() {
+    fun move() {
         // Just to check before migration that the target database is empty
         val consumer = DatabaseConsumer(dataSourceFirstSchema)
         consumer.receive(queue)?.let { message ->
@@ -83,9 +83,9 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             .values
             .first()
 
-        val callback = mockk<MigrateEvents>(relaxed = true)
+        val callback = mockk<ProgressCallback>(relaxed = true)
 
-        val migrateOneTable = MigrateOneTable(
+        val moveOneTable = MoveOneTable(
             shards = shardsToMove,
             schema = schema,
             sourceDataSource = dataSource,
@@ -93,7 +93,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
             rowsPerBatch = migrateBatchSize,
             moveProgressCallback = callback
         )
-        val migratedItems = migrateOneTable.migrate()
+        val migratedItems = moveOneTable.move()
 
         // after migration check that all required messages with (shard=shardsToMove) were moved
         var foundItems = 0
@@ -117,7 +117,7 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
 
         // check that the callback was called correctly
         verifySequence {
-            callback.migrateStart(queue.dbTableName, dataSource, dataSourceFirstSchema)
+            callback.moveStart(queue.dbTableName, dataSource, dataSourceFirstSchema)
 
             var totalRows = 0
             while (totalRows < migratedItems) {
@@ -125,11 +125,11 @@ internal class MigrateOneTableTest : AbstractPostgresqlTest() {
                 if (totalRows > migratedItems) {
                     totalRows = migratedItems
                 }
-                callback.migrateNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, totalRows)
+                callback.moveNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, totalRows)
             }
-            callback.migrateNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
+            callback.moveNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
 
-            callback.migrateEnd(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
+            callback.moveEnd(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
         }
     }
 

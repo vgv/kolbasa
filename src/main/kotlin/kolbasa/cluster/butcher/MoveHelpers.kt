@@ -1,10 +1,12 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.readString
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
 internal data class ShardInfo(
@@ -22,7 +24,7 @@ internal data class ShardDiff(
     val updatedShard: Shard
 )
 
-internal object MigrateHelpers {
+internal object MoveHelpers {
 
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
         // Try to find a node with a 100% initialized shard table, if found, return it
@@ -73,5 +75,42 @@ internal object MigrateHelpers {
         }
 
         return difference
+    }
+
+    /**
+     * Validate connectivity to all nodes.
+     */
+    fun checkConnection(dataSources: List<DataSource>): Map<DataSource, Exception> {
+        val errors = ConcurrentHashMap<DataSource, Exception>()
+
+        dataSources.parallelStream().forEach { dataSource ->
+            try {
+                // Any fast query will do — we only need to confirm we can open a connection
+                dataSource.readString("select 1")
+            } catch (e: Exception) {
+                errors[dataSource] = e
+            }
+        }
+
+        return errors
+    }
+
+    fun checkClusterNodes(nodes: ClusterNodes) {
+        val errors = checkConnection(nodes.dataSources)
+        if (errors.isEmpty()) {
+            return
+        }
+
+        val errorMessage = buildString {
+            appendLine("Can't connect to ${errors.size} of ${nodes.dataSources.size} kolbasa cluster nodes:")
+
+            errors.forEach { (dataSource, error) ->
+                appendLine("  Node: $dataSource")
+                appendLine("  Error: ${error.message}")
+                appendLine()
+            }
+        }
+
+        throw ButcherException.ExecutionException(errorMessage)
     }
 }

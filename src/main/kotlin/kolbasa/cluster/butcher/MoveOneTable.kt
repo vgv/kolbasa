@@ -1,4 +1,4 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -9,16 +9,16 @@ import java.sql.ResultSet
 import java.sql.Statement
 import javax.sql.DataSource
 
-internal class MigrateOneTable(
+internal class MoveOneTable(
     private val shards: List<Int>,
     private val schema: Table,
     private val sourceDataSource: DataSource,
     private val targetDataSource: DataSource,
     private val rowsPerBatch: Int,
-    private val moveProgressCallback: MigrateEvents
+    private val moveProgressCallback: ProgressCallback
 ) {
 
-    fun migrate(): Int {
+    fun move(): Int {
         val dbTableName = schema.name
         val columns = schema.columns.toList()
         val columnsString = columns.joinToString(",") { it.name }
@@ -28,16 +28,16 @@ internal class MigrateOneTable(
         val selectQuery = "select $columnsString from $dbTableName where shard in ($shardsString) limit $rowsPerBatch"
         val insertQuery = "insert into $dbTableName ($columnsString) values ($insertQuestionMarks) on conflict do nothing"
 
-        moveProgressCallback.migrateStart(dbTableName, sourceDataSource, targetDataSource)
+        moveProgressCallback.moveStart(dbTableName, sourceDataSource, targetDataSource)
 
         var totalMovedRows = 0
         do {
             val movedRows = moveOneBatch(insertQuery, selectQuery, columns, dbTableName)
             totalMovedRows += movedRows
-            moveProgressCallback.migrateNextBatch(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
+            moveProgressCallback.moveNextBatch(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
         } while (movedRows > 0)
 
-        moveProgressCallback.migrateEnd(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
+        moveProgressCallback.moveEnd(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
 
         return totalMovedRows
     }
