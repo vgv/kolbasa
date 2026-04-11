@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.cluster.butcher.check.check
 import kolbasa.cluster.butcher.config.Command
 import kotlin.system.exitProcess
 
