@@ -23,9 +23,9 @@ private fun checkShardBalance(command: Command.Check) {
     val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
     val (_, shards) = MoveHelpers.readShards(nodes)
 
-    val r = mutableMapOf<NodeId, MutableList<Shard>>()
+    val currentDistribution = mutableMapOf<NodeId, MutableList<Shard>>()
     shards.forEach { (_, shard) ->
-        r.computeIfAbsent(shard.producerNode) { mutableListOf() }.add(shard)
+        currentDistribution.computeIfAbsent(shard.producerNode) { mutableListOf() }.add(shard)
     }
 
 
