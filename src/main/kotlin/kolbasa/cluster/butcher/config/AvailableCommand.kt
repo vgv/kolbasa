@@ -2,7 +2,6 @@ package kolbasa.cluster.butcher.config
 
 import kolbasa.cluster.butcher.ButcherException
 import kolbasa.schema.NodeId
-import java.io.File
 
 /**
  * All CLI commands the butcher tool supports. Holds the command name plus
@@ -57,7 +56,7 @@ internal enum class AvailableCommand(
             }
 
             val parsed = try {
-                parseArgs(restArgs, supportedFlags = emptySet())
+                ConfigHelper.parseArgs(restArgs, supportedFlags = emptySet())
             } catch (e: ButcherException.InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
@@ -83,7 +82,7 @@ internal enum class AvailableCommand(
     ) {
         override fun parse(args: Array<String>): Command.Prepare {
             val parsed = try {
-                parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TARGET, FLAG_SHARDS))
+                ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TARGET, FLAG_SHARDS))
             } catch (e: ButcherException.InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
@@ -121,7 +120,7 @@ internal enum class AvailableCommand(
     ) {
         override fun parse(args: Array<String>): Command.Move {
             val parsed = try {
-                parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TABLES))
+                ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TABLES))
             } catch (e: ButcherException.InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
@@ -144,7 +143,7 @@ internal enum class AvailableCommand(
     ) {
         override fun parse(args: Array<String>): Command.Finalize {
             val parsed = try {
-                parseArgs(args.drop(1), supportedFlags = emptySet())
+                ConfigHelper.parseArgs(args.drop(1), supportedFlags = emptySet())
             } catch (e: ButcherException.InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
@@ -205,57 +204,4 @@ private const val FLAG_SHARDS = "--shards"
 private const val FLAG_TABLES = "--tables"
 
 
-/**
- * Parsed CLI args split into flags and positional file paths.
- */
-private data class ParsedArgs(val files: List<File>, val flags: Map<String, String>)
-
-/**
- * Extract flags (`--key=value`) and positional file paths from [args].
- *
- * Rules:
- *  - `--key=value` → flag; key must be in [supportedFlags].
- *  - `--key` alone (no `=`) → error.
- *  - Anything else → file path; must be readable.
- *  - Duplicate flag → error.
- *  - Zero files → error.
- */
-private fun parseArgs(args: List<String>, supportedFlags: Set<String>): ParsedArgs {
-    val files = mutableListOf<File>()
-    val flags = mutableMapOf<String, String>()
-
-    for (arg in args) {
-        if (arg.startsWith("--")) {
-            // this is an argument, like --shards or --target
-            val eq = arg.indexOf('=')
-            if (eq < 0) {
-                throw ButcherException.InvalidConfigurationException("Flag '$arg' must be in '--key=value' form")
-            }
-
-            val key = arg.substring(0, eq)
-            val value = arg.substring(eq + 1)
-            if (key !in supportedFlags) {
-                throw ButcherException.InvalidConfigurationException("Unknown flag '$key'. Supported flags: $supportedFlags")
-            }
-            if (key in flags) {
-                throw ButcherException.InvalidConfigurationException("Duplicate flag '$key'")
-            }
-
-            flags[key] = value
-        } else {
-            // this is a cluster file, one of
-            val file = File(arg)
-            if (!file.canRead()) {
-                throw ButcherException.InvalidConfigurationException("Cannot read config file: ${file.absolutePath}")
-            }
-            files.add(file)
-        }
-    }
-
-    if (files.isEmpty()) {
-        throw ButcherException.InvalidConfigurationException("No cluster config files provided. At least one config file is required.")
-    }
-
-    return ParsedArgs(files, flags)
-}
 
