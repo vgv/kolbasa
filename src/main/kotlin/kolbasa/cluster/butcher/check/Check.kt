@@ -11,7 +11,7 @@ internal fun check(command: Command.Check): CheckResult {
         when (check) {
             AvailableCheck.CHECK_SHARD_BALANCE -> ShardBalance.check(command)
             AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> checkSchemaConsistency(command)
-            AvailableCheck.FIND_ORPHAN_TABLES -> findOrphanTables(command)
+            AvailableCheck.FIND_ORPHAN_TABLES -> OrphanTables.check(command)
             AvailableCheck.CHECK_MIGRATION_STATE -> MigrationState.check(command)
         }
     }
@@ -24,8 +24,4 @@ private fun checkSchemaConsistency(command: Command.Check): Any? {
     return null
 }
 
-private fun findOrphanTables(command: Command.Check): Any? {
-    // TODO: find orphan tables
-    return null
-}
 
