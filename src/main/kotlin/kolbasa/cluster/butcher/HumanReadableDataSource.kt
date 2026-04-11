@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.cluster.butcher.config.PgEndpoint
 import java.sql.ConnectionBuilder
 import java.sql.ShardingKeyBuilder
 import javax.sql.DataSource

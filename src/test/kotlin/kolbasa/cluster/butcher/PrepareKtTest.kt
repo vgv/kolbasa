@@ -2,6 +2,8 @@ package kolbasa.cluster.butcher
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.butcher.config.ClusterNodes
+import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.NodeId

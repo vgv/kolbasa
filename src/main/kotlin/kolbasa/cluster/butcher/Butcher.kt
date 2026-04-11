@@ -1,10 +1,11 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.cluster.butcher.config.Command
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     val command = try {
-        parseCommand(args)
+        Command.parseCommand(args)
     } catch (e: ButcherException.InvalidConfigurationException) {
         println("=================================================")
         println("Invalid configuration.")

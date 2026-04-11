@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 

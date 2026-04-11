@@ -2,6 +2,8 @@ package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
+import kolbasa.cluster.butcher.config.AvailableCheck
+import kolbasa.cluster.butcher.config.Command
 import kolbasa.schema.NodeId
 
 internal fun check(command: Command.Check) {

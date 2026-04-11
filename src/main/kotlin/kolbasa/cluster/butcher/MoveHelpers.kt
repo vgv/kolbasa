@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.Shard
+import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
