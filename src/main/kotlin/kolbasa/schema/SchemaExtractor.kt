@@ -2,6 +2,7 @@ package kolbasa.schema
 
 import kolbasa.utils.JdbcHelpers
 import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
 import javax.sql.DataSource
@@ -36,7 +37,7 @@ internal object SchemaExtractor {
 
             // Collect all indexes and identities
             val allIndexes = getAllIndexes(connection, connection.schema, tablesAndColumns.keys)
-            val allIdentities = getIdentities(connection, connection.schema, tablesAndColumns.keys)
+            val allIdentities = getIdentities(connection, connection.schema, tablesAndColumns.keys  )
 
             val result = mutableMapOf<TableName, Table>()
             for ((tableName, columns) in tablesAndColumns) {
@@ -201,25 +202,38 @@ internal object SchemaExtractor {
     private fun findSequences(
         connection: Connection,
         schemaName: String?,
-        tableNames: Set<String>
+        tableNames: Set<TableName>
     ): Map<TableName, SequenceName> {
         if (tableNames.isEmpty()) {
             return emptyMap()
         }
 
-        val realSchemaNameWithDot = "${JdbcHelpers.schemaNameOrDefault(schemaName)}."
         val allSequenceNamesQuery = """
-            with tbl_names(table_name) as (values ${tableNames.joinToString(separator = ",") { "('$it')" }})
-            select table_name, pg_get_serial_sequence(table_name,'${Const.ID_COLUMN_NAME}') from (table tbl_names) as tbl_names
+            with tbl_names(table_name) as (select unnest(?::text[]))
+            select c.relname as table_name, s.relname as sequence_name
+            from tbl_names
+            join pg_namespace n on n.nspname = ?
+            join pg_class c on c.relnamespace = n.oid and c.relname = tbl_names.table_name
+            join pg_attribute a on a.attrelid = c.oid
+                and a.attname = ?
+                and not a.attisdropped
+            join pg_depend d on d.refobjid = c.oid
+                and d.refobjsubid = a.attnum
+                and d.classid = 'pg_class'::regclass
+            join pg_class s on s.oid = d.objid and s.relkind = 'S'
         """
 
         val sequenceNames = mutableMapOf<TableName, SequenceName>()
-        connection.useStatement(allSequenceNamesQuery) { resultSet ->
-            while (resultSet.next()) {
-                val tableName = resultSet.getString(1)
-                val sequenceName = resultSet.getString(2)
-                if (sequenceName != null) {
-                    sequenceNames[tableName] = sequenceName.removePrefix(realSchemaNameWithDot)
+        connection.usePreparedStatement(allSequenceNamesQuery) { preparedStatement ->
+            preparedStatement.setArray(1, connection.createArrayOf("text", tableNames.toTypedArray()))
+            preparedStatement.setString(2, JdbcHelpers.schemaNameOrDefault(schemaName))
+            preparedStatement.setString(3, Const.ID_COLUMN_NAME)
+
+            preparedStatement.executeQuery().use { resultSet ->
+                while (resultSet.next()) {
+                    val tableName = resultSet.getString(1)
+                    val sequenceName = resultSet.getString(2)
+                    sequenceNames[tableName] = sequenceName
                 }
             }
         }
