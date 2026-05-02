@@ -1,40 +1,44 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.butcher.config.Command
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
 import java.util.SortedMap
 import javax.sql.DataSource
-import kotlin.collections.component1
-import kotlin.collections.component2
 
-internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, events: MigrateEvents) {
-    val nodes = ClusterHelper.readNodes(dataSources)
+/**
+ * Transfer data from source nodes to target nodes for all shards in migration state.
+ * Can be re-run safely if interrupted — INSERT uses ON CONFLICT DO NOTHING,
+ * so duplicate rows are silently skipped on retry.
+ */
+internal fun move(command: Command.Move) {
+    val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
 
     // tablename => schema
-    val schemas = findAndCompareAllSchemas(dataSources, tablesToFind)
+    val schemas = findAndCompareAllSchemas(command.nodes.dataSources, command.tables)
 
     // targetnode => shards (which should be migrated to this node)
     val targetsToShards = findTargetNodeAndShards(nodes)
 
     // start move
     targetsToShards.forEach { (targetNode, shards) ->
-        val (sources, target) = MigrateHelpers.splitNodes(nodes, targetNode)
+        val (sources, target) = MoveHelpers.splitNodes(nodes, targetNode)
 
         schemas.forEach { (_, schema) ->
             do {
                 val migratedRows = sources.sumOf { sourceDS ->
-                    val migrateOneTable = MigrateOneTable(
+                    val moveOneTable = MoveOneTable(
                         shards = shards,
                         schema = schema,
                         sourceDataSource = sourceDS,
                         targetDataSource = target,
                         rowsPerBatch = 1000,
-                        moveProgressCallback = events
+                        moveProgressCallback = ConsoleProgressCallback
                     )
-                    migrateOneTable.migrate()
+                    moveOneTable.move()
                 }
             } while (migratedRows > 0)
         }
@@ -42,7 +46,7 @@ internal fun migrate(tablesToFind: Set<String>?, dataSources: List<DataSource>, 
 }
 
 private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<Int>> {
-    val (_, shards) = MigrateHelpers.readShards(nodes)
+    val (_, shards) = MoveHelpers.readShards(nodes)
 
     val targetsToShards = mutableMapOf<NodeId, MutableList<Int>>()
     shards.values.forEach { shard ->
@@ -73,7 +77,7 @@ private fun findAndCompareAllSchemas(
             for (j in i + 1..tables.size - 1) {
                 val secondTable = tables[j]
                 if (!partialEq(firstTable.second, secondTable.second)) {
-                    throw MigrateException.InconsistentSchemaException(tableName, firstTable.second, secondTable.second)
+                    throw ButcherException.InconsistentSchemaException(tableName, firstTable.second, secondTable.second)
                 }
             }
         }

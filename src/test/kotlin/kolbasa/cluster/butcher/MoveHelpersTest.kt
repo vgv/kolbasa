@@ -1,4 +1,4 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.IllegalStateException
 
-class MigrateHelpersTest : AbstractPostgresqlTest() {
+class MoveHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadShards_Success() {
@@ -22,7 +22,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
         val expectedShardTable = ShardSchema.readShards(dataSourceFirstSchema)
 
         // Check that we've found exactly the same shard table
-        val shardInfo = MigrateHelpers.readShards(nodes)
+        val shardInfo = MoveHelpers.readShards(nodes)
         assertEquals(expectedShardTable, shardInfo.shards)
         assertEquals(dataSourceFirstSchema, shardInfo.shardDataSource)
     }
@@ -33,7 +33,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
 
         // Without shard table we expect an exception
         assertThrows<IllegalStateException> {
-            MigrateHelpers.readShards(nodes)
+            MoveHelpers.readShards(nodes)
         }
     }
 
@@ -47,7 +47,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
             .values
             .toList()
 
-        val splitResult = MigrateHelpers.splitNodes(nodes, targetNode.id)
+        val splitResult = MoveHelpers.splitNodes(nodes, targetNode.id)
         assertEquals(dataSourcesWithoutTargetNode, splitResult.sourceNodes)
         assertEquals(nodes[targetNode], splitResult.targetNode)
     }
@@ -57,7 +57,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
         assertThrows<IllegalStateException> {
-            MigrateHelpers.splitNodes(nodes, NodeId("bugaga-non-existing-target-id-${System.nanoTime()}"))
+            MoveHelpers.splitNodes(nodes, NodeId("bugaga-non-existing-target-id-${System.nanoTime()}"))
         }
     }
 
@@ -71,7 +71,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
 
         val updatedShards = buildMap { putAll(shards) } // to create the copy of the map
 
-        val diff = MigrateHelpers.calculateShardsDiff(shards, updatedShards)
+        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
         assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
     }
 
@@ -101,7 +101,7 @@ class MigrateHelpersTest : AbstractPostgresqlTest() {
         val updatedShard = updatedShards[randomShardToChange]
 
 
-        val diff = MigrateHelpers.calculateShardsDiff(shards, updatedShards)
+        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
         assertEquals(1, diff.size)
         assertEquals(originalShard, diff.first().originalShard)
         assertEquals(updatedShard, diff.first().updatedShard)

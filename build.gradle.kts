@@ -19,13 +19,9 @@ repositories {
 dependencies {
     // Kotlin
     implementation(libs.kotlin.stdlib)
-    //implementation(libs.kotlin.reflect)
 
     // PostgreSQL
     implementation(libs.postgresql)
-
-    // JCommander
-    implementation(libs.jcommander)
 
     // Metrics
     compileOnly(libs.prometheus.metrics.core)

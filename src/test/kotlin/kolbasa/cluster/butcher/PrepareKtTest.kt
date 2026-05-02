@@ -1,9 +1,9 @@
-package kolbasa.cluster.migrate
+package kolbasa.cluster.butcher
 
-import io.mockk.mockk
-import io.mockk.verifySequence
 import kolbasa.AbstractPostgresqlTest
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.butcher.config.ClusterNodes
+import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.NodeId
@@ -19,7 +19,8 @@ class PrepareKtTest : AbstractPostgresqlTest() {
     @Test
     fun testPrepare_Success() {
         // PREPARE everything
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         val shards = ShardSchema.readShards(dataSource)
@@ -34,15 +35,8 @@ class PrepareKtTest : AbstractPostgresqlTest() {
             .take(Random.nextInt(2, 10))  // choose a few shards to move
             .sorted()
 
-        val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-
         // RUN
-        prepare(
-            shards = shardsToMove,
-            targetNode = targetNode.id,
-            dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-            events = migrateEvents
-        )
+        prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove))
 
         // CHECK
         // first, check the table content
@@ -66,26 +60,16 @@ class PrepareKtTest : AbstractPostgresqlTest() {
             }
         }
 
-        // second, check that the event was reported
-        val diffs = shardsToMove.map { shardNumber ->
-            val originalShard = requireNotNull(shards[shardNumber])
-            val updatedShard = originalShard.copy(
-                producerNode = targetNode.id,
-                consumerNode = null,
-                nextConsumerNode = targetNode.id
-            )
-            ShardDiff(originalShard, updatedShard)
-        }
-
-        verifySequence {
-            migrateEvents.prepareSuccessful(shardsToMove, targetNode.id, diffs)
-        }
+        // second, check that the output was printed (ConsoleProgressCallback is used directly now)
+        // The old mockk verification is no longer applicable since prepare() uses ConsoleProgressCallback directly.
+        // We verify correctness via the database assertions above.
     }
 
     @Test
     fun testPrepare_TargetNodeDoesNotExist() {
         // PREPARE everything
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
 
@@ -93,28 +77,22 @@ class PrepareKtTest : AbstractPostgresqlTest() {
 
         val shardsToMove = listOf(Random.nextInt(1, 100000), Random.nextInt(1, 100000), Random.nextInt(1, 100000))
 
-        val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-
         // RUN
-        val exception = assertThrows<MigrateException.MigrateToNonExistingNodeException> {
-            prepare(
-                shards = shardsToMove,
-                targetNode = targetNode,
-                dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-                events = migrateEvents,
-            )
+        val exception = assertThrows<ButcherException.MoveToNonExistingNodeException> {
+            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode, shardsToMove))
         }
 
         // CHECK
-        assertInstanceOf<MigrateException.MigrateToNonExistingNodeException>(exception)
+        assertInstanceOf<ButcherException.MoveToNonExistingNodeException>(exception)
         assertEquals(nodes.keys.toList(), exception.knownNodes)
         assertEquals(targetNode, exception.targetNode)
     }
 
     @Test
-    fun testPrepare_MigrateShardToTheSameNode() {
+    fun testPrepare_MoveShardToTheSameNode() {
         // PREPARE everything
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         val shards = ShardSchema.readShards(dataSource)
@@ -129,20 +107,13 @@ class PrepareKtTest : AbstractPostgresqlTest() {
             .take(Random.nextInt(2, 10))  // choose a few shards to move
             .sorted()
 
-        val migrateEvents = mockk<MigrateEvents>(relaxed = true)
-
         // RUN
-        val exception = assertThrows<MigrateException.MigrateToTheSameShardException> {
-            prepare(
-                shards = shardsToMove,
-                targetNode = targetNode.id,
-                dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema),
-                events = migrateEvents
-            )
+        val exception = assertThrows<ButcherException.MoveToTheSameShardException> {
+            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove))
         }
 
         // CHECK
-        assertInstanceOf<MigrateException.MigrateToTheSameShardException>(exception)
+        assertInstanceOf<ButcherException.MoveToTheSameShardException>(exception)
         assertEquals(shards[shardsToMove.first()], exception.shard)
         assertEquals(targetNode.id, exception.targetNode)
     }
