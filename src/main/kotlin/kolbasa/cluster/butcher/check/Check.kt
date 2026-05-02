@@ -7,10 +7,10 @@ import kolbasa.cluster.butcher.config.Command
 internal fun check(command: Command.Check): CheckResult {
     MoveHelpers.checkClusterNodes(command.nodes)
 
-    val results = command.checks.mapNotNull { check ->
+    val results = command.checks.map { check ->
         when (check) {
             AvailableCheck.CHECK_SHARD_BALANCE -> ShardBalance.check(command)
-            AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> checkSchemaConsistency(command)
+            AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> SchemaConsistency.check(command)
             AvailableCheck.FIND_ORPHAN_TABLES -> OrphanTables.check(command)
             AvailableCheck.CHECK_MIGRATION_STATE -> MigrationState.check(command)
         }
@@ -18,10 +18,3 @@ internal fun check(command: Command.Check): CheckResult {
 
     return CheckResult(results)
 }
-
-private fun checkSchemaConsistency(command: Command.Check): Any? {
-    // TODO: check schema consistency
-    return null
-}
-
-
