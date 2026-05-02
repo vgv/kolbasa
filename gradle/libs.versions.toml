@@ -12,7 +12,7 @@ nexus = "2.0.0"
 
 prometheus = "1.5.1"
 opentelemetry = "1.60.1"
-opentelemetry-instrumentation = "2.26.1"
+opentelemetry-instrumentation = "2.27.0"
 opentelemetry-instrumentation-incubator = "2.26.1-alpha"
 opentelemetry-semconv = "1.40.0"
 hikaricp = "7.0.2"
