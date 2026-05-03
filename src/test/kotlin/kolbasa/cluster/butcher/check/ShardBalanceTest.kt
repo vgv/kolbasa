@@ -173,7 +173,7 @@ class ShardBalanceTest {
         val text = ShardBalance(shards, nodes.toSet()).compute().toString()
 
         assertTrue(text.contains("Proposed moves"), text)
-        assertTrue(text.contains("n1 -> n2"), text)
+        assertTrue(text.contains("⟶ n2"), text)
     }
 
     @Test
