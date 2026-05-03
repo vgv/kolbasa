@@ -32,7 +32,7 @@ class MoveHelpersTest : AbstractPostgresqlTest() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
         // Without shard table we expect an exception
-        assertThrows<IllegalStateException> {
+        assertThrows<ButcherException.ExecutionException> {
             MoveHelpers.readShards(nodes)
         }
     }

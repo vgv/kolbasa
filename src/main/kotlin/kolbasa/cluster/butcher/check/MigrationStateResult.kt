@@ -20,10 +20,9 @@ internal data class MigrationStateResult(
         appendLine("Migration state: $totalMigratingShards shard(s) in migration")
         migratingShardsByTarget.toSortedMap().forEach { (target, shards) ->
             val sorted = shards.sortedBy { it.shard }
-            appendLine("  -> ${target.id} (${sorted.size} shards):")
-            sorted.forEach { shard ->
-                appendLine("    shard ${shard.shard.toString().padStart(4)}")
-            }
+            appendLine("  ⟶ ${target.id} (${sorted.size} shards):")
+            appendLine("    shards: ${sorted.joinToString(separator = ",") { it.shard.toString() }}")
+            appendLine("    target: ${target.id}")
         }
     }.trimEnd()
 }

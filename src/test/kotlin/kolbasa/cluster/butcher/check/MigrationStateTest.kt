@@ -87,6 +87,8 @@ class MigrationStateTest {
         val n2 = NodeId("n2")
         val n3 = NodeId("n3")
         val shards = listOf(
+            migratingShard(50, n3),
+            migratingShard(40, n3),
             migratingShard(30, n3),
             migratingShard(10, n2),
             migratingShard(20, n2),
@@ -94,16 +96,16 @@ class MigrationStateTest {
 
         val text = MigrationState(shards).compute().toString()
 
-        assertTrue(text.contains("3 shard(s) in migration"), text)
-        assertTrue(text.contains("-> n2"), text)
-        assertTrue(text.contains("-> n3"), text)
+        assertTrue(text.contains("5 shard(s) in migration"), text)
+        assertTrue(text.contains("⟶ n2"), text)
+        assertTrue(text.contains("⟶ n3"), text)
         // Targets sorted by id (n2 before n3) and shards sorted ascending within each group.
-        val n2Pos = text.indexOf("-> n2")
-        val n3Pos = text.indexOf("-> n3")
+        val n2Pos = text.indexOf("⟶ n2")
+        val n3Pos = text.indexOf("⟶ n3")
         assertTrue(n2Pos < n3Pos, "n2 group should come before n3 group:\n$text")
-        val shard10Pos = text.indexOf("shard   10")
-        val shard20Pos = text.indexOf("shard   20")
-        assertTrue(shard10Pos in 0 until shard20Pos, "shard 10 should appear before shard 20:\n$text")
+        // Check shards list
+        assertTrue(text.contains("shards: 10,20"), text)
+        assertTrue(text.contains("shards: 30,40,50"), text)
     }
 
     // ---------- helpers ----------

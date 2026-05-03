@@ -43,7 +43,7 @@ internal object MoveHelpers {
             }
         }
 
-        throw IllegalStateException("Initialized shard table not found")
+        throw ButcherException.ExecutionException("Initialized shard table ${ShardSchema.SHARD_TABLE_NAME} not found. Is it a Kolbasa cluster?")
     }
 
     fun splitNodes(nodes: SortedMap<Node, DataSource>, targetNodeId: NodeId): SourceAndTargetNodes {
