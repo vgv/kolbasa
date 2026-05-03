@@ -23,9 +23,6 @@ internal data class MigrationStateResult(
             appendLine("  ⟶ ${target.id} (${sorted.size} shards):")
             appendLine("    shards: ${sorted.joinToString(separator = ",") { it.shard.toString() }}")
             appendLine("    target: ${target.id}")
-//            sorted.forEach { shard ->
-//                appendLine("    shard ${shard.shard.toString().padStart(4)}")
-//            }
         }
     }.trimEnd()
 }
