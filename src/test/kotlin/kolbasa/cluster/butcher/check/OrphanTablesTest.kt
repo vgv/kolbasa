@@ -162,7 +162,7 @@ class OrphanTablesTest {
     fun testToString_Clean() {
         val result = OrphanTables(emptyMap()).compute()
 
-        assertEquals("Orphan tables: no orphan companion tables", result.toString())
+        assertEquals("Orphan tables: no orphan queue tables", result.toString())
     }
 
     @Test
@@ -176,14 +176,14 @@ class OrphanTablesTest {
 
         val text = OrphanTables(tables).compute().toString()
 
-        assertTrue(text.contains("3 orphan companion(s) across 2 node(s)"), text)
+        assertTrue(text.contains("3 orphan queue(s) across 2 node(s)"), text)
         assertTrue(text.contains("n1"), text)
         assertTrue(text.contains("n2"), text)
         assertTrue(text.contains("q_orders_dlq"), text)
         assertTrue(text.contains("q_orders_arc"), text)
         assertTrue(text.contains("q_payments_arc"), text)
-        assertTrue(text.contains("main q_orders missing"), text)
-        assertTrue(text.contains("main q_payments missing"), text)
+        assertTrue(text.contains("main queue q_orders missing"), text)
+        assertTrue(text.contains("main queue q_payments missing"), text)
         // Nodes sorted by id: n1 before n2.
         val n1Pos = text.indexOf("n1:")
         val n2Pos = text.indexOf("n2:")
