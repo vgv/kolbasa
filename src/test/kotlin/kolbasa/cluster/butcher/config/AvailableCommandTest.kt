@@ -201,40 +201,44 @@ class AvailableCommandTest {
         val parsed = AvailableCommand.MOVE_DATA.parse(arrayOf("move-data", file.absolutePath))
 
         assertInstanceOf<Command.Move>(parsed)
-        assertNull(parsed.tables)
+        assertNull(parsed.includeTables)
+        assertNull(parsed.excludeTables)
     }
 
     @Test
     fun testMoveData_Parse_WithTables() {
         val file = configFile()
         val parsed = AvailableCommand.MOVE_DATA.parse(
-            arrayOf("move-data", "--tables=orders,events,logs", file.absolutePath)
+            arrayOf("move-data", "--include-tables=orders,events,logs", "--exclude-tables=garbage,trash", file.absolutePath)
         )
 
         assertInstanceOf<Command.Move>(parsed)
-        assertEquals(setOf("orders", "events", "logs"), parsed.tables)
+        assertEquals(setOf("orders", "events", "logs"), parsed.includeTables)
+        assertEquals(setOf("garbage", "trash"), parsed.excludeTables)
     }
 
     @Test
     fun testMoveData_Parse_TablesWhitespaceTrimmed() {
         val file = configFile()
         val parsed = AvailableCommand.MOVE_DATA.parse(
-            arrayOf("move-data", "--tables= orders , events ", file.absolutePath)
+            arrayOf("move-data", "--exclude-tables= garbage , trash ", "--include-tables= orders , events ", file.absolutePath)
         )
 
         assertInstanceOf<Command.Move>(parsed)
-        assertEquals(setOf("orders", "events"), parsed.tables)
+        assertEquals(setOf("orders", "events"), parsed.includeTables)
+        assertEquals(setOf("garbage", "trash"), parsed.excludeTables)
     }
 
     @Test
     fun testMoveData_Parse_TablesDuplicatesCollapse() {
         val file = configFile()
         val parsed = AvailableCommand.MOVE_DATA.parse(
-            arrayOf("move-data", "--tables=orders,orders,events", file.absolutePath)
+            arrayOf("move-data", "--include-tables=orders,orders,events", "--exclude-tables=trash,garbage,trash", file.absolutePath)
         )
 
         assertInstanceOf<Command.Move>(parsed)
-        assertEquals(setOf("orders", "events"), parsed.tables)
+        assertEquals(setOf("orders", "events"), parsed.includeTables)
+        assertEquals(setOf("trash", "garbage"), parsed.excludeTables)
     }
 
     @Test
