@@ -3,12 +3,14 @@
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 nebula-release = { id = "com.netflix.nebula.release", version.ref = "nebula" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 
 [versions]
 
 kotlin = "2.3.21"
 nebula = "20.2.0"
 nexus = "2.0.0"
+shadow = "9.4.1"
 
 prometheus = "1.6.1"
 opentelemetry = "1.61.0"

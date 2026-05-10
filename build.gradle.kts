@@ -10,6 +10,7 @@ plugins {
     `maven-publish`
     alias(libs.plugins.nebula.release)
     alias(libs.plugins.nexus.publish)
+    alias(libs.plugins.shadow)
 }
 
 repositories {
@@ -124,6 +125,47 @@ tasks {
             dependsOn(named("final").get())
         }
     }
+}
+
+// ===== Butcher fat jar (build/libs/butcher.jar) =====
+tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+    archiveBaseName.set("butcher")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+
+    manifest {
+        attributes(
+            "Main-Class" to "kolbasa.cluster.butcher.ButcherKt",
+            "Implementation-Title" to "butcher",
+            "Implementation-Version" to project.sanitizeVersion(),
+        )
+    }
+
+    // Postgres JDBC driver registers itself via META-INF/services/.
+    // Must be preserved or the driver won't be auto-discovered.
+    mergeServiceFiles()
+
+    // compileOnly deps (prometheus, opentelemetry) are excluded automatically
+    // because shadow bundles `runtimeClasspath`, which doesn't include them.
+}
+
+// Detach `shadowJar` from `assemble` so the fat jar is built only on explicit
+// `./gradlew shadowJar`. The shadow plugin attaches it to `assemble` by
+// default, which would make every `build` bundle kotlin-stdlib + postgresql +
+// butcher classes — wasted work, since the fat jar is a downstream artifact
+// of the library, not part of it. The release pipeline invokes the task
+// directly as its own step (see `.github/workflows/push-to-main.yml`).
+//
+// Shadow registers the dependency as a lazy TaskProvider, not a Task or
+// String, so filtering needs to handle all three forms.
+val shadowJarTaskProvider = tasks.named("shadowJar")
+tasks.named("assemble") {
+    setDependsOn(dependsOn.filterNot { dep ->
+        dep === shadowJarTaskProvider ||
+            (dep is TaskProvider<*> && dep.name == "shadowJar") ||
+            (dep is Task && dep.name == "shadowJar") ||
+            (dep is String && dep == "shadowJar")
+    })
 }
 
 tasks.withType<Sign> {

@@ -2,9 +2,15 @@ package kolbasa.cluster.butcher
 
 import kolbasa.cluster.butcher.check.check
 import kolbasa.cluster.butcher.config.Command
+import java.lang.invoke.MethodHandles
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    if (args.isNotEmpty() && (args[0] == "--version" || args[0] == "-v")) {
+        println(butcherVersion())
+        exitProcess(0)
+    }
+
     val command = try {
         Command.parseCommand(args)
     } catch (e: ButcherException.InvalidConfigurationException) {
@@ -34,6 +40,17 @@ fun main(args: Array<String>) {
     println(green("Completed successfully."))
     println(result)
     println("=================================================")
+}
+
+private fun butcherVersion(): String {
+    // `MethodHandles.lookup().lookupClass()` is the idiomatic JVM way to get a
+    // Class handle to "the class containing this code" without declaring a
+    // placeholder type. It resolves to the synthetic `ButcherKt` class that
+    // Kotlin generates for top-level functions in this file, whose `Package`
+    // carries the jar manifest's `Implementation-Version` attribute set by
+    // the shadow task. Falls back to "unknown" outside a jar (IDE,
+    // `./gradlew run`), where the JVM doesn't populate the attribute.
+    return MethodHandles.lookup().lookupClass().`package`.implementationVersion ?: "unknown"
 }
 
 private fun red(msg: String): String {
