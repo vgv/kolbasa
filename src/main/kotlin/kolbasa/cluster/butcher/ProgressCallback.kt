@@ -11,4 +11,6 @@ internal interface ProgressCallback {
     fun moveEnd(tableName: String, from: DataSource, to: DataSource, migratedRows: Int)
     fun moveNextBatch(tableName: String, from: DataSource, to: DataSource, migratedRows: Int)
 
+    fun finalizeSuccessful(shardsDiff: List<ShardDiff>)
+
 }
