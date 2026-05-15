@@ -137,34 +137,39 @@ internal object ConsumerSchemaHelpers {
         val scheduledAt = resultSet.getTimestamp(columnIndex++).time
         val attempts = resultSet.getInt(columnIndex++)
 
-        val data = when (queue.databaseDataType) {
-            is DatabaseQueueDataType.Json -> {
-                val data = resultSet.getString(columnIndex++)
-                approxBytesCounter.addString(data)
-                queue.databaseDataType.deserializer(data)
-            }
+        val id = Id(localId, shard)
+        val data = try {
+            when (queue.databaseDataType) {
+                is DatabaseQueueDataType.Json -> {
+                    val data = resultSet.getString(columnIndex++)
+                    approxBytesCounter.addString(data)
+                    queue.databaseDataType.deserializer(data)
+                }
 
-            is DatabaseQueueDataType.Binary -> {
-                val data = resultSet.getBytes(columnIndex++)
-                approxBytesCounter.addByteArray(data)
-                queue.databaseDataType.deserializer(data)
-            }
+                is DatabaseQueueDataType.Binary -> {
+                    val data = resultSet.getBytes(columnIndex++)
+                    approxBytesCounter.addByteArray(data)
+                    queue.databaseDataType.deserializer(data)
+                }
 
-            is DatabaseQueueDataType.Text -> {
-                val data = resultSet.getString(columnIndex++)
-                approxBytesCounter.addString(data)
-                queue.databaseDataType.deserializer(data)
-            }
+                is DatabaseQueueDataType.Text -> {
+                    val data = resultSet.getString(columnIndex++)
+                    approxBytesCounter.addString(data)
+                    queue.databaseDataType.deserializer(data)
+                }
 
-            is DatabaseQueueDataType.Int -> {
-                approxBytesCounter.addInt()
-                queue.databaseDataType.deserializer(resultSet.getInt(columnIndex++))
-            }
+                is DatabaseQueueDataType.Int -> {
+                    approxBytesCounter.addInt()
+                    queue.databaseDataType.deserializer(resultSet.getInt(columnIndex++))
+                }
 
-            is DatabaseQueueDataType.Long -> {
-                approxBytesCounter.addLong()
-                queue.databaseDataType.deserializer(resultSet.getLong(columnIndex++))
+                is DatabaseQueueDataType.Long -> {
+                    approxBytesCounter.addLong()
+                    queue.databaseDataType.deserializer(resultSet.getLong(columnIndex++))
+                }
             }
+        } catch (e: Exception) {
+            throw MessageDeserializationException(id, e)
         }
 
         val meta = if (receiveOptions.readMetadata && queue.metadata.fields.isNotEmpty()) {
@@ -192,7 +197,7 @@ internal object ConsumerSchemaHelpers {
         }
 
         val message = Message(
-            id = Id(localId, shard),
+            id = id,
             createdAt = createdAt,
             processingAt = processingAt,
             scheduledAt = scheduledAt,

@@ -4,6 +4,7 @@ import kolbasa.cluster.Shards
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ConsumerSchemaHelpers
 import kolbasa.consumer.Message
+import kolbasa.consumer.MessageDeserializationException
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.producer.Id
@@ -69,7 +70,14 @@ class ConnectionAwareDatabaseConsumer internal constructor(
                     val result = ArrayList<Message<Data>>(limit)
 
                     while (resultSet.next()) {
-                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        try {
+                            result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        } catch (_: MessageDeserializationException) {
+                            // Skip the row. The receive CTE has already decremented remaining_attempts and pushed
+                            // scheduled_at, so the row will be retried (and eventually expire / move to DLQ).
+                            // Rethrowing would roll back the surrounding transaction together with that bookkeeping,
+                            // pinning the poison message at the head of the queue forever.
+                        }
                     }
 
                     result
