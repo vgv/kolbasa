@@ -10,7 +10,6 @@ plugins {
     `maven-publish`
     alias(libs.plugins.nebula.release)
     alias(libs.plugins.nexus.publish)
-    alias(libs.plugins.shadow)
 }
 
 repositories {
@@ -128,44 +127,48 @@ tasks {
 }
 
 // ===== Butcher fat jar (build/libs/butcher.jar) =====
-tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+tasks.register<Jar>("butcherJar") {
+    group = "build"
+    description = "Builds the standalone butcher CLI fat jar"
+
     archiveBaseName.set("butcher")
     archiveClassifier.set("")
     archiveVersion.set("")
+
+    // Reproducibility: same source → same output bytes. Useful for both
+    // CI cache hits and for the "same tag → same butcher.jar" guarantee
+    // we promised in Phase 1's failure-recovery section.
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
 
     manifest {
         attributes(
             "Main-Class" to "kolbasa.cluster.butcher.ButcherKt",
             "Implementation-Title" to "butcher",
             "Implementation-Version" to project.sanitizeVersion(),
+            // postgresql 42.7.x is a Multi-Release jar: it ships JDK11-specialized classes under META-INF/versions/11/
+            "Multi-Release" to true,
         )
     }
 
-    // Postgres JDBC driver registers itself via META-INF/services/.
-    // Must be preserved or the driver won't be auto-discovered.
-    mergeServiceFiles()
+    // Our own compiled classes + resources.
+    from(sourceSets.main.get().output)
 
-    // compileOnly deps (prometheus, opentelemetry) are excluded automatically
-    // because shadow bundles `runtimeClasspath`, which doesn't include them.
-}
-
-// Detach `shadowJar` from `assemble` so the fat jar is built only on explicit
-// `./gradlew shadowJar`. The shadow plugin attaches it to `assemble` by
-// default, which would make every `build` bundle kotlin-stdlib + postgresql +
-// butcher classes — wasted work, since the fat jar is a downstream artifact
-// of the library, not part of it. The release pipeline invokes the task
-// directly as its own step (see `.github/workflows/push-to-main.yml`).
-//
-// Shadow registers the dependency as a lazy TaskProvider, not a Task or
-// String, so filtering needs to handle all three forms.
-val shadowJarTaskProvider = tasks.named("shadowJar")
-tasks.named("assemble") {
-    setDependsOn(dependsOn.filterNot { dep ->
-        dep === shadowJarTaskProvider ||
-            (dep is TaskProvider<*> && dep.name == "shadowJar") ||
-            (dep is Task && dep.name == "shadowJar") ||
-            (dep is String && dep == "shadowJar")
+    // All runtime dependencies, unpacked. compileOnly deps (prometheus,
+    // opentelemetry) are deliberately NOT in runtimeClasspath, so they
+    // don't end up in the fat jar.
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
     })
+
+    // Exclude per-dep MANIFEST.MF: each dep has its own; our `manifest { }`
+    // block above wins regardless, but excluding explicitly is clearer.
+    exclude("META-INF/MANIFEST.MF")
+    // Exclude a root module-info.class: we're an executable, not a JPMS module
+    exclude("/module-info.class")
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.withType<Sign> {
