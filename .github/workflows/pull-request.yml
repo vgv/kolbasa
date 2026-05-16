@@ -1,40 +1,40 @@
 name: On pull request
 
 on:
-    pull_request:
-        paths-ignore:
-            - README.md
-            - docs/**
+  pull_request:
+    paths-ignore:
+      - README.md
+      - docs/**
 
 concurrency: on-pull-request
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v6
-              with:
-                  fetch-depth: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-            - name: Setup JDK 17
-              uses: actions/setup-java@v5
-              with:
-                  java-version: '17'
-                  distribution: 'corretto'
-                  cache: 'gradle'
+      - name: Setup JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+          cache: 'gradle'
 
-            - name: Build (by human)
-              if: github.actor != 'dependabot[bot]'
-              run: ./gradlew devSnapshot printDevSnapshotReleaseNote
-              env:
-                  GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
-                  GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
-                  SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-                  SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-                  GITHUB_HEAD_REF: ${{ github.head_ref }}
+      - name: Build (by human)
+        if: github.actor != 'dependabot[bot]'
+        run: ./gradlew devSnapshot printDevSnapshotReleaseNote
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
 
-            - name: Build (by dependabot)
-              if: github.actor == 'dependabot[bot]'
-              run: ./gradlew test
+      - name: Build (by dependabot)
+        if: github.actor == 'dependabot[bot]'
+        run: ./gradlew test
