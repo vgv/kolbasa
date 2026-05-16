@@ -6,17 +6,17 @@ nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "n
 
 [versions]
 
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 nebula = "20.2.0"
 nexus = "2.0.0"
 
 prometheus = "1.6.1"
-opentelemetry = "1.60.1"
+opentelemetry = "1.61.0"
 opentelemetry-instrumentation = "2.27.0"
 opentelemetry-instrumentation-incubator = "2.27.0-alpha"
-opentelemetry-semconv = "1.40.0"
+opentelemetry-semconv = "1.41.0"
 hikaricp = "7.0.2"
-postgresql = "42.7.10"
+postgresql = "42.7.11"
 
 logback = "1.5.32"
 testcontainers = "2.0.5"

@@ -11,7 +11,12 @@ internal object ConsoleProgressCallback : ProgressCallback {
         println("Target node: ${targetNode.id}")
         println("Shards to move (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
-            println("\t${diff.originalShard} => ${diff.updatedShard}")
+            // Shard(shard=6, producerNode=NodeId(id=db4), consumerNode=NodeId(id=db4), nextConsumerNode=null) => Shard(shard=6, producerNode=NodeId(id=db5), consumerNode=null, nextConsumerNode=NodeId(id=db5))
+            val originalShard =
+                "Shard #${diff.originalShard.shard}(producerNode=${diff.originalShard.producerNode.id}, consumerNode=${diff.originalShard.consumerNode?.id}, nextConsumerNode=${diff.originalShard.nextConsumerNode?.id})"
+            val updatedShard =
+                "Shard #${diff.updatedShard.shard}(producerNode=${diff.updatedShard.producerNode.id}, consumerNode=${diff.updatedShard.consumerNode?.id}, nextConsumerNode=${diff.updatedShard.nextConsumerNode?.id})"
+            println("\t$originalShard=>$updatedShard")
         }
     }
 

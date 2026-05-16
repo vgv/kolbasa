@@ -1,7 +1,5 @@
 package kolbasa.stats.prometheus
 
-import kolbasa.inspector.MessageAge
-import kolbasa.inspector.Messages
 import kolbasa.inspector.connection.ConnectionAwareDatabaseInspector
 import kolbasa.producer.PartialInsert
 import kolbasa.queue.Queue
@@ -10,6 +8,8 @@ import kolbasa.stats.prometheus.metrics.*
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 internal class PrometheusQueueMetrics(
     private val queue: Queue<*>,
@@ -78,7 +78,12 @@ internal class PrometheusQueueMetrics(
         }
     }
 
-    override fun consumerDeleteMetrics(nodeId: NodeId, removedMessages: Int, executionNanos: Long, connection: Connection?) {
+    override fun consumerDeleteMetrics(
+        nodeId: NodeId,
+        removedMessages: Int,
+        executionNanos: Long,
+        connection: Connection?
+    ) {
         val consumerQueueMetrics = consumer.computeIfAbsent(nodeId) { _ ->
             ConsumerQueueMetrics(queueName, nodeId, prometheusConfig)
         }
@@ -140,44 +145,47 @@ internal class PrometheusQueueMetrics(
             CommonQueueMetrics(queueName, nodeId, prometheusConfig)
         }
 
-        val cacheValue = getCachedValue(connection, queue, commonQueueMetrics.cacheKey)
-
-        commonQueueMetrics.queueMetrics(
-            messages = cacheValue.messages,
-            queueSizeBytes = cacheValue.queueSizeBytes,
-            messageAge = cacheValue.messageAge
-        )
+        val lastUpdateInfo = lastUpdateCache.computeIfAbsent(commonQueueMetrics.cacheKey) { UpdateInfo() }
+        if (lastUpdateInfo.isOutdated()) {
+            // time to update the common metrics, only one thread should do it
+            if (lastUpdateInfo.tryLock()) {
+                try {
+                    commonQueueMetrics.queueMetrics(
+                        messages = inspector.count(connection, queue),
+                        queueSizeBytes = inspector.size(connection, queue),
+                        messageAge = inspector.messageAge(connection, queue)
+                    )
+                } finally {
+                    lastUpdateInfo.unlockAndUpdateTimestamp()
+                }
+            }
+        }
     }
 
     private companion object {
 
-        private const val CACHE_LIFETIME_MILLIS = 60_000 // 1 minute
+        private const val COMMON_METRICS_REFRESH_INTERVAL_MS = 60_000 // 1 minute
 
-        data class CacheValue(
-            val messages: Messages,
-            val queueSizeBytes: Long,
-            val messageAge: MessageAge,
-            val expiration: Long
-        )
+        data class UpdateInfo(
+            @Volatile
+            private var lastUpdated: Long = 0,
+            private val lock: Lock = ReentrantLock()
+        ) {
 
-        val inspector = ConnectionAwareDatabaseInspector()
-        val cache: ConcurrentMap<String, CacheValue> = ConcurrentHashMap()
-
-        fun getCachedValue(connection: Connection, queue: Queue<*>, cacheKey: String): CacheValue {
-            var value = cache[cacheKey]
-            if (value != null && System.currentTimeMillis() < value.expiration) {
-                return value
+            fun isOutdated(): Boolean {
+                return (lastUpdated + COMMON_METRICS_REFRESH_INTERVAL_MS) < System.currentTimeMillis()
             }
 
-            // Cache miss or expired, fetch new values
-            val messages = inspector.count(connection, queue)
-            val queueSizeBytes = inspector.size(connection, queue)
-            val messageAge = inspector.messageAge(connection, queue)
+            fun tryLock(): Boolean = lock.tryLock()
 
-            value = CacheValue(messages, queueSizeBytes, messageAge, System.currentTimeMillis() + CACHE_LIFETIME_MILLIS)
-            cache[cacheKey] = value
-            return value
+            fun unlockAndUpdateTimestamp() {
+                lock.unlock()
+                lastUpdated = System.currentTimeMillis()
+            }
         }
+
+        val inspector = ConnectionAwareDatabaseInspector()
+        val lastUpdateCache: ConcurrentMap<String, UpdateInfo> = ConcurrentHashMap()
     }
 }
 
