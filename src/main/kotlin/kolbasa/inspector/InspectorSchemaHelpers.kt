@@ -8,24 +8,21 @@ import java.sql.Connection
 
 internal object InspectorSchemaHelpers {
 
+    private const val TOUCHED = "${Const.PROCESSING_AT_COLUMN_NAME} is not null"
+    private const val UNTOUCHED = "${Const.PROCESSING_AT_COLUMN_NAME} is null"
+
+    private const val VISIBLE = "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp()"
+    private const val NOT_VISIBLE = "${Const.SCHEDULED_AT_COLUMN_NAME} > statement_timestamp()"
+
+    private const val EXHAUSTED = "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0"
+    private const val NOT_EXHAUSTED = "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
+
     // Message state SQL conditions
-    private const val SCHEDULED_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is null and " +
-        "${Const.SCHEDULED_AT_COLUMN_NAME} > statement_timestamp() and " +
-        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
-
-    private const val READY_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is null and " +
-        "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
-        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
-
-    private const val IN_FLIGHT_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is not null and " +
-        "${Const.SCHEDULED_AT_COLUMN_NAME} > statement_timestamp()"
-
-    private const val RETRY_CONDITION = "${Const.PROCESSING_AT_COLUMN_NAME} is not null and " +
-        "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
-        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0"
-
-    private const val DEAD_CONDITION = "${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and " +
-        "${Const.REMAINING_ATTEMPTS_COLUMN_NAME} <= 0"
+    private const val SCHEDULED_CONDITION = "$UNTOUCHED and $NOT_VISIBLE and $NOT_EXHAUSTED "
+    private const val READY_CONDITION = "$UNTOUCHED and $VISIBLE and $NOT_EXHAUSTED"
+    private const val IN_FLIGHT_CONDITION = "$TOUCHED and $NOT_VISIBLE"
+    private const val RETRY_CONDITION = "$TOUCHED and $VISIBLE and $NOT_EXHAUSTED"
+    private const val DEAD_CONDITION = "$VISIBLE and $EXHAUSTED"
 
     fun generateCountWithFilterQuery(connection: Connection, queue: Queue<*>, options: CountOptions): QueryAndSample {
         val samplePercent = effectiveSamplePercent(connection, queue, options.samplePercent)
@@ -93,9 +90,9 @@ internal object InspectorSchemaHelpers {
                  limit 1) as newest_message_age,
                 (select extract(epoch from (statement_timestamp() - ${Const.SCHEDULED_AT_COLUMN_NAME}))
                  from ${queue.dbTableName}
-                 where ${Const.SCHEDULED_AT_COLUMN_NAME} <= statement_timestamp() and ${Const.REMAINING_ATTEMPTS_COLUMN_NAME} > 0
+                 where $VISIBLE and $NOT_EXHAUSTED
                  order by ${Const.SCHEDULED_AT_COLUMN_NAME} asc
-                 limit 1) as oldest_ready_message_age
+                 limit 1) as oldest_ready_or_retry_message_age
                  """.trimIndent()
     }
 
