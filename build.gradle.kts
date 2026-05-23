@@ -135,9 +135,7 @@ tasks.register<Jar>("butcherJar") {
     archiveClassifier.set("")
     archiveVersion.set("")
 
-    // Reproducibility: same source → same output bytes. Useful for both
-    // CI cache hits and for the "same tag → same butcher.jar" guarantee
-    // we promised in Phase 1's failure-recovery section.
+    // Reproducibility: same source → same output bytes
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true
 
