@@ -107,27 +107,29 @@ internal enum class AvailableCommand(
 
     MOVE_DATA(
         commandName = "move-data", shortUsage = "Transfer data to target nodes (safe to re-run if crashed)", fullUsage = """
-            Usage: java -jar butcher.jar move-data [--tables=<t1,t2,...>] <config-file>...
+            Usage: java -jar butcher.jar move-data [--include-tables=<t1,t2,...>] [--exclude-tables=<t1,t2,...>] <config-file>...
 
             Transfer data from source nodes to target nodes for all shards in migration state.
             Safe to re-run — INSERT uses ON CONFLICT DO NOTHING.
 
             Optional flags:
-              --tables=<t1,t2,...>       comma-separated queue table names (default: all)
+              --include-tables=<t1,t2,...>       comma-separated queue table names to migrate (default: all)
+              --exclude-tables=<t1,t2,...>       comma-separated queue table names not to migrate (default: none)
 
             $CONFIG_FILE_FORMAT_HELP
         """.trimIndent()
     ) {
         override fun parse(args: Array<String>): Command.Move {
             val parsed = try {
-                ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TABLES))
+                ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(INCLUDE_FLAG_TABLES, EXCLUDE_FLAG_TABLES))
             } catch (e: ButcherException.InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
 
-            val tables = parsed.flags[FLAG_TABLES]?.split(",")?.map { it.trim() }?.toSet()
+            val includeTables = parsed.flags[INCLUDE_FLAG_TABLES]?.split(",")?.map { it.trim() }?.toSet()
+            val excludeTables = parsed.flags[EXCLUDE_FLAG_TABLES]?.split(",")?.map { it.trim() }?.toSet()
             val nodes = ClusterNodes.buildClusterNodes(parsed.files)
-            return Command.Move(nodes, tables)
+            return Command.Move(nodes, includeTables, excludeTables)
         }
     },
 
@@ -201,7 +203,8 @@ private val CONFIG_FILE_FORMAT_HELP = """
 
 private const val FLAG_TARGET = "--target"
 private const val FLAG_SHARDS = "--shards"
-private const val FLAG_TABLES = "--tables"
+private const val INCLUDE_FLAG_TABLES = "--include-tables"
+private const val EXCLUDE_FLAG_TABLES = "--exclude-tables"
 
 
 

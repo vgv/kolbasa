@@ -1,0 +1,4 @@
+# Exclude everything by default…
+*
+# …then re-include only what the Dockerfile actually copies.
+!build/libs/butcher.jar

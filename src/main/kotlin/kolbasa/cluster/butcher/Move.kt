@@ -18,7 +18,11 @@ internal fun move(command: Command.Move) {
     val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
 
     // tablename => schema
-    val schemas = findAndCompareAllSchemas(command.nodes.dataSources, command.tables)
+    val schemas = findAndCompareAllSchemas(
+        command.nodes.dataSources,
+        includeTables = command.includeTables,
+        excludeTables = command.excludeTables
+    )
 
     // targetnode => shards (which should be migrated to this node)
     val targetsToShards = findTargetNodeAndShards(nodes)
@@ -60,13 +64,16 @@ private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<Nod
 
 private fun findAndCompareAllSchemas(
     dataSources: List<DataSource>,
-    tablesToFind: Set<String>?
+    includeTables: Set<String>?,
+    excludeTables: Set<String>?
 ): Map<String, Table> {
     // schemas
     val allSchemas = mutableMapOf<String, MutableList<Pair<DataSource, Table>>>()
     dataSources.forEach { dataSource ->
-        SchemaExtractor.extractRawSchema(dataSource, tablesToFind).forEach { (tableName, table) ->
-            allSchemas.computeIfAbsent(tableName) { mutableListOf() }.add(dataSource to table)
+        SchemaExtractor.extractRawSchema(dataSource, includeTables).forEach { (tableName, table) ->
+            if (excludeTables == null ||  tableName !in excludeTables) {
+                allSchemas.computeIfAbsent(tableName) { mutableListOf() }.add(dataSource to table)
+            }
         }
     }
 

@@ -13,7 +13,8 @@ internal sealed class Command(val nodes: ClusterNodes, val command: AvailableCom
     /**
      * Transfer data to target nodes. Safe to re-run if crashed — INSERT uses ON CONFLICT DO NOTHING.
      */
-    class Move(nodes: ClusterNodes, val tables: Set<String>?) : Command(nodes, AvailableCommand.MOVE_DATA)
+    class Move(nodes: ClusterNodes, val includeTables: Set<String>?, val excludeTables: Set<String>?) :
+        Command(nodes, AvailableCommand.MOVE_DATA)
 
     class Finalize(nodes: ClusterNodes) : Command(nodes, AvailableCommand.FINALIZE_MIGRATION)
 
