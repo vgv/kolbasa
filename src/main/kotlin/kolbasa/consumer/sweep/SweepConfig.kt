@@ -13,8 +13,8 @@ data class SweepConfig(
      * Every fifth consume? Every tenth? Every hundredth?
      *
      * Default value is `0.0001 (1 / 10_000)`, so, it means that every ten thousandth consume will trigger a sweep.
-     * If you want to trigger a sweep at every consume, you have to use `probability = 1.0f`, to disable automatic sweep
-     * completely and manage it manually use `probability = 0.0f`
+     * If you want to trigger a sweep at every consume, you have to use `probability = 1.0` (SWEEP_IS_ALWAYS_ON constant),
+     * to disable automatic sweep completely and manage it manually use `probability = 0.0` (SWEEP_IS_DISABLED constant)
      */
     val probability: Double = DEFAULT_SWEEP_PROBABILITY,
 ) {
