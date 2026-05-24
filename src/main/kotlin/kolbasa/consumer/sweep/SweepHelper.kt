@@ -19,19 +19,7 @@ import kotlin.math.max
 object SweepHelper {
 
     fun needSweep(): Boolean {
-        val sweepConfig = Kolbasa.sweepConfig
-
-        // Sweep is disabled at all, stop all other checks
-        if (!sweepConfig.enabled) {
-            return false
-        }
-
-        // Check
-        if (!checkProbability(sweepConfig.probability)) {
-            return false
-        }
-
-        return true
+        return checkProbability(Kolbasa.sweepConfig.probability)
     }
 
     /**
@@ -55,8 +43,8 @@ object SweepHelper {
     }
 
     internal fun checkProbability(probability: Double): Boolean = when (probability) {
-        0.0 -> false
-        1.0 -> true
+        SweepConfig.SWEEP_IS_DISABLED -> false
+        SweepConfig.SWEEP_IS_ALWAYS_ON -> true
         else -> (ThreadLocalRandom.current().nextDouble() <= probability)
     }
 
