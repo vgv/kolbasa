@@ -1,4 +1,4 @@
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.vgv/kolbasa)](https://central.sonatype.com/search?namespace=io.github.vgv)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.vgv/kolbasa)](https://central.sonatype.com/artifact/io.github.vgv/kolbasa)
 [![GitHub License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0)
 
 # kolbasa
@@ -12,7 +12,7 @@ Kolbasa is a small, efficient and capable Kotlin library to add PostgreSQL-based
 * Message visibility timeout (delay before consumed but not deleted message will be visible to another consumers)
 * Configurable amount of receive attempts
 * Ability to receive messages filtered by one or more meta-fields (like `user_id=42 and event_type=PAGE_VIEW`)
-* Ability to receive messages sorted by one or more meta-fields (like `custom_priority desc, created asc`)
+* Ability to receive messages sorted by one or more meta-fields (like `priority desc, registration_date asc`)
 * Supports working in "external" transaction context (send/receive messages from a queue will follow "external" transaction commit/rollback)
 * Batch send/receive to improve performance
 * Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
