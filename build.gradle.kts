@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    java
     alias(libs.plugins.kotlin.jvm)
     signing
     `maven-publish`
@@ -305,11 +304,8 @@ fun printFinalReleaseNote(groupId: String, artifactId: String, sanitizedVersion:
     println("Discover on Maven Central:")
     println("	https://repo1.maven.org/maven2/${groupId.replace('.', '/')}/$artifactId/")
     println()
-    println("Edit or delete artifacts on OSS Nexus Repository Manager:")
-    println("	https://oss.sonatype.org/#nexus-search;gav~$groupId~~~~")
-    println()
-    println("Control staging repositories on OSS Nexus Repository Manager:")
-    println("	https://oss.sonatype.org/#stagingRepositories")
+    println("View on Central Portal:")
+    println("	https://central.sonatype.com/artifact/$groupId/$artifactId/$sanitizedVersion")
     println()
     println("========================================================")
     println()
