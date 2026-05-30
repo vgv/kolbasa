@@ -32,7 +32,6 @@ dependencies {
     compileOnly(libs.opentelemetry.semconv)
     compileOnly(libs.opentelemetry.instrumentation.api)
     compileOnly(libs.opentelemetry.instrumentation.api.incubator)
-    // ---------------------------------------------------------------------------------
 
     // Test
     testImplementation(libs.junit.jupiter)
@@ -54,6 +53,7 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
+        // Pin to 1.9 so the published bytecode stays consumable by projects on older Kotlin compilers.
         apiVersion = KotlinVersion.KOTLIN_1_9
         languageVersion = KotlinVersion.KOTLIN_1_9
         // We need JVM default methods for interfaces, but don't need the compatibility bridges
@@ -185,8 +185,8 @@ tasks.withType<PublishToMavenRepository> {
 tasks.register("printFinalReleaseNote") {
     doLast {
         printFinalReleaseNote(
-            groupId = "io.github.vgv",
-            artifactId = "kolbasa",
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID,
+            artifactId = SettingsProvider.ARTIFACT_NAME,
             sanitizedVersion = project.sanitizeVersion()
         )
     }
@@ -196,8 +196,8 @@ tasks.register("printFinalReleaseNote") {
 tasks.register("printDevSnapshotReleaseNote") {
     doLast {
         printDevSnapshotReleaseNote(
-            groupId = "io.github.vgv",
-            artifactId = "kolbasa",
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID,
+            artifactId = SettingsProvider.ARTIFACT_NAME,
             sanitizedVersion = project.sanitizeVersion()
         )
     }
@@ -208,8 +208,8 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            groupId = "io.github.vgv"
-            artifactId = "kolbasa"
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID
+            artifactId = SettingsProvider.ARTIFACT_NAME
             version = project.sanitizeVersion()
             versionMapping {
                 usage("java-api") {
@@ -221,7 +221,7 @@ publishing {
             }
             pom {
                 name.set("Kolbasa")
-                description.set("Kotlin library for PostgreSQL queues")
+                description.set("A reliable message & job queue for Java & Kotlin, built on PostgreSQL.")
                 url.set("https://github.com/vgv/kolbasa")
                 licenses {
                     license {
@@ -255,7 +255,7 @@ nexusPublishing {
     repositories {
         sonatype {
             useStaging.set(!project.isSnapshotVersion())
-            packageGroup.set("io.github.vgv")
+            packageGroup.set(SettingsProvider.ARTIFACT_GROUP_ID)
             username = settingsProvider.sonatypeUsername
             password = settingsProvider.sonatypePassword
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
@@ -358,7 +358,10 @@ class SettingsProvider {
         lazyMessage = { "Both $SONATYPE_USERNAME_PROPERTY and $SONATYPE_PASSWORD_PROPERTY environment variables must not be empty" }
     )
 
-    private companion object {
+    companion object {
+        const val ARTIFACT_GROUP_ID = "io.github.vgv"
+        const val ARTIFACT_NAME = "kolbasa"
+
         // it should be a so-called "ascii-armored in-memory PGP secret key"
         private const val GPG_SIGNING_KEY_PROPERTY = "GPG_SIGNING_KEY"
         private const val GPG_SIGNING_PASSWORD_PROPERTY = "GPG_SIGNING_PASSWORD"
