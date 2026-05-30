@@ -33,8 +33,8 @@ data class SqlDumpConfig(
         private var writer: Writer = Writer.nullWriter()
         private var queues: MutableMap<String, EnumSet<StatementKind>> = mutableMapOf()
 
-        fun enabled() = apply { this.enabled = true }
-        fun disabled() = apply { this.enabled = false }
+        fun enable() = apply { this.enabled = true }
+        fun disable() = apply { this.enabled = false }
         fun writer(writer: Writer) = apply { this.writer = writer }
         fun queue(queue: Queue<*>, vararg kind: StatementKind) = apply {
             queues[queue.name] = EnumSet.copyOf(kind.toList())
