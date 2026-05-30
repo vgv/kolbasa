@@ -83,18 +83,18 @@ tasks.register<JavaExec>("example") {
 
 // Unit tests settings
 tasks.withType<Test> {
+    enableAssertions = true
+
     // enable parallel tests execution
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
 
-    // JUnit settings
-    useJUnitPlatform {
-        enableAssertions = true
-        testLogging {
-            exceptionFormat = TestExceptionFormat.FULL
-            events = setOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED)
-            showStandardStreams = false
-        }
+    useJUnitPlatform()
+
+    testLogging {
+        exceptionFormat = TestExceptionFormat.FULL
+        events = setOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED)
+        showStandardStreams = false
     }
 }
 
