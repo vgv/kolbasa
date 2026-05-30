@@ -2,6 +2,7 @@ package kolbasa.queue.meta
 
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.time.Instant
 
 /**
  * A container that holds a collection of [MetaValue] instances for a queue message.
@@ -99,6 +100,7 @@ data class MetaValues(val values: List<MetaValue<*>>) {
  * | [StringValue]      | [String]       |
  * | [BigIntegerValue]  | [BigInteger]   |
  * | [BigDecimalValue]  | [BigDecimal]   |
+ * | [InstantValue]     | [Instant]      |
  *
  * ## Usage Example
  *
@@ -175,3 +177,8 @@ data class BigDecimalValue internal constructor(
     override val field: MetaField<BigDecimal>,
     override val value: BigDecimal
 ) : MetaValue<BigDecimal>(field, value)
+
+data class InstantValue internal constructor(
+    override val field: MetaField<Instant>,
+    override val value: Instant
+) : MetaValue<Instant>(field, value)

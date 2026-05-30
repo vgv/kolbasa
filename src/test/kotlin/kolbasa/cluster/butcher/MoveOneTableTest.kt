@@ -13,7 +13,9 @@ import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
-import kolbasa.queue.meta.*
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.MetaValues
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.SchemaHelpers
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.time.Instant
 import kotlin.random.Random
 
 internal class MoveOneTableTest : AbstractPostgresqlTest() {
@@ -102,7 +105,10 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
             messages.forEach { message ->
                 // check that the shard is in the list of shards to move
                 val shard = message.data.value
-                assertTrue(shardsToMove.contains(shard), "Shard $shard should be in the list of shards to move: $shardsToMove")
+                assertTrue(
+                    shardsToMove.contains(shard),
+                    "Shard $shard should be in the list of shards to move: $shardsToMove"
+                )
 
                 // check that the meta fields were moved correctly
                 val originalMsg = requireNotNull(sentItems[message.id])
@@ -144,6 +150,7 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
         internal val FLOAT_FIELD = MetaField.float("float_field")
         internal val BI_FIELD = MetaField.bigInteger("big_integer_field")
         internal val BD_FIELD = MetaField.bigDecimal("big_decimal_field")
+        internal val INSTANT_FIELD = MetaField.instant("instant_field")
 
         internal data class Value(val value: Int)
 
@@ -162,7 +169,8 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
                 DOUBLE_FIELD,
                 FLOAT_FIELD,
                 BI_FIELD,
-                BD_FIELD
+                BD_FIELD,
+                INSTANT_FIELD
             )
         )
 
@@ -177,7 +185,8 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
                 DOUBLE_FIELD.value(Random.nextDouble(Double.MIN_VALUE, Double.MAX_VALUE)),
                 FLOAT_FIELD.value(Random.nextFloat() * 1_000_000),
                 BI_FIELD.value(BigInteger.valueOf(Random.nextLong())),
-                BD_FIELD.value(BigDecimal.valueOf(Random.nextDouble()))
+                BD_FIELD.value(BigDecimal.valueOf(Random.nextDouble())),
+                INSTANT_FIELD.value(Instant.ofEpochSecond(Random.nextLong(0, 1_000_000_000), 0))
             )
         }
     }

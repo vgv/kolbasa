@@ -98,6 +98,7 @@ internal enum class ColumnType(
     NUMERIC(setOf("numeric"), Types.NUMERIC),
     BOOLEAN(setOf("bool"), Types.BOOLEAN),
     TIMESTAMP(setOf("timestamp"), Types.TIMESTAMP),
+    TIMESTAMPTZ(setOf("timestamptz"), Types.TIMESTAMP_WITH_TIMEZONE),
     VARCHAR(setOf("varchar", "text"), Types.VARCHAR),
     VARCHAR_ARRAY(setOf("_varchar"), Types.ARRAY),
     BYTEARRAY(setOf("bytea"), Types.BINARY),
