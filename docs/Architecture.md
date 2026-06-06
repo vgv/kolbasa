@@ -131,6 +131,7 @@ column's SQL type follows the field type:
 | `double` | `double precision` |
 | `string` | `varchar(8192)` |
 | `bigInteger`, `bigDecimal` | `numeric` |
+| `instant` | `timestamptz` |
 
 So the `orders` queue gains three columns beyond the standard set: `meta_merchant_id bigint`, `meta_priority int`, and
 `meta_dedup_key varchar(8192)`.
