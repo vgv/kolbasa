@@ -7,6 +7,8 @@ import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
+import java.sql.Types
+import java.time.OffsetDateTime
 import javax.sql.DataSource
 
 internal class MoveOneTable(
@@ -160,6 +162,16 @@ internal class MoveOneTable(
                     insertStatement.setNull(resultSetIndex, column.type.sqlType)
                 } else {
                     insertStatement.setTimestamp(resultSetIndex, value)
+                }
+            }
+
+            ColumnType.TIMESTAMPTZ -> {
+                // OffsetDateTime is the JSR-310 bridge for timestamptz — timezone-safe across sessions.
+                val value = resultSet.getObject(resultSetIndex, OffsetDateTime::class.java)
+                if (resultSet.wasNull()) {
+                    insertStatement.setNull(resultSetIndex, column.type.sqlType)
+                } else {
+                    insertStatement.setObject(resultSetIndex, value, Types.TIMESTAMP_WITH_TIMEZONE)
                 }
             }
 

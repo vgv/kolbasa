@@ -8,6 +8,9 @@ import java.math.BigInteger
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 /**
  * Represents a typed metadata field that can be attached to queue message.
@@ -30,6 +33,7 @@ import java.sql.Types
  * | [string]         | [String]       | `varchar`              |
  * | [bigInteger]     | [BigInteger]   | `numeric`              |
  * | [bigDecimal]     | [BigDecimal]   | `numeric`              |
+ * | [instant]        | [Instant]      | `timestamptz`          |
  *
  * ## Field Options
  *
@@ -99,6 +103,7 @@ sealed class MetaField<T>(
             is StringField -> copy(option = newOption)
             is BigIntegerField -> copy(option = newOption)
             is BigDecimalField -> copy(option = newOption)
+            is InstantField -> copy(option = newOption)
         } as MetaField<T>
     }
 
@@ -117,11 +122,6 @@ sealed class MetaField<T>(
         }
     }
 
-    internal fun fillPreparedStatementForValue(ps: PreparedStatement, columnIndex: Int, metaValues: MetaValues) {
-        val value = metaValues.getOrNull(this)
-        fillPreparedStatementForValue(ps, columnIndex, value)
-    }
-
     internal fun fillPreparedStatementForValue(ps: PreparedStatement, columnIndex: Int, value: T?) {
         if (value == null) {
             ps.setNull(columnIndex, sqlColumnType)
@@ -134,61 +134,181 @@ sealed class MetaField<T>(
         if (propertyValues == null) {
             ps.setNull(columnIndex, sqlColumnType)
         } else {
-            val sqlArray = ps.connection.createArrayOf(dbColumnArrayBaseType, propertyValues.toTypedArray())
+            val mapped = arrayOfNulls<Any?>(propertyValues.size)
+            propertyValues.forEachIndexed { index, value ->
+                @Suppress("UNCHECKED_CAST")
+                mapped[index] = if (value == null) null else toJdbcArrayElement(value as T)
+            }
+            val sqlArray = ps.connection.createArrayOf(dbColumnArrayBaseType, mapped)
             ps.setArray(columnIndex, sqlArray)
         }
     }
 
+    /**
+     * Hook for types whose JDBC array-element representation differs from the Kotlin user type.
+     * Default is identity, so all 10 numeric/boolean/string types are byte-for-byte unchanged.
+     * [InstantField] overrides this to map [Instant] → [OffsetDateTime] (UTC) because pgjdbc
+     * has no [Instant] writer for `timestamptz` arrays.
+     */
+    protected open fun toJdbcArrayElement(value: T): Any = value as Any
+
     companion object {
 
+        /**
+         * A meta-field holding a [Byte], stored as PostgreSQL `smallint` (PostgreSQL has no
+         * single-byte integer type, so `byte` and [short] share the same column type).
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `smallint` column
+         */
         fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
             Checks.checkUserDefinedMetaFieldName(name)
             return ByteField(name, option)
         }
 
+        /**
+         * A meta-field holding a [Short], stored as PostgreSQL `smallint`.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `smallint` column
+         */
         fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
             Checks.checkUserDefinedMetaFieldName(name)
             return ShortField(name, option)
         }
 
+        /**
+         * A meta-field holding an [Int], stored as PostgreSQL `int`.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by an `int` column
+         */
         fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
             Checks.checkUserDefinedMetaFieldName(name)
             return IntField(name, option)
         }
 
+        /**
+         * A meta-field holding a [Long], stored as PostgreSQL `bigint`.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `bigint` column
+         */
         fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
             Checks.checkUserDefinedMetaFieldName(name)
             return LongField(name, option)
         }
 
+        /**
+         * A meta-field holding a [Boolean], stored as PostgreSQL `boolean`.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `boolean` column
+         */
         fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BooleanField(name, option)
         }
 
+        /**
+         * A meta-field holding a [Float], stored as PostgreSQL `real` (single-precision).
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `real` column
+         */
         fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
             Checks.checkUserDefinedMetaFieldName(name)
             return FloatField(name, option)
         }
 
+        /**
+         * A meta-field holding a [Double], stored as PostgreSQL `double precision`.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `double precision` column
+         */
         fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
             Checks.checkUserDefinedMetaFieldName(name)
             return DoubleField(name, option)
         }
 
+        /**
+         * A meta-field holding a [String], stored as PostgreSQL `varchar`.
+         *
+         * The column is capped at [Const.META_FIELD_STRING_TYPE_MAX_LENGTH] characters; longer
+         * values are rejected by the database.
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `varchar` column
+         */
         fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
             Checks.checkUserDefinedMetaFieldName(name)
             return StringField(name, option)
         }
 
+        /**
+         * A meta-field holding a [BigInteger], stored as PostgreSQL `numeric` (arbitrary
+         * precision; `bigInteger` and [bigDecimal] share the same column type).
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `numeric` column
+         */
         fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigIntegerField(name, option)
         }
 
+        /**
+         * A meta-field holding a [BigDecimal], stored as PostgreSQL `numeric` (arbitrary
+         * precision and scale).
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `numeric` column
+         */
         fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigDecimalField(name, option)
+        }
+
+        /**
+         * A meta-field holding a moment in time — [java.time.Instant], stored as PostgreSQL
+         * `timestamptz`. The value is a UTC instant: a lossless, timezone-independent round-trip
+         * through the column.
+         *
+         * Precision: `timestamptz` is microsecond. [Instant.now] carries nanos; the sub-µs
+         * portion is truncated on the way to the database. If you bind
+         * `2026-05-25T14:30:00.123456789Z` you will read back `2026-05-25T14:30:00.123456Z`.
+         *
+         * Range: `timestamptz` covers `4713 BC … 294276 AD`. Sending [Instant.MIN]/[Instant.MAX]
+         * will fail at the driver/database boundary — these are not validated client-side.
+         *
+         * ```kotlin
+         * val EVENT_TIME = MetaField.instant("event_time", FieldOption.SEARCH)
+         *
+         * producer.send(queue,
+         *     SendMessage("payload", meta = MetaValues.of(EVENT_TIME.value(Instant.now()))))
+         *
+         * consumer.receive(queue, 10, ReceiveOptions(
+         *     filter = EVENT_TIME greater Instant.now().minusSeconds(60)))
+         * ```
+         *
+         * @param name the field name, used as the base to generate a column name
+         * @param option the field option controlling indexing and uniqueness behavior
+         * @return a [MetaField] backed by a `timestamptz` column
+         */
+        fun instant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
+            Checks.checkUserDefinedMetaFieldName(name)
+            return InstantField(name, option)
         }
     }
 
@@ -481,5 +601,39 @@ data class BigDecimalField internal constructor(
 
     override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: BigDecimal) {
         ps.setBigDecimal(columnIndex, value)
+    }
+}
+
+data class InstantField internal constructor(
+    override val name: String,
+    override val option: FieldOption = FieldOption.NONE
+) : MetaField<Instant>(
+    name = name,
+    option = option,
+    dbColumnType = "timestamptz",
+    dbColumnArrayBaseType = "timestamptz",
+    sqlColumnType = Types.TIMESTAMP_WITH_TIMEZONE
+) {
+
+    init {
+        Checks.checkMetaFieldName(name)
+    }
+
+    override val dbColumnName = QueueHelpers.generateMetaColumnDbName(name)
+    override val dbIndexType = MetaHelpers.defineIndexType(option)
+
+    override fun value(value: Instant): MetaValue<Instant> = InstantValue(this, value)
+
+    override fun read(rs: ResultSet, columnIndex: Int): Instant? {
+        // pgjdbc 42.7 has no java.time.Instant handler; OffsetDateTime is the JSR-310 bridge for timestamptz.
+        return rs.getObject(columnIndex, OffsetDateTime::class.java)?.toInstant()
+    }
+
+    override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: Instant) {
+        ps.setObject(columnIndex, OffsetDateTime.ofInstant(value, ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
+    }
+
+    override fun toJdbcArrayElement(value: Instant): Any {
+        return OffsetDateTime.ofInstant(value, ZoneOffset.UTC)
     }
 }
