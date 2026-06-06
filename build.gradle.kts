@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    java
     alias(libs.plugins.kotlin.jvm)
     signing
     `maven-publish`
@@ -32,7 +31,6 @@ dependencies {
     compileOnly(libs.opentelemetry.semconv)
     compileOnly(libs.opentelemetry.instrumentation.api)
     compileOnly(libs.opentelemetry.instrumentation.api.incubator)
-    // ---------------------------------------------------------------------------------
 
     // Test
     testImplementation(libs.junit.jupiter)
@@ -54,6 +52,7 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
+        // Pin to 1.9 so the published bytecode stays consumable by projects on older Kotlin compilers.
         apiVersion = KotlinVersion.KOTLIN_1_9
         languageVersion = KotlinVersion.KOTLIN_1_9
         // We need JVM default methods for interfaces, but don't need the compatibility bridges
@@ -84,20 +83,56 @@ tasks.register<JavaExec>("example") {
 
 // Unit tests settings
 tasks.withType<Test> {
+    enableAssertions = true
+
     // enable parallel tests execution
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
 
-    // JUnit settings
-    useJUnitPlatform {
-        enableAssertions = true
-        testLogging {
-            exceptionFormat = TestExceptionFormat.FULL
-            events = setOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED)
-            showStandardStreams = false
-        }
+    useJUnitPlatform()
+
+    testLogging {
+        exceptionFormat = TestExceptionFormat.FULL
+        events = setOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED)
+        showStandardStreams = false
     }
 }
+
+// ===== Run the test suite against PostgreSQL versions =====
+// One visible Test task per image, so any specific version can be run directly (e.g. ./gradlew testPg_15_8).
+val pgImagesFile = file("src/test/resources/postgresql-test-images.txt")
+val pgImages: List<String> = pgImagesFile.readLines()
+    .map(String::trim)
+    .filter { it.isNotEmpty() && !it.startsWith("#") }
+    .also { require(it.isNotEmpty()) { "${pgImagesFile.name} is empty or unreadable" } }
+
+val testSources = sourceSets["test"]
+val pgTasksByImage: Map<String, TaskProvider<Test>> = pgImages.associateWith { image ->
+    val suffix = image.substringAfter(':').removeSuffix("-alpine").replace('.', '_') // 16.4-alpine -> 16_4
+    tasks.register<Test>("testPg_$suffix") {
+        group = "verification"
+        description = "Run all tests on $image"
+        // A hand-registered Test task does NOT inherit the test source set wiring that the built-in
+        // `test` task gets, so set it explicitly (this also wires the test-compile dependency):
+        testClassesDirs = testSources.output.classesDirs
+        classpath = testSources.runtimeClasspath
+        systemProperty("kolbasa.test.postgresql.image", image)
+        outputs.upToDateWhen { false } // always actually run in a matrix
+    }
+}
+
+// "Boundary" = the first and last patch of each major release, discovered from the image list.
+val boundaryPgImages: List<String> = pgImages
+    .groupBy { pgVersion(it).first }
+    .flatMap { (_, images) -> listOf(images.minBy { pgVersion(it).second }, images.maxBy { pgVersion(it).second }) }
+    .distinct() // a major with a single patch would otherwise appear twice
+
+tasks.register("testBoundaryPgVersions") {
+    group = "verification"
+    description = "Run @unit-db tests against the first and last patch of each major PostgreSQL version."
+    dependsOn(boundaryPgImages.map { pgTasksByImage.getValue(it) })
+}
+
 
 java {
     withSourcesJar()
@@ -185,8 +220,8 @@ tasks.withType<PublishToMavenRepository> {
 tasks.register("printFinalReleaseNote") {
     doLast {
         printFinalReleaseNote(
-            groupId = "io.github.vgv",
-            artifactId = "kolbasa",
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID,
+            artifactId = SettingsProvider.ARTIFACT_NAME,
             sanitizedVersion = project.sanitizeVersion()
         )
     }
@@ -196,8 +231,8 @@ tasks.register("printFinalReleaseNote") {
 tasks.register("printDevSnapshotReleaseNote") {
     doLast {
         printDevSnapshotReleaseNote(
-            groupId = "io.github.vgv",
-            artifactId = "kolbasa",
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID,
+            artifactId = SettingsProvider.ARTIFACT_NAME,
             sanitizedVersion = project.sanitizeVersion()
         )
     }
@@ -208,8 +243,8 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            groupId = "io.github.vgv"
-            artifactId = "kolbasa"
+            groupId = SettingsProvider.ARTIFACT_GROUP_ID
+            artifactId = SettingsProvider.ARTIFACT_NAME
             version = project.sanitizeVersion()
             versionMapping {
                 usage("java-api") {
@@ -221,7 +256,7 @@ publishing {
             }
             pom {
                 name.set("Kolbasa")
-                description.set("Kotlin library for PostgreSQL queues")
+                description.set("A reliable message & job queue for Java & Kotlin, built on PostgreSQL.")
                 url.set("https://github.com/vgv/kolbasa")
                 licenses {
                     license {
@@ -255,13 +290,19 @@ nexusPublishing {
     repositories {
         sonatype {
             useStaging.set(!project.isSnapshotVersion())
-            packageGroup.set("io.github.vgv")
+            packageGroup.set(SettingsProvider.ARTIFACT_GROUP_ID)
             username = settingsProvider.sonatypeUsername
             password = settingsProvider.sonatypePassword
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
     }
+}
+
+fun pgVersion(image: String): Pair<Int, Int> {
+    // "postgres:16.4-alpine" -> (16, 4)
+    val (major, minor) = image.substringAfter(':').substringBefore('-').split('.').map(String::toInt)
+    return major to minor
 }
 
 // We want to change SNAPSHOT versions format from:
@@ -305,11 +346,8 @@ fun printFinalReleaseNote(groupId: String, artifactId: String, sanitizedVersion:
     println("Discover on Maven Central:")
     println("	https://repo1.maven.org/maven2/${groupId.replace('.', '/')}/$artifactId/")
     println()
-    println("Edit or delete artifacts on OSS Nexus Repository Manager:")
-    println("	https://oss.sonatype.org/#nexus-search;gav~$groupId~~~~")
-    println()
-    println("Control staging repositories on OSS Nexus Repository Manager:")
-    println("	https://oss.sonatype.org/#stagingRepositories")
+    println("View on Central Portal:")
+    println("	https://central.sonatype.com/artifact/$groupId/$artifactId/$sanitizedVersion")
     println()
     println("========================================================")
     println()
@@ -358,7 +396,10 @@ class SettingsProvider {
         lazyMessage = { "Both $SONATYPE_USERNAME_PROPERTY and $SONATYPE_PASSWORD_PROPERTY environment variables must not be empty" }
     )
 
-    private companion object {
+    companion object {
+        const val ARTIFACT_GROUP_ID = "io.github.vgv"
+        const val ARTIFACT_NAME = "kolbasa"
+
         // it should be a so-called "ascii-armored in-memory PGP secret key"
         private const val GPG_SIGNING_KEY_PROPERTY = "GPG_SIGNING_KEY"
         private const val GPG_SIGNING_PASSWORD_PROPERTY = "GPG_SIGNING_PASSWORD"
