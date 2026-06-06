@@ -111,12 +111,11 @@ val pgTasksByImage: Map<String, TaskProvider<Test>> = pgImages.associateWith { i
     val suffix = image.substringAfter(':').removeSuffix("-alpine").replace('.', '_') // 16.4-alpine -> 16_4
     tasks.register<Test>("testPg_$suffix") {
         group = "verification"
-        description = "Run @unit-db tests on $image"
+        description = "Run all tests on $image"
         // A hand-registered Test task does NOT inherit the test source set wiring that the built-in
         // `test` task gets, so set it explicitly (this also wires the test-compile dependency):
         testClassesDirs = testSources.output.classesDirs
         classpath = testSources.runtimeClasspath
-        useJUnitPlatform { includeTags("unit-db") } // narrow to the PG-dependent tests
         systemProperty("kolbasa.test.postgresql.image", image)
         outputs.upToDateWhen { false } // always actually run in a matrix
     }
