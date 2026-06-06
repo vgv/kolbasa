@@ -100,22 +100,39 @@ abstract class AbstractPostgresqlTest {
         const val FIRST_SCHEMA_NAME = "first"
         const val SECOND_SCHEMA_NAME = "second"
 
-        // All PG images to run tests
-        // Choose random image at every run
-        private val POSTGRES_IMAGES = setOf(
-            "postgres:10.23-alpine",
-            "postgres:11.22-alpine",
-            "postgres:12.22-alpine",
-            "postgres:13.23-alpine",
-            "postgres:14.22-alpine",
-            "postgres:15.17-alpine",
-            "postgres:16.13-alpine",
-            "postgres:17.9-alpine",
-            "postgres:18.3-alpine"
-        )
+        // All PG images to run tests against. Loaded from src/test/resources/postgresql-test-images.txt
+        // One image per line, blank lines and '#' comments are ignored.
+        private val POSTGRES_IMAGES: Set<String> =
+            requireNotNull(AbstractPostgresqlTest::class.java.getResourceAsStream("/postgresql-test-images.txt")) {
+                "postgresql-test-images.txt not found on the test classpath"
+            }.bufferedReader().useLines { lines ->
+                lines.map(String::trim)
+                    .filter { it.isNotEmpty() && !it.startsWith("#") }
+                    .toSet()
+            }.also {
+                require(it.isNotEmpty()) { "postgresql-test-images.txt parsed to 0 images" }
+            }
 
-        val RANDOM_POSTGRES_IMAGE = POSTGRES_IMAGES.random()
-        val NEWEST_POSTGRES_IMAGE = POSTGRES_IMAGES.last()
+        // The latest patch of each major version (e.g. 14.23, 15.18, 16.14, 17.10, 18.4).
+        private val LATEST_POSTGRES_IMAGES: List<String> = POSTGRES_IMAGES
+            .groupBy { pgVersion(it).first } // group by major
+            .map { (_, images) -> images.maxBy { pgVersion(it).second } } // highest minor
+
+        // Chosen once per JVM: an explicit override (used by the per-version Gradle tasks), otherwise a
+        // random latest-per-major image. Sampling only the latest patches keeps the local Docker image
+        // cache bounded to ~one per major, while still rotating coverage across majors run-to-run.
+        val RANDOM_POSTGRES_IMAGE: String =
+            System.getProperty("kolbasa.test.postgresql.image") ?: LATEST_POSTGRES_IMAGES.random()
+
+        // Newest image by parsed version (major, then minor), so it does not depend on file ordering.
+        val NEWEST_POSTGRES_IMAGE: String =
+            POSTGRES_IMAGES.maxWith(compareBy({ pgVersion(it).first }, { pgVersion(it).second }))
+
+        // "postgres:16.4-alpine" -> (16, 4)
+        private fun pgVersion(image: String): Pair<Int, Int> {
+            val (major, minor) = image.substringAfter(':').substringBefore('-').split('.').map(String::toInt)
+            return major to minor
+        }
 
         init {
             println("PostgreSQL docker image: $RANDOM_POSTGRES_IMAGE")
