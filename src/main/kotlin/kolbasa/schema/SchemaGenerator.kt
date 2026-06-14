@@ -3,9 +3,12 @@ package kolbasa.schema
 import kolbasa.cluster.Shard
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
+import kolbasa.queue.QueueType
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
 import kolbasa.schema.Table.Companion.hasIndex
+import kolbasa.utils.Helpers
+import kolbasa.utils.TimeHelper
 
 internal object SchemaGenerator {
 
@@ -32,6 +35,9 @@ internal object SchemaGenerator {
             forMetaFieldColumn(queue, metaField, existingTable, mutableSchema)
         }
 
+        // SQL put function (q_<name>_put)
+        forPutFunction(queue, existingTable, mutableSchema)
+
         return Schema(mutableSchema.tables, mutableSchema.indexes)
     }
 
@@ -42,8 +48,26 @@ internal object SchemaGenerator {
         }
 
         val newDatabaseTableName = QueueHelpers.generateQueueDbName(newQueueName)
-        val renameSql = "alter table if exists ${queue.dbTableName} RENAME TO $newDatabaseTableName"
-        return Schema(tableStatements = listOf(renameSql), indexStatements = emptyList())
+        val statements = mutableListOf(
+            "alter table if exists ${queue.dbTableName} RENAME TO $newDatabaseTableName"
+        )
+
+        // The put function name and body are derived from the queue name/table, so on rename we drop the old
+        // function and (if enabled) create one bound to the new table. Only MAIN queues have put functions.
+        if (queue.queueType == QueueType.MAIN) {
+            if (existingTable.putFunction != null) {
+                // SQL put function exists for the old table
+                statements += "drop function if exists ${QueueHelpers.generatePutFunctionName(queue.name)}"
+            }
+
+            if (queue.options.sqlPutFunction) {
+                // Need to recreate put function for the new queue name
+                val newFunctionName = QueueHelpers.generatePutFunctionName(newQueueName)
+                statements += generatePutFunctionDdl(queue, newFunctionName, newDatabaseTableName).createAndComment
+            }
+        }
+
+        return Schema(tableStatements = statements, indexStatements = emptyList())
     }
 
     internal fun generateDropTableSchema(queue: Queue<*>, existingTable: Table?): Schema {
@@ -52,8 +76,18 @@ internal object SchemaGenerator {
             return Schema.EMPTY
         }
 
-        val dropSql = "drop table if exists ${queue.dbTableName}"
-        return Schema(tableStatements = listOf(dropSql), indexStatements = emptyList())
+        val statements = mutableListOf<String>()
+
+        // Drop the put function (if any) before the table. Bare-name DROP works on PG 10+ and no-ops if absent.
+        if (queue.queueType == QueueType.MAIN) {
+            if (existingTable.putFunction != null) {
+                // SQL put function exists for the old table, drop it
+                statements += "drop function if exists ${QueueHelpers.generatePutFunctionName(queue.name)}"
+            }
+        }
+
+        statements += "drop table if exists ${queue.dbTableName}"
+        return Schema(tableStatements = statements, indexStatements = emptyList())
     }
 
     private fun forTable(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema, idRange: IdRange) {
@@ -251,7 +285,136 @@ internal object SchemaGenerator {
             }
         }
     }
+
+    // ----------------------------------------------------------------------------------------------------------
+    // SQL put function (q_<name>_put)
+
+    private fun forPutFunction(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema) {
+        // Only MAIN queues get a put function; DLQ/Archive companions never do.
+        if (queue.queueType != QueueType.MAIN) {
+            return
+        }
+
+        val functionName = QueueHelpers.generatePutFunctionName(queue.name)
+        val existing = existingTable?.putFunction
+
+        if (!queue.options.sqlPutFunction) {
+            // Flag off: drop the function if it currently exists (idempotent — nothing emitted otherwise).
+            if (existing != null) {
+                mutableSchema.tables += "drop function if exists $functionName"
+            }
+            return
+        }
+
+        val ddl = generatePutFunctionDdl(queue, functionName, queue.dbTableName)
+
+        // Already current? The hash lives in the function's COMMENT, so this comparison is normalization-proof.
+        if (existing?.hash == ddl.hash) {
+            return
+        }
+
+        // (Re)create. Bare-name DROP IF EXISTS is a no-op when absent and also clears any same-named orphan
+        // (e.g. a table dropped manually without our deleteQueues), so drop-then-create is safe in every case.
+        // DROP + CREATE + COMMENT in ONE statement string => executeSchemaStatements runs them in a single
+        // implicit transaction (atomic; no window where a trigger could hit a missing function).
+        mutableSchema.tables += "drop function if exists $functionName; ${ddl.createAndComment}"
+    }
+
+
+    private fun putFunctionArgs(queue: Queue<*>): List<PutArg> {
+        val args = mutableListOf<PutArg>()
+
+        // `data` is required and has no default => it must come first
+        // PostgreSQL requires that - required params first, optional next
+        args += PutArg(Const.DATA_COLUMN_NAME, queue.databaseDataType.dbColumnType, default = null)
+
+        // Fixed control params, identical for every queue. `delay`/`attempts` defaults are baked from the queue
+        // options; because the baked literal is part of the create text, any change to defaultDelay/defaultAttempts
+        // changes the hash and triggers a regenerate
+        args += PutArg("delay", "interval", TimeHelper.generatePostgreSQLInterval(queue.options.defaultDelay))
+        args += PutArg("attempts", "int", queue.options.defaultAttempts.toString())
+        args += PutArg(Const.SHARD_COLUMN_NAME, "int", Shard.MIN_SHARD.toString())
+        args += PutArg(Const.PRODUCER_COLUMN_NAME, "varchar", "null")
+        args += PutArg("ignore_duplicates", "boolean", "false")
+
+        // Per-queue meta fields last, in column order, each defaulting to null
+        queue.metadata.fields.forEach { field ->
+            args += PutArg(field.dbColumnName, field.dbColumnType, "null")
+        }
+
+        return args
+    }
+
+
+    // Deterministic CREATE FUNCTION + COMMENT, with the change-detection hash. The hash covers only the CREATE
+    // text (the COMMENT embeds it, so it can't be part of its own input).
+    private fun generatePutFunctionDdl(queue: Queue<*>, functionName: String, tableName: String): PutFunctionDdl {
+        val argList = putFunctionArgs(queue).joinToString(separator = ", ", transform = PutArg::dbDefinition)
+
+        // Meta param names equal the meta column names, and the `data` param equals the data column, so the
+        // VALUES list is mostly just the parameter names.
+        val metaColumns = queue.metadata.fields.map { it.dbColumnName }
+        val insertColumns = (listOf(
+            Const.SCHEDULED_AT_COLUMN_NAME,
+            Const.REMAINING_ATTEMPTS_COLUMN_NAME,
+            Const.SHARD_COLUMN_NAME,
+            Const.PRODUCER_COLUMN_NAME
+        ) + metaColumns + Const.DATA_COLUMN_NAME).joinToString(separator = ", ")
+
+        val insertValues = (listOf(
+            "statement_timestamp() + delay",
+            "attempts",
+            "shard",
+            "producer"
+        ) + metaColumns + Const.DATA_COLUMN_NAME).joinToString(separator = ", ")
+
+        val createStatement = """
+            create function $functionName($argList) returns bigint language plpgsql set search_path from current as $DOLLAR_QUOTE
+            declare
+                result_id bigint;
+            begin
+                if ignore_duplicates then
+                    insert into $tableName($insertColumns) values ($insertValues)
+                    on conflict do nothing
+                    returning ${Const.ID_COLUMN_NAME} into result_id;
+                else
+                    insert into $tableName($insertColumns) values ($insertValues)
+                    returning ${Const.ID_COLUMN_NAME} into result_id;
+                end if;
+                return result_id;
+            end
+            $DOLLAR_QUOTE
+        """.trimIndent()
+
+        val hash = Helpers.md5Hash(createStatement)
+        val commentStatement =
+            "comment on function $functionName is '${Const.PUT_FUNCTION_COMMENT_PREFIX}$hash'"
+
+        return PutFunctionDdl(hash = hash, createAndComment = "$createStatement; $commentStatement")
+    }
 }
+
+// Argument description for the put-function arg like 'meta_priority int default 15'
+private data class PutArg(
+    val name: String,
+    val type: String,
+    val default: String?
+) {
+    val dbDefinition = if (default != null)
+        "$name $type default $default"
+    else
+        "$name $type"
+}
+
+// The generated put-function DDL plus the content hash it encodes. `hash` = md5 of the CREATE text;
+// `createAndComment` is "create function ...; comment on function ... is 'kolbasa-put:<hash>'". Computing
+// both here keeps the hash next to the exact bytes it hashes
+private data class PutFunctionDdl(val hash: String, val createAndComment: String)
+
+// PostgreSQL dollar-quote delimiting the function body. The delimiter is always `$`; `kolbasa` is just the
+// tag. Written as a regular (escaped) string because Kotlin raw strings have no `\$` escape.
+private const val DOLLAR_QUOTE = "\$kolbasa\$"
+
 
 // Just a holder class for a few mutable lists
 private class MutableSchema {

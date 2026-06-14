@@ -35,15 +35,17 @@ internal object SchemaExtractor {
                 tablesAndColumns[tableName] = columns
             }
 
-            // Collect all indexes and identities
+            // Collect all indexes, identities and put functions
             val allIndexes = getAllIndexes(connection, connection.schema, tablesAndColumns.keys)
             val allIdentities = getIdentities(connection, connection.schema, tablesAndColumns.keys  )
+            val allPutFunctions = getPutFunctions(connection, connection.schema, tablesAndColumns.keys)
 
             val result = mutableMapOf<TableName, Table>()
             for ((tableName, columns) in tablesAndColumns) {
                 val indexes = allIndexes[tableName] ?: emptySet()
                 val identity = allIdentities[tableName]
-                result[tableName] = Table(tableName, columns, indexes, identity)
+                val putFunction = allPutFunctions[tableName]
+                result[tableName] = Table(tableName, columns, indexes, identity, putFunction)
             }
             result
         }
@@ -239,4 +241,48 @@ internal object SchemaExtractor {
         }
         return sequenceNames
     }
+
+    // Reads the q_<table>_put functions for the given tables (function name = tableName + "_put"). The
+    // kolbasa content hash is parsed from each function's COMMENT ('kolbasa-put:<md5>'); null if it has none.
+    private fun getPutFunctions(
+        connection: Connection,
+        schemaName: String?,
+        tableNames: Set<TableName>
+    ): Map<TableName, PutFunction> {
+        if (tableNames.isEmpty()) {
+            return emptyMap()
+        }
+
+        val realSchemaName = JdbcHelpers.schemaNameOrDefault(schemaName)
+        // function name -> table name, e.g. ["q_users_put" -> "q_users"]
+        val functionToTable = tableNames.associateBy { it + Const.PUT_FUNCTION_NAME_SUFFIX }
+
+        val sql = """
+            select
+                p.proname as name,
+                d.description as description
+            from pg_proc p
+            join pg_namespace n on n.oid = p.pronamespace
+            left join pg_description d
+                on d.objoid = p.oid and d.classoid = 'pg_proc'::regclass and d.objsubid = 0
+            where
+                n.nspname = '$realSchemaName' and
+                p.proname in (${functionToTable.keys.joinToString(separator = ",") { "'$it'" }})
+        """
+
+        val result = mutableMapOf<TableName, PutFunction>()
+        connection.useStatement(sql) { resultSet ->
+            while (resultSet.next()) {
+                val functionName = resultSet.getString("name")
+                val tableName = functionToTable[functionName] ?: continue
+                val description = resultSet.getString("description")
+                val hash = description
+                    ?.takeIf { it.startsWith(Const.PUT_FUNCTION_COMMENT_PREFIX) }
+                    ?.removePrefix(Const.PUT_FUNCTION_COMMENT_PREFIX)
+                result[tableName] = PutFunction(functionName, hash)
+            }
+        }
+        return result
+    }
+
 }
