@@ -6,6 +6,7 @@ import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.readIntList
 import kolbasa.utils.JdbcHelpers.readLong
 import kolbasa.utils.JdbcHelpers.readLongList
+import kolbasa.utils.JdbcHelpers.readLongOrNull
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.readStringList
 import kolbasa.utils.JdbcHelpers.useConnection
@@ -156,7 +157,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
         // Check outside of transaction
         Assertions.assertEquals(5, dataSource.readInt("select count(*) from full_table"))
-        Assertions.assertEquals(
+        assertEquals(
             listOf(1, 2, 3, 4, 5),
             dataSource.readIntList("select int_value from full_table order by int_value")
         )
@@ -172,7 +173,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
     @Test
     fun testReadStringList() {
         val list = dataSource.readStringList("select str_value from full_table order by str_value")
-        Assertions.assertEquals(listOf("a", "b", "c"), list)
+        assertEquals(listOf("a", "b", "c"), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -186,7 +187,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
     @Test
     fun testReadIntList() {
         val list = dataSource.readIntList("select int_value from full_table order by int_value")
-        Assertions.assertEquals(listOf(1, 2, 3), list)
+        assertEquals(listOf(1, 2, 3), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -200,7 +201,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
     @Test
     fun testReadLongList() {
         val list = dataSource.readLongList("select long_value from full_table order by long_value")
-        Assertions.assertEquals(listOf<Long>(10, 20, 30), list)
+        assertEquals(listOf<Long>(10, 20, 30), list)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -253,6 +254,42 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
     // -------------------------------------------------------------------------------------------
 
     @Test
+    fun testReadLongOrNull() {
+        val value = dataSource.readLongOrNull("select long_value from full_table where str_value='a'")
+        Assertions.assertEquals(10L, value)
+    }
+
+    @Test
+    fun testReadLongOrNull_Null() {
+        // A SQL NULL must come back as null...
+        Assertions.assertNull(dataSource.readLongOrNull("select null::bigint"))
+    }
+
+    @Test
+    fun testReadLongOrNull_Zero() {
+        // ...while a real 0 must NOT (getLong returns 0 for both, so this is the case that matters)
+        Assertions.assertEquals(0L, dataSource.readLongOrNull("select 0::bigint"))
+    }
+
+    @Test
+    fun testReadLongOrNull_NoRows() {
+        assertThrows<IllegalArgumentException> {
+            // No rows with str_value == 'z'
+            dataSource.readLongOrNull("select long_value from full_table where str_value='z'")
+        }
+    }
+
+    @Test
+    fun testReadLongOrNull_MoreThanOneRow() {
+        assertThrows<IllegalArgumentException> {
+            // More than one row
+            dataSource.readLongOrNull("select long_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
     fun testReadBoolean() {
         val value = dataSource.readBoolean("select boolean_value from full_table where str_value='b'")
         Assertions.assertTrue(value)
@@ -279,7 +316,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
     @Test
     fun testReadString() {
         val value = dataSource.readString("select str_value from full_table where int_value=1")
-        Assertions.assertEquals("a", value)
+        assertEquals("a", value)
     }
 
     @Test
