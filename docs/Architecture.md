@@ -149,7 +149,7 @@ create table if not exists q_orders(
     opentelemetry      varchar(1024)[],
     shard              int          not null default 0,
     created_at         timestamp    not null default statement_timestamp(),
-    scheduled_at       timestamp    not null,
+    scheduled_at       timestamp    not null default clock_timestamp(),
     processing_at      timestamp,
     producer           varchar(256),
     consumer           varchar(256),
@@ -175,7 +175,7 @@ Column by column:
 | `opentelemetry` | `varchar(1024)[]` | OpenTelemetry context for trace propagation, stored as a flat `[key1, val1, key2, val2, …]` array. Populated only when OpenTelemetry is configured. |
 | `shard` | `int` | The message's shard (0–1023), used to route messages across nodes in a cluster. In standalone mode every row defaults to shard `0`, but the column always exists — see [Cluster architecture.md](Cluster%20architecture.md). |
 | `created_at` | `timestamp` | When the row was inserted (`statement_timestamp()` default). Never changes. |
-| `scheduled_at` | `timestamp` | When the message next becomes visible to consumers. Drives delay and visibility-timeout — see [How states are stored](#how-states-are-stored). |
+| `scheduled_at` | `timestamp` | When the message next becomes visible to consumers. Drives delay and visibility-timeout — see [How states are stored](#how-states-are-stored). Defaults to `clock_timestamp()` (immediately visible) on every queue, so a bare hand-written `INSERT` is valid. |
 | `processing_at` | `timestamp` | When the message was last taken for processing. `NULL` until first received. |
 | `producer` | `varchar(256)` | Optional producer name, for debugging. Write-only — never returned on receive. |
 | `consumer` | `varchar(256)` | Optional consumer name, for debugging. Write-only. |

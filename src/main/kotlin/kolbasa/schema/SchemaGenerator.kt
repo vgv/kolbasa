@@ -6,7 +6,6 @@ import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
 import kolbasa.schema.Table.Companion.hasIndex
-import kolbasa.utils.TimeHelper
 
 internal object SchemaGenerator {
 
@@ -65,7 +64,7 @@ internal object SchemaGenerator {
                 ${Const.OPENTELEMETRY_COLUMN_NAME} varchar(${Const.OPENTELEMETRY_VALUE_LENGTH})[],
                 ${Const.SHARD_COLUMN_NAME} int not null default ${Shard.MIN_SHARD},
                 ${Const.CREATED_AT_COLUMN_NAME} timestamp not null default statement_timestamp(),
-                ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null,
+                ${Const.SCHEDULED_AT_COLUMN_NAME} timestamp not null default clock_timestamp(),
                 ${Const.PROCESSING_AT_COLUMN_NAME} timestamp,
                 ${Const.PRODUCER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
                 ${Const.CONSUMER_COLUMN_NAME} varchar(${Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH}),
@@ -124,26 +123,11 @@ internal object SchemaGenerator {
     }
 
     private fun forScheduledAtColumn(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema) {
-        val hasDefaultClause = existingTable
-            ?.findColumn(Const.SCHEDULED_AT_COLUMN_NAME)
-            ?.defaultExpression != null
-
-        if (queue.options.defaultDelay.isZero) {
-            val alterStatement =
-                "alter table ${queue.dbTableName} alter ${Const.SCHEDULED_AT_COLUMN_NAME} set default clock_timestamp()"
-
-            if (existingTable != null && hasDefaultClause) {
-                mutableSchema.tables += alterStatement
-            }
-        } else {
-            val alterStatement = """
-                    alter table ${queue.dbTableName}
-                    alter ${Const.SCHEDULED_AT_COLUMN_NAME}
-                    set default clock_timestamp() + ${TimeHelper.generatePostgreSQLInterval(queue.options.defaultDelay)}
-                """.trimIndent()
-
-            if (!hasDefaultClause) {
-                mutableSchema.tables += alterStatement
+        if (existingTable != null) {
+            val currentDefault = existingTable.findColumn(Const.SCHEDULED_AT_COLUMN_NAME)?.defaultExpression
+            if (currentDefault != "clock_timestamp()") {
+                mutableSchema.tables +=
+                    "alter table ${queue.dbTableName} alter ${Const.SCHEDULED_AT_COLUMN_NAME} set default clock_timestamp()"
             }
         }
 

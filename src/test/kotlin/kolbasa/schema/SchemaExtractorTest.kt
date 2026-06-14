@@ -94,7 +94,8 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         requireNotNull(testTable.findColumn("scheduled_at")).let { scheduledAtColumn ->
             assertEquals(ColumnType.TIMESTAMP, scheduledAtColumn.type)
             assertFalse(scheduledAtColumn.nullable)
-            assertNotNull(scheduledAtColumn.defaultExpression)
+            // Constant default on every queue, regardless of defaultDelay (this queue has a 5m delay).
+            assertEquals("clock_timestamp()", scheduledAtColumn.defaultExpression)
         }
 
         // attempts
