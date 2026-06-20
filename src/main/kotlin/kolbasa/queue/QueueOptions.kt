@@ -126,7 +126,16 @@ data class QueueOptions(
      * @see Queue.archiveQueue
      * @see dlqOptions
      */
-    val archiveQueueOptions: ArchiveQueueOptions? = null
+    val archiveQueueOptions: ArchiveQueueOptions? = null,
+
+    /**
+     * When enabled, schema generation creates a typed SQL helper function `q_<name>_put(...)` for this queue,
+     * so messages can be enqueued from plain SQL (triggers, stored functions, psql) without the JVM producer.
+     * Disabling it drops the function on the next schema update. Only MAIN queues get one.
+     *
+     * Default: `false`.
+     */
+    val sqlPutFunction: Boolean = false
 ) {
 
     init {
@@ -141,6 +150,7 @@ data class QueueOptions(
         private var defaultVisibilityTimeout: Duration = DEFAULT_VISIBILITY_TIMEOUT
         private var dlqOptions: DlqOptions? = null
         private var archiveQueueOptions: ArchiveQueueOptions? = null
+        private var sqlPutFunction: Boolean = false
 
         fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
         fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
@@ -151,7 +161,11 @@ data class QueueOptions(
         fun enableArchiveQueue(archiveQueueOptions: ArchiveQueueOptions = ArchiveQueueOptions.DEFAULT) =
             apply { this.archiveQueueOptions = archiveQueueOptions }
 
-        fun build() = QueueOptions(defaultDelay, defaultAttempts, defaultVisibilityTimeout, dlqOptions, archiveQueueOptions)
+        fun enableSqlPutFunction() = apply { this.sqlPutFunction = true }
+
+        fun build() = QueueOptions(
+            defaultDelay, defaultAttempts, defaultVisibilityTimeout, dlqOptions, archiveQueueOptions, sqlPutFunction
+        )
     }
 
     companion object {

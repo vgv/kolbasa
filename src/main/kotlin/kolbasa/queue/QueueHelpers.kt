@@ -27,6 +27,10 @@ internal object QueueHelpers {
         return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, name)
     }
 
+    fun generatePutFunctionName(queueName: String): String {
+        return generateDatabaseName(Const.QUEUE_TABLE_NAME_PREFIX, queueName, Const.PUT_FUNCTION_NAME_SUFFIX)
+    }
+
     fun generateMetaColumnDbName(fieldName: String): String {
         // convert Java field into column name, like someField -> some_field
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()

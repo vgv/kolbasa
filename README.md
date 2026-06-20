@@ -18,6 +18,7 @@
 * Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
 * Dead Letter Queue (DLQ) for messages that exhaust all processing attempts
 * Archive queue for retaining successfully processed messages (auditing, compliance, replay)
+* Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
 * Share load between different PostgreSQL servers
 
 ## Concepts
@@ -248,3 +249,29 @@ val queue = Queue(
 Example: [ArchiveExample](src/test/kotlin/examples/ArchiveExample.kt)
 
 `./gradlew example -P name=ArchiveExample`
+
+### Sending from SQL (triggers, batch jobs)
+Sometimes the event that should create a message originates in the database itself — an `AFTER INSERT` trigger on a
+business table, a stored procedure, a batch job in `psql`. Enable `sqlPutFunction` on a queue and kolbasa generates a
+typed `q_<name>_put(...)` function next to the queue table, so you can enqueue straight from SQL without a round-trip
+to the JVM. The function writes a correct "send" row (cluster-unique id, `scheduled_at`, attempts, meta-fields) and
+returns the new message id; pass `ignore_duplicates => true` for `ON CONFLICT DO NOTHING` dedup.
+
+```kotlin
+val queue = Queue(
+    name = "events",
+    databaseDataType = PredefinedDataTypes.String,
+    options = QueueOptions(
+        sqlPutFunction = true  // creates `q_events_put(data text, ...)` function in the database
+    )
+)
+```
+
+```sql
+-- e.g. from an AFTER INSERT trigger on a business table
+perform q_events_put(data => new.message);
+```
+
+Example: [SqlPutFunctionExample](src/test/kotlin/examples/SqlPutFunctionExample.kt)
+
+`./gradlew example -P name=SqlPutFunctionExample`

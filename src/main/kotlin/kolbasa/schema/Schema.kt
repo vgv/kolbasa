@@ -43,7 +43,10 @@ internal data class Table(
     val name: String,
     val columns: Set<Column>,
     val indexes: Set<String>,
-    val identity: Identity?
+    // Table identity column, if exists
+    val identity: Identity?,
+    // SQL put function, if exists
+    val putFunction: PutFunction? = null
 ) {
     fun findColumn(name: String): Column? = columns.find { it.name == name }
 
@@ -117,6 +120,17 @@ internal data class Identity(
     val increment: Long,
     val cycles: Boolean,
     val cache: Long
+)
+
+internal data class PutFunction(
+    /**
+     * SQL put function (q_<name>_put) name
+     */
+    val name: String,
+    /**
+     * Function content hash, used for reliable change detection. Stored in the function's COMMENT ('kolbasa-put:<md5>')
+     */
+    val hash: String?
 )
 
 // Every queue table should have these columns

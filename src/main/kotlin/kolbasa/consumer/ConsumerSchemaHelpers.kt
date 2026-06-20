@@ -280,10 +280,10 @@ internal object ConsumerSchemaHelpers {
             add(Const.DATA_COLUMN_NAME)
             mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
             // Original values
-            add(Const.ID_COLUMN_NAME)                                                                    // original id
-            add("(extract(epoch from ${Const.CREATED_AT_COLUMN_NAME}) * 1000)::bigint")                  // original created_at
-            add("(extract(epoch from ${Const.PROCESSING_AT_COLUMN_NAME}) * 1000)::bigint")               // original processing_at
-            add("(extract(epoch from ${Const.SCHEDULED_AT_COLUMN_NAME}) * 1000)::bigint")                // original scheduled_at
+            add(Const.ID_COLUMN_NAME)               // original id
+            add(Const.CREATED_AT_COLUMN_NAME)       // original created_at
+            add(Const.PROCESSING_AT_COLUMN_NAME)    // original processing_at
+            add(Const.SCHEDULED_AT_COLUMN_NAME)     // original scheduled_at
         }
         val selectStr = selectExprs.joinToString(",")
 
@@ -349,18 +349,18 @@ internal object ConsumerSchemaHelpers {
 
         // SELECT expressions
         val selectExprs = buildList {
-            add("statement_timestamp()")                            // scheduled_at = now
-            add("${archiveQueue.options.defaultAttempts}")           // remaining_attempts (high value)
+            add("statement_timestamp()")                       // scheduled_at = now
+            add("${archiveQueue.options.defaultAttempts}")     // remaining_attempts (high value)
             add(Const.SHARD_COLUMN_NAME)
             add(Const.PRODUCER_COLUMN_NAME)
             add(Const.CONSUMER_COLUMN_NAME)
             add(Const.DATA_COLUMN_NAME)
             mainQueue.metadata.fields.forEach { add(it.dbColumnName) }
             // Original values
-            add(Const.ID_COLUMN_NAME)                                                                    // original id
-            add("(extract(epoch from ${Const.CREATED_AT_COLUMN_NAME}) * 1000)::bigint")                  // original created_at
-            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)                                                    // original remaining_attempts
-            add("(extract(epoch from ${Const.PROCESSING_AT_COLUMN_NAME}) * 1000)::bigint")               // original processing_at
+            add(Const.ID_COLUMN_NAME)                    // original id
+            add(Const.CREATED_AT_COLUMN_NAME)            // original created_at
+            add(Const.REMAINING_ATTEMPTS_COLUMN_NAME)    // original remaining_attempts
+            add(Const.PROCESSING_AT_COLUMN_NAME)         // original processing_at
         }
         val selectStr = selectExprs.joinToString(",")
 
