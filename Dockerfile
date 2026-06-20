@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 
 # OCI image labels (title, description, source, licenses, version, …) are set at release time by
 # docker/metadata-action in .github/workflows/butcher-release.yml — its --label values override any
