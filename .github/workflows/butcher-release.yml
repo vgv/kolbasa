@@ -90,6 +90,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/vgv/butcher
+          # metadata-action defaults org.opencontainers.image.title to the repo name (kolbasa) and
+          # description to the repo's library blurb. This image is the butcher CLI, so override both —
+          # these --label values take precedence over any LABEL in the Dockerfile.
+          labels: |
+            org.opencontainers.image.title=butcher
+            org.opencontainers.image.description=CLI for managing a kolbasa cluster
           # `:latest` moves only on a plain production release. A prerelease tag (e.g. v0.195.0-rc.1, version contains a `-`)
           # still builds and pushes its own immutable `:0.195.0-rc.1` image, but must not hijack `:latest` — operators pulling
           # `:latest` expect the last stable build.

@@ -1,8 +1,8 @@
 FROM eclipse-temurin:17-jre
 
-LABEL org.opencontainers.image.source=https://github.com/vgv/kolbasa
-LABEL org.opencontainers.image.title=butcher
-LABEL org.opencontainers.image.description="CLI for managing a kolbasa cluster"
+# OCI image labels (title, description, source, licenses, version, …) are set at release time by
+# docker/metadata-action in .github/workflows/butcher-release.yml — its --label values override any
+# LABEL here, so labels live there as the single source of truth rather than being duplicated.
 
 WORKDIR /work
 
