@@ -143,6 +143,36 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertTrue(renameAgain.schema.isEmpty)
     }
 
+    @Test
+    fun testRename_With_PutFunction() {
+        val queue = Queue.builder("put_queue", PredefinedDataTypes.String)
+            .options(QueueOptions.builder().enableSqlPutFunction().build())
+            .build()
+
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+
+        // Before renaming - table and its put function exist
+        assertTrue(tableExists(queue.dbTableName))
+        assertTrue(functionExists("q_put_queue_put"))
+
+        // --------------------------------------------------------------------------------
+        // Rename: the table moves AND the put function follows it (dropped at old name, recreated at new)
+        val newQueueSuffix = "_renamed"
+        var renameResult = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
+        assertEquals(0, renameResult.failedStatements)
+
+        assertFalse(tableExists(queue.dbTableName))
+        assertTrue(tableExists(queue.dbTableName + newQueueSuffix))
+        assertFalse(functionExists("q_put_queue_put"))
+        assertTrue(functionExists("q_put_queue_renamed_put"))
+
+        // --------------------------------------------------------------------------------
+        // Rename again to the same name - should be no changes
+        renameResult = SchemaHelpers.renameQueues(dataSource, queue) { _ -> queue.name + newQueueSuffix }
+        assertEquals(0, renameResult.failedStatements)
+        assertTrue(renameResult.schema.isEmpty)
+    }
+
 
     @Test
     fun testDelete() {
@@ -208,6 +238,50 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         assertTrue(deleteAgain.schema.isEmpty)
     }
 
+    @Test
+    fun testDelete_With_PutFunction() {
+        val queue = Queue.builder("put_queue", PredefinedDataTypes.String)
+            .options(QueueOptions.builder().enableSqlPutFunction().build())
+            .build()
+
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+
+        // Before deleting - table and its put function exist
+        assertTrue(tableExists(queue.dbTableName))
+        assertTrue(functionExists("q_put_queue_put"))
+
+        // --------------------------------------------------------------------------------
+        // Delete: the table and its put function are both gone
+        var deleteResult = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteResult.failedStatements)
+        assertFalse(tableExists(queue.dbTableName))
+        assertFalse(functionExists("q_put_queue_put"))
+
+        // --------------------------------------------------------------------------------
+        // Delete again - should be no changes
+        deleteResult = SchemaHelpers.deleteQueues(dataSource, queue)
+        assertEquals(0, deleteResult.failedStatements)
+        assertTrue(deleteResult.schema.isEmpty)
+    }
+
+    @Test
+    fun testCreateOrUpdate_DisablePutFunction_DropsIt() {
+        val name = "put_queue"
+
+        // Enabled: createOrUpdate creates the put function
+        SchemaHelpers.createOrUpdateQueues(
+            dataSource,
+            Queue.builder(name, PredefinedDataTypes.String)
+                .options(QueueOptions.builder().enableSqlPutFunction().build())
+                .build()
+        )
+        assertTrue(functionExists("q_put_queue_put"))
+
+        // Disabled: a subsequent createOrUpdate drops it
+        SchemaHelpers.createOrUpdateQueues(dataSource, Queue.of(name, PredefinedDataTypes.String))
+        assertFalse(functionExists("q_put_queue_put"))
+    }
+
 
     @Test
     fun testGenerateSchema_CheckDurationBiggerThanMaxInt() {
@@ -268,6 +342,14 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
         val query = """select count(*)
             from information_schema.tables
             where table_schema='public' and table_name='$tableName'
+        """
+        return dataSource.readInt(query) == 1
+    }
+
+    private fun functionExists(functionName: String): Boolean {
+        val query = """select count(*)
+            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname='public' and p.proname='$functionName'
         """
         return dataSource.readInt(query) == 1
     }

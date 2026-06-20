@@ -36,6 +36,13 @@ internal class QueueHelpersTest {
     }
 
     @Test
+    fun testGeneratePutFunctionName() {
+        val queueName = "my_queue"
+        val expectedFunctionName = Const.QUEUE_TABLE_NAME_PREFIX + queueName + Const.PUT_FUNCTION_NAME_SUFFIX
+        assertEquals(expectedFunctionName, QueueHelpers.generatePutFunctionName(queueName))
+    }
+
+    @Test
     fun testGenerateMetaColumnDbName() {
         val fieldName = "someFieldName"
         val expectedColumnName = Const.META_FIELD_NAME_PREFIX + "some_field_name"

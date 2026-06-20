@@ -24,8 +24,9 @@ transitions.md](Message%20state%20transitions.md).
 12. [Archive queues](#archive-queues)
 13. [Sweep](#sweep)
 14. [Operational roles](#operational-roles)
-15. [Schema generation and migration](#schema-generation-and-migration)
-16. [Configuration reference](#configuration-reference)
+15. [Sending from SQL — triggers, batch jobs](#sending-from-sql--triggers-batch-jobs)
+16. [Schema generation and migration](#schema-generation-and-migration)
+17. [Configuration reference](#configuration-reference)
 
 ---
 
@@ -149,7 +150,7 @@ create table if not exists q_orders(
     opentelemetry      varchar(1024)[],
     shard              int          not null default 0,
     created_at         timestamp    not null default statement_timestamp(),
-    scheduled_at       timestamp    not null,
+    scheduled_at       timestamp    not null default clock_timestamp(),
     processing_at      timestamp,
     producer           varchar(256),
     consumer           varchar(256),
@@ -175,7 +176,7 @@ Column by column:
 | `opentelemetry` | `varchar(1024)[]` | OpenTelemetry context for trace propagation, stored as a flat `[key1, val1, key2, val2, …]` array. Populated only when OpenTelemetry is configured. |
 | `shard` | `int` | The message's shard (0–1023), used to route messages across nodes in a cluster. In standalone mode every row defaults to shard `0`, but the column always exists — see [Cluster architecture.md](Cluster%20architecture.md). |
 | `created_at` | `timestamp` | When the row was inserted (`statement_timestamp()` default). Never changes. |
-| `scheduled_at` | `timestamp` | When the message next becomes visible to consumers. Drives delay and visibility-timeout — see [How states are stored](#how-states-are-stored). |
+| `scheduled_at` | `timestamp` | When the message next becomes visible to consumers. Drives delay and visibility-timeout — see [How states are stored](#how-states-are-stored). Defaults to `clock_timestamp()` (immediately visible) on every queue, so a bare hand-written `INSERT` is valid. |
 | `processing_at` | `timestamp` | When the message was last taken for processing. `NULL` until first received. |
 | `producer` | `varchar(256)` | Optional producer name, for debugging. Write-only — never returned on receive. |
 | `consumer` | `varchar(256)` | Optional consumer name, for debugging. Write-only. |
@@ -674,6 +675,84 @@ around the slow scan, treat it as a signal to revise your sweep strategy — rai
 often, or, if you run sweep manually, increase its cadence or `maxMessages`. In a healthy queue DEAD rows are removed (or moved to
 the DLQ) promptly, and this caveat never bites.
 
+## Sending from SQL — triggers, batch jobs
+
+Everything so far enqueues messages through the JVM [producer](#producer). But sometimes the event that should create a
+message originates in the database itself — an `AFTER INSERT` trigger on a business table, a stored procedure, a nightly
+batch job in `psql`. Routing those through the JVM means a round-trip back to the application just to run an `INSERT` the
+database could have done directly.
+
+Kolbasa can generate, **per queue**, a typed SQL function that performs a correct "send" `INSERT` for you. It is
+**opt-in**:
+
+```kotlin
+val queue = Queue(
+    name = "orders",
+    databaseDataType = PredefinedDataTypes.ByteArray, // bytea payload
+    metadata = Metadata.of(
+        MetaField.long("merchant_id", FieldOption.SEARCH),
+        MetaField.int("priority", FieldOption.SEARCH),
+        MetaField.string("dedup_key", FieldOption.UNTOUCHED_UNIQUE)
+    ),
+    options = QueueOptions(
+        sqlPutFunction = true // with the builder: QueueOptions.builder().enableSqlPutFunction().build()
+    )
+)
+```
+
+With the flag on, `createOrUpdateQueues` creates a function named `q_<queue>_put(...)` alongside the queue table (and
+`deleteQueues` drops it; turning the flag back off drops it on the next migration). For this `orders` queue the generated
+signature is:
+
+```sql
+q_orders_put(
+    data bytea,                                    -- required (no default) => must be passed
+    delay interval default interval '0 millisecond',  -- baked from QueueOptions.defaultDelay
+    attempts int default 5,                        -- baked from QueueOptions.defaultAttempts
+    shard int default 0,
+    producer varchar default null,
+    ignore_duplicates boolean default false,
+    meta_merchant_id bigint default null,          -- one typed param per meta-field, appended last
+    meta_priority int default null,
+    meta_dedup_key varchar(8192) default null
+) returns bigint
+```
+
+It writes a row exactly as the JVM producer would: `scheduled_at = statement_timestamp() + delay`, the configured attempt
+count, your meta-fields, and the payload. The `id` is assigned from the node's bucket range automatically, so plain
+`INSERT`s still get cluster-unique IDs. The function returns the new message `id`.
+
+Every parameter but `data` has a default, so callers use named arguments and pass only what they need:
+
+```sql
+-- enqueue, delayed 5 minutes, with meta-fields
+select q_orders_put(data => '\x01'::bytea, meta_priority => 10, delay => interval '5 minutes');
+
+-- the headline use case: an AFTER INSERT trigger that mirrors a row into a queue
+create function orders_enqueue() returns trigger language plpgsql as $$
+begin
+    perform q_orders_put(data => new.payload, meta_merchant_id => new.merchant_id);
+    return new;
+end $$;
+create trigger orders_trg after insert on orders_table
+    for each row execute procedure orders_enqueue();
+```
+
+**Deduplication.** Pass `ignore_duplicates => true` to turn the insert into `ON CONFLICT DO NOTHING` — the same mechanism
+the JVM producer's [`IGNORE_DUPLICATE`](#deduplication) mode relies on. On a skipped duplicate the function returns `NULL`:
+
+```sql
+select q_orders_put(data => '\x01'::bytea, meta_dedup_key => 'k-001', ignore_duplicates => true); -- NULL if duplicate
+```
+
+> **Cluster caveat.** In practice this rarely comes up — the put function is a single-node tool, called by triggers and
+> jobs that live in the same database as the queue, and business tables seldom sit on a kolbasa [cluster](Cluster%20architecture.md)
+> node. It only matters in that uncommon case: the function inserts into the **local** node's database and cannot route
+> elsewhere, so a row sent with the default `shard 0` is stranded unless the local node actually consumes shard 0. A
+> standalone server owns every shard, so it never bites there; on a cluster node, pass a `shard` the local node owns.
+
+Only **main** queues get a put function — DLQ and archive companions never do.
+
 ## Schema generation and migration
 
 A kolbasa queue is more than one table. Each queue needs its own table and indexes, plus a separate table (also with indexes) for
@@ -737,7 +816,7 @@ options you construct and pass to a specific queue, role, or call.
 | Class | Configures | Key fields |
 |---|---|---|
 | `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `shardStrategy`, `asyncExecutor`, `prometheusConfig`, `openTelemetryConfig` |
-| `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions` |
+| `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |
 | `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `batchSize` (500), `partialInsert`, `shard`, `asyncExecutor` |

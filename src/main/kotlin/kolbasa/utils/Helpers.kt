@@ -4,6 +4,12 @@ import java.security.MessageDigest
 
 internal object Helpers {
 
+    /**
+     * Converts a flat `[key1, value1, key2, value2, …]` array into a `Map` [`key1` → `value1`, `key2` → `value2`, …].
+     *
+     * @throws IllegalArgumentException if [array] has an odd number of elements, since it
+     * cannot be split into complete key/value pairs.
+     */
     fun arrayToMap(array: Array<String>?): Map<String, String>? {
         if (array == null) {
             return null
@@ -53,19 +59,31 @@ internal object Helpers {
         return sb.toString()
     }
 
+    /**
+     * Returns the number of bytes [value] would occupy when encoded as UTF-8.
+     *
+     * Equivalent to `value.toByteArray(Charsets.UTF_8).size`, but computes the length by
+     * inspecting characters in place instead of allocating the encoded byte array — useful
+     * for cheaply estimating payload sizes (see [BytesCounter]).
+     *
+     * Each UTF-16 code unit is mapped to its UTF-8 width: 1 byte for U+0000–U+007F,
+     * 2 for U+0080–U+07FF, 3 for the rest of the BMP, and 4 for a surrogate pair
+     * (the low surrogate is consumed together with its high surrogate).
+     */
     fun utf8ByteLength(value: String): Int {
         var count = 0
         var i = 0
         while (i < value.length) {
             val ch = value[i]
             when {
-                ch.code <= 0x7F -> count += 1        // ASCII
+                ch.code <= 0x7F -> count += 1         // ASCII
                 ch.code <= 0x7FF -> count += 2        // 2-byte
                 ch.isHighSurrogate() -> {
-                    count += 4                         // surrogate pair → 4 bytes
-                    i++                                // skip low surrogate
+                    count += 4                        // surrogate pair → 4 bytes
+                    i++                               // skip low surrogate
                 }
-                else -> count += 3                     // BMP (3-byte)
+
+                else -> count += 3                    // BMP (3-byte)
             }
             i++
         }

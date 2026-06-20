@@ -5,11 +5,11 @@ import kolbasa.assertNotNull
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
-import kolbasa.queue.meta.*
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Table.Companion.hasIndex
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
@@ -37,7 +37,8 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         PredefinedDataTypes.ByteArray,
         options = QueueOptions(
             defaultDelay = Duration.ofMinutes(5),
-            defaultAttempts = 42
+            defaultAttempts = 42,
+            sqlPutFunction = true
         ),
         metadata = Metadata.of(
             STRING_FIELD,
@@ -94,7 +95,8 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
         requireNotNull(testTable.findColumn("scheduled_at")).let { scheduledAtColumn ->
             assertEquals(ColumnType.TIMESTAMP, scheduledAtColumn.type)
             assertFalse(scheduledAtColumn.nullable)
-            assertNotNull(scheduledAtColumn.defaultExpression)
+            // Constant default on every queue, regardless of defaultDelay (this queue has a 5m delay).
+            assertEquals("clock_timestamp()", scheduledAtColumn.defaultExpression)
         }
 
         // attempts
@@ -187,5 +189,14 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
 
         // meta_short index
         assertTrue(testTable.hasIndex("${testQueue.dbTableName}_short_value_pu"))
+
+        // Check the SQL put function (q_<name>_put). The extractor parses its content hash out of the
+        // 'kolbasa-put:<md5>' COMMENT (prefix stripped), so let's just check it looks like md5 string
+        requireNotNull(testTable.putFunction)
+        assertEquals("${testQueue.dbTableName}_put", testTable.putFunction.name)
+        assertTrue(
+            requireNotNull(testTable.putFunction.hash).matches(Regex("[0-9a-f]{32}")),
+            "Expected a bare md5 hash, got: ${testTable.putFunction.hash}"
+        )
     }
 }

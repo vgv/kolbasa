@@ -206,6 +206,34 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
+    fun DataSource.readLongOrNull(sql: String): Long? {
+        return useConnection { connection ->
+            connection.readLongOrNull(sql)
+        }
+    }
+
+    fun Connection.readLongOrNull(sql: String): Long? {
+        return useStatement { statement ->
+            statement.executeQuery(sql).use { resultSet ->
+                require(resultSet.next()) {
+                    "No rows in the query '$sql'"
+                }
+
+                val value = resultSet.getLong(1)
+                // Distinguish a real value from a SQL NULL (getLong returns 0 for both)
+                val result = if (resultSet.wasNull()) null else value
+
+                // Do we have more rows than one?
+                require(!resultSet.next()) {
+                    "More than one row in the query '$sql'"
+                }
+
+                result
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
     fun DataSource.readBoolean(sql: String): Boolean {
         return useConnection { connection ->
             connection.readBoolean(sql)

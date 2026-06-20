@@ -57,6 +57,13 @@ internal object Const {
     const val DATA_COLUMN_NAME = "data"
 
     // ------------------------------------------------------------------------------------------------------------
+    // SQL put function — q_<name>_put
+    const val PUT_FUNCTION_NAME_SUFFIX = "_put"
+
+    // Prefix of the q_<name>_put functions COMMENT we put on generated functions: 'kolbasa-put:<md5>'. Used for change detection.
+    const val PUT_FUNCTION_COMMENT_PREFIX = "kolbasa-put:"
+
+    // ------------------------------------------------------------------------------------------------------------
     // Meta fields
     const val META_FIELD_NAME_PREFIX = "meta_"
     const val META_FIELD_NAME_MAX_LENGTH = MAX_DATABASE_OBJECT_NAME_LENGTH - META_FIELD_NAME_PREFIX.length
