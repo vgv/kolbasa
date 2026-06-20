@@ -19,8 +19,10 @@ internal data class ShardBalanceResult(
         appendLine("Shard balance:")
         appendLine("  Current distribution (${currentDistribution.values.sumOf { it.size }} shards across ${sortedNodes.size} nodes):")
         sortedNodes.forEach { node ->
-            val count = currentDistribution[node]?.size ?: 0
-            appendLine("    ${node.id.padEnd(width)}  $count shards")
+            val shards = currentDistribution[node] ?: emptyList()
+            val shardsCount = shards.size
+            val allShardsString = shards.joinToString(separator = ", ", prefix = "[", postfix = "]") { it.shard.toString() }
+            appendLine("    ${node.id.padEnd(width)}  $shardsCount shards $allShardsString")
         }
 
         if (isBalanced) {
