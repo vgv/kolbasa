@@ -275,3 +275,20 @@ perform q_events_put(data => new.message);
 Example: [SqlPutFunctionExample](src/test/kotlin/examples/SqlPutFunctionExample.kt)
 
 `./gradlew example -P name=SqlPutFunctionExample`
+
+
+## Documentation
+
+Beyond the examples above, these documents explain how Kolbasa works under the hood:
+
+- [Architecture.md](docs/Architecture.md) — how Kolbasa works on a single node: the queue model, meta-fields,
+  the anatomy of a queue table, the message lifecycle, deduplication, DLQ and archive, sweep, and schema generation.
+- [Cluster architecture.md](docs/Cluster%20architecture.md) — what changes when you run Kolbasa across multiple
+  PostgreSQL nodes: shards, routing, the shard-ownership map, and shard migration.
+- [Butcher.md](docs/Butcher.md) — operator guide for `butcher`, the CLI for running cluster health checks and
+  expanding, shrinking, or rebalancing a cluster by migrating shards between nodes. Distributed as a Docker image
+  (`ghcr.io/vgv/butcher`) and a `butcher.jar` on the [releases page](https://github.com/vgv/kolbasa/releases/latest).
+- [Message IDs.md](docs/Message%20IDs.md) — how a message's 64-bit `id` is structured (the per-node bucket) so
+  that ids stay globally unique across nodes, enabling shard migration and growing a standalone DB into a cluster.
+- [Message state transitions.md](docs/Message%20state%20transitions.md) — the message lifecycle deep-dive
+  (states, transitions, and how uniqueness scopes map onto them).
