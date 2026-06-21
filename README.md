@@ -283,6 +283,8 @@ Beyond the examples above, these documents explain how Kolbasa works under the h
 
 - [Architecture.md](docs/Architecture.md) — how Kolbasa works on a single node: the queue model, meta-fields,
   the anatomy of a queue table, the message lifecycle, deduplication, DLQ and archive, sweep, and schema generation.
+- [Patterns.md](docs/Patterns.md) — recipes for the queue patterns people reach for most: a priority queue,
+  time-to-live (TTL), and at-most-once delivery — each built from Kolbasa's primitives.
 - [Cluster architecture.md](docs/Cluster%20architecture.md) — what changes when you run Kolbasa across multiple
   PostgreSQL nodes: shards, routing, the shard-ownership map, and shard migration.
 - [Butcher.md](docs/Butcher.md) — operator guide for `butcher`, the CLI for running cluster health checks and

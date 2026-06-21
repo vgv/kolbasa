@@ -864,4 +864,5 @@ producer, `send()`, or individual message can still override it for just its own
 
 ---
 
-*Next: [Cluster architecture.md](Cluster%20architecture.md) — what changes when you run kolbasa across multiple nodes.*
+*Next: [Patterns.md](Patterns.md) — recipes that combine these primitives (priority queue, TTL, at-most-once), or
+[Cluster architecture.md](Cluster%20architecture.md) — what changes when you run kolbasa across multiple nodes.*
