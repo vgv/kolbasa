@@ -8,6 +8,17 @@ Guidance for AI coding agents working in this repository.
 RabbitMQ, just the database you already run. It is a pure Kotlin library (usable from any JVM language),
 published to Maven Central as `io.github.vgv:kolbasa`. Requires PostgreSQL 10+ and JVM 17+.
 
+## Mental model
+
+- A `Queue<Data>` is a typed handle — just metadata, it holds no DB resources.
+- Four roles act on queues: a **Producer** sends, a **Consumer** receives/acks, a **Mutator** modifies
+  live messages in place, an **Inspector** reports (diagnostics, counts).
+- Each role has a `Database*` flavor (manages its own JDBC connection + transaction) and a
+  `ConnectionAware*` flavor (the caller passes a `java.sql.Connection`). Use `Database*` almost always;
+  reach for `ConnectionAware*` only when a send/receive must share a transaction with your own business
+  writes (the transactional-outbox case).
+- Roles are **not bound to a queue** — pass the `queue` to every call.
+
 ## Build, test, run
 
 This is a **Gradle** project (Kotlin DSL). Use the wrapper:
@@ -33,6 +44,20 @@ Toolchain: JVM 17, Kotlin API/language level 1.9, JUnit 5.
 - `src/test/kotlin/examples/` — runnable, self-contained examples; the best on-ramp to the API.
 - `docs/` — architecture and operator documentation (see below).
 
+## Gotchas
+
+Things that commonly trip people up:
+
+- **Set up the schema once.** Call `SchemaHelpers.createOrUpdateQueues(dataSource, queue, …)` at startup,
+  before any send/receive. It is idempotent and incremental — safe to run on every boot.
+- **`receive` has two shapes.** `consumer.receive(queue)` returns a single nullable `Message<Data>?`;
+  `consumer.receive(queue, limit = N)` returns a `List<Message<Data>>`.
+- **Acknowledge by deleting.** After processing, call `consumer.delete(queue, message)`. A message not
+  deleted before its visibility timeout reappears for another attempt.
+- **Failed sends don't throw.** `producer.send(…)` returns a `SendResult`; check
+  `result.failedMessages` (or call `result.throwExceptionIfAny()`) — a partial failure won't surface as
+  an exception on its own.
+
 ## Conventions
 
 - Follow the style of the surrounding code; match its naming, structure, and KDoc density. Public APIs
@@ -41,7 +66,9 @@ Toolchain: JVM 17, Kotlin API/language level 1.9, JUnit 5.
   for each role — keep them in sync when changing one.
 - kolbasa runs on **vanilla PostgreSQL** (no extensions, no superuser). Don't introduce SQL that needs
   either.
-- Don't hand-edit a queue's generated DDL; schema generation owns table/index structure.
+- Don't hand-edit a queue's generated DDL; schema generation owns table/index structure. Ad-hoc
+  `SELECT`/`UPDATE` against `q_*` tables for diagnostics or ops is fine and even encouraged (see
+  Architecture.md) — just don't change their *structure* by hand.
 - Run `./gradlew test` after changes. Don't commit, stage, or push unless explicitly asked.
 
 ## Documentation
