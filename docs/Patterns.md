@@ -35,8 +35,6 @@ The ordering is evaluated on the database side, inside the same atomic claim tha
 client-side sorting and no separate "priority queue" type.
 
 ```kotlin
-import kolbasa.consumer.order.Order.Companion.desc
-
 val PRIORITY = MetaField.int("priority", FieldOption.SEARCH)   // indexed so we can order by it
 
 val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(PRIORITY /*, … */))
@@ -62,10 +60,6 @@ So to keep an oldest-first tiebreaker *under* the priority sort, add a meta-fiel
 `enqueued_at` you stamp at send time:
 
 ```kotlin
-import kolbasa.consumer.order.Order.Companion.desc
-import kolbasa.consumer.order.Order.Companion.asc
-import kolbasa.consumer.order.Order.Companion.then
-
 ReceiveOptions(order = PRIORITY.desc() then ENQUEUED_AT.asc())   // priority first, then oldest within a priority
 ```
 
@@ -136,8 +130,6 @@ producer.send(
 Now make every consumer skip messages whose deadline has passed:
 
 ```kotlin
-import kolbasa.consumer.filter.Filter.greater
-
 consumer.receive(
     orders,
     limit = 10,
