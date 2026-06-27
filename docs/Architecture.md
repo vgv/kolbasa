@@ -171,10 +171,10 @@ Column by column:
 
 | Column | Type | What it stores |
 |---|---|---|
-| `id` | `bigint` identity | Per-node-unique message identifier. The identity range (`minvalue`/`maxvalue`) is bounded to this node's id range — see [Cluster architecture.md](Cluster%20architecture.md). |
+| `id` | `bigint` identity | Per-node-unique message identifier. The identity range (`minvalue`/`maxvalue`) is bounded to this node's id range — see [Message IDs.md](Message%20IDs.md). |
 | `uc` | `int` | Internal bookkeeping used to map per-message send results; carries no queue meaning, safe to ignore. |
 | `opentelemetry` | `varchar(1024)[]` | OpenTelemetry context for trace propagation, stored as a flat `[key1, val1, key2, val2, …]` array. Populated only when OpenTelemetry is configured. |
-| `shard` | `int` | The message's shard (0–1023), used to route messages across nodes in a cluster. In standalone mode every row defaults to shard `0`, but the column always exists — see [Cluster architecture.md](Cluster%20architecture.md). |
+| `shard` | `int` | The message's shard (0–1023), used to route messages across nodes in a cluster. In standalone mode every row defaults to shard `0`, but the column always exists — see [Cluster architecture.md](Cluster%20architecture.md#shards). |
 | `created_at` | `timestamp` | When the row was inserted (`statement_timestamp()` default). Never changes. |
 | `scheduled_at` | `timestamp` | When the message next becomes visible to consumers. Drives delay and visibility-timeout — see [How states are stored](#how-states-are-stored). Defaults to `clock_timestamp()` (immediately visible) on every queue, so a bare hand-written `INSERT` is valid. |
 | `processing_at` | `timestamp` | When the message was last taken for processing. `NULL` until first received. |
@@ -414,7 +414,7 @@ example with diagrams and a runnable sample.
 
 Unique indexes are per-table, so deduplication works **within one node**. In a cluster, messages that must be deduplicated against
 each other have to be routed to the same node — i.e. given the same shard (see [Cluster
-architecture.md](Cluster%20architecture.md)). On a single node this is automatic.
+architecture.md](Cluster%20architecture.md#shards)). On a single node this is automatic.
 
 ## DLQ — dead letter queue
 
@@ -789,7 +789,7 @@ and that path is even faster.
 A few things happen automatically:
 
 - **System table.** A small internal table `q__node` is created and seeded with this node's identity — this is what bounds the
-  `id` range (see [Cluster architecture.md](Cluster%20architecture.md)). The `q__` prefix marks internal tables.
+  `id` range (see [Message IDs.md](Message%20IDs.md)). The `q__` prefix marks internal tables.
 - **Companion tables.** Enabling DLQ or archive on a queue expands the work to create those companion tables too; you only pass
   the *main* queues.
 - **Concurrent-safe index creation.** Indexes are created with `CREATE INDEX CONCURRENTLY`, so adding a meta-field to an existing
@@ -864,4 +864,5 @@ producer, `send()`, or individual message can still override it for just its own
 
 ---
 
-*Next: [Cluster architecture.md](Cluster%20architecture.md) — what changes when you run kolbasa across multiple nodes.*
+*Next: [Patterns.md](Patterns.md) — recipes that combine these primitives (priority queue, TTL, at-most-once), or
+[Cluster architecture.md](Cluster%20architecture.md) — what changes when you run kolbasa across multiple nodes.*
