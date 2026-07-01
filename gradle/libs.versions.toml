@@ -14,7 +14,7 @@ prometheus = "1.6.1"
 opentelemetry = "1.62.0"
 opentelemetry-instrumentation = "2.28.1"
 opentelemetry-instrumentation-incubator = "2.28.1-alpha"
-opentelemetry-semconv = "1.41.1"
+opentelemetry-semconv = "1.42.0"
 hikaricp = "7.0.2"
 postgresql = "42.7.11"
 
