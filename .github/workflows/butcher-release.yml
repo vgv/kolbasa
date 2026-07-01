@@ -49,7 +49,7 @@ jobs:
           echo "Releasing butcher for tag=$TAG (version=$VERSION)"
 
       - name: Checkout tag commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.tag.outputs.tag }}
 
