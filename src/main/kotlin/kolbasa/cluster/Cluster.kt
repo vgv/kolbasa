@@ -21,6 +21,10 @@ class Cluster @JvmOverloads constructor(
     @Volatile
     private var state: ClusterState = ClusterState.NOT_INITIALIZED
 
+    /**
+     * Updating the schema can be a fairly resource-intensive operation, but if the queues don't change (and they don't),
+     * updating the database schema only once is sufficient. This flag controls this behavior.
+     */
     private var schemaUpdated: Boolean = false
 
     fun initAndScheduleStateUpdate() {
@@ -50,6 +54,18 @@ class Cluster @JvmOverloads constructor(
         if (newState != state) {
             state = newState
         }
+    }
+
+    fun clusterStateUpdatedAtLeastOnce(): Boolean {
+        return state != ClusterState.NOT_INITIALIZED
+    }
+
+    internal fun getState(): ClusterState {
+        check(state !== ClusterState.NOT_INITIALIZED) {
+            "Cluster state isn't initialized, maybe you forgot to call updateState() method?"
+        }
+
+        return state
     }
 
     private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
@@ -123,15 +139,6 @@ class Cluster @JvmOverloads constructor(
         }
 
         schemaUpdated = true
-    }
-
-
-    internal fun getState(): ClusterState {
-        check(state !== ClusterState.NOT_INITIALIZED) {
-            "Cluster state isn't initialized, maybe you forgot to call updateState() method?"
-        }
-
-        return state
     }
 
 }
