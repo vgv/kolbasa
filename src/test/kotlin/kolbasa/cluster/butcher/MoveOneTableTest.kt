@@ -81,7 +81,7 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
         }
 
         // start migration
-        val schema = SchemaExtractor
+        val tableSchema = SchemaExtractor
             .extractRawSchema(dataSource, setOf(queue.dbTableName))
             .values
             .first()
@@ -89,12 +89,12 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
         val callback = mockk<ProgressCallback>(relaxed = true)
 
         val moveOneTable = MoveOneTable(
-            shards = shardsToMove,
-            schema = schema,
             sourceDataSource = dataSource,
             targetDataSource = dataSourceFirstSchema,
-            rowsPerBatch = migrateBatchSize,
-            moveProgressCallback = callback
+            moveProgressCallback = callback,
+            shards = shardsToMove,
+            table = tableSchema,
+            rowsPerBatch = migrateBatchSize
         )
         val migratedItems = moveOneTable.move()
 

@@ -35,12 +35,12 @@ internal fun move(command: Command.Move) {
             do {
                 val migratedRows = sources.sumOf { sourceDS ->
                     val moveOneTable = MoveOneTable(
-                        shards = shards,
-                        schema = schema,
                         sourceDataSource = sourceDS,
                         targetDataSource = target,
-                        rowsPerBatch = 1000,
-                        moveProgressCallback = ConsoleProgressCallback
+                        moveProgressCallback = ConsoleProgressCallback,
+                        shards = shards,
+                        table = schema,
+                        rowsPerBatch = 1000
                     )
                     moveOneTable.move()
                 }
