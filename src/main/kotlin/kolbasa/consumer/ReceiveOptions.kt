@@ -92,7 +92,7 @@ data class ReceiveOptions @JvmOverloads constructor(
     /**
      * If you want to receive messages in a specific order, you can specify it here.
      */
-    val order: List<Order>? = null,
+    val order: Order = Order.NONE,
 
     /**
      * If you want to receive messages filtered by meta fields values, you can specify it here.
@@ -112,13 +112,13 @@ data class ReceiveOptions @JvmOverloads constructor(
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
         private var readMetadata: Boolean = false
-        private var order: List<Order>? = null
+        private var order: Order = Order.NONE
         private var filter: Condition? = null
 
         fun consumer(consumer: String) = apply { this.consumer = consumer }
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
         fun readMetadata(readMetadata: Boolean) = apply { this.readMetadata = readMetadata }
-        fun order(order: List<Order>) = apply { this.order = order }
+        fun order(order: Order) = apply { this.order = order }
         fun filter(filter: Condition) = apply { this.filter = filter }
 
         fun build(): ReceiveOptions {

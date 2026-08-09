@@ -20,8 +20,8 @@ package kolbasa.consumer.order
  * ## Usage Example
  *
  * ```kotlin
- * // Using with Order.of() factory method
- * val order = Order.of(USER_ID, SortOrder.DESC_NULLS_LAST)
+ * // Using with Order.by() factory method
+ * val order = Order.by(USER_ID, SortOrder.DESC_NULLS_LAST)
  *
  * // Or use the more idiomatic extension methods on MetaField
  * val order = USER_ID.descNullsLast()

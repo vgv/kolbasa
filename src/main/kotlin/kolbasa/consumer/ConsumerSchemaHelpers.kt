@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.cluster.Shards
+import kolbasa.consumer.order.OrderClause
 import kolbasa.producer.Id
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
@@ -66,10 +67,10 @@ internal object ConsumerSchemaHelpers {
         val customColumnsForOrdering = mutableListOf<String>()
         val orderByClauses = mutableListOf<String>()
         // custom ordering clauses first, if any
-        receiveOptions.order?.forEach { order ->
-            orderByClauses += order.dbOrderClause
-            if (order.field.dbColumnName !in dataColumns) {
-                customColumnsForOrdering += order.field.dbColumnName
+        receiveOptions.order.clauses.forEach { orderClause: OrderClause ->
+            orderByClauses += orderClause.dbOrderClause
+            if (orderClause.field.dbColumnName !in dataColumns) {
+                customColumnsForOrdering += orderClause.field.dbColumnName
             }
         }
         // after custom clauses – standard
