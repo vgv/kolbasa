@@ -15,9 +15,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.eq(value: T): Condition {
         return EqCondition(this, value)
     }
@@ -35,9 +36,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.neq(value: T): Condition {
         return NeqCondition(this, value)
     }
@@ -55,9 +57,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.greater(value: T): Condition {
         return GreaterThanCondition(this, value)
     }
@@ -75,9 +78,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.greaterEq(value: T): Condition {
         return GreaterThanOrEqCondition(this, value)
     }
@@ -95,9 +99,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.less(value: T): Condition {
         return LessThanCondition(this, value)
     }
@@ -115,9 +120,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.lessEq(value: T): Condition {
         return LessThanOrEqCondition(this, value)
     }
@@ -137,9 +143,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.between(value: Pair<T, T>): Condition {
         return BetweenCondition(this, value)
     }
@@ -157,9 +164,10 @@ object Filter {
      *
      * USER_NAME is just a meta-field, declared something like this
      * ```
-     * val USER_NAME = StringField("user_name")
+     * val USER_NAME = MetaField.ofString("user_name")
      * ```
      */
+    @JvmStatic
     infix fun MetaField<String>.like(value: String): Condition {
         return LikeCondition(this, value)
     }
@@ -191,9 +199,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     fun <T> isNull(field: MetaField<T>): Condition {
         return IsNullCondition(field)
     }
@@ -211,9 +220,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     fun <T> isNotNull(field: MetaField<T>): Condition {
         return IsNotNullCondition(field)
     }
@@ -225,15 +235,16 @@ object Filter {
      *
      * Usage is the same as in SQL:
      * ```kotlin
-     * USER_ID in listOf(42)
+     * USER_ID in listOf(1,2,3,4,5)
      * ```
-     * means `meta_user_id = ANY (42)`
+     * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.`in`(values: Collection<T>): Condition {
         return InCondition(this, values)
     }
@@ -263,8 +274,8 @@ object Filter {
      *
      * FIELD_1 and FIELD_2 are just a meta-fields, declared something like this
      * ```
-     * val FIELD_1 = DoubleField("field_1")
-     * val FIELD_2 = LongField("field_2")
+     * val FIELD_1 = MetaField.ofDouble("field_1")
+     * val FIELD_2 = MetaField.ofLong("field_2")
      * ```
      *
      * Pattern format rules are the same as in [java.text.MessageFormat].
@@ -272,6 +283,7 @@ object Filter {
      * Use it with caution, because it's not type-safe.
      * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
      */
+    @JvmStatic
     fun nativeSql(sqlPattern: String, vararg fields: MetaField<*>): Condition {
         return NativeSqlCondition(sqlPattern, fields)
     }
