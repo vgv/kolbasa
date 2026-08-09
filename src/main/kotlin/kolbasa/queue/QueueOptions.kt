@@ -157,7 +157,9 @@ data class QueueOptions(
         fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
             apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
+        @JvmOverloads
         fun enableDlq(dlqOptions: DlqOptions = DlqOptions.DEFAULT) = apply { this.dlqOptions = dlqOptions }
+        @JvmOverloads
         fun enableArchiveQueue(archiveQueueOptions: ArchiveQueueOptions = ArchiveQueueOptions.DEFAULT) =
             apply { this.archiveQueueOptions = archiveQueueOptions }
 
