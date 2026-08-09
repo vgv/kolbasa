@@ -4,7 +4,7 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class InCondition<T>(
+internal class OneOfCondition<T>(
     private val field: MetaField<T>,
     private val values: Collection<T>
 ) : Condition() {

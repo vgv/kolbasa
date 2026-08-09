@@ -5,7 +5,7 @@ import kolbasa.queue.meta.MetaField
 object Filter {
 
     /**
-     * PostgreSQL normal equality operator.
+     * PostgreSQL equality (`=`) operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -26,7 +26,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL normal 'not equal' operator.
+     * PostgreSQL `not equal (<>)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -47,7 +47,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'greater than' operator.
+     * PostgreSQL `greater than (>)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -68,7 +68,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'greater than or equal to' operator.
+     * PostgreSQL `greater than or equal to (>=)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -89,7 +89,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'less than' operator.
+     * PostgreSQL `less than (<)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -110,7 +110,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'less than or equal to' operator.
+     * PostgreSQL `less than or equal to (<=)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -131,7 +131,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'between' operator.
+     * PostgreSQL `between` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -154,7 +154,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL classic like operator.
+     * PostgreSQL `like` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -189,7 +189,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'is null' operator.
+     * PostgreSQL `is null` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -210,7 +210,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'is not null' operator.
+     * PostgreSQL `is not null` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -231,6 +231,25 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
+     * PostgreSQL `ANY` operator.
+     *
+     * Usage is the same as in SQL:
+     * ```kotlin
+     * USER_ID oneOf listOf(1,2,3,4,5)
+     * ```
+     * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```
+     * val USER_ID = MetaField.ofInt("user_id")
+     * ```
+     */
+    @JvmStatic
+    infix fun <T> MetaField<T>.oneOf(values: Collection<T>): Condition {
+        return OneOfCondition(this, values)
+    }
+
+    /**
      * PostgreSQL in operator.
      *
      * Usage is the same as in SQL:
@@ -245,8 +264,9 @@ object Filter {
      * ```
      */
     @JvmStatic
+    @Deprecated("Use oneOf() instead", ReplaceWith("oneOf(values)"))
     infix fun <T> MetaField<T>.`in`(values: Collection<T>): Condition {
-        return InCondition(this, values)
+        return oneOf(values)
     }
 
     // -------------------------------------------------------------------------------------------

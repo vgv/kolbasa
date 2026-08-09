@@ -6,7 +6,6 @@ import kolbasa.consumer.filter.Filter.like
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greater
 import kolbasa.consumer.filter.Filter.greaterEq
-import kolbasa.consumer.filter.Filter.`in`
 import kolbasa.consumer.filter.Filter.isNotNull
 import kolbasa.consumer.filter.Filter.less
 import kolbasa.consumer.filter.Filter.lessEq
@@ -15,6 +14,7 @@ import kolbasa.consumer.filter.Filter.or
 import kolbasa.consumer.filter.Filter.isNull
 import kolbasa.consumer.filter.Filter.nativeSql
 import kolbasa.consumer.filter.Filter.not
+import kolbasa.consumer.filter.Filter.oneOf
 import kolbasa.queue.meta.MetaField
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
@@ -87,8 +87,8 @@ internal class FilterTest {
     }
 
     @Test
-    fun testIn() {
-        assertInstanceOf<InCondition<*>>(STR_FIELD `in` listOf("local"))
+    fun testOneOf() {
+        assertInstanceOf<OneOfCondition<*>>(STR_FIELD oneOf listOf("local"))
     }
 
     @Test
