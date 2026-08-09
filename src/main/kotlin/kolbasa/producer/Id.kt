@@ -22,6 +22,7 @@ data class Id(
          *
          * String format: `localId/shard`
          */
+        @JvmStatic
         fun fromString(stringId: String): Id {
             // Optimized implementation without string allocations and 2.5x faster than naive implementation
             var index = stringId.length - 1
