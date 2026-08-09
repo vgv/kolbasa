@@ -2,6 +2,24 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.meta.MetaField
 
+/**
+ * Conditions for filtering messages by meta-fields.
+ *
+ * Kotlin callers get an infix DSL that reads like SQL:
+ * ```kotlin
+ * (USER_ID eq 42) and (CREATED_AT between t1 and t2)
+ * ```
+ *
+ * Java callers should static-import the members and use the flat forms to have clean, nice API
+ * ```java
+ * import static kolbasa.consumer.filter.Filter.*;
+ *
+ * var userCondition = eq(USER_ID, 42);
+ * var createdCondition = between(CREATED_AT, t1, t2);
+ *
+ * var complexCondition = or(userCondition, createdCondition);
+ * ```
+ */
 object Filter {
 
     /**
@@ -147,9 +165,53 @@ object Filter {
      * ```
      */
     @JvmStatic
+    @Deprecated("Use between(from) instead", ReplaceWith("between(from)"))
     infix fun <T> MetaField<T>.between(value: Pair<T, T>): Condition {
-        return BetweenCondition(this, value)
+        return BetweenCondition(this, value.first, value.second)
     }
+
+    /**
+     * PostgreSQL `between` operator.
+     *
+     * Usage is the same as in SQL:
+     * ```kotlin
+     * USER_ID between 10 and 20
+     * ```
+     * means `(meta_user_id between 10 and 20)`
+     *
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```
+     * val USER_ID = MetaField.ofInt("user_id")
+     * ```
+     */
+    @JvmSynthetic // to hide this method from Java users, they don't need this infix version
+    infix fun <T> MetaField<T>.between(from: T): BetweenBuilder<T> = BetweenBuilder(this, from)
+
+    /**
+     * PostgreSQL `between` operator.
+     *
+     * Note: This method is primarily for Java users. Kotlin callers should prefer the infix form, which reads much closer to
+     * SQL. Nothing wrong with calling this method from Kotlin, it's just a "nice DSL" vs "regular method call" matter.
+     *
+     * Usage is the same as in SQL:
+     *
+     * ```java
+     * between(USER_ID, 10, 20);
+     * ```
+     *
+     * means `(meta_user_id between 10 and 20)`
+     *
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```java
+     * static final MetaField<Integer> USER_ID = MetaField.ofInt("user_id");
+     * ```
+     */
+    @JvmStatic
+    fun <T> between(field: MetaField<T>, from: T, to: T): Condition = BetweenCondition(field, from, to)
 
     // -------------------------------------------------------------------------------------------
 
