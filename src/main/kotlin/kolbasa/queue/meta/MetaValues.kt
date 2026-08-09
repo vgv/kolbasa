@@ -71,9 +71,14 @@ data class MetaValues(val values: List<MetaValue<*>>) {
 
 
     companion object {
+
+        @JvmField
         val EMPTY = of(emptyList())
 
+        @JvmStatic
         fun of(values: List<MetaValue<*>>) = MetaValues(values)
+
+        @JvmStatic
         fun of(vararg values: MetaValue<*>) = of(values.toList())
     }
 }
