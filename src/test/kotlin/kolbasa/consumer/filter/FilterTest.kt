@@ -38,7 +38,7 @@ internal class FilterTest {
 
     @Test
     fun testGreaterEq() {
-        assertInstanceOf<GreaterThanOrEqCondition< *>>(STR_FIELD greaterEq "local")
+        assertInstanceOf<GreaterThanOrEqCondition<*>>(STR_FIELD greaterEq "local")
     }
 
     @Test
@@ -53,7 +53,7 @@ internal class FilterTest {
 
     @Test
     fun testBetween() {
-        assertInstanceOf<BetweenCondition<*>>(STR_FIELD between Pair("a", "b"))
+        assertInstanceOf<BetweenCondition<*>>(STR_FIELD between "a" and "b")
     }
 
     @Test

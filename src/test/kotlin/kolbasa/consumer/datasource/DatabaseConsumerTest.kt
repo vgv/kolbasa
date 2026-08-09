@@ -440,7 +440,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
             limit = items,
             receiveOptions = ReceiveOptions(
                 readMetadata = readMetadata,
-                filter = FIELD between Pair(start, end),
+                filter = FIELD between start and end,
                 order = FIELD.desc() // add order just to simplify testing
             )
         )

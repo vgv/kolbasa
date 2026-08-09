@@ -21,19 +21,19 @@ import java.time.ZoneOffset
  *
  * ## Supported Types
  *
- * | Factory Method   | Kotlin Type    | PostgreSQL Type        |
- * |------------------|----------------|------------------------|
- * | [byte]           | [Byte]         | `smallint`             |
- * | [short]          | [Short]        | `smallint`             |
- * | [int]            | [Int]          | `int`                  |
- * | [long]           | [Long]         | `bigint`               |
- * | [boolean]        | [Boolean]      | `boolean`              |
- * | [float]          | [Float]        | `real`                 |
- * | [double]         | [Double]       | `double precision`     |
- * | [string]         | [String]       | `varchar`              |
- * | [bigInteger]     | [BigInteger]   | `numeric`              |
- * | [bigDecimal]     | [BigDecimal]   | `numeric`              |
- * | [instant]        | [Instant]      | `timestamptz`          |
+ * | Factory Method     | Kotlin Type    | PostgreSQL Type        |
+ * |--------------------|----------------|------------------------|
+ * | [ofByte]           | [Byte]         | `smallint`             |
+ * | [ofShort]          | [Short]        | `smallint`             |
+ * | [ofInt]            | [Int]          | `int`                  |
+ * | [ofLong]           | [Long]         | `bigint`               |
+ * | [ofBoolean]        | [Boolean]      | `boolean`              |
+ * | [ofFloat]          | [Float]        | `real`                 |
+ * | [ofDouble]         | [Double]       | `double precision`     |
+ * | [ofString]         | [String]       | `varchar`              |
+ * | [ofBigInteger]     | [BigInteger]   | `numeric`              |
+ * | [ofBigDecimal]     | [BigDecimal]   | `numeric`              |
+ * | [ofInstant]        | [Instant]      | `timestamptz`          |
  *
  * ## Field Options
  *
@@ -156,7 +156,7 @@ sealed class MetaField<T>(
 
         /**
          * A meta-field holding a [Byte], stored as PostgreSQL `smallint` (PostgreSQL has no
-         * single-byte integer type, so `byte` and [short] share the same column type).
+         * single-byte integer type, so [ofByte] and [ofShort] share the same column type).
          *
          * @param name the field name, used as the base to generate a column name
          * @param option the field option controlling indexing and uniqueness behavior
@@ -167,11 +167,6 @@ sealed class MetaField<T>(
         fun ofByte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
             Checks.checkUserDefinedMetaFieldName(name)
             return ByteField(name, option)
-        }
-
-        @Deprecated("Use ofByte(name, option)", replaceWith = ReplaceWith("ofByte(name, option)"))
-        fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
-            return ofByte(name, option)
         }
 
         /**
@@ -188,11 +183,6 @@ sealed class MetaField<T>(
             return ShortField(name, option)
         }
 
-        @Deprecated("Use ofShort(name, option)", replaceWith = ReplaceWith("ofShort(name, option)"))
-        fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
-            return ofShort(name, option)
-        }
-
         /**
          * A meta-field holding an [Int], stored as PostgreSQL `int`.
          *
@@ -205,11 +195,6 @@ sealed class MetaField<T>(
         fun ofInt(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
             Checks.checkUserDefinedMetaFieldName(name)
             return IntField(name, option)
-        }
-
-        @Deprecated("Use ofInt(name, option)", replaceWith = ReplaceWith("ofInt(name, option)"))
-        fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
-            return ofInt(name, option)
         }
 
         /**
@@ -226,11 +211,6 @@ sealed class MetaField<T>(
             return LongField(name, option)
         }
 
-        @Deprecated("Use ofLong(name, option)", replaceWith = ReplaceWith("ofLong(name, option)"))
-        fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
-            return ofLong(name, option)
-        }
-
         /**
          * A meta-field holding a [Boolean], stored as PostgreSQL `boolean`.
          *
@@ -243,11 +223,6 @@ sealed class MetaField<T>(
         fun ofBoolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BooleanField(name, option)
-        }
-
-        @Deprecated("Use ofBoolean(name, option)", replaceWith = ReplaceWith("ofBoolean(name, option)"))
-        fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
-            return ofBoolean(name, option)
         }
 
         /**
@@ -264,11 +239,6 @@ sealed class MetaField<T>(
             return FloatField(name, option)
         }
 
-        @Deprecated("Use ofFloat(name, option)", replaceWith = ReplaceWith("ofFloat(name, option)"))
-        fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
-            return ofFloat(name, option)
-        }
-
         /**
          * A meta-field holding a [Double], stored as PostgreSQL `double precision`.
          *
@@ -281,11 +251,6 @@ sealed class MetaField<T>(
         fun ofDouble(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
             Checks.checkUserDefinedMetaFieldName(name)
             return DoubleField(name, option)
-        }
-
-        @Deprecated("Use ofDouble(name, option)", replaceWith = ReplaceWith("ofDouble(name, option)"))
-        fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
-            return ofDouble(name, option)
         }
 
         /**
@@ -305,14 +270,9 @@ sealed class MetaField<T>(
             return StringField(name, option)
         }
 
-        @Deprecated("Use ofString(name, option)", replaceWith = ReplaceWith("ofString(name, option)"))
-        fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
-            return ofString(name, option)
-        }
-
         /**
          * A meta-field holding a [BigInteger], stored as PostgreSQL `numeric` (arbitrary
-         * precision; `bigInteger` and [bigDecimal] share the same column type).
+         * precision; [ofBigInteger] and [ofBigDecimal] share the same column type).
          *
          * @param name the field name, used as the base to generate a column name
          * @param option the field option controlling indexing and uniqueness behavior
@@ -323,11 +283,6 @@ sealed class MetaField<T>(
         fun ofBigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigIntegerField(name, option)
-        }
-
-        @Deprecated("ofBigInteger(name, option)", replaceWith = ReplaceWith("ofBigInteger(name, option)"))
-        fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
-            return ofBigInteger(name, option)
         }
 
         /**
@@ -343,11 +298,6 @@ sealed class MetaField<T>(
         fun ofBigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigDecimalField(name, option)
-        }
-
-        @Deprecated("Use ofBigDecimal(name, option)", replaceWith = ReplaceWith("ofBigDecimal(name, option)"))
-        fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
-            return ofBigDecimal(name, option)
         }
 
         /**
@@ -381,11 +331,6 @@ sealed class MetaField<T>(
         fun ofInstant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
             Checks.checkUserDefinedMetaFieldName(name)
             return InstantField(name, option)
-        }
-
-        @Deprecated("Use ofInstant(name, option)", replaceWith = ReplaceWith("ofInstant(name, option)"))
-        fun instant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
-            return ofInstant(name, option)
         }
     }
 
