@@ -13,6 +13,7 @@
 
 # Local development
 /src/test/kotlin/local/
+/src/test/java/local/
 
 # OSX
 .DS_Store
