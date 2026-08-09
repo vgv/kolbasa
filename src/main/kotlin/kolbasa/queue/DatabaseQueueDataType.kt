@@ -45,16 +45,16 @@ object PredefinedDataTypes {
 
     private fun <T> identity(x: T): T = x
 
-    @JvmStatic
+    @JvmField
     val ByteArray = DatabaseQueueDataType.Binary(::identity, ::identity)
 
-    @JvmStatic
+    @JvmField
     val String = DatabaseQueueDataType.Text(::identity, ::identity)
 
-    @JvmStatic
+    @JvmField
     val Int = DatabaseQueueDataType.Int(::identity, ::identity)
 
-    @JvmStatic
+    @JvmField
     val Long = DatabaseQueueDataType.Long(::identity, ::identity)
 
 }
