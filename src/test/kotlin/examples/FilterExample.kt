@@ -11,8 +11,8 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 
-private val USER_ID = MetaField.int("user_id", FieldOption.SEARCH)
-private val PRIORITY = MetaField.int("priority", FieldOption.SEARCH)
+private val USER_ID = MetaField.ofInt("user_id", FieldOption.SEARCH)
+private val PRIORITY = MetaField.ofInt("priority", FieldOption.SEARCH)
 
 fun main() {
     // Define queue with name `test_queue`, varchar type as data storage and metadata

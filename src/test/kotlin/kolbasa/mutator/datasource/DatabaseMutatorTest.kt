@@ -27,7 +27,7 @@ import java.time.Duration
 
 class DatabaseMutatorTest : AbstractPostgresqlTest() {
 
-    private val FIELD = MetaField.int("field", FieldOption.SEARCH)
+    private val FIELD = MetaField.ofInt("field", FieldOption.SEARCH)
 
     private val queue = Queue.of(
         "local",

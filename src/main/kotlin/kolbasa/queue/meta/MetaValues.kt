@@ -106,7 +106,7 @@ data class MetaValues(val values: List<MetaValue<*>>) {
  *
  * ```kotlin
  * // Define a meta field
- * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
  *
  * // Create a value (binding) using the field's value() method
  * val priorityValue: MetaValue<Int> = priority.value(10)

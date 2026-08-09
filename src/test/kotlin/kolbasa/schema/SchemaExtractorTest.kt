@@ -23,14 +23,14 @@ internal class SchemaExtractorTest : AbstractPostgresqlTest() {
     private val cacheValue = 1000.toLong()
     private val incrementValue = 1.toLong()
 
-    private val STRING_FIELD = MetaField.string("string_value")
-    private val LONG_FIELD = MetaField.long("long_value", FieldOption.SEARCH)
-    private val INT_FIELD = MetaField.int("int_value", FieldOption.ALL_LIVE_UNIQUE)
-    private val SHORT_FIELD = MetaField.short("short_value", FieldOption.UNTOUCHED_UNIQUE)
-    private val BOOLEAN_FIELD = MetaField.boolean("boolean_value")
-    private val DOUBLE_FIELD = MetaField.double("double_value")
-    private val FLOAT_FIELD = MetaField.float("float_value")
-    private val BIGINTEGER_FIELD = MetaField.bigInteger("big_integer_value")
+    private val STRING_FIELD = MetaField.ofString("string_value")
+    private val LONG_FIELD = MetaField.ofLong("long_value", FieldOption.SEARCH)
+    private val INT_FIELD = MetaField.ofInt("int_value", FieldOption.ALL_LIVE_UNIQUE)
+    private val SHORT_FIELD = MetaField.ofShort("short_value", FieldOption.UNTOUCHED_UNIQUE)
+    private val BOOLEAN_FIELD = MetaField.ofBoolean("boolean_value")
+    private val DOUBLE_FIELD = MetaField.ofDouble("double_value")
+    private val FLOAT_FIELD = MetaField.ofFloat("float_value")
+    private val BIGINTEGER_FIELD = MetaField.ofBigInteger("big_integer_value")
 
     private val testQueue = Queue(
         queueName,

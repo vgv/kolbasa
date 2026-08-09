@@ -35,7 +35,7 @@ The ordering is evaluated on the database side, inside the same atomic claim tha
 client-side sorting and no separate "priority queue" type.
 
 ```kotlin
-val PRIORITY = MetaField.int("priority", FieldOption.SEARCH)   // indexed so we can order by it
+val PRIORITY = MetaField.ofInt("priority", FieldOption.SEARCH)   // indexed so we can order by it
 
 val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(PRIORITY /*, … */))
 
@@ -116,7 +116,7 @@ reference **meta-fields** — it can't see system columns like `created_at` — 
 deadline *as a meta-field*. Add an indexed `instant` field and have the producer stamp it:
 
 ```kotlin
-val EXPIRES_AT = MetaField.instant("expires_at", FieldOption.SEARCH)
+val EXPIRES_AT = MetaField.ofInstant("expires_at", FieldOption.SEARCH)
 
 val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(EXPIRES_AT /*, … */))
 

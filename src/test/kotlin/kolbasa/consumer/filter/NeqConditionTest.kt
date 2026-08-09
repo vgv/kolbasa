@@ -39,6 +39,6 @@ internal class NeqConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
+        private val INT_VALUE = MetaField.ofInt("int_value", FieldOption.SEARCH)
     }
 }

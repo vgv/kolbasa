@@ -140,17 +140,17 @@ internal class MoveOneTableTest : AbstractPostgresqlTest() {
     }
 
     companion object {
-        internal val STRING_FIELD = MetaField.string("string_field")
-        internal val LONG_FIELD = MetaField.long("long_field")
-        internal val INT_FIELD = MetaField.int("int_field")
-        internal val SHORT_FIELD = MetaField.short("short_field")
-        internal val BYTE_FIELD = MetaField.byte("byte_field")
-        internal val BOOLEAN_FIELD = MetaField.boolean("boolean_field")
-        internal val DOUBLE_FIELD = MetaField.double("double_field")
-        internal val FLOAT_FIELD = MetaField.float("float_field")
-        internal val BI_FIELD = MetaField.bigInteger("big_integer_field")
-        internal val BD_FIELD = MetaField.bigDecimal("big_decimal_field")
-        internal val INSTANT_FIELD = MetaField.instant("instant_field")
+        internal val STRING_FIELD = MetaField.ofString("string_field")
+        internal val LONG_FIELD = MetaField.ofLong("long_field")
+        internal val INT_FIELD = MetaField.ofInt("int_field")
+        internal val SHORT_FIELD = MetaField.ofShort("short_field")
+        internal val BYTE_FIELD = MetaField.ofByte("byte_field")
+        internal val BOOLEAN_FIELD = MetaField.ofBoolean("boolean_field")
+        internal val DOUBLE_FIELD = MetaField.ofDouble("double_field")
+        internal val FLOAT_FIELD = MetaField.ofFloat("float_field")
+        internal val BI_FIELD = MetaField.ofBigInteger("big_integer_field")
+        internal val BD_FIELD = MetaField.ofBigDecimal("big_decimal_field")
+        internal val INSTANT_FIELD = MetaField.ofInstant("instant_field")
 
         internal data class Value(val value: Int)
 

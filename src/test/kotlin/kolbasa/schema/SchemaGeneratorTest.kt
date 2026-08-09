@@ -10,9 +10,9 @@ import org.junit.jupiter.api.assertNotNull
 
 class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
-    private val FIRST = MetaField.int("first", FieldOption.SEARCH)
-    private val SECOND = MetaField.long("second", FieldOption.ALL_LIVE_UNIQUE)
-    private val THIRD = MetaField.string("third")
+    private val FIRST = MetaField.ofInt("first", FieldOption.SEARCH)
+    private val SECOND = MetaField.ofLong("second", FieldOption.ALL_LIVE_UNIQUE)
+    private val THIRD = MetaField.ofString("third")
 
     private val queue = Queue.of(
         "test_queue",

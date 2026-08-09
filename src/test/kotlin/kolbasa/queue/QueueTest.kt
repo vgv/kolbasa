@@ -10,8 +10,8 @@ import java.time.Duration
 
 class QueueTest {
 
-    private val USER_ID = MetaField.int("user_id")
-    private val NAME = MetaField.string("name")
+    private val USER_ID = MetaField.ofInt("user_id")
+    private val NAME = MetaField.ofString("name")
 
     @Test
     fun testBuilders_WithoutMetadata_WithoutOptions() {

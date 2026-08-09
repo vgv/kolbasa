@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test
 
 class OrderTest {
 
-    private val STRING_FIELD = MetaField.string("string_value")
-    private val INT_FIELD = MetaField.int("int_value")
+    private val STRING_FIELD = MetaField.ofString("string_value")
+    private val INT_FIELD = MetaField.ofInt("int_value")
 
     @Test
     fun testThenInfixMethod() {

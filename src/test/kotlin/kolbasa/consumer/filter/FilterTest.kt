@@ -97,4 +97,4 @@ internal class FilterTest {
     }
 }
 
-private val STR_FIELD = MetaField.string("str_value")
+private val STR_FIELD = MetaField.ofString("str_value")
