@@ -34,6 +34,7 @@ data class DistinctValuesOptions(
     companion object {
 
         /** Default options: automatic sampling, no filter. */
+        @JvmField
         val DEFAULT = DistinctValuesOptions()
 
         /** @see CountOptions.YOU_KNOW_BETTER */

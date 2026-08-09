@@ -134,6 +134,7 @@ data class ReceiveOptions @JvmOverloads constructor(
 
     companion object {
 
+        @JvmField
         val DEFAULT = ReceiveOptions()
 
         @JvmStatic

@@ -27,6 +27,7 @@ data class CountOptions(
     companion object {
 
         /** Default options: automatic sampling, no filter. */
+        @JvmField
         val DEFAULT = CountOptions()
 
         /**

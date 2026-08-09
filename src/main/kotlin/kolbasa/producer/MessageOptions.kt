@@ -116,6 +116,8 @@ data class MessageOptions(
     }
 
     companion object {
+
+        @JvmField
         val DEFAULT = MessageOptions()
 
         @JvmStatic
