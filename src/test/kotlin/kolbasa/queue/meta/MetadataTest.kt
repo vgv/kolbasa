@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 
 class MetadataTest {
 
-    private val USER_ID = MetaField.int("user_id")
+    private val USER_ID = MetaField.ofInt("user_id")
 
     @Test
     fun testDlqFieldsCount() {

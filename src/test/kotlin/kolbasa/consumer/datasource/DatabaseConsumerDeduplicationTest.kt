@@ -22,8 +22,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 
-private val ALL_LIVE_FIELD = MetaField.int("all_live_unique_field", FieldOption.ALL_LIVE_UNIQUE)
-private val UNTOUCHED_FIELD = MetaField.int("untouched_unique_field", FieldOption.UNTOUCHED_UNIQUE)
+private val ALL_LIVE_FIELD = MetaField.ofInt("all_live_unique_field", FieldOption.ALL_LIVE_UNIQUE)
+private val UNTOUCHED_FIELD = MetaField.ofInt("untouched_unique_field", FieldOption.UNTOUCHED_UNIQUE)
 
 class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
 

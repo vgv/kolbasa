@@ -3,28 +3,29 @@ package kolbasa.consumer.order
 import kolbasa.queue.meta.MetaField
 
 /**
- * Represents an ordering specification for consuming messages from a queue.
+ * A complete `order by` specification for a `receive()` call.
  *
- * Order combines a [MetaField] with a [SortOrder] to define how messages should be
- * sorted when retrieved. Multiple orders can be combined to create complex sorting rules.
+ * An Order holds one or more sort clauses, applied left to right, exactly like the columns
+ * of a SQL `order by`. Build one with the factory methods below and combine with [then].
  *
- * ## Creating Orders
- *
- * The recommended way to create orders is using the extension methods on [MetaField]:
+ * ## Creating orders
  *
  * ```kotlin
- * import kolbasa.consumer.order.Order.Companion.asc
- * import kolbasa.consumer.order.Order.Companion.desc
- * import kolbasa.consumer.order.Order.Companion.then
- *
- * // Single field ordering
+ * // Single field
  * val byPriority = PRIORITY.desc()
  *
- * // Multiple field ordering using 'then' infix function
- * val complexOrder = PRIORITY.desc() then CREATED_AT.asc() then USER_ID.ascNullsLast()
+ * // Multiple fields
+ * val complex = PRIORITY.desc() then CREATED_AT.asc() then USER_ID.ascNullsLast()
  * ```
  *
- * ## Available Extension Methods
+ * From Java:
+ * ```java
+ * var byPriority = Order.desc(PRIORITY);
+ * var complex = Order.desc(PRIORITY).then(Order.asc(CREATED_AT));
+ * var same    = Order.by(Order.desc(PRIORITY), Order.asc(CREATED_AT));
+ * ```
+ *
+ * ## Available factories
  *
  * | Method              | Sort Direction | Nulls Handling    |
  * |---------------------|----------------|-------------------|
@@ -45,33 +46,79 @@ import kolbasa.queue.meta.MetaField
  * val messages = consumer.receive(queue, 10, options)
  * ```
  *
- * @property field the metadata field to sort by
- * @property order the sort direction
- *
  * @see SortOrder
  * @see kolbasa.consumer.ReceiveOptions
  * @see MetaField
  */
-data class Order internal constructor(val field: MetaField<*>, val order: SortOrder) {
+data class Order internal constructor(internal val clauses: List<OrderClause>) {
 
-    // SQL 'order by' clause (column name + sort), like 'meta_column asc'
-    internal val dbOrderClause = "${field.dbColumnName} ${order.sql}"
+    /**
+     * Appends [next] after this ordering.
+     *
+     * The same semantics as a second column in SQL `order by`: [next] only breaks ties
+     * left unresolved by this ordering.
+     *
+     * ```kotlin
+     * ReceiveOptions(
+     *    order = USER_ID.asc() then SALE_ID.ascNullsFirst() then PRIORITY.desc()
+     * )
+     * ```
+     */
+    infix fun then(next: Order): Order {
+        return Order(this.clauses + next.clauses)
+    }
 
     companion object {
 
         /**
-         * Helper DSL method to concatenate several [orders][Order] instead of direct
-         * list manipulation.
+         * An ordering with no clauses, and the default value of
+         * [ReceiveOptions.order][kolbasa.consumer.ReceiveOptions.order].
          *
-         * Example:
+         * This does **not** mean messages arrive in an arbitrary order. Kolbasa always appends its
+         * own `scheduled_at` clause to every receive query, after any custom clauses. NONE
+         * ordering therefore means "no custom ordering on top of the queue's natural order", which
+         * is exactly what a `receive()` call does when you don't ask for anything else.
+         *
+         * Its main purpose is to be a neutral starting value when an ordering is assembled
+         * conditionally. [then] on NONE returns the other ordering unchanged, so there are no null
+         * checks and no special case for "nothing selected yet":
+         *
          * ```kotlin
-         * ReceiveOptions(
-         *    order = USER_ID.asc() then SALE_ID.ascNullsFirst() then PRIORITY.desc()
-         * )
+         * var order = Order.NONE
+         * if (sortByPriority) order = order then PRIORITY.desc()
+         * if (sortByAge)      order = order then CREATED_AT.asc()
+         *
+         * val messages = consumer.receive(queue, 10, ReceiveOptions(order = order))
          * ```
+         *
+         * The same from Java, where NONE is a plain static field:
+         *
+         *     var order = Order.NONE;
+         *     if (sortByPriority) order = order.then(Order.desc(PRIORITY));
+         *     if (sortByAge)      order = order.then(Order.asc(CREATED_AT));
+         *
+         *     var messages = consumer.receive(queue, 10, ReceiveOptions.builder().order(order).build());
+         *
+         * @see then
+         * @see by
          */
-        infix fun List<Order>.then(next: List<Order>): List<Order> {
-            return this + next
+        @JvmField
+        val NONE: Order = Order(emptyList())
+
+        /**
+         * Creates an [Order] from a [MetaField] and [SortOrder].
+         *
+         * This is a low-level factory method. For more idiomatic usage, prefer the extension
+         * methods like [asc], [desc], [ascNullsFirst], etc.
+         *
+         * @param field the metadata field to sort by
+         * @param order the sort direction and null handling
+         * @return an Order instance
+         */
+        @JvmStatic
+        fun by(field: MetaField<*>, order: SortOrder): Order {
+            val clause = OrderClause(field, order)
+            return Order(listOf(clause))
         }
 
         /**
@@ -84,8 +131,40 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          * @param order the sort direction and null handling
          * @return an Order instance
          */
+        @JvmStatic
+        @Deprecated("Use by(field, order)", ReplaceWith("by(field, order)"))
         fun of(field: MetaField<*>, order: SortOrder): Order {
-            return Order(field, order)
+            return by(field, order)
+        }
+
+        /**
+         * Combines several orderings into one, applied left to right.
+         *
+         * Equivalent to chaining [then], and the natural form when the ordering is built
+         * dynamically or from Java:
+         *
+         * ```java
+         * var byPriority = Order.desc(PRIORITY);
+         * var byCreated = Order.asc(CREATED_AT);
+         * var byAccountId = Order.ascNullsFirst(ACCOUNT_ID);
+
+         * var order = Order.by(byPriority, byCreated, byAccountId);
+         * ```
+         *
+         * An empty argument list produces an empty ordering, which leaves the default
+         * queue ordering untouched.
+         */
+        @JvmStatic
+        fun by(vararg orders: Order): Order {
+            return Order(orders.flatMap { it.clauses })
+        }
+
+        /**
+         * Same as [by], for an ordering already collected into a list or set.
+         */
+        @JvmStatic
+        fun by(orders: Collection<Order>): Order {
+            return Order(orders.flatMap { it.clauses })
         }
 
         /**
@@ -101,8 +180,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          * @see ascNullsFirst
          * @see ascNullsLast
          */
-        fun MetaField<*>.asc(): List<Order> {
-            return listOf(of(this, SortOrder.ASC))
+        @JvmStatic
+        fun MetaField<*>.asc(): Order {
+            return by(this, SortOrder.ASC)
         }
 
         /**
@@ -118,8 +198,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          * @see descNullsFirst
          * @see descNullsLast
          */
-        fun MetaField<*>.desc(): List<Order> {
-            return listOf(of(this, SortOrder.DESC))
+        @JvmStatic
+        fun MetaField<*>.desc(): Order {
+            return by(this, SortOrder.DESC)
         }
 
         /**
@@ -131,8 +212,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          *
          * @return a list containing a single ascending Order with nulls first
          */
-        fun MetaField<*>.ascNullsFirst(): List<Order> {
-            return listOf(of(this, SortOrder.ASC_NULLS_FIRST))
+        @JvmStatic
+        fun MetaField<*>.ascNullsFirst(): Order {
+            return by(this, SortOrder.ASC_NULLS_FIRST)
         }
 
         /**
@@ -144,8 +226,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          *
          * @return a list containing a single descending Order with nulls first
          */
-        fun MetaField<*>.descNullsFirst(): List<Order> {
-            return listOf(of(this, SortOrder.DESC_NULLS_FIRST))
+        @JvmStatic
+        fun MetaField<*>.descNullsFirst(): Order {
+            return by(this, SortOrder.DESC_NULLS_FIRST)
         }
 
         /**
@@ -157,8 +240,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          *
          * @return a list containing a single ascending Order with nulls last
          */
-        fun MetaField<*>.ascNullsLast(): List<Order> {
-            return listOf(of(this, SortOrder.ASC_NULLS_LAST))
+        @JvmStatic
+        fun MetaField<*>.ascNullsLast(): Order {
+            return by(this, SortOrder.ASC_NULLS_LAST)
         }
 
         /**
@@ -170,8 +254,9 @@ data class Order internal constructor(val field: MetaField<*>, val order: SortOr
          *
          * @return a list containing a single descending Order with nulls last
          */
-        fun MetaField<*>.descNullsLast(): List<Order> {
-            return listOf(of(this, SortOrder.DESC_NULLS_LAST))
+        @JvmStatic
+        fun MetaField<*>.descNullsLast(): Order {
+            return by(this, SortOrder.DESC_NULLS_LAST)
         }
     }
 }

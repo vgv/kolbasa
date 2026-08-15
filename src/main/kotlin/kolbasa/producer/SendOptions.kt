@@ -171,6 +171,8 @@ data class SendOptions(
     }
 
     companion object {
+
+        @JvmField
         val DEFAULT = SendOptions()
 
         @JvmStatic

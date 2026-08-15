@@ -20,7 +20,7 @@ import java.time.Duration
 
 class SweepHelperDlqTest : AbstractPostgresqlTest() {
 
-    private val USER_ID = MetaField.int("user_id")
+    private val USER_ID = MetaField.ofInt("user_id")
 
     private val queue = Queue(
         name = "dlq_test",

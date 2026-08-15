@@ -2,10 +2,28 @@ package kolbasa.consumer.filter
 
 import kolbasa.queue.meta.MetaField
 
+/**
+ * Conditions for filtering messages by meta-fields.
+ *
+ * Kotlin callers get an infix DSL that reads like SQL:
+ * ```kotlin
+ * (USER_ID eq 42) and (CREATED_AT between t1 and t2)
+ * ```
+ *
+ * Java callers should static-import the members and use the flat forms to have clean, nice API
+ * ```java
+ * import static kolbasa.consumer.filter.Filter.*;
+ *
+ * var userCondition = eq(USER_ID, 42);
+ * var createdCondition = between(CREATED_AT, t1, t2);
+ *
+ * var complexCondition = or(userCondition, createdCondition);
+ * ```
+ */
 object Filter {
 
     /**
-     * PostgreSQL normal equality operator.
+     * PostgreSQL equality (`=`) operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -15,9 +33,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.eq(value: T): Condition {
         return EqCondition(this, value)
     }
@@ -25,7 +44,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL normal 'not equal' operator.
+     * PostgreSQL `not equal (<>)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -35,9 +54,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.neq(value: T): Condition {
         return NeqCondition(this, value)
     }
@@ -45,7 +65,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'greater than' operator.
+     * PostgreSQL `greater than (>)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -55,9 +75,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.greater(value: T): Condition {
         return GreaterThanCondition(this, value)
     }
@@ -65,7 +86,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'greater than or equal to' operator.
+     * PostgreSQL `greater than or equal to (>=)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -75,9 +96,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.greaterEq(value: T): Condition {
         return GreaterThanOrEqCondition(this, value)
     }
@@ -85,7 +107,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'less than' operator.
+     * PostgreSQL `less than (<)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -95,9 +117,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.less(value: T): Condition {
         return LessThanCondition(this, value)
     }
@@ -105,7 +128,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'less than or equal to' operator.
+     * PostgreSQL `less than or equal to (<=)` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -115,9 +138,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     infix fun <T> MetaField<T>.lessEq(value: T): Condition {
         return LessThanOrEqCondition(this, value)
     }
@@ -125,7 +149,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'between' operator.
+     * PostgreSQL `between` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -137,17 +161,62 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
+    @Deprecated("Use between(from) instead", ReplaceWith("between(from)"))
     infix fun <T> MetaField<T>.between(value: Pair<T, T>): Condition {
-        return BetweenCondition(this, value)
+        return BetweenCondition(this, value.first, value.second)
     }
+
+    /**
+     * PostgreSQL `between` operator.
+     *
+     * Usage is the same as in SQL:
+     * ```kotlin
+     * USER_ID between 10 and 20
+     * ```
+     * means `(meta_user_id between 10 and 20)`
+     *
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```
+     * val USER_ID = MetaField.ofInt("user_id")
+     * ```
+     */
+    @JvmSynthetic // to hide this method from Java users, they don't need this infix version
+    infix fun <T> MetaField<T>.between(from: T): BetweenBuilder<T> = BetweenBuilder(this, from)
+
+    /**
+     * PostgreSQL `between` operator.
+     *
+     * Note: This method is primarily for Java users. Kotlin callers should prefer the infix form, which reads much closer to
+     * SQL. Nothing wrong with calling this method from Kotlin, it's just a "nice DSL" vs "regular method call" matter.
+     *
+     * Usage is the same as in SQL:
+     *
+     * ```java
+     * between(USER_ID, 10, 20);
+     * ```
+     *
+     * means `(meta_user_id between 10 and 20)`
+     *
+     * Both values are inclusive, the same as `between` in SQL.
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```java
+     * static final MetaField<Integer> USER_ID = MetaField.ofInt("user_id");
+     * ```
+     */
+    @JvmStatic
+    fun <T> between(field: MetaField<T>, from: T, to: T): Condition = BetweenCondition(field, from, to)
 
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL classic like operator.
+     * PostgreSQL `like` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -157,9 +226,10 @@ object Filter {
      *
      * USER_NAME is just a meta-field, declared something like this
      * ```
-     * val USER_NAME = StringField("user_name")
+     * val USER_NAME = MetaField.ofString("user_name")
      * ```
      */
+    @JvmStatic
     infix fun MetaField<String>.like(value: String): Condition {
         return LikeCondition(this, value)
     }
@@ -181,7 +251,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'is null' operator.
+     * PostgreSQL `is null` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -191,9 +261,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     fun <T> isNull(field: MetaField<T>): Condition {
         return IsNullCondition(field)
     }
@@ -201,7 +272,7 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * PostgreSQL 'is not null' operator.
+     * PostgreSQL `is not null` operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
@@ -211,9 +282,10 @@ object Filter {
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
     fun <T> isNotNull(field: MetaField<T>): Condition {
         return IsNotNullCondition(field)
     }
@@ -221,21 +293,42 @@ object Filter {
     // -------------------------------------------------------------------------------------------
 
     /**
+     * PostgreSQL `ANY` operator.
+     *
+     * Usage is the same as in SQL:
+     * ```kotlin
+     * USER_ID oneOf listOf(1,2,3,4,5)
+     * ```
+     * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
+     *
+     * USER_ID is just a meta-field, declared something like this
+     * ```
+     * val USER_ID = MetaField.ofInt("user_id")
+     * ```
+     */
+    @JvmStatic
+    infix fun <T> MetaField<T>.oneOf(values: Collection<T>): Condition {
+        return OneOfCondition(this, values)
+    }
+
+    /**
      * PostgreSQL in operator.
      *
      * Usage is the same as in SQL:
      * ```kotlin
-     * USER_ID in listOf(42)
+     * USER_ID in listOf(1,2,3,4,5)
      * ```
-     * means `meta_user_id = ANY (42)`
+     * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
      *
      * USER_ID is just a meta-field, declared something like this
      * ```
-     * val USER_ID = IntField("user_id")
+     * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
+    @JvmStatic
+    @Deprecated("Use oneOf() instead", ReplaceWith("oneOf(values)"))
     infix fun <T> MetaField<T>.`in`(values: Collection<T>): Condition {
-        return InCondition(this, values)
+        return oneOf(values)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -263,8 +356,8 @@ object Filter {
      *
      * FIELD_1 and FIELD_2 are just a meta-fields, declared something like this
      * ```
-     * val FIELD_1 = DoubleField("field_1")
-     * val FIELD_2 = LongField("field_2")
+     * val FIELD_1 = MetaField.ofDouble("field_1")
+     * val FIELD_2 = MetaField.ofLong("field_2")
      * ```
      *
      * Pattern format rules are the same as in [java.text.MessageFormat].
@@ -272,6 +365,7 @@ object Filter {
      * Use it with caution, because it's not type-safe.
      * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.
      */
+    @JvmStatic
     fun nativeSql(sqlPattern: String, vararg fields: MetaField<*>): Condition {
         return NativeSqlCondition(sqlPattern, fields)
     }

@@ -105,9 +105,9 @@ payload** (which can be expensive).
 You declare meta-fields when defining the queue. This is the full `orders` queue we'll use for the rest of the document:
 
 ```kotlin
-val MERCHANT_ID = MetaField.long("merchant_id", FieldOption.SEARCH)
-val PRIORITY    = MetaField.int("priority", FieldOption.SEARCH)
-val DEDUP_KEY   = MetaField.string("dedup_key", FieldOption.UNTOUCHED_UNIQUE)
+val MERCHANT_ID = MetaField.ofLong("merchant_id", FieldOption.SEARCH)
+val PRIORITY    = MetaField.ofInt("priority", FieldOption.SEARCH)
+val DEDUP_KEY   = MetaField.ofString("dedup_key", FieldOption.UNTOUCHED_UNIQUE)
 
 val orders = Queue.of(
     "orders",
@@ -690,9 +690,9 @@ val queue = Queue(
     name = "orders",
     databaseDataType = PredefinedDataTypes.ByteArray, // bytea payload
     metadata = Metadata.of(
-        MetaField.long("merchant_id", FieldOption.SEARCH),
-        MetaField.int("priority", FieldOption.SEARCH),
-        MetaField.string("dedup_key", FieldOption.UNTOUCHED_UNIQUE)
+        MetaField.ofLong("merchant_id", FieldOption.SEARCH),
+        MetaField.ofInt("priority", FieldOption.SEARCH),
+        MetaField.ofString("dedup_key", FieldOption.UNTOUCHED_UNIQUE)
     ),
     options = QueueOptions(
         sqlPutFunction = true // with the builder: QueueOptions.builder().enableSqlPutFunction().build()

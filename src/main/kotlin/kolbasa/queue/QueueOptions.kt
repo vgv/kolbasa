@@ -157,7 +157,9 @@ data class QueueOptions(
         fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
             apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
+        @JvmOverloads
         fun enableDlq(dlqOptions: DlqOptions = DlqOptions.DEFAULT) = apply { this.dlqOptions = dlqOptions }
+        @JvmOverloads
         fun enableArchiveQueue(archiveQueueOptions: ArchiveQueueOptions = ArchiveQueueOptions.DEFAULT) =
             apply { this.archiveQueueOptions = archiveQueueOptions }
 
@@ -173,6 +175,7 @@ data class QueueOptions(
         private const val DEFAULT_ATTEMPTS = 5
         private val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
 
+        @JvmField
         val DEFAULT = QueueOptions()
 
         @JvmStatic

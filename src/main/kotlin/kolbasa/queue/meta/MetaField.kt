@@ -47,9 +47,9 @@ import java.time.ZoneOffset
  *
  * ```kotlin
  * // Define meta fields
- * val accountId = MetaField.long("account_id", FieldOption.SEARCH)
- * val priority = MetaField.int("priority", FieldOption.SEARCH)
- * val deduplicationKey = MetaField.string("deduplication_key", FieldOption.ALL_LIVE_UNIQUE)
+ * val accountId = MetaField.ofLong("account_id", FieldOption.SEARCH)
+ * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
+ * val deduplicationKey = MetaField.ofString("deduplication_key", FieldOption.ALL_LIVE_UNIQUE)
  *
  * // Create queue with meta fields
  * val queue = Queue.of(
@@ -162,9 +162,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `smallint` column
          */
-        fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofByte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
             Checks.checkUserDefinedMetaFieldName(name)
             return ByteField(name, option)
+        }
+
+        @Deprecated("Use ofByte(name, option)", replaceWith = ReplaceWith("ofByte(name, option)"))
+        fun byte(name: String, option: FieldOption = FieldOption.NONE): MetaField<Byte> {
+            return ofByte(name, option)
         }
 
         /**
@@ -174,9 +181,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `smallint` column
          */
-        fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofShort(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
             Checks.checkUserDefinedMetaFieldName(name)
             return ShortField(name, option)
+        }
+
+        @Deprecated("Use ofShort(name, option)", replaceWith = ReplaceWith("ofShort(name, option)"))
+        fun short(name: String, option: FieldOption = FieldOption.NONE): MetaField<Short> {
+            return ofShort(name, option)
         }
 
         /**
@@ -186,9 +200,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by an `int` column
          */
-        fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofInt(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
             Checks.checkUserDefinedMetaFieldName(name)
             return IntField(name, option)
+        }
+
+        @Deprecated("Use ofInt(name, option)", replaceWith = ReplaceWith("ofInt(name, option)"))
+        fun int(name: String, option: FieldOption = FieldOption.NONE): MetaField<Int> {
+            return ofInt(name, option)
         }
 
         /**
@@ -198,9 +219,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `bigint` column
          */
-        fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofLong(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
             Checks.checkUserDefinedMetaFieldName(name)
             return LongField(name, option)
+        }
+
+        @Deprecated("Use ofLong(name, option)", replaceWith = ReplaceWith("ofLong(name, option)"))
+        fun long(name: String, option: FieldOption = FieldOption.NONE): MetaField<Long> {
+            return ofLong(name, option)
         }
 
         /**
@@ -210,9 +238,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `boolean` column
          */
-        fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofBoolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BooleanField(name, option)
+        }
+
+        @Deprecated("Use ofBoolean(name, option)", replaceWith = ReplaceWith("ofBoolean(name, option)"))
+        fun boolean(name: String, option: FieldOption = FieldOption.NONE): MetaField<Boolean> {
+            return ofBoolean(name, option)
         }
 
         /**
@@ -222,9 +257,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `real` column
          */
-        fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofFloat(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
             Checks.checkUserDefinedMetaFieldName(name)
             return FloatField(name, option)
+        }
+
+        @Deprecated("Use ofFloat(name, option)", replaceWith = ReplaceWith("ofFloat(name, option)"))
+        fun float(name: String, option: FieldOption = FieldOption.NONE): MetaField<Float> {
+            return ofFloat(name, option)
         }
 
         /**
@@ -234,9 +276,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `double precision` column
          */
-        fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofDouble(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
             Checks.checkUserDefinedMetaFieldName(name)
             return DoubleField(name, option)
+        }
+
+        @Deprecated("Use ofDouble(name, option)", replaceWith = ReplaceWith("ofDouble(name, option)"))
+        fun double(name: String, option: FieldOption = FieldOption.NONE): MetaField<Double> {
+            return ofDouble(name, option)
         }
 
         /**
@@ -249,9 +298,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `varchar` column
          */
-        fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofString(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
             Checks.checkUserDefinedMetaFieldName(name)
             return StringField(name, option)
+        }
+
+        @Deprecated("Use ofString(name, option)", replaceWith = ReplaceWith("ofString(name, option)"))
+        fun string(name: String, option: FieldOption = FieldOption.NONE): MetaField<String> {
+            return ofString(name, option)
         }
 
         /**
@@ -262,9 +318,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `numeric` column
          */
-        fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofBigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigIntegerField(name, option)
+        }
+
+        @Deprecated("ofBigInteger(name, option)", replaceWith = ReplaceWith("ofBigInteger(name, option)"))
+        fun bigInteger(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigInteger> {
+            return ofBigInteger(name, option)
         }
 
         /**
@@ -275,9 +338,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `numeric` column
          */
-        fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofBigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
             Checks.checkUserDefinedMetaFieldName(name)
             return BigDecimalField(name, option)
+        }
+
+        @Deprecated("Use ofBigDecimal(name, option)", replaceWith = ReplaceWith("ofBigDecimal(name, option)"))
+        fun bigDecimal(name: String, option: FieldOption = FieldOption.NONE): MetaField<BigDecimal> {
+            return ofBigDecimal(name, option)
         }
 
         /**
@@ -293,7 +363,7 @@ sealed class MetaField<T>(
          * will fail at the driver/database boundary — these are not validated client-side.
          *
          * ```kotlin
-         * val EVENT_TIME = MetaField.instant("event_time", FieldOption.SEARCH)
+         * val EVENT_TIME = MetaField.ofInstant("event_time", FieldOption.SEARCH)
          *
          * producer.send(queue,
          *     SendMessage("payload", meta = MetaValues.of(EVENT_TIME.value(Instant.now()))))
@@ -306,9 +376,16 @@ sealed class MetaField<T>(
          * @param option the field option controlling indexing and uniqueness behavior
          * @return a [MetaField] backed by a `timestamptz` column
          */
-        fun instant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
+        @JvmStatic
+        @JvmOverloads
+        fun ofInstant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
             Checks.checkUserDefinedMetaFieldName(name)
             return InstantField(name, option)
+        }
+
+        @Deprecated("Use ofInstant(name, option)", replaceWith = ReplaceWith("ofInstant(name, option)"))
+        fun instant(name: String, option: FieldOption = FieldOption.NONE): MetaField<Instant> {
+            return ofInstant(name, option)
         }
     }
 

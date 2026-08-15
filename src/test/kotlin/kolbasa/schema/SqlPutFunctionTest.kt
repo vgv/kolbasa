@@ -24,8 +24,8 @@ class SqlPutFunctionTest : AbstractPostgresqlTest() {
 
     // Meta fields. NB: the generated function param for a meta field is named after its *column*
     // (meta_<snake_case_name>), not the bare field name — see QueueHelpers.generateMetaColumnDbName.
-    private val priority = MetaField.int("priority", FieldOption.SEARCH)
-    private val dedup = MetaField.string("dedup", FieldOption.UNTOUCHED_UNIQUE)
+    private val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
+    private val dedup = MetaField.ofString("dedup", FieldOption.UNTOUCHED_UNIQUE)
 
     private fun queue(name: String, delay: Duration = Duration.ZERO) =
         Queue.builder(name, PredefinedDataTypes.String)
@@ -125,7 +125,7 @@ class SqlPutFunctionTest : AbstractPostgresqlTest() {
 
         // Add a meta field => signature changes => function regenerated, still exactly one overload
         // (bare-name DROP guarantees a single function with that name).
-        val accountId = MetaField.long("account_id", FieldOption.SEARCH)
+        val accountId = MetaField.ofLong("account_id", FieldOption.SEARCH)
         val evolved = Queue.builder("evolve", PredefinedDataTypes.String)
             .metadata(Metadata.of(priority, dedup, accountId))
             .options(QueueOptions.builder().enableSqlPutFunction().build())

@@ -6,7 +6,6 @@ import io.mockk.verify
 import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
-import kolbasa.queue.meta.MetaHelpers
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -16,7 +15,7 @@ internal class BetweenConditionTest {
 
     @Test
     fun testToSql() {
-        val betweenExpression = BetweenCondition(INT_VALUE, Pair(10, 20))
+        val betweenExpression = BetweenCondition(INT_VALUE, 10, 20)
 
         val sql = betweenExpression.toSqlClause()
         assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " between ? and ?", sql)
@@ -24,7 +23,7 @@ internal class BetweenConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val betweenExpression = BetweenCondition(INT_VALUE, Pair(10, 20))
+        val betweenExpression = BetweenCondition(INT_VALUE, 10, 20)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -40,6 +39,6 @@ internal class BetweenConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
+        private val INT_VALUE = MetaField.ofInt("int_value", FieldOption.SEARCH)
     }
 }

@@ -39,6 +39,6 @@ internal class LikeConditionTest {
     }
 
     companion object {
-        private val STRING_VALUE = MetaField.string("string_value", FieldOption.SEARCH)
+        private val STRING_VALUE = MetaField.ofString("string_value", FieldOption.SEARCH)
     }
 }

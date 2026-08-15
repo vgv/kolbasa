@@ -80,6 +80,7 @@ data class ConsumerOptions(
 
     companion object {
 
+        @JvmField
         val DEFAULT = ConsumerOptions()
 
         @JvmStatic

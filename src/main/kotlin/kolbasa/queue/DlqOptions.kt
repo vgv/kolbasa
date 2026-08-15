@@ -66,9 +66,13 @@ data class DlqOptions(
     }
 
     companion object {
+
+        @JvmField
         val MIN_RETENTION: Duration = Duration.ofHours(1)
+        @JvmField
         val MAX_RETENTION: Duration = Duration.ofDays(365 * 10L) // 10 years
 
+        @JvmField
         val DEFAULT = DlqOptions()
     }
 }

@@ -196,6 +196,7 @@ data class ProducerOptions(
     companion object {
         private const val DEFAULT_BATCH_SIZE = 500
 
+        @JvmField
         val DEFAULT = ProducerOptions()
 
         @JvmStatic

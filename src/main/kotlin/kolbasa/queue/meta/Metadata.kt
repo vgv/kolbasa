@@ -20,31 +20,41 @@ data class Metadata(val fields: List<MetaField<*>>) {
     fun findByName(fieldName: String): MetaField<*>? = nameToFields[fieldName]
 
     companion object {
+
+        @JvmField
         val EMPTY = of(emptyList())
 
+        @JvmStatic
         fun of(vararg fields: MetaField<*>) = of(fields.toList())
+
+        @JvmStatic
         fun of(fields: List<MetaField<*>>) = Metadata(fields)
 
         // --- DLQ original-value fields ---
         // Preserve: id, created_at, processing_at, scheduled_at
         // Use direct subclass constructors to bypass checkUserDefinedMetaFieldName (reserved suffix check)
 
-        /** Original message id from the source queue */
+        /** Original message `id bigint` from the source queue */
+        @JvmField
         val DLQ_ORIGINAL_ID: MetaField<Long> =
             LongField("original_${Const.ID_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original created_at timestamptz from the source queue */
+        /** Original `created_at timestamptz` from the source queue */
+        @JvmField
         val DLQ_ORIGINAL_CREATED_AT: MetaField<Instant> =
             InstantField("original_${Const.CREATED_AT_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original processing_at timestamptz from the source queue */
+        /** Original `processing_at timestamptz` from the source queue */
+        @JvmField
         val DLQ_ORIGINAL_PROCESSING_AT: MetaField<Instant> =
             InstantField("original_${Const.PROCESSING_AT_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original scheduled_at timestamptz from the source queue */
+        /** Original `scheduled_at timestamptz` from the source queue */
+        @JvmField
         val DLQ_ORIGINAL_SCHEDULED_AT: MetaField<Instant> =
             InstantField("original_${Const.SCHEDULED_AT_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
+        @JvmField
         val DLQ_FIELDS = listOf(
             DLQ_ORIGINAL_ID,
             DLQ_ORIGINAL_CREATED_AT,
@@ -56,22 +66,27 @@ data class Metadata(val fields: List<MetaField<*>>) {
         // Preserve: id, created_at, remaining_attempts, processing_at
         // Use direct subclass constructors to bypass checkUserDefinedMetaFieldName (reserved suffix check)
 
-        /** Original message id from the source queue */
+        /** Original message `id bigint` from the source queue */
+        @JvmField
         val ARCHIVE_ORIGINAL_ID: MetaField<Long> =
             LongField("original_${Const.ID_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original created_at timestamptz from the source queue */
+        /** Original `created_at timestamptz` from the source queue */
+        @JvmField
         val ARCHIVE_ORIGINAL_CREATED_AT: MetaField<Instant> =
             InstantField("original_${Const.CREATED_AT_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original remaining_attempts from the source queue */
+        /** Original `remaining_attempts int` from the source queue */
+        @JvmField
         val ARCHIVE_ORIGINAL_REMAINING_ATTEMPTS: MetaField<Int> =
             IntField("original_${Const.REMAINING_ATTEMPTS_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
-        /** Original processing_at timestamptz from the source queue */
+        /** Original `processing_at timestamptz` from the source queue */
+        @JvmField
         val ARCHIVE_ORIGINAL_PROCESSING_AT: MetaField<Instant> =
             InstantField("original_${Const.PROCESSING_AT_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
+        @JvmField
         val ARCHIVE_FIELDS = listOf(
             ARCHIVE_ORIGINAL_ID,
             ARCHIVE_ORIGINAL_CREATED_AT,

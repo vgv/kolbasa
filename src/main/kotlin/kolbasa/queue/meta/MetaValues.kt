@@ -71,9 +71,14 @@ data class MetaValues(val values: List<MetaValue<*>>) {
 
 
     companion object {
+
+        @JvmField
         val EMPTY = of(emptyList())
 
+        @JvmStatic
         fun of(values: List<MetaValue<*>>) = MetaValues(values)
+
+        @JvmStatic
         fun of(vararg values: MetaValue<*>) = of(values.toList())
     }
 }
@@ -106,7 +111,7 @@ data class MetaValues(val values: List<MetaValue<*>>) {
  *
  * ```kotlin
  * // Define a meta field
- * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
  *
  * // Create a value (binding) using the field's value() method
  * val priorityValue: MetaValue<Int> = priority.value(10)

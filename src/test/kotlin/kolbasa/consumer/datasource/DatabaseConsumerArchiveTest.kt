@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 
 class DatabaseConsumerArchiveTest : AbstractPostgresqlTest() {
 
-    private val USER_ID = MetaField.int("user_id")
+    private val USER_ID = MetaField.ofInt("user_id")
 
     private val queue = Queue(
         name = "archive_test",

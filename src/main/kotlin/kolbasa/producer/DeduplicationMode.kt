@@ -20,7 +20,7 @@ package kolbasa.producer
  *
  * ```kotlin
  * // Define a queue with a unique meta field
- * val USER_ID = MetaField.int("user_id", FieldOption.ALL_LIVE_UNIQUE)
+ * val USER_ID = MetaField.ofInt("user_id", FieldOption.ALL_LIVE_UNIQUE)
  * val queue = Queue.of("notifications", PredefinedDataTypes.String, metadata = Metadata.of(USER_ID))
  *
  * // Option 1: Set at producer level

@@ -44,16 +44,16 @@ package kolbasa.queue.meta
  *
  * ```kotlin
  * // Store-only field (no queries)
- * val justData = MetaField.string("just_data", FieldOption.NONE)
+ * val justData = MetaField.ofString("just_data", FieldOption.NONE)
  *
  * // Searchable field for filtering/sorting
- * val priority = MetaField.int("priority", FieldOption.SEARCH)
+ * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
  *
  * // Unique field for deduplication (all live messages)
- * val accountId = MetaField.long("account_id", FieldOption.ALL_LIVE_UNIQUE)
+ * val accountId = MetaField.ofLong("account_id", FieldOption.ALL_LIVE_UNIQUE)
  *
  * // Unique field for deduplication (untouched messages only)
- * val requestId = MetaField.string("request_id", FieldOption.UNTOUCHED_UNIQUE)
+ * val requestId = MetaField.ofString("request_id", FieldOption.UNTOUCHED_UNIQUE)
  *
  * // Create queue with meta fields
  * val queue = Queue.of(

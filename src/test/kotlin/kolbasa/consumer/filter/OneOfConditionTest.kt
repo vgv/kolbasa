@@ -6,32 +6,31 @@ import io.mockk.verify
 import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
-import kolbasa.queue.meta.MetaHelpers
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
-internal class InConditionTest {
+internal class OneOfConditionTest {
 
     @Test
     fun testToSql() {
-        val inExpression = InCondition(INT_VALUE, listOf(123))
+        val oneOfExpression = OneOfCondition(INT_VALUE, listOf(123))
 
-        val sql = inExpression.toSqlClause()
+        val sql = oneOfExpression.toSqlClause()
         assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " = ANY (?)", sql)
     }
 
     @Test
     fun testFillPreparedQuery() {
-        val inExpression = InCondition(INT_VALUE, listOf(123))
+        val oneOfExpression = OneOfCondition(INT_VALUE, listOf(123))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
 
         // call
-        inExpression.toSqlClause()
-        inExpression.fillPreparedQuery(preparedStatement, column)
+        oneOfExpression.toSqlClause()
+        oneOfExpression.fillPreparedQuery(preparedStatement, column)
 
         // check
         verify {
@@ -42,6 +41,6 @@ internal class InConditionTest {
     }
 
     companion object {
-        private val INT_VALUE = MetaField.int("int_value", FieldOption.SEARCH)
+        private val INT_VALUE = MetaField.ofInt("int_value", FieldOption.SEARCH)
     }
 }
