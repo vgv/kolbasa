@@ -41,7 +41,7 @@ data class ArchiveQueueOptions(
      * Must be between [MIN_RETENTION] (1 hour) and [MAX_RETENTION] (10 years).
      * Default: 30 days.
      */
-    val retention: Duration = Duration.ofDays(30),
+    val retention: Duration = DEFAULT_RETENTION,
 
     /**
      * Approximate maximum number of messages to retain in the Archive queue.
@@ -62,13 +62,30 @@ data class ArchiveQueueOptions(
         Checks.checkRetentionMaxMessages(maxMessages)
     }
 
+    class Builder internal constructor() {
+        private var retention: Duration = DEFAULT_RETENTION
+        private var maxMessages: Long? = null
+
+        fun retention(retention: Duration) = apply { this.retention = retention }
+        fun maxMessages(maxMessages: Long) = apply { this.maxMessages = maxMessages }
+
+        fun build() = ArchiveQueueOptions(retention, maxMessages)
+    }
+
     companion object {
         @JvmField
         val MIN_RETENTION: Duration = Duration.ofHours(1)
+
+        @JvmField
+        val DEFAULT_RETENTION: Duration = Duration.ofDays(30)
+
         @JvmField
         val MAX_RETENTION: Duration = Duration.ofDays(365 * 10L) // 10 years
 
         @JvmField
         val DEFAULT = ArchiveQueueOptions()
+
+        @JvmStatic
+        fun builder() = Builder()
     }
 }
