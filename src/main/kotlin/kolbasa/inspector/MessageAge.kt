@@ -31,7 +31,7 @@ data class MessageAge(
          * Merges multiple [MessageAge] instances: picks the maximum [oldest] and [oldestReady]
          * (the longest age across all sources) and the minimum [newest] (the most recently created message).
          */
-        fun Iterable<MessageAge>.merge(): MessageAge {
+        internal fun Iterable<MessageAge>.merge(): MessageAge {
             var oldest: Duration? = null
             var newest: Duration? = null
             var oldestReady: Duration? = null
