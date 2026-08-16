@@ -20,7 +20,10 @@ internal object QueueHelpers {
             "Your identifier name is too long ($result). Max allowed length is ${Const.MAX_DATABASE_OBJECT_NAME_LENGTH} symbols"
         }
 
-        return result
+        // for PG the case doesn't matter, so for us it doesn't either
+        // Make all database names lowercase to prevent any possible collisions inside
+        // the library itself (cache names, Prometheus stats names etc.)
+        return result.lowercase()
     }
 
     fun generateQueueDbName(name: String): String {

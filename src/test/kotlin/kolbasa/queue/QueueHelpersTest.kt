@@ -16,8 +16,8 @@ internal class QueueHelpersTest {
 
     @Test
     fun testGenerateDatabaseName() {
-        assertEquals("abcd", QueueHelpers.generateDatabaseName("a", "b", "c", "d"))
-        assertEquals("a-b-c-d", QueueHelpers.generateDatabaseName("a", "b", "c", "d", separator = "-"))
+        assertEquals("abcd", QueueHelpers.generateDatabaseName("a", "B", "C", "d"))
+        assertEquals("a-b-c-d", QueueHelpers.generateDatabaseName("a", "B", "C", "d", separator = "-"))
     }
 
     @Test
@@ -30,15 +30,15 @@ internal class QueueHelpersTest {
 
     @Test
     fun testGenerateQueueDbName() {
-        val queueName = "my_queue"
-        val expectedDbName = Const.QUEUE_TABLE_NAME_PREFIX + queueName
+        val queueName = "my_Queue"
+        val expectedDbName = (Const.QUEUE_TABLE_NAME_PREFIX + queueName).lowercase()
         assertEquals(expectedDbName, QueueHelpers.generateQueueDbName(queueName))
     }
 
     @Test
     fun testGeneratePutFunctionName() {
-        val queueName = "my_queue"
-        val expectedFunctionName = Const.QUEUE_TABLE_NAME_PREFIX + queueName + Const.PUT_FUNCTION_NAME_SUFFIX
+        val queueName = "my_Queue"
+        val expectedFunctionName = (Const.QUEUE_TABLE_NAME_PREFIX + queueName + Const.PUT_FUNCTION_NAME_SUFFIX).lowercase()
         assertEquals(expectedFunctionName, QueueHelpers.generatePutFunctionName(queueName))
     }
 
@@ -51,16 +51,16 @@ internal class QueueHelpersTest {
 
     @Test
     fun testGenerateMetaColumnIndexName_Normal() {
-        val queueName = "my_queue"
+        val queueName = "my_QUEUE"
         val fieldName = "someField"
         val indexSuffix = "idx"
-        val expectedIndexName = "my_queue_someField_idx"
+        val expectedIndexName = "my_queue_somefield_idx"
         assertEquals(expectedIndexName, QueueHelpers.generateMetaColumnIndexName(queueName, fieldName, indexSuffix))
     }
 
     @Test
     fun testGenerateMetaColumnIndexName_Replace_Column_Name() {
-        val queueName = "my_queue_quite_long_name_name_name_name_name"
+        val queueName = "my_queue_quite_LONG_name_name_name_name_name"
         val fieldName = "someExtremelyLongFieldNameThatMayCauseTheIndexNameToBeTooLong"
         val indexSuffix = "idx"
         val expectedIndexName = "my_queue_quite_long_name_name_name_name_name_1ba1bfe469_idx"
