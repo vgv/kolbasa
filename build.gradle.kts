@@ -60,6 +60,13 @@ kotlin {
     }
 }
 
+// Java examples live next to their Kotlin twins in src/test/kotlin, so javac has to look there too.
+// Without this, a .java file in that directory is passed to kotlinc as a resolution-only Java root
+// and is never compiled to bytecode by anything - not by `test`, not by CI.
+sourceSets.test {
+    java.srcDir("src/test/kotlin")
+}
+
 // Performance tests
 tasks.register<JavaExec>("performance") {
     mainClass = "performance.MainKt"
@@ -67,16 +74,21 @@ tasks.register<JavaExec>("performance") {
 }
 
 // Examples
+// ./gradlew example -Pname=FilterExample              - runs the Kotlin example (default)
+// ./gradlew example -Pname=FilterExample -Plang=java  - runs its Java twin
 tasks.register<JavaExec>("example") {
-    val propertyName = "name"
-    val propertyValue = project.providers.gradleProperty(propertyName)
-    val exampleName = if (propertyValue.isPresent) {
-        propertyValue.get()
-    } else {
-        "SimpleExample"
-    }
+    val exampleName = project.providers.gradleProperty("name").orElse("SimpleExample")
+    val exampleLang = project.providers.gradleProperty("lang").orElse("kotlin")
 
-    mainClass = "examples.${exampleName}Kt"
+    // A Kotlin example is a top-level main() and compiles to `examples.<name>Kt`,
+    // its Java twin is a plain class and has no suffix
+    mainClass = exampleName.zip(exampleLang) { name, lang ->
+        when (lang) {
+            "java" -> "examples.$name"
+            "kotlin" -> "examples.${name}Kt"
+            else -> throw GradleException("Unknown -Plang=$lang, expected 'java' or 'kotlin'")
+        }
+    }
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 
