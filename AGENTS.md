@@ -33,7 +33,7 @@ This is a **Gradle** project (Kotlin DSL). Use the wrapper:
 running Docker daemon is required. Examples can also point at a real PostgreSQL instance via
 `src/test/kotlin/examples/ExamplesDataSourceProvider.kt`.
 
-Toolchain: JVM 17, Kotlin API/language level 1.9, JUnit 5.
+Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 
 ## Layout
 
