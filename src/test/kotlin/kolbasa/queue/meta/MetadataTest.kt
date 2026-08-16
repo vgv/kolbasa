@@ -4,10 +4,22 @@ import kolbasa.queue.*
 import kolbasa.schema.Const
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class MetadataTest {
 
-    private val USER_ID = MetaField.ofInt("user_id")
+    private val userIdField = MetaField.ofInt("user_id")
+
+    @Test
+    fun testDuplicateFields() {
+        val fields = listOf(
+            MetaField.ofInt("user_id"),
+            MetaField.ofLong("userId"),
+            MetaField.ofString("USER_ID"),
+        )
+
+        assertThrows<IllegalStateException> { Metadata(fields) }
+    }
 
     @Test
     fun testDlqFieldsCount() {
@@ -58,7 +70,7 @@ class MetadataTest {
         val queue = Queue(
             name = "test",
             databaseDataType = PredefinedDataTypes.String,
-            metadata = Metadata.of(USER_ID),
+            metadata = Metadata.of(userIdField),
             options = QueueOptions(dlqOptions = DlqOptions.DEFAULT)
         )
 
@@ -66,7 +78,7 @@ class MetadataTest {
         // User field (stripped) + 4 DLQ original fields
         assertEquals(1 + 4, dlq.metadata.fields.size)
         // User field should have NONE option
-        assertEquals(FieldOption.NONE, dlq.metadata.findByName(USER_ID.name)?.option)
+        assertEquals(FieldOption.NONE, dlq.metadata.findByName(userIdField.name)?.option)
         // DLQ fields should be present
         assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_ID.name))
         assertNotNull(dlq.metadata.findByName(Metadata.DLQ_ORIGINAL_CREATED_AT.name))
@@ -79,7 +91,7 @@ class MetadataTest {
         val queue = Queue(
             name = "test",
             databaseDataType = PredefinedDataTypes.String,
-            metadata = Metadata.of(USER_ID),
+            metadata = Metadata.of(userIdField),
             options = QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT)
         )
 
@@ -87,7 +99,7 @@ class MetadataTest {
         // User field (stripped) + 4 Archive original fields
         assertEquals(1 + 4, archive.metadata.fields.size)
         // User field should have NONE option
-        assertEquals(FieldOption.NONE, archive.metadata.findByName(USER_ID.name)?.option)
+        assertEquals(FieldOption.NONE, archive.metadata.findByName(userIdField.name)?.option)
         // Archive fields should be present
         assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_ID.name))
         assertNotNull(archive.metadata.findByName(Metadata.ARCHIVE_ORIGINAL_CREATED_AT.name))

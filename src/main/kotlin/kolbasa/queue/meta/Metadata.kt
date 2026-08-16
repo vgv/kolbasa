@@ -1,5 +1,6 @@
 package kolbasa.queue.meta
 
+import kolbasa.queue.Checks
 import kolbasa.schema.Const
 import java.time.Instant
 
@@ -14,6 +15,13 @@ import java.time.Instant
  * Please read the documentation for [Queue.metadata][kolbasa.queue.Queue.metadata] field
  */
 data class Metadata(val fields: List<MetaField<*>>) {
+
+    init {
+        // All meta-fields must be unique. Attempting to declare multiple meta-fields with the same name is an indicator
+        // of a serious library usage error and will result in an immediate exception
+        // user_id, userId and USER_ID are the same database field name
+        Checks.checkMetaFieldsUnique(fields)
+    }
 
     private val nameToFields = fields.associateBy { it.name }
 

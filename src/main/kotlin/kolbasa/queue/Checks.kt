@@ -5,6 +5,7 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutationField
+import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
 import java.time.Duration
 
@@ -148,6 +149,18 @@ internal object Checks {
 
         check(maxMessages > 0) {
             "maxMessages must be positive (current: $maxMessages)"
+        }
+    }
+
+    fun checkMetaFieldsUnique(fields: List<MetaField<*>>) {
+        val duplicates = fields
+            .groupBy { it.dbColumnName }
+            .filterValues { it.size > 1 }
+
+        check(duplicates.isEmpty()) {
+            duplicates.entries.joinToString("; ") { (column, clashing) ->
+                "Meta fields ${clashing.map { it.name }} all map to the same database column '$column'"
+            }
         }
     }
 
