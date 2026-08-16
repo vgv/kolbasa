@@ -66,8 +66,8 @@ data class ArchiveQueueOptions(
         private var retention: Duration = DEFAULT_RETENTION
         private var maxMessages: Long? = null
 
-        fun retention(retention: Duration) = apply { this.retention = retention }
-        fun maxMessages(maxMessages: Long) = apply { this.maxMessages = maxMessages }
+        fun retention(retention: Duration): Builder = apply { this.retention = retention }
+        fun maxMessages(maxMessages: Long): Builder = apply { this.maxMessages = maxMessages }
 
         fun build() = ArchiveQueueOptions(retention, maxMessages)
     }

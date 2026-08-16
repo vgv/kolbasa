@@ -65,7 +65,7 @@ data class DlqOptions(
         Checks.checkRetentionMaxMessages(maxMessages)
     }
 
-    class Builder internal constructor(){
+    class Builder internal constructor() {
         private var retention: Duration = DEFAULT_RETENTION
         private var maxMessages: Long? = null
 
