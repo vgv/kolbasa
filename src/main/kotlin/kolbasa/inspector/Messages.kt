@@ -42,12 +42,12 @@ data class Messages(
 
     companion object {
 
-        val DEFAULT = Messages(0, 0, 0, 0, 0)
+        internal val DEFAULT = Messages(0, 0, 0, 0, 0)
 
         /**
          * Merges multiple [Messages] instances by summing up counts per state.
          */
-        fun Iterable<Messages>.merge(): Messages {
+        internal fun Iterable<Messages>.merge(): Messages {
             var scheduled = 0L
             var ready = 0L
             var inFlight = 0L
