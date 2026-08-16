@@ -105,7 +105,8 @@ interface Inspector {
      * @param limit maximum number of distinct values to return
      * @param options options such as sample percent, an optional filter condition and sort order
      * @return a map of distinct values to their (approximate) counts (may contain `null` key because meta-field may be missing)
-     */    fun <V> distinctValues(
+     */
+    fun <V> distinctValues(
         queue: Queue<*>,
         metaField: MetaField<V>,
         limit: Int,
