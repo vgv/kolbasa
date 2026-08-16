@@ -42,7 +42,7 @@ import java.time.Duration
  * @see Condition for filtering options
  * @see Order for ordering options
  */
-data class ReceiveOptions @JvmOverloads constructor(
+data class ReceiveOptions(
     /**
      * Arbitrary consumer name.
      *
