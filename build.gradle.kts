@@ -52,9 +52,8 @@ dependencies {
 kotlin {
     jvmToolchain(17)
     compilerOptions {
-        // Pin to 1.9 so the published bytecode stays consumable by projects on older Kotlin compilers.
-        apiVersion = KotlinVersion.KOTLIN_1_9
-        languageVersion = KotlinVersion.KOTLIN_1_9
+        apiVersion = KotlinVersion.KOTLIN_2_1
+        languageVersion = KotlinVersion.KOTLIN_2_1
         // We need JVM default methods for interfaces, but don't need the compatibility bridges
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
         freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
