@@ -55,8 +55,11 @@ be launched from the IDE or Gradle.
 The preferred way to run the examples is to use an IDE (like IntelliJ IDEA), as you can not only run the examples, but also
 modify them, set breakpoints, and see how everything goes step by step. But you can also run the examples from Gradle.
 
-To run from Gradle, you need to execute the command `./gradlew example -P name=FilterExample`, where `name` is
-the name of the file from the [examples](src/test/kotlin/examples) folder.
+To run from Gradle, you need to execute the command 
+
+`./gradlew example -P name=FilterExample -P lang=kotlin`
+
+where `name` is the name of the file from the [examples](src/test/kotlin/examples) folder and `lang` is `java` or `kotlin`.
 
 Examples needs to have a working PostgreSQL instance to run and here you have two options:
 1) The default (and easiest) way – just have running Docker on your machine. All examples will use Docker to start PostgreSQL instance.
