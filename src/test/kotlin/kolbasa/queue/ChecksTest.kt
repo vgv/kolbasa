@@ -343,12 +343,15 @@ internal class ChecksTest {
 
     @Test
     fun testCheckUserDefinedMetaFieldName_CannotEndWithReservedSuffix() {
-        assertThrows<IllegalStateException> {
-            Checks.checkUserDefinedMetaFieldName("field_dlq")
-        }
-        assertThrows<IllegalStateException> {
-            Checks.checkUserDefinedMetaFieldName("field_arc")
-        }
+        // DLQ
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_dlq") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_DLQ") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldDlq") }
+
+        // Archive queues
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_arc") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldArc") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_ARC") }
     }
 
     @Test

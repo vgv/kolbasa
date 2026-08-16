@@ -165,11 +165,20 @@ internal object Checks {
     }
 
     fun checkUserDefinedMetaFieldName(fieldName: String) {
-        check(!fieldName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
-            "Meta field name '$fieldName' must not end with '${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
+        val dbFieldName = QueueHelpers.generateMetaColumnDbName(fieldName)
+
+        // DLQ
+        check(!dbFieldName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' maps to database column " +
+                "'${Const.META_FIELD_NAME_PREFIX}${dbFieldName}', which ends with " +
+                "'${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
         }
-        check(!fieldName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
-            "Meta field name '$fieldName' must not end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
+
+        // Archive queues
+        check(!dbFieldName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' maps to database column " +
+                "'${Const.META_FIELD_NAME_PREFIX}${dbFieldName}', which ends with " +
+                "'${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
         }
     }
 

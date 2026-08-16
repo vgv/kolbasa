@@ -32,7 +32,10 @@ internal object QueueHelpers {
     }
 
     fun generateMetaColumnDbName(fieldName: String): String {
-        // convert Java field into column name, like someField -> some_field
+        // convert Java field into column name
+        // someField -> some_field
+        // SOME_FIELD -> some_field
+        // some_field -> some_field
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
 
         // add 'meta_' prefix
