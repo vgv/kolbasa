@@ -122,7 +122,7 @@ giving the client the opportunity to change their mind. In this case, you can se
 queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
 become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
 
-![Send delay](src/test/kotlin/examples/img/send_delay.png)
+![Send delay](docs/img/send_delay.png)
 
 Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
 
@@ -153,13 +153,13 @@ which (the second) contains an incorrect message.
 Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
 
 `PartialInsert.PROHIBITED`
-![Prohibited](src/test/kotlin/examples/img/partial_insert_prohibited.png)
+![Prohibited](docs/img/partial_insert_prohibited.png)
 
 `PartialInsert.UNTIL_FIRST_FAILURE`
-![Until first failure](src/test/kotlin/examples/img/partial_insert_until_first_failure.png)
+![Until first failure](docs/img/partial_insert_until_first_failure.png)
 
 `PartialInsert.INSERT_AS_MANY_AS_POSSIBLE`
-![As manu as possible](src/test/kotlin/examples/img/partial_insert_as_many_as_possible.png)
+![As manu as possible](docs/img/partial_insert_as_many_as_possible.png)
 
 
 Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
