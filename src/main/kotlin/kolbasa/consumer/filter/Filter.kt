@@ -214,20 +214,6 @@ object Filter {
 
     // -------------------------------------------------------------------------------------------
 
-    @JvmStatic
-    infix fun Condition.and(condition: Condition): Condition {
-        return AndCondition(this, condition)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @JvmStatic
-    infix fun Condition.or(condition: Condition): Condition {
-        return OrCondition(this, condition)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
     /**
      * PostgreSQL `is null` operator.
      *
@@ -287,13 +273,6 @@ object Filter {
     @JvmStatic
     infix fun <T> MetaField<T>.oneOf(values: Collection<T>): Condition {
         return OneOfCondition(this, values)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @JvmStatic
-    fun not(condition: Condition): Condition {
-        return NotCondition(condition)
     }
 
     // -------------------------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 package kolbasa.consumer.filter
 
-import kolbasa.consumer.filter.Filter.and
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.filter.Filter.like
 import kolbasa.consumer.filter.Filter.eq
@@ -10,10 +9,8 @@ import kolbasa.consumer.filter.Filter.isNotNull
 import kolbasa.consumer.filter.Filter.less
 import kolbasa.consumer.filter.Filter.lessEq
 import kolbasa.consumer.filter.Filter.neq
-import kolbasa.consumer.filter.Filter.or
 import kolbasa.consumer.filter.Filter.isNull
 import kolbasa.consumer.filter.Filter.nativeSql
-import kolbasa.consumer.filter.Filter.not
 import kolbasa.consumer.filter.Filter.oneOf
 import kolbasa.queue.meta.MetaField
 import org.junit.jupiter.api.Test
@@ -21,80 +18,65 @@ import org.junit.jupiter.api.assertInstanceOf
 
 internal class FilterTest {
 
+    private val strField = MetaField.ofString("str_value")
+
     @Test
     fun testEq() {
-        assertInstanceOf<EqCondition<*>>(STR_FIELD eq "local")
+        assertInstanceOf<EqCondition<*>>(strField eq "local")
     }
 
     @Test
     fun testNeq() {
-        assertInstanceOf<NeqCondition<*>>(STR_FIELD neq "local")
+        assertInstanceOf<NeqCondition<*>>(strField neq "local")
     }
 
     @Test
     fun testGreater() {
-        assertInstanceOf<GreaterThanCondition<*>>(STR_FIELD greater "local")
+        assertInstanceOf<GreaterThanCondition<*>>(strField greater "local")
     }
 
     @Test
     fun testGreaterEq() {
-        assertInstanceOf<GreaterThanOrEqCondition<*>>(STR_FIELD greaterEq "local")
+        assertInstanceOf<GreaterThanOrEqCondition<*>>(strField greaterEq "local")
     }
 
     @Test
     fun testLess() {
-        assertInstanceOf<LessThanCondition<*>>(STR_FIELD less "local")
+        assertInstanceOf<LessThanCondition<*>>(strField less "local")
     }
 
     @Test
     fun testLessEq() {
-        assertInstanceOf<LessThanOrEqCondition<*>>(STR_FIELD lessEq "local")
+        assertInstanceOf<LessThanOrEqCondition<*>>(strField lessEq "local")
     }
 
     @Test
     fun testBetween() {
-        assertInstanceOf<BetweenCondition<*>>(STR_FIELD between "a" and "b")
+        assertInstanceOf<BetweenCondition<*>>(strField between "a" and "b")
     }
 
     @Test
     fun testLike() {
-        assertInstanceOf<LikeCondition>(STR_FIELD like "asd")
-    }
-
-    @Test
-    fun testAnd() {
-        assertInstanceOf<AndCondition>((STR_FIELD eq "123") and (STR_FIELD neq "2234"))
-    }
-
-    @Test
-    fun testOr() {
-        assertInstanceOf<OrCondition>((STR_FIELD eq "123") or (STR_FIELD neq "2234"))
+        assertInstanceOf<LikeCondition>(strField like "asd")
     }
 
     @Test
     fun testIsNull() {
-        assertInstanceOf<IsNullCondition>(isNull(STR_FIELD))
+        assertInstanceOf<IsNullCondition>(isNull(strField))
     }
 
     @Test
     fun testIsNotNull() {
-        assertInstanceOf<IsNotNullCondition>(isNotNull(STR_FIELD))
-    }
-
-    @Test
-    fun testNot() {
-        assertInstanceOf<NotCondition>(not(STR_FIELD eq "123"))
+        assertInstanceOf<IsNotNullCondition>(isNotNull(strField))
     }
 
     @Test
     fun testOneOf() {
-        assertInstanceOf<OneOfCondition<*>>(STR_FIELD oneOf listOf("local"))
+        assertInstanceOf<OneOfCondition<*>>(strField oneOf listOf("local"))
     }
 
     @Test
     fun testNativeSql() {
-        assertInstanceOf<NativeSqlCondition>(nativeSql("{0} like '%asd%'", STR_FIELD))
+        assertInstanceOf<NativeSqlCondition>(nativeSql("{0} like '%asd%'", strField))
     }
 }
-
-private val STR_FIELD = MetaField.ofString("str_value")
