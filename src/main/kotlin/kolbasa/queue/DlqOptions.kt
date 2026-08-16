@@ -73,7 +73,6 @@ data class DlqOptions(
         fun maxMessages(maxMessages: Long): Builder = apply { this.maxMessages = maxMessages }
 
         fun build(): DlqOptions = DlqOptions(retention, maxMessages)
-
     }
 
     companion object {
