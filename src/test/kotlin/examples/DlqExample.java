@@ -19,17 +19,22 @@ class DlqExample {
         // When a message exhausts all processing attempts, it will be moved to the Dead Letter Queue
         // instead of being permanently deleted. This allows failed messages to be inspected, debugged,
         // or reprocessed later.
+        var dlqOptions = DlqOptions.builder()
+            .retention(Duration.ofDays(14))
+            .maxMessages(100_000)
+            .build();
+
         var queue = new Queue<>(
-                "orders",
-                PredefinedDataTypes.String,
-                QueueOptions.builder()
-                        // Only 1 attempt for this example, so the message goes to DLQ after the first failed processing
-                        .defaultAttempts(1)
-                        // Zero visibility timeout so the exhausted message becomes visible to sweep immediately.
-                        // This is only for example purposes — in production it should be greater than zero for 99.9999% of cases.
-                        .defaultVisibilityTimeout(Duration.ZERO)
-                        .enableDlq(new DlqOptions(Duration.ofDays(14), 100_000L))
-                        .build()
+            "orders",
+            PredefinedDataTypes.String,
+            QueueOptions.builder()
+                // Only 1 attempt for this example, so the message goes to DLQ after the first failed processing
+                .defaultAttempts(1)
+                // Zero visibility timeout so the exhausted message becomes visible to sweep immediately.
+                // This is only for example purposes — in production it should be greater than zero for 99.9999% of cases.
+                .defaultVisibilityTimeout(Duration.ZERO)
+                .enableDlq(dlqOptions)
+                .build()
         );
 
         // Valid datasource from DI, static factory etc.

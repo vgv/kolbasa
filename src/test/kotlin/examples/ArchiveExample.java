@@ -17,12 +17,17 @@ class ArchiveExample {
         // When a consumer deletes a message after successful processing, the message is atomically
         // moved to the Archive queue instead of being permanently deleted. This is useful for
         // auditing, compliance, trailing, or replaying successfully processed messages.
+        var archiveOptions = ArchiveQueueOptions.builder()
+            .maxMessages(1_000_000)
+            .retention(Duration.ofDays(14))
+            .build();
+
         var queue = new Queue<>(
-                "payments",
-                PredefinedDataTypes.String,
-                QueueOptions.builder()
-                        .enableArchiveQueue(new ArchiveQueueOptions(Duration.ofDays(90), 1_000_000L))
-                        .build()
+            "payments",
+            PredefinedDataTypes.String,
+            QueueOptions.builder()
+                .enableArchiveQueue(archiveOptions)
+                .build()
         );
 
         // Valid datasource from DI, static factory etc.
