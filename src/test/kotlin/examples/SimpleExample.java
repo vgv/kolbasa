@@ -12,7 +12,7 @@ class SimpleExample {
         var queue = Queue.of("test_queue", PredefinedDataTypes.String);
 
         // Valid datasource from DI, static factory etc.
-        var dataSource = ExamplesDataSourceProvider.INSTANCE.getDataSource();
+        var dataSource = ExamplesDataSourceProvider.getDataSource();
 
         // Update PostgreSQL schema
         // We need to create (or update) the queue table before the first use, since the table schema can be changed - for
