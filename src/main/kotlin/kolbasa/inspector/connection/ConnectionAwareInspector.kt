@@ -11,6 +11,25 @@ import java.sql.Connection
 interface ConnectionAwareInspector {
 
     /**
+     * Counts messages in the queue grouped by their state (`SCHEDULED`, `READY`, `IN_FLIGHT`, `RETRY`, `DEAD`),
+     * with Kolbasa choosing the sampling level for you.
+     *
+     * This method is designed to be called frequently — for example, every minute as part of monitoring — so it
+     * needs to be fast. A full table scan would be too expensive for large tables, so instead this method uses
+     * PostgreSQL [TABLESAMPLE](https://www.postgresql.org/docs/18/sql-select.html#SQL-FROM) to read only a
+     * fraction of the table. This means the result is an approximation, not an exact count.
+     *
+     * This method works as if by invoking the three-argument overload with [CountOptions.DEFAULT], which leaves the
+     * sampling level at [CountOptions.YOU_KNOW_BETTER][kolbasa.inspector.CountOptions.YOU_KNOW_BETTER] — Kolbasa
+     * picks a reasonable value based on the table size — and applies no filter, so every message is counted.
+     *
+     * @param connection the database connection to use
+     * @param queue the queue to inspect
+     * @return a [Messages] instance with per-state counts
+     */
+    fun count(connection: Connection, queue: Queue<*>): Messages = count(connection, queue, CountOptions.DEFAULT)
+
+    /**
      * Counts messages in the queue grouped by their state (`SCHEDULED`, `READY`, `IN_FLIGHT`, `RETRY`, `DEAD`).
      *
      * This method is designed to be called frequently — for example, every minute as part of monitoring — so it
@@ -19,9 +38,10 @@ interface ConnectionAwareInspector {
      * fraction of the table. This means the result is an approximation, not an exact count.
      *
      * The sampling percent is adjustable in the range (0, 100] via [CountOptions.samplePercent]. You can pick a
-     * value that balances speed and accuracy for your use case — or just leave it at
-     * [CountOptions.YOU_KNOW_BETTER][kolbasa.inspector.CountOptions.YOU_KNOW_BETTER] (the default)
-     * and let Kolbasa choose a reasonable sampling level for you based on the table size.
+     * value that balances speed and accuracy for your use case — or leave it at
+     * [CountOptions.YOU_KNOW_BETTER][kolbasa.inspector.CountOptions.YOU_KNOW_BETTER], which is what
+     * [CountOptions.DEFAULT] carries, and let Kolbasa choose a reasonable sampling level for you based on the
+     * table size.
      *
      * You can also provide an optional filter condition [CountOptions.filter] to restrict which messages are counted.
      *
@@ -30,7 +50,33 @@ interface ConnectionAwareInspector {
      * @param options counting options such as sample percent and an optional filter condition
      * @return a [Messages] instance with per-state counts
      */
-    fun count(connection: Connection, queue: Queue<*>, options: CountOptions = CountOptions.DEFAULT): Messages
+    fun count(connection: Connection, queue: Queue<*>, options: CountOptions): Messages
+
+    /**
+     * Returns distinct values of a meta-field across messages in the queue, with Kolbasa choosing the sampling
+     * level for you.
+     *
+     * Useful for discovering what meta-field values are currently present in the queue — for example, to see
+     * which tenants/shards/partitions have pending messages for load distribution or debugging.
+     *
+     * Just like [count], this method uses PostgreSQL
+     * [TABLESAMPLE](https://www.postgresql.org/docs/18/sql-select.html#SQL-FROM) to avoid a full table scan,
+     * so the result is an approximation — some rare values may be missing from the sample.
+     *
+     * This method works as if by invoking the five-argument overload with [DistinctValuesOptions.DEFAULT], which
+     * leaves the sampling level at
+     * [DistinctValuesOptions.YOU_KNOW_BETTER][kolbasa.inspector.DistinctValuesOptions.YOU_KNOW_BETTER] — Kolbasa
+     * picks a reasonable value based on the table size — applies no filter, so every message is considered, and
+     * returns the values in no particular order.
+     *
+     * @param connection the database connection to use
+     * @param queue the queue to inspect
+     * @param metaField the meta-field whose distinct values to retrieve
+     * @param limit maximum number of distinct values to return
+     * @return a map of distinct values to their (approximate) counts (may contain `null` key because meta-field may be missing)
+     */
+    fun <V> distinctValues(connection: Connection, queue: Queue<*>, metaField: MetaField<V>, limit: Int): Map<V?, Long> =
+        distinctValues(connection, queue, metaField, limit, DistinctValuesOptions.DEFAULT)
 
     /**
      * Returns distinct values of a meta-field across messages in the queue.
@@ -43,9 +89,10 @@ interface ConnectionAwareInspector {
      * so the result is an approximation — some rare values may be missing from the sample.
      *
      * The sampling percent is adjustable in the range (0, 100] via [DistinctValuesOptions.samplePercent]. You can
-     * pick a value that balances speed and completeness for your use case — or just leave it at
-     * [DistinctValuesOptions.YOU_KNOW_BETTER][kolbasa.inspector.DistinctValuesOptions.YOU_KNOW_BETTER] (the default)
-     * and let Kolbasa choose a reasonable sampling level for you based on the table size.
+     * pick a value that balances speed and completeness for your use case — or leave it at
+     * [DistinctValuesOptions.YOU_KNOW_BETTER][kolbasa.inspector.DistinctValuesOptions.YOU_KNOW_BETTER], which is
+     * what [DistinctValuesOptions.DEFAULT] carries, and let Kolbasa choose a reasonable sampling level for you
+     * based on the table size.
      *
      * You can also provide an optional filter condition [DistinctValuesOptions.filter] to restrict which messages are counted.
      *
@@ -63,7 +110,7 @@ interface ConnectionAwareInspector {
         queue: Queue<*>,
         metaField: MetaField<V>,
         limit: Int,
-        options: DistinctValuesOptions = DistinctValuesOptions.DEFAULT
+        options: DistinctValuesOptions
     ): Map<V?, Long>
 
     /**
