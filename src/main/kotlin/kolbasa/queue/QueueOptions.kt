@@ -171,9 +171,14 @@ data class QueueOptions(
     }
 
     companion object {
-        private val DEFAULT_DELAY = Duration.ZERO
-        private const val DEFAULT_ATTEMPTS = 5
-        private val DEFAULT_VISIBILITY_TIMEOUT = Duration.ofSeconds(60)
+
+        @JvmField
+        val DEFAULT_DELAY: Duration = Duration.ZERO
+
+        const val DEFAULT_ATTEMPTS = 5
+
+        @JvmField
+        val DEFAULT_VISIBILITY_TIMEOUT: Duration = Duration.ofSeconds(60)
 
         @JvmField
         val DEFAULT = QueueOptions()
