@@ -122,22 +122,6 @@ data class Order internal constructor(internal val clauses: List<OrderClause>) {
         }
 
         /**
-         * Creates an [Order] from a [MetaField] and [SortOrder].
-         *
-         * This is a low-level factory method. For more idiomatic usage, prefer the extension
-         * methods like [asc], [desc], [ascNullsFirst], etc.
-         *
-         * @param field the metadata field to sort by
-         * @param order the sort direction and null handling
-         * @return an Order instance
-         */
-        @JvmStatic
-        @Deprecated("Use by(field, order)", ReplaceWith("by(field, order)"))
-        fun of(field: MetaField<*>, order: SortOrder): Order {
-            return by(field, order)
-        }
-
-        /**
          * Combines several orderings into one, applied left to right.
          *
          * Equivalent to chaining [then], and the natural form when the ordering is built

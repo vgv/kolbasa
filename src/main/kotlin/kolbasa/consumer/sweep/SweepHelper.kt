@@ -18,10 +18,6 @@ import kotlin.math.max
 
 object SweepHelper {
 
-    fun needSweep(): Boolean {
-        return checkProbability(Kolbasa.sweepConfig.probability)
-    }
-
     /**
      * Run sweep for a particular queue
      *
@@ -29,6 +25,7 @@ object SweepHelper {
      *
      * @return how many expired messages were removed
      */
+    @JvmStatic
     fun sweep(connection: Connection, queue: Queue<*>, limit: Int): Int {
         return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
     }
@@ -40,6 +37,10 @@ object SweepHelper {
         val messagesToSweep = max(limit, sweepConfig.maxMessages)
 
         return rawSweep(connection, queue, nodeId, messagesToSweep)
+    }
+
+    internal fun needSweep(): Boolean {
+        return checkProbability(Kolbasa.sweepConfig.probability)
     }
 
     internal fun checkProbability(probability: Double): Boolean = when (probability) {

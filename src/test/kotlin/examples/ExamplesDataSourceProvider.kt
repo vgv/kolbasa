@@ -10,6 +10,7 @@ object ExamplesDataSourceProvider {
     /**
      * Launch PostgreSQL in Docker container using TestContainers
      */
+    @JvmStatic
     fun getDataSource(): DataSource {
         val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE)
 
@@ -32,6 +33,7 @@ object ExamplesDataSourceProvider {
      * 2) Uncomment this one
      * 3) Provide your own connection parameters (hostname, port, database, user, pwd)
      */
+//    @JvmStatic
 //    fun getDataSource(): DataSource {
 //        val hostname = ""
 //        val port = 5432

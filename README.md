@@ -36,14 +36,14 @@ version 10 and above.
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.198.0"
+implementation "io.github.vgv:kolbasa:0.207.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.198.0</version>
+    <version>0.207.0</version>
 </dependency>
 ```
 
@@ -55,8 +55,11 @@ be launched from the IDE or Gradle.
 The preferred way to run the examples is to use an IDE (like IntelliJ IDEA), as you can not only run the examples, but also
 modify them, set breakpoints, and see how everything goes step by step. But you can also run the examples from Gradle.
 
-To run from Gradle, you need to execute the command `./gradlew example -P name=FilterExample`, where `name` is
-the name of the file from the [examples](src/test/kotlin/examples) folder.
+To run from Gradle, you need to execute the command 
+
+`./gradlew example -P name=FilterExample -P lang=kotlin`
+
+where `name` is the name of the file from the [examples](src/test/kotlin/examples) folder and `lang` is `java` or `kotlin`.
 
 Examples needs to have a working PostgreSQL instance to run and here you have two options:
 1) The default (and easiest) way – just have running Docker on your machine. All examples will use Docker to start PostgreSQL instance.
@@ -122,7 +125,7 @@ giving the client the opportunity to change their mind. In this case, you can se
 queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
 become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
 
-![Send delay](src/test/kotlin/examples/img/send_delay.png)
+![Send delay](docs/img/send_delay.png)
 
 Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
 
@@ -153,13 +156,13 @@ which (the second) contains an incorrect message.
 Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
 
 `PartialInsert.PROHIBITED`
-![Prohibited](src/test/kotlin/examples/img/partial_insert_prohibited.png)
+![Prohibited](docs/img/partial_insert_prohibited.png)
 
 `PartialInsert.UNTIL_FIRST_FAILURE`
-![Until first failure](src/test/kotlin/examples/img/partial_insert_until_first_failure.png)
+![Until first failure](docs/img/partial_insert_until_first_failure.png)
 
 `PartialInsert.INSERT_AS_MANY_AS_POSSIBLE`
-![As manu as possible](src/test/kotlin/examples/img/partial_insert_as_many_as_possible.png)
+![As manu as possible](docs/img/partial_insert_as_many_as_possible.png)
 
 
 Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)

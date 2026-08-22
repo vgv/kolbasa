@@ -219,7 +219,6 @@ Consumers filter and order on meta-fields with a small type-safe DSL — `filter
 ```kotlin
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greaterEq
-import kolbasa.consumer.filter.Filter.and
 import kolbasa.consumer.order.Order.desc
 
 consumer.receive(
@@ -233,9 +232,10 @@ consumer.receive(
 )
 ```
 
-The available filter conditions are `eq`, `neq`, `greater`, `greaterEq`, `less`, `lessEq`, `between`, `like` (strings), `in`,
-`isNull`, `isNotNull`, combined with `and` / `or` / `not`. For an expression the DSL doesn't cover, `nativeSql` takes a raw SQL
-pattern referencing your meta-fields (use with care — it is not type-safe).
+The available filter conditions are `eq`, `neq`, `greater`, `greaterEq`, `less`, `lessEq`, `between`, `like` (strings), `oneOf`, 
+`isNull`, `isNotNull`. Conditions combine with `and` / `or` / `not`, which are members of `Condition` (`a and b` and `!a` in 
+Kotlin; `a.and(b)` and `a.not()` in Java). For an expression the DSL doesn't cover, `nativeSql` takes a raw SQL pattern 
+referencing your meta-fields (use with care — it is not type-safe).
 
 For ordering, each meta-field exposes `asc()` and `desc()`; pass a list to order by several fields. By default, messages are
 returned oldest-visible-first (by `scheduled_at`); an explicit `order` overrides that within the visible set.

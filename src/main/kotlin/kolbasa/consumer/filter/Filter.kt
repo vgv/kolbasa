@@ -153,28 +153,6 @@ object Filter {
      *
      * Usage is the same as in SQL:
      * ```kotlin
-     * USER_ID between Pair(10, 20)
-     * ```
-     * means `(meta_user_id between 10 and 20)`
-     *
-     * Both values are inclusive, the same as `between` in SQL.
-     *
-     * USER_ID is just a meta-field, declared something like this
-     * ```
-     * val USER_ID = MetaField.ofInt("user_id")
-     * ```
-     */
-    @JvmStatic
-    @Deprecated("Use between(from) instead", ReplaceWith("between(from)"))
-    infix fun <T> MetaField<T>.between(value: Pair<T, T>): Condition {
-        return BetweenCondition(this, value.first, value.second)
-    }
-
-    /**
-     * PostgreSQL `between` operator.
-     *
-     * Usage is the same as in SQL:
-     * ```kotlin
      * USER_ID between 10 and 20
      * ```
      * means `(meta_user_id between 10 and 20)`
@@ -232,20 +210,6 @@ object Filter {
     @JvmStatic
     infix fun MetaField<String>.like(value: String): Condition {
         return LikeCondition(this, value)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @JvmStatic
-    infix fun Condition.and(condition: Condition): Condition {
-        return AndCondition(this, condition)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @JvmStatic
-    infix fun Condition.or(condition: Condition): Condition {
-        return OrCondition(this, condition)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -309,33 +273,6 @@ object Filter {
     @JvmStatic
     infix fun <T> MetaField<T>.oneOf(values: Collection<T>): Condition {
         return OneOfCondition(this, values)
-    }
-
-    /**
-     * PostgreSQL in operator.
-     *
-     * Usage is the same as in SQL:
-     * ```kotlin
-     * USER_ID in listOf(1,2,3,4,5)
-     * ```
-     * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
-     *
-     * USER_ID is just a meta-field, declared something like this
-     * ```
-     * val USER_ID = MetaField.ofInt("user_id")
-     * ```
-     */
-    @JvmStatic
-    @Deprecated("Use oneOf() instead", ReplaceWith("oneOf(values)"))
-    infix fun <T> MetaField<T>.`in`(values: Collection<T>): Condition {
-        return oneOf(values)
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @JvmStatic
-    fun not(condition: Condition): Condition {
-        return NotCondition(condition)
     }
 
     // -------------------------------------------------------------------------------------------

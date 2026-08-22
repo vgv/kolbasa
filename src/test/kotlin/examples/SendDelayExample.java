@@ -1,13 +1,19 @@
 package examples;
 
+import kolbasa.consumer.Message;
 import kolbasa.consumer.datasource.DatabaseConsumer;
+import kolbasa.producer.MessageOptions;
+import kolbasa.producer.SendMessage;
 import kolbasa.producer.datasource.DatabaseProducer;
 import kolbasa.queue.PredefinedDataTypes;
 import kolbasa.queue.Queue;
+import kolbasa.queue.meta.MetaValues;
 import kolbasa.schema.SchemaHelpers;
 
-class SimpleExample {
-    public static void main(String[] args) {
+import java.time.Duration;
+
+class SendDelayExample {
+    public static void main(String[] args) throws InterruptedException {
         // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
         var queue = Queue.of("test_queue", PredefinedDataTypes.String);
 
@@ -26,17 +32,30 @@ class SimpleExample {
 
         // -------------------------------------------------------------------------------------------
         // Create producer and send simple message
+        var seconds = 5L;
+        System.out.println("Send a message with a " + seconds + "-second initial delay");
         var producer = new DatabaseProducer(dataSource);
-        producer.send(queue, "Test message");
+        var sendMessage = new SendMessage<>(
+                "Test message",
+                MetaValues.EMPTY,
+                MessageOptions.builder().delay(Duration.ofSeconds(seconds)).build()
+        );
+        producer.send(queue, sendMessage);
 
         // -------------------------------------------------------------------------------------------
         // Create consumer, try to read message from the queue, process it and delete
         var consumer = new DatabaseConsumer(dataSource);
-
-        var message = consumer.receive(queue);
-        if (message != null) {
-            System.out.println(message.getData());
-            consumer.delete(queue, message);
-        }
+        Message<String> message;
+        do {
+            message = consumer.receive(queue);
+            if (message == null) {
+                // Sleep for 1 second before next attempt
+                System.out.println("Message not found, waiting...");
+                Thread.sleep(1000);
+            } else {
+                System.out.println("Message received: " + message);
+                consumer.delete(queue, message);
+            }
+        } while (message == null);
     }
 }

@@ -31,6 +31,18 @@ data class DistinctValuesOptions(
         Checks.checkSamplePercent(samplePercent)
     }
 
+    class Builder internal constructor() {
+        private var samplePercent: Float = YOU_KNOW_BETTER
+        private var filter: Condition? = null
+        private var order: SortOrder? = null
+
+        fun samplePercent(samplePercent: Float): Builder = apply { this.samplePercent = samplePercent }
+        fun filter(filter: Condition): Builder = apply { this.filter = filter }
+        fun order(order: SortOrder): Builder = apply { this.order = order }
+
+        fun build(): DistinctValuesOptions = DistinctValuesOptions(samplePercent, filter, order)
+    }
+
     companion object {
 
         /** Default options: automatic sampling, no filter. */
@@ -39,6 +51,9 @@ data class DistinctValuesOptions(
 
         /** @see CountOptions.YOU_KNOW_BETTER */
         const val YOU_KNOW_BETTER = CountOptions.YOU_KNOW_BETTER
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
     }
 
 }

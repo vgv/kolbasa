@@ -17,12 +17,12 @@ data class Schema(
     val isEmpty = (size == 0)
 
     companion object {
-        val EMPTY = Schema(emptyList(), emptyList())
+        internal val EMPTY = Schema(emptyList(), emptyList())
 
         /**
          * Merge multiple schemas into one
          */
-        fun Iterable<Schema>.merge(): Schema {
+        internal fun Iterable<Schema>.merge(): Schema {
             val tableStatements = sumOf { it.tableStatements.size }
             val indexStatements = sumOf { it.indexStatements.size }
 

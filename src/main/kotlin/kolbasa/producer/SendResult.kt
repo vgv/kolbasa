@@ -105,6 +105,7 @@ data class SendResult<Data>(
      * If there were multiple exceptions, they can be added as suppressed to the first one if needed. By default, they
      * are not added.
      */
+    @JvmOverloads
     fun throwExceptionIfAny(addOthersAsSuppressed: Boolean = false) {
         if (failedMessages == 0) {
             return

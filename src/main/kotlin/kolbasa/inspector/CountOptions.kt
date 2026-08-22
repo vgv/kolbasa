@@ -24,6 +24,16 @@ data class CountOptions(
         Checks.checkSamplePercent(samplePercent)
     }
 
+    class Builder internal constructor() {
+        private var samplePercent: Float = YOU_KNOW_BETTER
+        private var filter: Condition? = null
+
+        fun samplePercent(samplePercent: Float): Builder = apply { this.samplePercent = samplePercent }
+        fun filter(filter: Condition): Builder = apply { this.filter = filter }
+
+        fun build(): CountOptions = CountOptions(samplePercent, filter)
+    }
+
     companion object {
 
         /** Default options: automatic sampling, no filter. */
@@ -38,6 +48,9 @@ data class CountOptions(
          * need to set an explicit percent if you have specific requirements.
          */
         const val YOU_KNOW_BETTER = Float.POSITIVE_INFINITY
+
+        @JvmStatic
+        fun builder(): Builder = Builder()
     }
 
 }
