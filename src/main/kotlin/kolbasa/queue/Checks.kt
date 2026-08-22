@@ -5,6 +5,7 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutationField
+import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
 import java.time.Duration
 
@@ -151,12 +152,31 @@ internal object Checks {
         }
     }
 
-    fun checkUserDefinedMetaFieldName(fieldName: String) {
-        check(!fieldName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
-            "Meta field name '$fieldName' must not end with '${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
+    fun checkMetaFieldsUnique(fields: List<MetaField<*>>) {
+        val duplicates = fields
+            .groupBy { it.dbColumnName }
+            .filterValues { it.size > 1 }
+
+        check(duplicates.isEmpty()) {
+            duplicates.entries.joinToString("; ") { (column, clashing) ->
+                "Meta fields ${clashing.map { it.name }} all map to the same database column '$column'"
+            }
         }
-        check(!fieldName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
-            "Meta field name '$fieldName' must not end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
+    }
+
+    fun checkUserDefinedMetaFieldName(fieldName: String) {
+        val dbColumnName = QueueHelpers.generateMetaColumnDbName(fieldName)
+
+        // DLQ
+        check(!dbColumnName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' maps to database column '$dbColumnName', which ends with " +
+                "'${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
+        }
+
+        // Archive queues
+        check(!dbColumnName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+            "Meta field name '$fieldName' maps to database column '$dbColumnName', which ends with " +
+                "'${Const.ARCHIVE_TABLE_NAME_SUFFIX}' - this suffix is reserved for archive queues"
         }
     }
 

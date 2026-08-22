@@ -1,5 +1,6 @@
 package kolbasa.queue
 
+import kolbasa.assertNotNull
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
@@ -8,7 +9,9 @@ import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
+import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -324,15 +327,31 @@ internal class ChecksTest {
     }
 
     // ---------------------------------------------------------------------------------------------------------------
+    @Test
+    fun testCheckMetaFieldsUnique() {
+        val fields = listOf(
+            MetaField.ofInt("user_id"),
+            MetaField.ofLong("userId"),
+            MetaField.ofString("USER_ID"),
+        )
+
+        val exception = assertThrows<IllegalStateException> { Checks.checkMetaFieldsUnique(fields) }
+        val message = assertNotNull(exception.message)
+        assertEquals("Meta fields [user_id, userId, USER_ID] all map to the same database column 'meta_user_id'", message)
+    }
+    // ---------------------------------------------------------------------------------------------------------------
 
     @Test
     fun testCheckUserDefinedMetaFieldName_CannotEndWithReservedSuffix() {
-        assertThrows<IllegalStateException> {
-            Checks.checkUserDefinedMetaFieldName("field_dlq")
-        }
-        assertThrows<IllegalStateException> {
-            Checks.checkUserDefinedMetaFieldName("field_arc")
-        }
+        // DLQ
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_dlq") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_DLQ") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldDlq") }
+
+        // Archive queues
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_arc") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldArc") }
+        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_ARC") }
     }
 
     @Test

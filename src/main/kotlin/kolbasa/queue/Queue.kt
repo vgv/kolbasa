@@ -202,7 +202,8 @@ data class Queue<Data> internal constructor(
                 defaultAttempts = Int.MAX_VALUE,
                 defaultVisibilityTimeout = mainQueue.options.defaultVisibilityTimeout,
                 dlqOptions = null,
-                archiveQueueOptions = null
+                archiveQueueOptions = null,
+                sqlPutFunction = false
             )
 
             return Queue(

@@ -20,7 +20,10 @@ internal object QueueHelpers {
             "Your identifier name is too long ($result). Max allowed length is ${Const.MAX_DATABASE_OBJECT_NAME_LENGTH} symbols"
         }
 
-        return result
+        // for PG the case doesn't matter, so for us it doesn't either
+        // Make all database names lowercase to prevent any possible collisions inside
+        // the library itself (cache names, Prometheus stats names etc.)
+        return result.lowercase()
     }
 
     fun generateQueueDbName(name: String): String {
@@ -32,7 +35,10 @@ internal object QueueHelpers {
     }
 
     fun generateMetaColumnDbName(fieldName: String): String {
-        // convert Java field into column name, like someField -> some_field
+        // convert Java field into column name
+        // someField -> some_field
+        // SOME_FIELD -> some_field
+        // some_field -> some_field
         val snakeCaseName = fieldName.replace(META_COLUMN_REGEX, "$1_$2").lowercase()
 
         // add 'meta_' prefix
@@ -42,13 +48,16 @@ internal object QueueHelpers {
     fun generateMetaColumnIndexName(queueName: String, fieldName: String, indexSuffix: String): String {
         return try {
             // Queue name + field name + index suffix is less than max length, everything is ok
+            // Name is like "q_audit_queue_account_id_j"
             generateDatabaseName(queueName, fieldName, indexSuffix, separator = "_")
         } catch (_: IllegalStateException) {
             try {
-                // Try to keep the queue name and use short hash for field name
+                // Try to keep the queue name and use short hash for field name.
+                // Name is like "q_audit_queue_6f00606e20_j"
                 generateDatabaseName(queueName, Helpers.shortHash(fieldName), indexSuffix, separator = "_")
             } catch (_: IllegalStateException) {
                 // Even a queue name is too long, use hash for both queue name and field name
+                // // Name is like "idx_6390e56c695bc1df858b9c185e10aba6_j"
                 generateDatabaseName("idx", Helpers.md5Hash(queueName + fieldName), indexSuffix, separator = "_")
             }
         }
