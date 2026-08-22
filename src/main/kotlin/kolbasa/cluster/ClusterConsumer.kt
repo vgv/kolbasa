@@ -10,7 +10,7 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
-class ClusterConsumer(
+class ClusterConsumer @JvmOverloads constructor(
     private val cluster: Cluster,
     private val consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
 ) : Consumer {

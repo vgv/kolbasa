@@ -11,7 +11,7 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
-class ClusterMutator(
+class ClusterMutator @JvmOverloads constructor(
     private val cluster: Cluster,
     private val mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
 ) : Mutator {

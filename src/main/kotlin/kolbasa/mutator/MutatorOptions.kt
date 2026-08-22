@@ -52,9 +52,10 @@ data class MutatorOptions(
         }
     }
 
-    internal companion object {
+    companion object {
         const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 100
 
+        @JvmField
         val DEFAULT = MutatorOptions()
 
         @JvmStatic

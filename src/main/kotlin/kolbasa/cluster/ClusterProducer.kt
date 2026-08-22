@@ -11,7 +11,7 @@ import kolbasa.producer.datasource.Producer
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
-class ClusterProducer(
+class ClusterProducer @JvmOverloads constructor(
     private val cluster: Cluster,
     private val producerOptions: ProducerOptions = ProducerOptions.DEFAULT
 ) : Producer {
