@@ -54,7 +54,7 @@ data class Message<Data>(
      * To avoid having to remember and work with magic constants (0), there is a convenient [isLastAttempt] method for checking
      *
      * ```kotlin
-     * fun processOneMessage(message: Message<Data, Meta>) {
+     * fun processOneMessage(message: Message<Data>) {
      *   try {
      *     // ... business code to process the message ...
      *   } catch (e: Exception) {

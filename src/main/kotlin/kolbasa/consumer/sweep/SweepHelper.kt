@@ -57,7 +57,7 @@ import kotlin.math.max
  * all queries will be executed in a single transaction (`auto-commit=false`), but you can specify a connection with
  * `auto-commit=true`, in which case each sweep query will be executed in its own separate transaction.
  *
- * A one [sweep] deletes a limited number of messages, so on a queue with a large backlog one call is not enough: call it
+ * One [sweep] call deletes a limited number of messages, so on a queue with a large backlog one call is not enough: call it
  * again until it returns 0 (or until your database monitoring system tells you to stop).
  *
  * @see SweepConfig

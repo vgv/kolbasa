@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture
  * cheap, but `producerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
  * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `send()`.
  *
- * This class implements the [Producer] interface, so, it's easy to use instad of [DatabaseProducer] if you need to
+ * This class implements the [Producer] interface, so it's easy to use instead of [DatabaseProducer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
  *
  * ## Usage Example

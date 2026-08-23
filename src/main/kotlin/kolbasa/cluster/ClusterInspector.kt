@@ -35,7 +35,7 @@ import kolbasa.queue.meta.MetaField
  * [DatabaseInspector][kolbasa.inspector.datasource.DatabaseInspector] per node behind the scenes. Creating one is
  * cheap. The [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
  *
- * This class implements the [Inspector] interface, so, it's easy to use instad of [DatabaseInspector] if you need to
+ * This class implements the [Inspector] interface, so it's easy to use instead of [DatabaseInspector] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
  *
  * ## Usage Example

@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture
  * but `mutatorOptions` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
  * must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
  *
- * This class implements the [Mutator] interface, so, it's easy to use instad of [DatabaseMutator] if you need to
+ * This class implements the [Mutator] interface, so it's easy to use instead of [DatabaseMutator] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
  *
  * ## Usage Example

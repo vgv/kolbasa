@@ -27,7 +27,7 @@ import javax.sql.DataSource
  * cheap, but `consumerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
  * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `receive()`.
  *
- * This class implements the [Consumer] interface, so, it's easy to use instad of [DatabaseConsumer] if you need to
+ * This class implements the [Consumer] interface, so it's easy to use instead of [DatabaseConsumer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
  *
  * ## Usage Example

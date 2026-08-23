@@ -30,7 +30,7 @@ import java.sql.Types
  * mergedSchema.tableStatements.forEach(::println)
  * mergedSchema.indexStatements.forEach(::println)
  * // execute all statements
- * val schemaResult = SchemaHelpers.executeSchemaStatements(mergedSchema)
+ * val schemaResult = SchemaHelpers.executeSchemaStatements(dataSource, mergedSchema)
  *
  * if (schemaResult.failedStatements > 0) {
  *   schemaResult.failedTableStatements.forEach { println("${it.statement} -> ${it.error}") }
@@ -64,7 +64,8 @@ data class Schema(
         /**
          * Merge multiple schemas into one
          */
-        internal fun Iterable<Schema>.merge(): Schema {
+        @JvmStatic
+        fun Iterable<Schema>.merge(): Schema {
             val tableStatements = sumOf { it.tableStatements.size }
             val indexStatements = sumOf { it.indexStatements.size }
 
