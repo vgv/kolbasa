@@ -4,9 +4,6 @@ import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueType
 import kolbasa.schema.Schema.Companion.merge
-import kolbasa.schema.SchemaHelpers.createOrUpdateQueues
-import kolbasa.schema.SchemaHelpers.deleteQueues
-import kolbasa.schema.SchemaHelpers.renameQueues
 import javax.sql.DataSource
 
 object SchemaHelpers {
@@ -67,6 +64,13 @@ object SchemaHelpers {
      *
      * This is a convenient method that allows you to simply bring the table in the database to the current queue state,
      * making the correct data migration for each of the above cases
+     *
+     * This method is heavily optimized for many queues at once. Whatever the number of queues, one call initializes
+     * the system tables, reads the existing database schema once and then applies the statements for all the queues
+     * together. Calling it once per queue repeats all of that fixed work for every single queue.
+     *
+     * So update the schema for all your queues in one call whenever you can. One call for 10 000 queues is much,
+     * much faster than 10 000 calls with one queue each.
      */
     @JvmStatic
     fun createOrUpdateQueues(dataSource: DataSource, mainQueues: List<Queue<*>>): SchemaResult {

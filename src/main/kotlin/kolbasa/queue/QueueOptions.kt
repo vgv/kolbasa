@@ -14,6 +14,28 @@ import java.time.Duration
  * 3. [SendOptions][kolbasa.producer.SendOptions]
  * 4. [MessageOptions][kolbasa.producer.MessageOptions]
  * 5. [ReceiveOptions][kolbasa.consumer.ReceiveOptions]
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = QueueOptions.builder()
+ *     .defaultAttempts(3)
+ *     .enableDlq()
+ *     .build()
+ *
+ * val queue = Queue("orders", PredefinedDataTypes.String, options)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var options = QueueOptions.builder()
+ *     .defaultAttempts(3)
+ *     .enableDlq()
+ *     .build();
+ *
+ * var queue = new Queue<>("orders", PredefinedDataTypes.String, options);
+ * ```
  */
 data class QueueOptions(
     /**
@@ -144,6 +166,7 @@ data class QueueOptions(
         Checks.checkVisibilityTimeout(defaultVisibilityTimeout)
     }
 
+    /** Builder for flexible [QueueOptions] creation, when only some of the properties need to be set. */
     class Builder internal constructor() {
         private var defaultDelay: Duration = DEFAULT_DELAY
         private var defaultAttempts: Int = DEFAULT_ATTEMPTS
@@ -152,19 +175,46 @@ data class QueueOptions(
         private var archiveQueueOptions: ArchiveQueueOptions? = null
         private var sqlPutFunction: Boolean = false
 
+        /** Sets [QueueOptions.defaultDelay] – how long a message stays invisible to consumers after it is sent. */
         fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
+
+        /** Sets [QueueOptions.defaultAttempts] – how many times a message may be consumed before it expires. */
         fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
+
+        /** Sets [QueueOptions.defaultVisibilityTimeout] – how long a consumed message stays hidden from others. */
         fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
             apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
+        /**
+         * Enables the DLQ for this queue.
+         *
+         * This is how [QueueOptions.dlqOptions] is set: there is no property with the name of this method.
+         * Called without an argument, it enables the DLQ with [DlqOptions.DEFAULT]. Not calling it at all leaves
+         * the DLQ disabled.
+         */
         @JvmOverloads
         fun enableDlq(dlqOptions: DlqOptions = DlqOptions.DEFAULT) = apply { this.dlqOptions = dlqOptions }
+
+        /**
+         * Enables the archive queue.
+         *
+         * This is how [QueueOptions.archiveQueueOptions] is set: there is no property with the name of this
+         * method. Called without an argument, it enables the archive with [ArchiveQueueOptions.DEFAULT]. Not
+         * calling it at all leaves the archive disabled.
+         */
         @JvmOverloads
         fun enableArchiveQueue(archiveQueueOptions: ArchiveQueueOptions = ArchiveQueueOptions.DEFAULT) =
             apply { this.archiveQueueOptions = archiveQueueOptions }
 
+        /**
+         * Enables the SQL put function, setting [QueueOptions.sqlPutFunction] to `true`.
+         *
+         * This builder has no method that switches it off again. Leave the call out for a queue that should
+         * not have the function.
+         */
         fun enableSqlPutFunction() = apply { this.sqlPutFunction = true }
 
+        /** Creates a new [QueueOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = QueueOptions(
             defaultDelay, defaultAttempts, defaultVisibilityTimeout, dlqOptions, archiveQueueOptions, sqlPutFunction
         )
@@ -172,14 +222,18 @@ data class QueueOptions(
 
     companion object {
 
+        /** The [QueueOptions.defaultDelay] used when none is set – zero, messages are visible immediately. */
         @JvmField
         val DEFAULT_DELAY: Duration = Duration.ZERO
 
+        /** The [QueueOptions.defaultAttempts] used when none is set – 5 attempts. */
         const val DEFAULT_ATTEMPTS = 5
 
+        /** The [QueueOptions.defaultVisibilityTimeout] used when none is set – 60 seconds. */
         @JvmField
         val DEFAULT_VISIBILITY_TIMEOUT: Duration = Duration.ofSeconds(60)
 
+        /** Default options: no delay, 5 attempts, 60 second visibility timeout, no DLQ, no archive, no SQL put function. */
         @JvmField
         val DEFAULT = QueueOptions()
 
