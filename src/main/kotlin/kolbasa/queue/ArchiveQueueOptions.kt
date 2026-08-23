@@ -32,6 +32,19 @@ import java.time.Duration
  * )
  * ```
  *
+ * The same from Java:
+ *
+ * ```java
+ * var archiveQueueOptions = ArchiveQueueOptions.builder()
+ *     .retention(Duration.ofDays(90))
+ *     .maxMessages(1_000_000)
+ *     .build();
+ *
+ * var queue = Queue.builder("orders", PredefinedDataTypes.String)
+ *     .options(QueueOptions.builder().enableArchiveQueue(archiveQueueOptions).build())
+ *     .build();
+ * ```
+ *
  * @see QueueOptions.archiveQueueOptions
  * @see DlqOptions
  */
@@ -62,26 +75,35 @@ data class ArchiveQueueOptions(
         Checks.checkRetentionMaxMessages(maxMessages)
     }
 
+    /** Builder for flexible [ArchiveQueueOptions] creation, when only some of the properties need to be set. */
     class Builder internal constructor() {
         private var retention: Duration = DEFAULT_RETENTION
         private var maxMessages: Long? = null
 
+        /** Sets [ArchiveQueueOptions.retention] – how long a message is kept before the sweep cycle deletes it. */
         fun retention(retention: Duration): Builder = apply { this.retention = retention }
+
+        /** Sets [ArchiveQueueOptions.maxMessages] – the approximate number of messages to keep, oldest removed first. */
         fun maxMessages(maxMessages: Long): Builder = apply { this.maxMessages = maxMessages }
 
+        /** Creates a new [ArchiveQueueOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = ArchiveQueueOptions(retention, maxMessages)
     }
 
     companion object {
+        /** The smallest retention Kolbasa accepts – 1 hour. */
         @JvmField
         val MIN_RETENTION: Duration = Duration.ofHours(1)
 
+        /** The retention used when none is set – 30 days. */
         @JvmField
         val DEFAULT_RETENTION: Duration = Duration.ofDays(30)
 
+        /** The largest retention Kolbasa accepts – 10 years. */
         @JvmField
         val MAX_RETENTION: Duration = Duration.ofDays(365 * 10L) // 10 years
 
+        /** Default options: 30 days retention and no message-count limit. */
         @JvmField
         val DEFAULT = ArchiveQueueOptions()
 

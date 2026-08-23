@@ -37,6 +37,21 @@ import java.time.Duration
  * val messages = consumer.receive(queue, 10, options)
  * ```
  *
+ * The same from Java, where the filter and the order come from the static factories of
+ * [Filter][kolbasa.consumer.filter.Filter] and [Order]:
+ *
+ * ```java
+ * var options = ReceiveOptions.builder()
+ *     .visibilityTimeout(Duration.ofMinutes(2))
+ *     .readMetadata(true)
+ *     .filter(Filter.eq(ACCOUNT_ID, 123))
+ *     .order(Order.desc(PRIORITY))
+ *     .build();
+ *
+ * // Use options in receive() call
+ * var messages = consumer.receive(queue, 10, options);
+ * ```
+ *
  * @see ConsumerOptions for consumer-level defaults
  * @see kolbasa.queue.QueueOptions for queue-wide defaults
  * @see Condition for filtering options
@@ -108,6 +123,7 @@ data class ReceiveOptions(
     // do we need to read, parse and propagate OT data?
     internal var readOpenTelemetryData: Boolean = false
 
+    /** Builder for flexible [ReceiveOptions] creation, when only some of the properties need to be set. */
     class Builder {
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
@@ -115,12 +131,22 @@ data class ReceiveOptions(
         private var order: Order = Order.NONE
         private var filter: Condition? = null
 
+        /** Sets [ReceiveOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
+
+        /** Sets [ReceiveOptions.visibilityTimeout] – how long the received messages stay invisible to other consumers. */
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
+
+        /** Sets [ReceiveOptions.readMetadata] – whether metadata is read from the database into the received messages. */
         fun readMetadata(readMetadata: Boolean) = apply { this.readMetadata = readMetadata }
+
+        /** Sets [ReceiveOptions.order] – the order in which the matching messages are received. */
         fun order(order: Order) = apply { this.order = order }
+
+        /** Sets [ReceiveOptions.filter] – the condition on meta fields a message has to match to be received. */
         fun filter(filter: Condition) = apply { this.filter = filter }
 
+        /** Creates a new [ReceiveOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build(): ReceiveOptions {
             return ReceiveOptions(
                 consumer = consumer,
@@ -134,6 +160,7 @@ data class ReceiveOptions(
 
     companion object {
 
+        /** Default options: they override nothing and leave the default behaviour in place. */
         @JvmField
         val DEFAULT = ReceiveOptions()
 

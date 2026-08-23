@@ -36,6 +36,19 @@ import java.util.concurrent.ExecutorService
  * producer.send(queue, SendRequest(data = messages, sendOptions = options))
  * ```
  *
+ * The same from Java:
+ *
+ * ```java
+ * var options = SendOptions.builder()
+ *     .delay(Duration.ofMinutes(2))
+ *     .attempts(10)
+ *     .shard(42)
+ *     .build();
+ *
+ * // Use options in send() call
+ * producer.send(queue, new SendRequest<>(messages, options));
+ * ```
+ *
  * @see ProducerOptions for producer-level defaults
  * @see MessageOptions for per-message overrides (highest priority)
  * @see kolbasa.queue.QueueOptions for queue-wide defaults
@@ -139,6 +152,7 @@ data class SendOptions(
         Checks.checkBatchSize(batchSize)
     }
 
+    /** Builder for flexible [SendOptions] creation, when only some of the properties need to be set. */
     class Builder internal constructor() {
         private var delay: Duration? = null
         private var attempts: Int? = null
@@ -149,15 +163,31 @@ data class SendOptions(
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
 
+        /** Sets [SendOptions.delay] – how long the messages of this send() call stay invisible to consumers. */
         fun delay(delay: Duration) = apply { this.delay = delay }
+
+        /** Sets [SendOptions.attempts] – how many times a message may be consumed before it expires or goes to a DLQ. */
         fun attempts(attempts: Int) = apply { this.attempts = attempts }
+
+        /** Sets [SendOptions.producer] – the sender name written into the queue's `producer` column, for debugging. */
         fun producer(producer: String) = apply { this.producer = producer }
+
+        /** Sets [SendOptions.deduplicationMode] – whether a duplicate key fails the send or is silently skipped. */
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
+
+        /** Sets [SendOptions.batchSize] – how many messages go into a single INSERT statement. */
         fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
+
+        /** Sets [SendOptions.partialInsert] – what happens to the rest of the batch when one chunk fails. */
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
+
+        /** Sets [SendOptions.shard] – the value that keeps messages with the same shard on the same cluster server. */
         fun shard(shard: Int) = apply { this.shard = shard }
+
+        /** Sets [SendOptions.asyncExecutor] – the executor used by the producer's sendAsync() methods. */
         fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
 
+        /** Creates a new [SendOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = SendOptions(
             delay = delay,
             attempts = attempts,
@@ -172,6 +202,7 @@ data class SendOptions(
 
     companion object {
 
+        /** Default options: they override nothing and leave the default behaviour in place. */
         @JvmField
         val DEFAULT = SendOptions()
 
