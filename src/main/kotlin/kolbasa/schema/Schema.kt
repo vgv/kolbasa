@@ -2,6 +2,45 @@ package kolbasa.schema
 
 import java.sql.Types
 
+/**
+ * The SQL statements that bring the database in line with a queue – built, but not executed yet.
+ *
+ * Kolbasa builds a schema by comparing the queue you declared with the table that exists in the database right now.
+ * If the table is missing, the schema creates it. If the table is there but a meta field or an index was added since
+ * the last run, the schema contains only what is missing. If everything is already in place, the schema is empty
+ * ([isEmpty] is `true`).
+ *
+ * Typically, you don't need [Schema] object itself, because the application normally works with
+ * [SchemaHelpers.createOrUpdateQueues] method, which creates [Schema] and executes it immediately. However, if you're
+ * debugging, performing research, or your application has some other way of handling database migrations, you may need to
+ * work with [Schema] directly.
+ *
+ * In the example below, an application retrieves [Schema], logs all queries, and then executes them using
+ * standard Kolbasa [SchemaHelpers.executeSchemaStatements] method.
+ *
+ * ## Example
+ *
+ * ```kotlin
+ * // extract all schemas for 'orders' and 'customers' queues
+ * // No database changes, generateCreateOrUpdateStatements() method only reads the database metadata
+ * val schemas = SchemaHelpers.generateCreateOrUpdateStatements(dataSource, orders, customers)
+ * // schemas has one schema per queue, merge all these schemas into one big schema
+ * val mergedSchema = schemas.values.merge()
+ * // dump all statements
+ * mergedSchema.tableStatements.forEach(::println)
+ * mergedSchema.indexStatements.forEach(::println)
+ * // execute all statements
+ * val schemaResult = SchemaHelpers.executeSchemaStatements(mergedSchema)
+ *
+ * if (schemaResult.failedStatements > 0) {
+ *   schemaResult.failedTableStatements.forEach { println("${it.statement} -> ${it.error}") }
+ *   schemaResult.failedIndexStatements.forEach { println("${it.statement} -> ${it.error}") }
+ * }
+ * ```
+ *
+ * @see SchemaHelpers
+ * @see SchemaResult
+ */
 data class Schema(
     /**
      * All "create table", "alter column", "set default" etc. statements
@@ -13,7 +52,10 @@ data class Schema(
     val indexStatements: List<String>
 ) {
 
+    /** How many statements this schema holds in total – table statements plus index statements. */
     val size = (tableStatements.size + indexStatements.size)
+
+    /** `true` when there is nothing to do, because the database already matches the queue. */
     val isEmpty = (size == 0)
 
     companion object {
@@ -35,7 +77,6 @@ data class Schema(
             }
         }
     }
-
 }
 
 

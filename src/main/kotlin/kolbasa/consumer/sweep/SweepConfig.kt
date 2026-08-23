@@ -7,9 +7,11 @@ import kolbasa.queue.Checks
  *
  * One sweep pass, on the connection of the `receive()` that triggered it:
  * - takes the messages of the queue that have run out of attempts and either deletes them or, if the queue has a
- *   [DLQ][kolbasa.queue.DlqOptions], moves them there
- * - applies the retention of that [DLQ][kolbasa.queue.DlqOptions], if there is one
- * - applies the retention of the [archive queue][kolbasa.queue.ArchiveQueueOptions], if there is one
+ *   [DLQ][kolbasa.queue.Queue.deadLetterQueue], moves them there
+ * - applies the retention of that [DLQ][kolbasa.queue.Queue.deadLetterQueue], if there is one
+ *   (see [DlqOptions][kolbasa.queue.DlqOptions])
+ * - applies the retention of the [archive queue][kolbasa.queue.Queue.archiveQueue], if there is one
+ *   (see [ArchiveQueueOptions][kolbasa.queue.ArchiveQueueOptions])
  *
  * Because the pass runs on the caller's connection and costs that caller some latency, it is not run on every
  * receive: [probability] decides how often it happens, and [maxMessages] caps how much one pass deletes.

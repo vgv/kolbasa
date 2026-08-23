@@ -20,8 +20,8 @@ import kotlin.math.max
  * Runs the sweep by hand – the cleanup that Kolbasa otherwise runs by itself inside `receive()`.
  *
  * One sweep pass over a queue does three things: it takes the messages that ran out of attempts and either deletes
- * them or, if the queue has a [DLQ][kolbasa.queue.DlqOptions], moves them there; it applies the retention rules of
- * that DLQ; and it applies the retention rules of the [archive queue][kolbasa.queue.ArchiveQueueOptions]. Without a
+ * them or, if the queue has a [DLQ][kolbasa.queue.Queue.deadLetterQueue], moves them there; it applies the retention rules of
+ * that DLQ; and it applies the retention rules of the [archive queue][kolbasa.queue.Queue.archiveQueue]. Without a
  * sweep, dead messages stay in the table forever.
  *
  * You normally do not need this object. Kolbasa runs the same pass from time to time inside `receive()`, and

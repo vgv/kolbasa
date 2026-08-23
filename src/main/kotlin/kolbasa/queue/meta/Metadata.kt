@@ -85,7 +85,7 @@ data class Metadata(val fields: List<MetaField<*>>) {
             InstantField("original_${Const.SCHEDULED_AT_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
         /**
-         * The four fields a [DLQ][kolbasa.queue.DlqOptions] adds to its own metadata. They keep the id and the
+         * The four fields a [DLQ][kolbasa.queue.Queue.deadLetterQueue] adds to its own metadata. They keep the id and the
          * timestamps a message had in the source queue.
          *
          * A DLQ has every meta field of its parent queue plus these four.
@@ -123,7 +123,7 @@ data class Metadata(val fields: List<MetaField<*>>) {
             InstantField("original_${Const.PROCESSING_AT_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
         /**
-         * The four fields an [archive queue][kolbasa.queue.ArchiveQueueOptions] adds to its own metadata. They
+         * The four fields an [archive queue][kolbasa.queue.Queue.archiveQueue] adds to its own metadata. They
          * keep the id, the timestamps and the attempts a message had in the source queue.
          *
          * An archive queue has every meta field of its parent queue plus these four.
