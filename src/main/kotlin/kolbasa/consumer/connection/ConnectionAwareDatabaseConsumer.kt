@@ -17,12 +17,34 @@ import kolbasa.utils.LruCache
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 
+/**
+ * Default implementation of [ConnectionAwareConsumer].
+ *
+ * It uses plain JDBC over the connection you pass to every call and needs no extra dependencies. It never opens,
+ * commits, rolls back or closes a connection – that stays your job, and that is the point of this class: receiving a
+ * message and changing your own tables can be one transaction.
+ *
+ * If you would rather let Kolbasa manage connections and transactions, use
+ * [DatabaseConsumer][kolbasa.consumer.datasource.DatabaseConsumer] instead.
+ */
 class ConnectionAwareDatabaseConsumer internal constructor(
     private val nodeId: NodeId,
     private val consumerOptions: ConsumerOptions,
     private val shards: Shards
 ) : ConnectionAwareConsumer {
 
+    /**
+     * Creates a consumer that works inside a transaction you manage.
+     *
+     * This object opens no connections. You pass an active [java.sql.Connection] to every call, and you decide when
+     * to commit or roll back. A message deleted through this consumer comes back to the queue if your transaction
+     * rolls back.
+     *
+     * The consumer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param consumerOptions defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
+     * and every call follows the queue defaults.
+     */
     @JvmOverloads
     constructor(consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,

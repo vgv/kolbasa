@@ -20,6 +20,23 @@ class DatabaseConsumer internal constructor(
     private val peer: ConnectionAwareConsumer
 ) : Consumer {
 
+    /**
+     * Creates a consumer that manages connections and transactions itself.
+     *
+     * Every call takes a connection from `dataSource`, does its work in one transaction and gives the connection
+     * back. You never open, commit, roll back or close anything.
+     *
+     * Because `receive()` and `delete()` are separate calls, they are separate transactions: a message received here
+     * stays invisible to other consumers until its visibility timeout ends, and it is really gone only after
+     * `delete()`. If you need the message and your own database changes to be one atomic operation, use
+     * [ConnectionAwareDatabaseConsumer][kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer].
+     *
+     * The consumer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param dataSource the pool this consumer takes connections from
+     * @param consumerOptions defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
+     * and every call follows the queue defaults.
+     */
     @JvmOverloads
     constructor(
         dataSource: DataSource,
