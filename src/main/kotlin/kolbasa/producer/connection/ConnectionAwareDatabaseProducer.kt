@@ -20,6 +20,17 @@ class ConnectionAwareDatabaseProducer internal constructor(
     internal val producerOptions: ProducerOptions
 ) : ConnectionAwareProducer {
 
+    /**
+     * Creates a producer that works inside a transaction you manage.
+     *
+     * This object opens no connections. You pass an active [java.sql.Connection] to every `send()`, and you decide
+     * when to commit or roll back. The messages appear in the queue only when your transaction commits.
+     *
+     * The producer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param producerOptions defaults for every `send()` of this producer. Without it,
+     * [ProducerOptions.DEFAULT] is used and every message follows the queue defaults.
+     */
     @JvmOverloads
     constructor(producerOptions: ProducerOptions = ProducerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
