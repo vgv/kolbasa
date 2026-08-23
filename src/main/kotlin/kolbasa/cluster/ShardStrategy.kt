@@ -44,6 +44,9 @@ import java.time.Duration
  * You can also write your own strategy, but there is no reason to: the four below cover the useful cases, and a
  * strategy that needs to look at the message itself belongs in
  * [SendOptions.shard][kolbasa.producer.SendOptions.shard] instead.
+ *
+ * Why a shard matters at all, which node a given shard lives on, and what co-location buys you are described in
+ * [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md#how-a-messages-shard-is-chosen).
  */
 sealed class ShardStrategy {
 
