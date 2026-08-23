@@ -19,6 +19,16 @@ class DatabaseInspector(
     private val peer: ConnectionAwareInspector
 ) : Inspector {
 
+    /**
+     * Creates an inspector that manages connections itself.
+     *
+     * Every call takes a connection from `dataSource`, reads what it needs and gives the connection back. The
+     * inspector only reads: it never changes a queue or a message.
+     *
+     * The inspector is thread-safe and holds no state between calls, so create one and share it.
+     *
+     * @param dataSource the pool this inspector takes connections from
+     */
     constructor(dataSource: DataSource) : this(
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseInspector()

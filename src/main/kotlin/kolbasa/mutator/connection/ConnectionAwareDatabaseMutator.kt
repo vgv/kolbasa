@@ -18,11 +18,31 @@ import java.sql.Connection
 import java.sql.ResultSet
 import kotlin.math.min
 
+/**
+ * Default implementation of [ConnectionAwareMutator].
+ *
+ * It uses plain JDBC over the connection you pass to every call and needs no extra dependencies. It never opens,
+ * commits, rolls back or closes a connection – that stays your job, and that is the point of this class: changing a
+ * message and changing your own tables can be one transaction.
+ *
+ * If you would rather let Kolbasa manage connections and transactions, use
+ * [DatabaseMutator][kolbasa.mutator.datasource.DatabaseMutator] instead.
+ */
 class ConnectionAwareDatabaseMutator internal constructor(
     internal val nodeId: NodeId,
     internal val mutatorOptions: MutatorOptions
 ) : ConnectionAwareMutator {
 
+    /**
+     * Creates a mutator that works inside a transaction you manage.
+     *
+     * This object opens no connections. You pass an active [java.sql.Connection] to every call, and you decide when
+     * to commit or roll back. The changes reach the queue only when your transaction commits.
+     *
+     * The mutator is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param mutatorOptions defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
+     */
     @JvmOverloads
     constructor(mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
