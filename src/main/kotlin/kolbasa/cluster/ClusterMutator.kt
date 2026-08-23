@@ -11,6 +11,50 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
+/**
+ * A [Mutator] that changes messages on every node of a cluster.
+ *
+ * How many nodes one call touches depends on what you ask for:
+ * - by message id – every id carries its shard, so the ids are grouped by node and each node gets one call. An id
+ *   whose shard has no node to read from at that moment, which happens while the shard is being migrated, is
+ *   silently skipped: it is not an error and it is not reported, so compare
+ *   [MutateResult.mutatedMessages][kolbasa.mutator.MutateResult.mutatedMessages] with the number of ids you passed
+ *   if that matters to you.
+ * - by filter – the filter can match messages anywhere, so every node is called.
+ *
+ * The results of all nodes are added up: [MutateResult.mutatedMessages][kolbasa.mutator.MutateResult.mutatedMessages]
+ * is the total over the cluster. The list of changed messages is capped by
+ * [MutatorOptions.maxMutatedMessagesKeepInMemory][kolbasa.mutator.MutatorOptions.maxMutatedMessagesKeepInMemory]
+ * for the whole call, not per node, and
+ * [MutateResult.truncated][kolbasa.mutator.MutateResult.truncated] tells you when the cap was reached.
+ *
+ * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
+ * [DatabaseMutator][kolbasa.mutator.datasource.DatabaseMutator] per node behind the scenes. Creating one is cheap,
+ * but `mutatorOptions` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
+ * must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
+ *
+ * This class implements the [Mutator] interface, so, it's easy to use instad of [DatabaseMutator] if you need to
+ * migrate from a single-node setup to a Kolbasa cluster.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val mutator: Mutator = ClusterMutator(cluster)
+ *
+ * mutator.addRemainingAttempts(orders, 5, messageId)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Mutator mutator = new ClusterMutator(cluster);
+ *
+ * mutator.addRemainingAttempts(orders, 5, messageId);
+ * ```
+ *
+ * @see Cluster
+ * @see kolbasa.mutator.datasource.DatabaseMutator
+ */
 class ClusterMutator @JvmOverloads constructor(
     private val cluster: Cluster,
     private val mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT

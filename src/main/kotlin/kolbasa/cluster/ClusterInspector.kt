@@ -13,6 +13,50 @@ import kolbasa.inspector.datasource.Inspector
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
 
+/**
+ * An [Inspector] that reports numbers for a whole cluster.
+ *
+ * Every method asks all nodes and merges their answers, so you get one number for the cluster instead of one per
+ * node. How they are merged depends on the question:
+ * - [count] and [size] are added up over the nodes.
+ * - [isEmpty] and [isDeadOrEmpty] are true only when they are true on every node.
+ * - [messageAge] keeps the oldest message of the cluster and the newest message of the cluster.
+ * - [distinctValues] asks every node for at most `limit` values, adds up the counts of equal values, then sorts
+ *   the merged map and applies `limit` again. The limit therefore holds for the cluster, but the answer is not the
+ *   exact cluster-wide top: with `limit = 10` on three nodes, a value that is 11th on each of them is cut by each
+ *   node's own limit and never reaches the merge – even though its three counts added together could make it the
+ *   largest of all. And when [DistinctValuesOptions.order] is not set, the nodes are asked without any `order by`,
+ *   so each of them returns an arbitrary group of values and the merged result is arbitrary as well.
+ *
+ * The result is as approximate as the underlying calls are: [count] samples the table instead of reading all of it,
+ * and the nodes are asked one after another, not at one instant.
+ *
+ * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
+ * [DatabaseInspector][kolbasa.inspector.datasource.DatabaseInspector] per node behind the scenes. Creating one is
+ * cheap. The [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
+ *
+ * This class implements the [Inspector] interface, so, it's easy to use instad of [DatabaseInspector] if you need to
+ * migrate from a single-node setup to a Kolbasa cluster.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val inspector: Inspector = ClusterInspector(cluster)
+ *
+ * val messages = inspector.count(orders)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Inspector inspector = new ClusterInspector(cluster);
+ *
+ * var messages = inspector.count(orders);
+ * ```
+ *
+ * @see Cluster
+ * @see kolbasa.inspector.datasource.DatabaseInspector
+ */
 class ClusterInspector(private val cluster: Cluster) : Inspector {
 
     override fun count(queue: Queue<*>, options: CountOptions): Messages {
