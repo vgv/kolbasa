@@ -30,10 +30,21 @@ package kolbasa.consumer.order
  * @see Order
  */
 enum class SortOrder(internal val sql: String) {
+    /** Smallest value first. Where nulls go is decided by PostgreSQL: with `asc` they come last. */
     ASC("asc"),
+
+    /** Largest value first. Where nulls go is decided by PostgreSQL: with `desc` they come first. */
     DESC("desc"),
+
+    /** Smallest value first, nulls before all of them. */
     ASC_NULLS_FIRST("asc nulls first"),
+
+    /** Largest value first, nulls before all of them. */
     DESC_NULLS_FIRST("desc nulls first"),
+
+    /** Smallest value first, nulls after all of them. */
     ASC_NULLS_LAST("asc nulls last"),
+
+    /** Largest value first, nulls after all of them. */
     DESC_NULLS_LAST("desc nulls last")
 }

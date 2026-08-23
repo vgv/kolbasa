@@ -120,26 +120,49 @@ data class SendOptions(
     val producer: String? = null,
 
     /**
+     * Overrides [ProducerOptions.deduplicationMode] for this send() call – what happens to a message whose unique key is
+     * already in the queue.
+     *
+     * `null`, the default, means "do not override": the value of the producer is used.
+     *
      * @see [ProducerOptions.deduplicationMode]
      */
     val deduplicationMode: DeduplicationMode? = null,
 
     /**
+     * Overrides [ProducerOptions.batchSize] for this send() call – how many messages go into a single INSERT statement.
+     *
+     * `null`, the default, means "do not override": the value of the producer is used.
+     *
      * @see [ProducerOptions.batchSize]
      */
     val batchSize: Int? = null,
 
     /**
+     * Overrides [ProducerOptions.partialInsert] for this send() call – what happens to the rest of the batch when one part
+     * of it fails.
+     *
+     * `null`, the default, means "do not override": the value of the producer is used.
+     *
      * @see [ProducerOptions.partialInsert]
      */
     val partialInsert: PartialInsert? = null,
 
     /**
+     * Overrides [ProducerOptions.shard] for this send() call – which shard, and therefore which node of
+     * a cluster, the messages go to.
+     *
+     * `null`, the default, means "do not override": the value of the producer is used.
+     *
      * @see [ProducerOptions.shard]
      */
     val shard: Int? = null,
 
     /**
+     * Overrides [ProducerOptions.asyncExecutor] for this send() call – the executor that runs `sendAsync()` calls.
+     *
+     * `null`, the default, means "do not override": the value of the producer is used.
+     *
      * @see [ProducerOptions.asyncExecutor]
      */
     val asyncExecutor: ExecutorService? = null,
