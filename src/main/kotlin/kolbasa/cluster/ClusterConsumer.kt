@@ -10,6 +10,45 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
+/**
+ * A [Consumer] that receives messages from a cluster of nodes.
+ *
+ * Messages of one queue live on many nodes, and one `receive()` call reads from one node: the consumer picks a node
+ * that currently owns shards for reading and takes messages from it. Different calls may pick different nodes, so a
+ * normal receive loop visits the whole cluster over time. This also means the order of messages across the cluster
+ * is not defined – only the order inside one node is.
+ *
+ * An empty result therefore does not always mean "the queue is empty". It also happens when the chosen node has
+ * nothing ready, and when no node is available for reading at all, which is the case while every shard is being
+ * migrated. Treat an empty list as "nothing for me right now" and call again.
+ *
+ * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
+ * [DatabaseConsumer][kolbasa.consumer.datasource.DatabaseConsumer] per node behind the scenes. Creating one is
+ * cheap, but `consumerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
+ * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `receive()`.
+ *
+ * This class implements the [Consumer] interface, so, it's easy to use instad of [DatabaseConsumer] if you need to
+ * migrate from a single-node setup to a Kolbasa cluster.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val consumer: Consumer = ClusterConsumer(cluster)
+ *
+ * val messages = consumer.receive(orders, 100)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Consumer consumer = new ClusterConsumer(cluster);
+ *
+ * var messages = consumer.receive(orders, 100);
+ * ```
+ *
+ * @see Cluster
+ * @see kolbasa.consumer.datasource.DatabaseConsumer
+ */
 class ClusterConsumer @JvmOverloads constructor(
     private val cluster: Cluster,
     private val consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT

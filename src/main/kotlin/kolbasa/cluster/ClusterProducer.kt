@@ -11,6 +11,46 @@ import kolbasa.producer.datasource.Producer
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
+/**
+ * A [Producer] that sends messages to a cluster of nodes.
+ *
+ * Every message gets a shard number, and the shard decides which node stores it. The number comes from the first of
+ * these that is set: the shard of the `send()` call ([SendOptions.shard][kolbasa.producer.SendOptions.shard]), the
+ * shard of this producer ([ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard]), or
+ * [Kolbasa.shardStrategy][kolbasa.Kolbasa.shardStrategy]. Any number is accepted: it is folded into the `0..1023`
+ * range for you.
+ *
+ * One `send()` call goes to one node, so a batch of messages that must land together must share a shard. If the
+ * node that owns the shard is not part of the cluster at that moment, the messages are written to another node
+ * instead of being lost, and a later auto-repair process moves them where they belong.
+ *
+ * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
+ * [DatabaseProducer][kolbasa.producer.datasource.DatabaseProducer] per node behind the scenes. Creating one is
+ * cheap, but `producerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
+ * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `send()`.
+ *
+ * This class implements the [Producer] interface, so, it's easy to use instad of [DatabaseProducer] if you need to
+ * migrate from a single-node setup to a Kolbasa cluster.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val producer: Producer = ClusterProducer(cluster)
+ *
+ * producer.send(orders, "message")
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Producer producer = new ClusterProducer(cluster);
+ *
+ * producer.send(orders, "message");
+ * ```
+ *
+ * @see Cluster
+ * @see kolbasa.producer.datasource.DatabaseProducer
+ */
 class ClusterProducer @JvmOverloads constructor(
     private val cluster: Cluster,
     private val producerOptions: ProducerOptions = ProducerOptions.DEFAULT
