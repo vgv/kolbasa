@@ -9,13 +9,13 @@ import kolbasa.queue.meta.MetaValues
  * message, a list of messages, or a [SendRequest] that wraps a list together with options for the whole send() call.
  *
  * A message carries three things, and only the first one is required:
- * 1. [data] – the payload, stored in the queue's data column
- * 2. [meta] – metadata values, used to filter and sort messages when they are received
- * 3. [options] – delay and attempts overrides for this particular message
+ * - (1) [data] – the payload, stored in the queue's data column
+ * - (2) [meta] – metadata values, used to filter and sort messages when they are received
+ * - (3) [options] – delay and attempts overrides for this particular message
  *
  * `Data` must match the type of the queue the message is sent to – a `Queue<String>` accepts `SendMessage<String>` only.
  *
- * ## Usage Example
+ * Usage example (Kotlin):
  *
  * ```kotlin
  * val USER_ID = MetaField.ofInt("user_id", FieldOption.SEARCH)
@@ -28,7 +28,7 @@ import kolbasa.queue.meta.MetaValues
  * ))
  * ```
  *
- * ## Usage Example (Java)
+ * Usage example (Java):
  *
  * ```java
  * producer.send(queue, List.of(
@@ -39,9 +39,11 @@ import kolbasa.queue.meta.MetaValues
  * ));
  * ```
  *
- * @see SendRequest to send a batch of messages with options for the whole send() call
- * @see MetaValues for building the metadata values of a message
- * @see MessageOptions for per-message delay and attempts
+ * See also [SendRequest] to send a batch of messages with options for the whole send() call, [MetaValues] for
+ * building the metadata values of a message, and [MessageOptions] for per-message delay and attempts.
+ *
+ * @constructor Creates a message from all three parts. The secondary constructors below cover the cases where the
+ * metadata, the options, or both are left at their defaults.
  */
 data class SendMessage<Data>(
     /**
