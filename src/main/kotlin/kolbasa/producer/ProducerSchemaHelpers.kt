@@ -140,7 +140,7 @@ internal object ProducerSchemaHelpers {
         // 3. Array: delays in microseconds (bigint[])
         val delays = Array(request.data.size) { index ->
             val item = request.data[index]
-            val delay = QueueHelpers.calculateDelay(queue.options, producerOptions, request.sendOptions, item.messageOptions)
+            val delay = QueueHelpers.calculateDelay(queue.options, producerOptions, request.sendOptions, item.options)
             durationToMicroseconds(delay)
         }
         preparedStatement.setArray(columnIndex++, connection.createArrayOf("bigint", delays))
@@ -148,7 +148,7 @@ internal object ProducerSchemaHelpers {
         // 4. Array: remaining_attempts (int[])
         val attempts = Array(request.data.size) { index ->
             val item = request.data[index]
-            QueueHelpers.calculateAttempts(queue.options, producerOptions, request.sendOptions, item.messageOptions)
+            QueueHelpers.calculateAttempts(queue.options, producerOptions, request.sendOptions, item.options)
         }
         preparedStatement.setArray(columnIndex++, connection.createArrayOf("int", attempts))
 

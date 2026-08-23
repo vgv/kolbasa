@@ -41,7 +41,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     @Test
     fun testDeduplication_All_Live_Unique() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data = data, meta = MetaValues.of(ALL_LIVE_FIELD.value(1)), messageOptions = MessageOptions(attempts = 1))
+        val messageToSend = SendMessage(data = data, meta = MetaValues.of(ALL_LIVE_FIELD.value(1)), options = MessageOptions(attempts = 1))
 
         val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource)
@@ -87,7 +87,7 @@ class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
     @Test
     fun testDeduplication_Untouched_Unique() {
         val data = "bugaga"
-        val messageToSend = SendMessage(data = data, meta = MetaValues.of(UNTOUCHED_FIELD.value(1)), messageOptions = MessageOptions(attempts = 10))
+        val messageToSend = SendMessage(data = data, meta = MetaValues.of(UNTOUCHED_FIELD.value(1)), options = MessageOptions(attempts = 10))
 
         val producer = DatabaseProducer(dataSource)
         val consumer = DatabaseConsumer(dataSource)

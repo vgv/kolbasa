@@ -43,7 +43,7 @@ class SweepHelperDlqTest : AbstractPostgresqlTest() {
         // 70 messages with 1 attempt, 30 with 10 attempts
         val messagesToSend = (1..100).map {
             val attempts = if (it <= 70) 1 else 10
-            SendMessage("data_$it", messageOptions = MessageOptions(attempts = attempts))
+            SendMessage("data_$it", options = MessageOptions(attempts = attempts))
         }
         producer.send(queue, messagesToSend)
 
@@ -104,7 +104,7 @@ class SweepHelperDlqTest : AbstractPostgresqlTest() {
 
         val producer = DatabaseProducer(dataSource)
         val messagesToSend = (1..10).map {
-            SendMessage("data_$it", messageOptions = MessageOptions(attempts = 1))
+            SendMessage("data_$it", options = MessageOptions(attempts = 1))
         }
         producer.send(plainQueue, messagesToSend)
 

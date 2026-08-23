@@ -156,7 +156,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
 
         val result = producer.send(
             queue,
-            SendMessage("bugaga", messageOptions = MessageOptions(delay = delay))
+            SendMessage("bugaga", options = MessageOptions(delay = delay))
         )
         assertEquals(0, result.failedMessages, "Result: $result")
         assertEquals(1, result.onlySuccessful().size)

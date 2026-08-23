@@ -66,7 +66,7 @@ class SweepHelperTest : AbstractPostgresqlTest() {
         val messagesToSend = (1..100).map {
             // 70 messages with 1 attempt, 30 messages with 10 attempts
             val attempts = if (it <= 70) 1 else 10
-            SendMessage("random_crap_$it", messageOptions = MessageOptions(attempts = attempts))
+            SendMessage("random_crap_$it", options = MessageOptions(attempts = attempts))
         }
         producer.send(queue, messagesToSend)
 

@@ -31,7 +31,7 @@ class RetentionCleanupTest : AbstractPostgresqlTest() {
         val producer = DatabaseProducer(dataSource)
         // Create messages with 1 attempt so they expire after receive
         val messages = (1..5).map {
-            SendMessage("data_$it", messageOptions = MessageOptions(attempts = 1))
+            SendMessage("data_$it", options = MessageOptions(attempts = 1))
         }
         producer.send(queue, messages)
 

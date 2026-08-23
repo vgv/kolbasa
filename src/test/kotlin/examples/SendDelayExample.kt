@@ -33,7 +33,7 @@ fun main() {
     val producer = DatabaseProducer(dataSource)
     val sendMessage = SendMessage(
         data = "Test message",
-        messageOptions = MessageOptions(delay = Duration.ofSeconds(seconds))
+        options = MessageOptions(delay = Duration.ofSeconds(seconds))
     )
     producer.send(queue, sendMessage)
 

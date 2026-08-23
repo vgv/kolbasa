@@ -72,7 +72,7 @@ class ClusterInspectorTest : AbstractPostgresqlTest() {
             else
                 MessageOptions(delay = Duration.ZERO)
 
-            clusterProducer.send(queue, SendMessage(i.toString(), MetaValues.of(FIELD.value(i)), messageOptions = options))
+            clusterProducer.send(queue, SendMessage(i.toString(), MetaValues.of(FIELD.value(i)), options = options))
         }
 
         val messages = clusterInspector.count(queue, CountOptions(samplePercent = 100f))
