@@ -3,6 +3,14 @@ package kolbasa.consumer
 import kolbasa.producer.Id
 import kolbasa.queue.meta.MetaValues
 
+/**
+ * One message received from a queue, as returned by
+ * [Consumer.receive][kolbasa.consumer.datasource.Consumer.receive].
+ *
+ * A message carries its [id], the timestamps of its life in the queue, the number of attempts left, the payload
+ * and its metadata. [meta] is empty unless the queue declares meta fields and
+ * [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] is turned on.
+ */
 data class Message<Data>(
     /**
      * Unique message identifier
@@ -76,6 +84,7 @@ data class Message<Data>(
 
     internal var openTelemetryData: Map<String, String>? = null
 
+    /** Returns `true` when [remainingAttempts] is 0: the queue will not hand this message out again. */
     fun isLastAttempt(): Boolean = (remainingAttempts == 0)
 
 }

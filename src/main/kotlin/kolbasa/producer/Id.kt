@@ -7,7 +7,14 @@ package kolbasa.producer
  * identifies the record. Any part doesn't make sense without the others.
  */
 data class Id(
+    /** The value of the queue table's `id` column. */
     val localId: Long,
+
+    /**
+     * The value of the queue table's `shard` column, always in `0..1023`.
+     *
+     * In a cluster the shard decides which server stores the message.
+     */
     val shard: Int
 ) {
 
