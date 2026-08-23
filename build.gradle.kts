@@ -9,7 +9,6 @@ plugins {
     `maven-publish`
     alias(libs.plugins.nebula.release)
     alias(libs.plugins.nexus.publish)
-    alias(libs.plugins.dokka.javadoc)
 }
 
 repositories {
@@ -149,12 +148,6 @@ tasks.register("testBoundaryPgVersions") {
 java {
     withSourcesJar()
     withJavadocJar()
-}
-
-tasks.named<Jar>("javadocJar") {
-    // Since Kolbasa is a project written entirely in Kotlin, there are no *.java source files, so we need to ask Dokka
-    // to generate HTML Javadoc documentation and use that Dokka output as the javadocJar task input
-    from(tasks.named("dokkaGeneratePublicationJavadoc"))
 }
 
 val settingsProvider = SettingsProvider()
