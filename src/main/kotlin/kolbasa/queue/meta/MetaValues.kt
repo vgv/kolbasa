@@ -57,10 +57,17 @@ data class MetaValues(val values: List<MetaValue<*>>) {
         }
     }
 
+    /** Returns the value of [field], or `null` if this message carries no value for it. */
     fun <T> getOrNull(field: MetaField<T>): T? {
         return findValue(field)?.value
     }
 
+    /**
+     * Returns the value of [field]. Throws [IllegalArgumentException] if this message has no value for it.
+     *
+     * Metadata is optional for every message, so a field declared in the queue's [Metadata] is not always
+     * present. Use [getOrNull] for such fields.
+     */
     fun <T> get(field: MetaField<T>): T {
         val value = requireNotNull(findValue(field)) {
             "Field $field not found. Known fields: ${values.map { it.field }}"
@@ -72,12 +79,15 @@ data class MetaValues(val values: List<MetaValue<*>>) {
 
     companion object {
 
+        /** Metadata of a message that carries no meta values at all. */
         @JvmField
         val EMPTY = of(emptyList())
 
+        /** Collects already built values – see [MetaField.value] – into the metadata of one message. */
         @JvmStatic
         fun of(values: List<MetaValue<*>>) = MetaValues(values)
 
+        /** Collects already built values – see [MetaField.value] – into the metadata of one message. */
         @JvmStatic
         fun of(vararg values: MetaValue<*>) = of(values.toList())
     }
@@ -133,56 +143,67 @@ sealed class MetaValue<T>(
     open val value: T
 )
 
+/** A [Byte] bound to a field created by [MetaField.ofByte]. Produced by [MetaField.value]. */
 data class ByteValue internal constructor(
     override val field: MetaField<Byte>,
     override val value: Byte
 ) : MetaValue<Byte>(field, value)
 
+/** A [Short] bound to a field created by [MetaField.ofShort]. Produced by [MetaField.value]. */
 data class ShortValue internal constructor(
     override val field: MetaField<Short>,
     override val value: Short
 ) : MetaValue<Short>(field, value)
 
+/** A [Int] bound to a field created by [MetaField.ofInt]. Produced by [MetaField.value]. */
 data class IntValue internal constructor(
     override val field: MetaField<Int>,
     override val value: Int
 ) : MetaValue<Int>(field, value)
 
+/** A [Long] bound to a field created by [MetaField.ofLong]. Produced by [MetaField.value]. */
 data class LongValue internal constructor(
     override val field: MetaField<Long>,
     override val value: Long
 ) : MetaValue<Long>(field, value)
 
+/** A [Boolean] bound to a field created by [MetaField.ofBoolean]. Produced by [MetaField.value]. */
 data class BooleanValue internal constructor(
     override val field: MetaField<Boolean>,
     override val value: Boolean
 ) : MetaValue<Boolean>(field, value)
 
+/** A [Float] bound to a field created by [MetaField.ofFloat]. Produced by [MetaField.value]. */
 data class FloatValue internal constructor(
     override val field: MetaField<Float>,
     override val value: Float
 ) : MetaValue<Float>(field, value)
 
+/** A [Double] bound to a field created by [MetaField.ofDouble]. Produced by [MetaField.value]. */
 data class DoubleValue internal constructor(
     override val field: MetaField<Double>,
     override val value: Double
 ) : MetaValue<Double>(field, value)
 
+/** A [String] bound to a field created by [MetaField.ofString]. Produced by [MetaField.value]. */
 data class StringValue internal constructor(
     override val field: MetaField<String>,
     override val value: String
 ) : MetaValue<String>(field, value)
 
+/** A [BigInteger] bound to a field created by [MetaField.ofBigInteger]. Produced by [MetaField.value]. */
 data class BigIntegerValue internal constructor(
     override val field: MetaField<BigInteger>,
     override val value: BigInteger
 ) : MetaValue<BigInteger>(field, value)
 
+/** A [BigDecimal] bound to a field created by [MetaField.ofBigDecimal]. Produced by [MetaField.value]. */
 data class BigDecimalValue internal constructor(
     override val field: MetaField<BigDecimal>,
     override val value: BigDecimal
 ) : MetaValue<BigDecimal>(field, value)
 
+/** A [Instant] bound to a field created by [MetaField.ofInstant]. Produced by [MetaField.value]. */
 data class InstantValue internal constructor(
     override val field: MetaField<Instant>,
     override val value: Instant

@@ -19,6 +19,14 @@ import java.time.ZoneOffset
  * This metadata can be used for filtering, sorting, and deduplication of messages without
  * deserializing the message payload (which can be quite expensive).
  *
+ * A meta field is a declaration, not a value. It describes a column of the queue, so there is no point in
+ * creating it more than once. Meta fields are meant to be singletons: declare each field once per application
+ * and reuse it.
+ *
+ * Two fields that differ only in [FieldOption] are different fields. A value stored under one of them cannot be
+ * read back with the other – [MetaValues.get] throws. This is deliberate. Two such fields for the same queue, in
+ * one JVM, mean a bug in your code. It is better to fail than to silently pick one of the two options.
+ *
  * ## Supported Types
  *
  * | Factory Method     | Kotlin Type    | PostgreSQL Type        |
@@ -46,27 +54,45 @@ import java.time.ZoneOffset
  * ## Usage Example
  *
  * ```kotlin
- * // Define meta fields
+ * // Define meta fields – normally declared once per application, as a singleton `val`
  * val accountId = MetaField.ofLong("account_id", FieldOption.SEARCH)
  * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
  * val deduplicationKey = MetaField.ofString("deduplication_key", FieldOption.ALL_LIVE_UNIQUE)
  *
  * // Create queue with meta fields
- * val queue = Queue.of(
- *     name = "orders",
- *     metadata = listOf(userId, priority, deduplicationKey),
- *     ...
- * )
+ * val queue = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(accountId, priority, deduplicationKey))
  *
  * // Send message with meta values
  * producer.send(
  *     queue,
- *     SendMessage("payload_data", meta = MetaValues.of(
- *         userId.value(12345L),
+ *     SendMessage("payload_data", MetaValues.of(
+ *         accountId.value(12345L),
  *         priority.value(10),
  *         deduplicationKey.value("unique-key-001")
  *     ))
  * )
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * // Define meta fields – normally declared once per application, as a `static final` field
+ * var accountId = MetaField.ofLong("account_id", FieldOption.SEARCH);
+ * var priority = MetaField.ofInt("priority", FieldOption.SEARCH);
+ * var deduplicationKey = MetaField.ofString("deduplication_key", FieldOption.ALL_LIVE_UNIQUE);
+ *
+ * // Create queue with meta fields
+ * var queue = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(accountId, priority, deduplicationKey));
+ *
+ * // Send message with meta values
+ * producer.send(
+ *     queue,
+ *     new SendMessage<>("payload_data", MetaValues.of(
+ *         accountId.value(12345L),
+ *         priority.value(10),
+ *         deduplicationKey.value("unique-key-001")
+ *     ))
+ * );
  * ```
  *
  * @param T the type of value this field holds
@@ -88,8 +114,19 @@ sealed class MetaField<T>(
     internal abstract val dbColumnName: String
     internal abstract val dbIndexType: MetaIndexType
 
+    /**
+     * Binds a value to this field.
+     *
+     * A [MetaValue] is what a message carries. Collect them with [MetaValues.of] and pass them to
+     * [SendMessage][kolbasa.producer.SendMessage].
+     */
     abstract fun value(value: T): MetaValue<T>
 
+    /**
+     * Returns a copy of this field with a different [FieldOption], leaving this instance untouched.
+     *
+     * The name stays the same, so the copy uses the same database column. Only indexing and uniqueness change.
+     */
     fun withOption(newOption: FieldOption): MetaField<T> {
         @Suppress("UNCHECKED_CAST")
         return when (this) {
@@ -336,6 +373,11 @@ sealed class MetaField<T>(
 
 }
 
+/**
+ * A [MetaField] holding a [Byte], stored in a `smallint` column. Created by [MetaField.ofByte].
+ *
+ * PostgreSQL has no single-byte integer type, so this field and [ShortField] use the same column type.
+ */
 data class ByteField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -365,6 +407,9 @@ data class ByteField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Short], stored in a `smallint` column. Created by [MetaField.ofShort].
+ */
 data class ShortField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -394,6 +439,9 @@ data class ShortField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Int], stored in a `int` column. Created by [MetaField.ofInt].
+ */
 data class IntField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -423,6 +471,9 @@ data class IntField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Long], stored in a `bigint` column. Created by [MetaField.ofLong].
+ */
 data class LongField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -452,6 +503,9 @@ data class LongField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Boolean], stored in a `boolean` column. Created by [MetaField.ofBoolean].
+ */
 data class BooleanField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -481,6 +535,9 @@ data class BooleanField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Float], stored in a `real` column. Created by [MetaField.ofFloat].
+ */
 data class FloatField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -510,6 +567,9 @@ data class FloatField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Double], stored in a `double precision` column. Created by [MetaField.ofDouble].
+ */
 data class DoubleField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -539,6 +599,9 @@ data class DoubleField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [String], stored in a `varchar` column. Created by [MetaField.ofString].
+ */
 data class StringField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -568,6 +631,9 @@ data class StringField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [BigInteger], stored in a `numeric` column. Created by [MetaField.ofBigInteger].
+ */
 data class BigIntegerField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -597,6 +663,9 @@ data class BigIntegerField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [BigDecimal], stored in a `numeric` column. Created by [MetaField.ofBigDecimal].
+ */
 data class BigDecimalField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
@@ -626,6 +695,9 @@ data class BigDecimalField internal constructor(
     }
 }
 
+/**
+ * A [MetaField] holding a [Instant], stored in a `timestamptz` column. Created by [MetaField.ofInstant].
+ */
 data class InstantField internal constructor(
     override val name: String,
     override val option: FieldOption = FieldOption.NONE
