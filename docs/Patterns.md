@@ -106,7 +106,7 @@ delay elapses. This is the [send-delay feature](../README.md#send-delay) — set
 message:
 
 ```kotlin
-producer.send(orders, SendMessage(payload, messageOptions = MessageOptions(delay = Duration.ofMinutes(5))))
+producer.send(orders, SendMessage(payload, options = MessageOptions(delay = Duration.ofMinutes(5))))
 ```
 
 ### "Not after" — an `expires_at` meta-field + a receive filter
