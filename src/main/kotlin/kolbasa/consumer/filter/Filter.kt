@@ -17,7 +17,7 @@ import kolbasa.queue.meta.MetaField
  * var userCondition = eq(USER_ID, 42);
  * var createdCondition = between(CREATED_AT, t1, t2);
  *
- * var complexCondition = or(userCondition, createdCondition);
+ * var complexCondition = userCondition.or(createdCondition);
  * ```
  */
 object Filter {

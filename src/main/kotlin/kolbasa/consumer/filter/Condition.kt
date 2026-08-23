@@ -3,6 +3,40 @@ package kolbasa.consumer.filter
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
+/**
+ * One filter condition – the `where` part of a receive, mutate or count call.
+ *
+ * A condition compares a meta field with a value, for example `meta_user_id = 42`. You do not create conditions
+ * directly: build them with the methods of [Filter], then join them with [and], [or] and [not]. Kolbasa turns the
+ * result into a single SQL `where` clause and sends your values as query parameters, so they are never pasted into
+ * the SQL text.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * import kolbasa.consumer.filter.Filter.eq
+ * import kolbasa.consumer.filter.Filter.like
+ *
+ * val condition = (USER_ID eq 42) and (USER_NAME like "abc%")
+ *
+ * val messages = consumer.receive(queue, 10, ReceiveOptions(filter = condition))
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var condition = Filter.eq(USER_ID, 42).and(Filter.like(USER_NAME, "abc%"));
+ *
+ * var messages = consumer.receive(queue, 10, ReceiveOptions.builder().filter(condition).build());
+ * ```
+ *
+ * A condition is immutable and holds no connection, so you can build one once and reuse it in as many calls as you
+ * like. [and], [or] and [not] never change the conditions they are called on, they return a new one.
+ *
+ * Do not write your own subclass of this class. If you need a condition Kolbasa cannot express, use [Filter.nativeSql].
+ *
+ * @see Filter
+ */
 abstract class Condition {
 
     /**

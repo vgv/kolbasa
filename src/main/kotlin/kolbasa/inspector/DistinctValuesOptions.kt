@@ -75,7 +75,12 @@ data class DistinctValuesOptions(
         @JvmField
         val DEFAULT = DistinctValuesOptions()
 
-        /** @see CountOptions.YOU_KNOW_BETTER */
+        /**
+         * The same magic constant as [CountOptions.YOU_KNOW_BETTER], and the same meaning: "I trust Kolbasa to
+         * pick the right sampling percent for me". It is the default of [DistinctValuesOptions.samplePercent].
+         *
+         * @see CountOptions.YOU_KNOW_BETTER
+         */
         const val YOU_KNOW_BETTER = CountOptions.YOU_KNOW_BETTER
 
         @JvmStatic
