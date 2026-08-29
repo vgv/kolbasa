@@ -32,7 +32,7 @@ object Filter {
      * means `meta_user_id = 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -53,7 +53,7 @@ object Filter {
      * means `meta_user_id <> 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -74,7 +74,7 @@ object Filter {
      * means `meta_user_id > 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -95,7 +95,7 @@ object Filter {
      * means `meta_user_id >= 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -116,7 +116,7 @@ object Filter {
      * means `meta_user_id < 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -137,7 +137,7 @@ object Filter {
      * means `meta_user_id <= 42`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -160,7 +160,7 @@ object Filter {
      * Both values are inclusive, the same as `between` in SQL.
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -203,7 +203,7 @@ object Filter {
      * means `meta_user_name like 'abc%'`
      *
      * USER_NAME is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_NAME = MetaField.ofString("user_name")
      * ```
      */
@@ -224,7 +224,7 @@ object Filter {
      * means `meta_user_id is null`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -245,7 +245,7 @@ object Filter {
      * means `meta_user_id is not null`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
@@ -266,7 +266,7 @@ object Filter {
      * means `meta_user_id = ANY (ARRAY [1,2,3,4,5])`
      *
      * USER_ID is just a meta-field, declared something like this
-     * ```
+     * ```kotlin
      * val USER_ID = MetaField.ofInt("user_id")
      * ```
      */
