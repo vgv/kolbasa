@@ -287,12 +287,12 @@ object Filter {
      * ```
      *
      * This expression will be converted into this SQL expression:
-     * ```kotlin
+     * ```sql
      * sin(meta_field_1) > 0.7 and meta_field_2 * meta_field_2>1000
      * ```
      *
      * FIELD_1 and FIELD_2 are just a meta-fields, declared something like this
-     * ```
+     * ```kotlin
      * val FIELD_1 = MetaField.ofDouble("field_1")
      * val FIELD_2 = MetaField.ofLong("field_2")
      * ```
