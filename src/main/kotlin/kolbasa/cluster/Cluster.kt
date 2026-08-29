@@ -8,6 +8,7 @@ import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 import javax.sql.DataSource
 
 /**
@@ -68,7 +69,7 @@ import javax.sql.DataSource
  *
  * @constructor Creates a cluster whose node list is read from the `dataSources` function. The function is called
  * again on every state update, so use this form when nodes can be added or removed while the application runs.
- * @param dataSources returns the [DataSource] of every node of this cluster. It must never return an empty list –
+ * @param dataSourcesProvider returns the [DataSource] of every node of this cluster. It must never return an empty list –
  * a state update over an empty list fails with `Data sources list is empty`.
  * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a state update,
  * for the nodes that do not have them yet, so a node added later gets the whole schema on its own – within one
@@ -77,7 +78,7 @@ import javax.sql.DataSource
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
  */
 class Cluster @JvmOverloads constructor(
-    private val dataSources: () -> List<DataSource>,
+    private val dataSourcesProvider: Supplier<List<DataSource>>,
     private val queues: List<Queue<*>> = emptyList(),
 ) {
 
@@ -143,7 +144,7 @@ class Cluster @JvmOverloads constructor(
      */
     @Synchronized
     fun updateStateOnce() {
-        val dataSources = dataSources()
+        val dataSources = dataSourcesProvider.get()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
         }
