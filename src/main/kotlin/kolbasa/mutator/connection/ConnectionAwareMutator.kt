@@ -34,7 +34,7 @@ import java.time.Duration
  * In case of Hibernate, it may look like this
  * ```kotlin
  * session.doWork { connection ->
- *    consumer.receive(queue)?.let { message ->
+ *    consumer.receive(connection, queue)?.let { message ->
  *       val orderIsPaid = << request to 3rd-party system >>
  *       if (!orderIsPaid) {
  *          // Update the business entity inside the same transaction
@@ -175,7 +175,7 @@ interface ConnectionAwareMutator {
      * Filters can be specified using nice Kotlin lambda syntax as follows:
      * ```kotlin
      * // Try to mutate all messages with (userId<=10 OR userId=78) in the queue
-     * val mutateResult = mutator.mutate(queue, listOf(AddRemainingAttempts(123))) {
+     * val mutateResult = mutator.mutate(connection, queue, listOf(AddRemainingAttempts(123))) {
      *     // Type-safe DSL to filter messages
      *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }

@@ -28,7 +28,7 @@ import java.sql.Connection
  * session.persist(customer)
  * // Send message to the queue in the same transaction
  * session.doWork { connection ->
- *     newRegistrationProducer.send(connection, SendMessage(customer))
+ *     newRegistrationProducer.send(connection, queue, SendMessage(customer))
  * }
  * ```
  * When Hibernate commits transaction (explicitly or, for example, when you use `@Transactional` annotation), message
