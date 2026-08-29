@@ -3,6 +3,7 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
+import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -10,11 +11,13 @@ import java.sql.PreparedStatement
 
 internal class NotConditionTest {
 
+    private val userId = MetaField.ofInt("user_id")
+
     @Test
     fun testToSql() {
-        val testExpression = TestCondition("test_expr")
+        val expression = EqCondition(userId, 42)
 
-        assertEquals("not (test_expr)", NotCondition(testExpression).toSqlClause())
+        assertEquals("not (${expression.toSqlClause()})", NotCondition(expression).toSqlClause())
     }
 
     @Test
