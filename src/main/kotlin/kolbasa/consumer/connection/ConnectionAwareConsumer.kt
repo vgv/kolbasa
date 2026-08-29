@@ -32,7 +32,7 @@ import java.sql.Connection
  * In case of Hibernate, it may look like this
  * ```kotlin
  * session.doWork { connection ->
- *    consumer.receive(queue)?.let { message ->
+ *    consumer.receive(connection, queue)?.let { message ->
  *       // business logic
  *       session.persist(businessEntity)
  *       // delete processed message inside the same transaction
@@ -68,7 +68,7 @@ interface ConnectionAwareConsumer {
      * Filters can be specified using nice Kotlin lambda syntax as follows:
      * ```kotlin
      * // Try to read a message with (userId<=10 OR userId=78) from the queue
-     * val message = consumer.receive(queue) {
+     * val message = consumer.receive(connection, queue) {
      *     // Type-safe DSL to filter messages
      *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }
@@ -128,7 +128,7 @@ interface ConnectionAwareConsumer {
      * Filters can be specified using nice Kotlin lambda syntax as follows:
      * ```kotlin
      * // Try to read up to 100 messages with (userId<=10 OR userId=78) from the queue
-     * val messages = consumer.receive(queue, 100) {
+     * val messages = consumer.receive(connection, queue, 100) {
      *     // Type-safe DSL to filter messages
      *     (USER_ID lessEq 10) or (USER_ID eq 78)
      * }

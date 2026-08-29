@@ -22,6 +22,18 @@ class DatabaseProducer internal constructor(
     private val peer: ConnectionAwareProducer
 ): Producer {
 
+    /**
+     * Creates a producer that manages connections and transactions itself.
+     *
+     * Every `send()` takes a connection from `dataSource`, sends the messages in one transaction and gives the
+     * connection back. You never open, commit, roll back or close anything.
+     *
+     * The producer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param dataSource the pool this producer takes connections from
+     * @param producerOptions defaults for every `send()` of this producer. Without it,
+     * [ProducerOptions.DEFAULT] is used and every message follows the queue defaults.
+     */
     @JvmOverloads
     constructor(
         dataSource: DataSource,

@@ -23,6 +23,17 @@ class DatabaseMutator(
     private val peer: ConnectionAwareMutator
 ) : Mutator {
 
+    /**
+     * Creates a mutator that manages connections and transactions itself.
+     *
+     * Every call takes a connection from `dataSource`, changes the messages in one transaction and gives the
+     * connection back. You never open, commit, roll back or close anything.
+     *
+     * The mutator is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param dataSource the pool this mutator takes connections from
+     * @param mutatorOptions defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
+     */
     @JvmOverloads
     constructor(
         dataSource: DataSource,

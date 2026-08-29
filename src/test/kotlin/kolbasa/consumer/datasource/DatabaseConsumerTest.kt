@@ -193,7 +193,7 @@ class DatabaseConsumerTest : AbstractPostgresqlTest() {
         val delay = Duration.of(1500 + Random.nextLong(0, 1500), ChronoUnit.MILLIS)
 
         val producer = DatabaseProducer(dataSource)
-        val id = producer.send(queue, SendMessage(data = data, messageOptions = MessageOptions(delay = delay)))
+        val id = producer.send(queue, SendMessage(data = data, options = MessageOptions(delay = delay)))
             .let { (failedMessages, result) ->
                 assertEquals(0, failedMessages)
                 assertEquals(1, result.onlySuccessful().size)

@@ -14,6 +14,36 @@ import kolbasa.stats.prometheus.PrometheusQueueMetrics
 import kolbasa.stats.prometheus.QueueMetrics
 import java.time.Duration
 
+/**
+ * A queue: its name, the type of its messages, its metadata and its options.
+ *
+ * A [Queue] object only describes a queue table, it is not the table itself. Creating one touches no database.
+ * Call [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues] to create or
+ * update the table. The name maps directly to the table name: a queue named `orders` lives in table `q_orders`.
+ *
+ * A queue is a description, not a value, so there is no point in creating it more than once. Create it once per
+ * application and reuse it, the same way you declare a [MetaField][kolbasa.queue.meta.MetaField].
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val orders = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(ACCOUNT_ID))
+ * val customers = Queue.of("customers", PredefinedDataTypes.String)
+ *
+ * // Both tables are created, or brought up to date, in one call
+ * SchemaHelpers.createOrUpdateQueues(dataSource, orders, customers)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var orders = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(ACCOUNT_ID));
+ * var customers = Queue.of("customers", PredefinedDataTypes.String);
+ *
+ * // Both tables are created, or brought up to date, in one call
+ * SchemaHelpers.createOrUpdateQueues(dataSource, orders, customers);
+ * ```
+ */
 data class Queue<Data> internal constructor(
     /**
      * Queue name. Must be unique.
@@ -79,6 +109,12 @@ data class Queue<Data> internal constructor(
     val queueType: QueueType
 ) {
 
+    /**
+     * Creates a [MAIN][QueueType.MAIN] queue, the only kind that can be created directly.
+     *
+     * DLQ and archive queues are not created this way. Enable them in [QueueOptions] and read them back from
+     * [deadLetterQueue] and [archiveQueue].
+     */
     // Public constructor — users can only create MAIN queues
     @JvmOverloads
     constructor(
@@ -136,6 +172,7 @@ data class Queue<Data> internal constructor(
         }
     }
 
+    /** Builder for flexible [Queue] creation, when only some of the properties need to be set. */
     class Builder<Data> internal constructor(
         private val name: String,
         private val databaseDataType: DatabaseQueueDataType<Data>,
@@ -143,9 +180,13 @@ data class Queue<Data> internal constructor(
         private var options: QueueOptions = QueueOptions.DEFAULT
         private var metadata: Metadata = Metadata.EMPTY
 
+        /** Sets [Queue.options] – delays, attempts, visibility timeout, DLQ, archive and the SQL put function. */
         fun options(options: QueueOptions) = apply { this.options = options }
+
+        /** Sets [Queue.metadata] – the meta fields the messages of this queue may carry. */
         fun metadata(metadata: Metadata) = apply { this.metadata = metadata }
 
+        /** Creates a new [Queue] instance: a fresh one on every call, nothing is cached or reused. */
         fun build(): Queue<Data> = Queue(name, databaseDataType, options, metadata)
     }
 

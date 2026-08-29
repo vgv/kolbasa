@@ -23,6 +23,25 @@ import java.time.Duration
  * and ConsumerOptions sets `visibilityTimeout = 5 min`, messages received by this consumer
  * will use the 5-minute timeout. You can read more about the override hierarchy in the documentation of individual options.
  *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = ConsumerOptions(consumer = "billing", visibilityTimeout = Duration.ofMinutes(5))
+ *
+ * val consumer = DatabaseConsumer(dataSource, options)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var options = ConsumerOptions.builder()
+ *     .consumer("billing")
+ *     .visibilityTimeout(Duration.ofMinutes(5))
+ *     .build();
+ *
+ * var consumer = new DatabaseConsumer(dataSource, options);
+ * ```
+ *
  * @see ReceiveOptions for per-receive() call overrides
  * @see kolbasa.queue.QueueOptions for queue-wide defaults
  */
@@ -68,18 +87,24 @@ data class ConsumerOptions(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
+    /** Builder for flexible [ConsumerOptions] creation, when only some of the properties need to be set. */
     class Builder {
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
 
+        /** Sets [ConsumerOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
+
+        /** Sets [ConsumerOptions.visibilityTimeout] – how long a received message stays invisible to other consumers. */
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
 
+        /** Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = ConsumerOptions(consumer, visibilityTimeout)
     }
 
     companion object {
 
+        /** Default options: they override nothing and leave the default behaviour in place. */
         @JvmField
         val DEFAULT = ConsumerOptions()
 

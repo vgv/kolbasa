@@ -8,6 +8,19 @@ import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
 import java.sql.Connection
 
+/**
+ * Provides read-only inspection capabilities for queues, over a connection you manage.
+ *
+ * It answers the same questions as [Inspector][kolbasa.inspector.datasource.Inspector] – message counts by state,
+ * approximate queue size, distinct meta-field values, message age – but you pass an active
+ * [java.sql.Connection] to every call. Use it when you already hold a connection, or when the numbers have to be
+ * consistent with the changes made inside your own open transaction.
+ *
+ * Every method only reads. Nothing here changes a queue or a message.
+ *
+ * If you would rather let Kolbasa take connections from a pool for you, use
+ * [Inspector][kolbasa.inspector.datasource.Inspector].
+ */
 interface ConnectionAwareInspector {
 
     /**

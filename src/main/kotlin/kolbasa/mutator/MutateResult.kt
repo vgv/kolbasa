@@ -2,6 +2,12 @@ package kolbasa.mutator
 
 import kolbasa.producer.Id
 
+/**
+ * Result of one [Mutator.mutate][kolbasa.mutator.datasource.Mutator.mutate] call.
+ *
+ * [mutatedMessages] counts every message the call changed. [messages] holds the per-message results and can be
+ * shorter than that count – see [truncated].
+ */
 data class MutateResult(
 
     /**
@@ -37,10 +43,12 @@ data class MutateResult(
     }
 
     companion object {
+        /** Keeps only the successfully mutated messages of a plain list. [MutateResult.onlyMutated] does the same for a result. */
         fun List<MessageResult>.onlyMutated(): List<MessageResult.Mutated> {
             return filterIsInstance<MessageResult.Mutated>()
         }
 
+        /** Keeps only the messages that were not found. [MutateResult.onlyNotFound] does the same for a result. */
         fun List<MessageResult>.onlyNotFound(): List<MessageResult.NotFound> {
             return filterIsInstance<MessageResult.NotFound>()
         }

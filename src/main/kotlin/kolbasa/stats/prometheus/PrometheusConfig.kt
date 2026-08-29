@@ -6,10 +6,43 @@ import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kolbasa.stats.prometheus.metrics.Const
 
+/**
+ * Says whether Kolbasa collects Prometheus metrics, and where it registers them.
+ *
+ * There are two states, and nothing in between: [None] collects nothing, [Config] collects everything – message
+ * counters, queue sizes, message ages, call durations. [None] is the default, so metrics cost you nothing until you
+ * ask for them.
+ *
+ * Set it through [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] at application startup, before you
+ * create your queues and start sending. Any later changes will have no effect.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * Kolbasa.prometheusConfig = PrometheusConfig.Config()
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Kolbasa.setPrometheusConfig(new PrometheusConfig.Config());
+ * ```
+ */
 sealed class PrometheusConfig {
 
+    /** No metrics at all: nothing is measured and nothing is registered in any registry. */
     object None : PrometheusConfig()
 
+    /**
+     * Metrics, registered in a Prometheus registry.
+     *
+     * Every metric of the library is created and registered when this object is created, not when the first message
+     * is sent. That is a deliberate trade: the work happens once, and reporting a value later costs almost nothing.
+     *
+     * It also means one such object per registry. A registry refuses a metric name it already holds, so building a
+     * second [Config] over the same registry fails with `duplicate metric name`. Build one, give it to
+     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig], and keep it.
+     */
     data class Config(
         /**
          * By default, the size of the string to send to Prometheus is calculated in characters, not in bytes, which is much
@@ -179,13 +212,23 @@ sealed class PrometheusConfig {
             .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
+        /** Builder for flexible [Config] creation, when only some of the properties need to be set. */
         class Builder internal constructor() {
             private var preciseStringSize: Boolean = false
             private var registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
 
+            /** Sets [Config.preciseStringSize] – whether message sizes are measured in bytes instead of characters. */
             fun preciseStringSize(preciseStringSize: Boolean) = apply { this.preciseStringSize = preciseStringSize }
+
+            /** Sets [Config.registry] – the Prometheus registry all metrics are registered in. */
             fun registry(registry: PrometheusRegistry) = apply { this.registry = registry }
 
+            /**
+             * Creates a new [Config] instance: a fresh one on every call, nothing is cached or reused.
+             *
+             * Every call also registers the whole set of Kolbasa metrics in the chosen registry, so call it once –
+             * see [Config].
+             */
             fun build() = Config(preciseStringSize, registry)
         }
 

@@ -2,6 +2,27 @@ package kolbasa.mutator
 
 import java.util.concurrent.ExecutorService
 
+/**
+ * Configuration options for a [Mutator][kolbasa.mutator.datasource.Mutator] instance.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = MutatorOptions(maxMutatedMessagesKeepInMemory = 1000)
+ *
+ * val mutator = DatabaseMutator(dataSource, options)
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var options = MutatorOptions.builder()
+ *     .maxMutatedMessagesKeepInMemory(1000)
+ *     .build();
+ *
+ * var mutator = new DatabaseMutator(dataSource, options);
+ * ```
+ */
 data class MutatorOptions(
     /**
      * How many mutated messages to keep in [MutateResult.messages] list when using a filter condition
@@ -32,18 +53,22 @@ data class MutatorOptions(
     val asyncExecutor: ExecutorService? = null,
 ) {
 
+    /** Builder for flexible [MutatorOptions] creation, when only some of the properties need to be set. */
     class Builder {
         private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
         private var asyncExecutor: ExecutorService? = null
 
+        /** Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry. */
         fun maxMutatedMessagesKeepInMemory(value: Int) = apply {
             this.maxMutatedMessagesKeepInMemory = value
         }
 
+        /** Sets [MutatorOptions.asyncExecutor] – the executor used by the mutator's mutateAsync() methods. */
         fun asyncExecutor(value: ExecutorService?) = apply {
             this.asyncExecutor = value
         }
 
+        /** Creates a new [MutatorOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build(): MutatorOptions {
             return MutatorOptions(
                 maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
@@ -52,9 +77,12 @@ data class MutatorOptions(
         }
     }
 
-    internal companion object {
+    companion object {
+        /** The default [MutatorOptions.maxMutatedMessagesKeepInMemory] – 100 messages. */
         const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 100
 
+        /** Default options: they override nothing and leave the default behaviour in place. */
+        @JvmField
         val DEFAULT = MutatorOptions()
 
         @JvmStatic

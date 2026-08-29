@@ -40,6 +40,25 @@ import java.time.Duration
  * ))
  * ```
  *
+ * The same from Java:
+ *
+ * ```java
+ * var urgentOptions = MessageOptions.builder()
+ *     .delay(Duration.ZERO)
+ *     .attempts(10)
+ *     .build();
+ *
+ * var delayedOptions = MessageOptions.builder()
+ *     .delay(Duration.ofHours(1))
+ *     .build();
+ *
+ * producer.send(queue, List.of(
+ *     new SendMessage<>(urgentPayload, urgentOptions),
+ *     new SendMessage<>(normalPayload),
+ *     new SendMessage<>(delayedPayload, delayedOptions)
+ * ));
+ * ```
+ *
  * @see ProducerOptions for producer-level defaults
  * @see SendOptions for per-send() call overrides
  * @see kolbasa.queue.QueueOptions for queue-wide defaults
@@ -105,18 +124,24 @@ data class MessageOptions(
         Checks.checkAttempts(attempts)
     }
 
+    /** Builder for flexible [MessageOptions] creation, when only some of the properties need to be set. */
     class Builder internal constructor() {
         private var delay: Duration? = null
         private var attempts: Int? = null
 
+        /** Sets [MessageOptions.delay] – how long this message stays invisible to consumers after it is sent. */
         fun delay(delay: Duration) = apply { this.delay = delay }
+
+        /** Sets [MessageOptions.attempts] – how many times this message may be consumed before it expires or goes to a DLQ. */
         fun attempts(attempts: Int) = apply { this.attempts = attempts }
 
+        /** Creates a new [MessageOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = MessageOptions(delay, attempts)
     }
 
     companion object {
 
+        /** Default options: they override nothing and leave the default behaviour in place. */
         @JvmField
         val DEFAULT = MessageOptions()
 

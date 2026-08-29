@@ -30,6 +30,14 @@ class BetweenBuilder<T> internal constructor(
     private val field: MetaField<T>,
     private val from: T
 ) {
+    /**
+     * Completes a `between` condition by adding its upper bound.
+     *
+     * This is the second half of the Kotlin form `field between from and to`, which means SQL `between from and to`
+     * – both bounds included. Java callers do not see this method and use [Filter.between] instead.
+     *
+     * @param to the upper bound, included
+     */
     @JvmSynthetic
     infix fun and(to: T): Condition = BetweenCondition(field, from, to)
 }

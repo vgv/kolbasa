@@ -58,7 +58,7 @@ package kolbasa.queue.meta
  * // Create queue with meta fields
  * val queue = Queue.of(
  *     name = "notifications",
- *     dataType = PredefinedDataTypes.String,
+ *     databaseDataType = PredefinedDataTypes.String,
  *     metadata = Metadata.of(justData, priority, accountId, requestId)
  * )
  * ```

@@ -133,14 +133,29 @@ data class SendResult<Data>(
 
     companion object {
 
+        /**
+         * Keeps only the messages that were sent, and drops the rest.
+         *
+         * The same as [SendResult.onlySuccessful], but for a list of results you already hold.
+         */
         fun <Data> List<MessageResult<Data>>.onlySuccessful(): List<Success<Data>> {
             return filterIsInstance<Success<Data>>()
         }
 
+        /**
+         * Keeps only the messages that were refused as duplicates, and drops the rest.
+         *
+         * The same as [SendResult.onlyDuplicated], but for a list of results you already hold.
+         */
         fun <Data> List<MessageResult<Data>>.onlyDuplicated(): List<Duplicate<Data>> {
             return filterIsInstance<Duplicate<Data>>()
         }
 
+        /**
+         * Keeps only the messages that failed, and drops the rest.
+         *
+         * The same as [SendResult.onlyFailed], but for a list of results you already hold.
+         */
         fun <Data> List<MessageResult<Data>>.onlyFailed(): List<Error<Data>> {
             return filterIsInstance<Error<Data>>()
         }

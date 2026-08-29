@@ -13,6 +13,24 @@ import java.time.Instant
  *
  * Should you use metadata or store everything in the message body?
  * Please read the documentation for [Queue.metadata][kolbasa.queue.Queue.metadata] field
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val accountId = MetaField.ofLong("account_id", FieldOption.SEARCH)
+ * val priority = MetaField.ofInt("priority", FieldOption.SEARCH)
+ *
+ * val queue = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(accountId, priority))
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * var accountId = MetaField.ofLong("account_id", FieldOption.SEARCH);
+ * var priority = MetaField.ofInt("priority", FieldOption.SEARCH);
+ *
+ * var queue = Queue.of("orders", PredefinedDataTypes.String, Metadata.of(accountId, priority));
+ * ```
  */
 data class Metadata(val fields: List<MetaField<*>>) {
 
@@ -25,16 +43,20 @@ data class Metadata(val fields: List<MetaField<*>>) {
 
     private val nameToFields = fields.associateBy { it.name }
 
+    /** Returns the declared field with this name, or `null` if the queue has no such field. */
     fun findByName(fieldName: String): MetaField<*>? = nameToFields[fieldName]
 
     companion object {
 
+        /** Metadata of a queue that declares no meta fields, which is the default for [Queue][kolbasa.queue.Queue]. */
         @JvmField
         val EMPTY = of(emptyList())
 
+        /** Declares the meta fields of a queue. Field names must be unique, otherwise the call throws. */
         @JvmStatic
         fun of(vararg fields: MetaField<*>) = of(fields.toList())
 
+        /** Declares the meta fields of a queue. Field names must be unique, otherwise the call throws. */
         @JvmStatic
         fun of(fields: List<MetaField<*>>) = Metadata(fields)
 
@@ -62,6 +84,12 @@ data class Metadata(val fields: List<MetaField<*>>) {
         val DLQ_ORIGINAL_SCHEDULED_AT: MetaField<Instant> =
             InstantField("original_${Const.SCHEDULED_AT_COLUMN_NAME}${Const.DLQ_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
+        /**
+         * The four fields a [DLQ][kolbasa.queue.Queue.deadLetterQueue] adds to its own metadata. They keep the id and the
+         * timestamps a message had in the source queue.
+         *
+         * A DLQ has every meta field of its parent queue plus these four.
+         */
         @JvmField
         val DLQ_FIELDS = listOf(
             DLQ_ORIGINAL_ID,
@@ -94,6 +122,12 @@ data class Metadata(val fields: List<MetaField<*>>) {
         val ARCHIVE_ORIGINAL_PROCESSING_AT: MetaField<Instant> =
             InstantField("original_${Const.PROCESSING_AT_COLUMN_NAME}${Const.ARCHIVE_TABLE_NAME_SUFFIX}", FieldOption.NONE)
 
+        /**
+         * The four fields an [archive queue][kolbasa.queue.Queue.archiveQueue] adds to its own metadata. They
+         * keep the id, the timestamps and the attempts a message had in the source queue.
+         *
+         * An archive queue has every meta field of its parent queue plus these four.
+         */
         @JvmField
         val ARCHIVE_FIELDS = listOf(
             ARCHIVE_ORIGINAL_ID,

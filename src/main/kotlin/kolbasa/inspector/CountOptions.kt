@@ -5,6 +5,26 @@ import kolbasa.queue.Checks
 
 /**
  * Options for [Inspector.count][kolbasa.inspector.datasource.Inspector.count].
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * val options = CountOptions(samplePercent = 5.0f, filter = ACCOUNT_ID eq 123)
+ *
+ * val messages = inspector.count(queue, options)
+ * ```
+ *
+ * The same from Java, where the filter comes from the static factories of
+ * [Filter][kolbasa.consumer.filter.Filter]:
+ *
+ * ```java
+ * var options = CountOptions.builder()
+ *     .samplePercent(5.0f)
+ *     .filter(Filter.eq(ACCOUNT_ID, 123))
+ *     .build();
+ *
+ * var messages = inspector.count(queue, options);
+ * ```
  */
 data class CountOptions(
     /**
@@ -24,13 +44,18 @@ data class CountOptions(
         Checks.checkSamplePercent(samplePercent)
     }
 
+    /** Builder for flexible [CountOptions] creation, when only some of the properties need to be set. */
     class Builder internal constructor() {
         private var samplePercent: Float = YOU_KNOW_BETTER
         private var filter: Condition? = null
 
+        /** Sets [CountOptions.samplePercent] – the percentage of the table to sample, `(0, 100]`. */
         fun samplePercent(samplePercent: Float): Builder = apply { this.samplePercent = samplePercent }
+
+        /** Sets [CountOptions.filter] – the condition on meta fields that restricts which messages are counted. */
         fun filter(filter: Condition): Builder = apply { this.filter = filter }
 
+        /** Creates a new [CountOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build(): CountOptions = CountOptions(samplePercent, filter)
     }
 
