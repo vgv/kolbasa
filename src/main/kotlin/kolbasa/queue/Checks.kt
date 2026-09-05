@@ -69,7 +69,7 @@ internal object Checks {
         }
     }
 
-    fun checkQueueName(queueName: String, queueType: QueueType) {
+    fun checkQueueName(queueName: String, queueRole: QueueRole) {
         check(queueName.isNotEmpty()) {
             "Queue name is empty"
         }
@@ -87,8 +87,8 @@ internal object Checks {
             "Queue name contains illegal symbols. Allowed: ${Const.QUEUE_NAME_ALLOWED_SYMBOLS} (current=$queueName)"
         }
 
-        when (queueType) {
-            QueueType.MAIN -> {
+        when (queueRole) {
+            QueueRole.MAIN -> {
                 // MAIN queues must not use reserved suffixes
                 check(!queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
                     "Queue name '$queueName' must not end with '${Const.DLQ_TABLE_NAME_SUFFIX}' - this suffix is reserved for dead letter queues"
@@ -98,14 +98,14 @@ internal object Checks {
                 }
             }
 
-            QueueType.DLQ -> {
+            QueueRole.DLQ -> {
                 // DLQ queues must end with the _dlq suffix
                 check(queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
                     "DLQ queue name must end with '${Const.DLQ_TABLE_NAME_SUFFIX}' (current: $queueName)"
                 }
             }
 
-            QueueType.ARCHIVE -> {
+            QueueRole.ARCHIVE -> {
                 // Archive queues must end with the _arc suffix
                 check(queueName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
                     "Archive queue name must end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' (current: $queueName)"
@@ -114,14 +114,14 @@ internal object Checks {
         }
     }
 
-    fun checkQueueType(queueType: QueueType, options: QueueOptions) {
+    fun checkQueueRole(queueRole: QueueRole, options: QueueOptions) {
         // DLQ and ARCHIVE queues cannot have their own DLQ/Archive (prevent recursion)
-        if (queueType != QueueType.MAIN) {
+        if (queueRole != QueueRole.MAIN) {
             check(options.dlqOptions == null) {
-                "Only MAIN queues can have a DLQ (current queue type: $queueType)"
+                "Only MAIN queues can have a DLQ (current queue role: $queueRole)"
             }
             check(options.archiveQueueOptions == null) {
-                "Only MAIN queues can have an Archive (current queue type: $queueType)"
+                "Only MAIN queues can have an Archive (current queue role: $queueRole)"
             }
         }
     }

@@ -2,7 +2,7 @@ package kolbasa.schema
 
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.queue.Queue
-import kolbasa.queue.QueueType
+import kolbasa.queue.QueueRole
 import kolbasa.schema.Schema.Companion.merge
 import javax.sql.DataSource
 
@@ -21,9 +21,9 @@ import javax.sql.DataSource
  * Two rules are worth knowing before you call anything here:
  * - It is better to pass all your queues in one call. One call reads the existing schema once and then works on every queue, so one
  *   call with 10 000 queues is far faster than 10 000 calls with one queue each.
- * - Pass only [MAIN][kolbasa.queue.QueueType.MAIN] queues. Companion queues
+ * - Pass only [MAIN][kolbasa.queue.QueueRole.MAIN] queues. Companion queues
  *   ([DLQ][kolbasa.queue.Queue.deadLetterQueue]/[archive queue][kolbasa.queue.Queue.archiveQueue]) are created, renamed and
- *   deleted together with its [MAIN][kolbasa.queue.QueueType.MAIN] queue. Passing one directly is rejected with an exception.
+ *   deleted together with its [MAIN][kolbasa.queue.QueueRole.MAIN] queue. Passing one directly is rejected with an exception.
  *
  * ## Usage Example
  *
@@ -367,8 +367,8 @@ object SchemaHelpers {
 
     private fun checkAllQueuesAreMain(mainQueues: List<Queue<*>>) {
         mainQueues.forEach { queue ->
-            check(queue.queueType == QueueType.MAIN) {
-                "Only MAIN queues are allowed, but '${queue.name}' has type ${queue.queueType}. " +
+            check(queue.queueRole == QueueRole.MAIN) {
+                "Only MAIN queues are allowed, but '${queue.name}' has type ${queue.queueRole}. " +
                     "DLQ and Archive queues are managed automatically through their parent MAIN queue."
             }
         }

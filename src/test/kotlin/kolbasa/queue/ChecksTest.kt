@@ -156,26 +156,26 @@ internal class ChecksTest {
     @Test
     fun testCheckQueueName_IfEmpty() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.MAIN)
+            Checks.checkQueueName("", QueueRole.MAIN)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.DLQ)
+            Checks.checkQueueName("", QueueRole.DLQ)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.ARCHIVE)
+            Checks.checkQueueName("", QueueRole.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidPrefix() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email", QueueType.MAIN)
+            Checks.checkQueueName("q_customer_email", QueueRole.MAIN)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email_dlq", QueueType.DLQ)
+            Checks.checkQueueName("q_customer_email_dlq", QueueRole.DLQ)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email_arc", QueueType.ARCHIVE)
+            Checks.checkQueueName("q_customer_email_arc", QueueRole.ARCHIVE)
         }
     }
 
@@ -183,26 +183,26 @@ internal class ChecksTest {
     fun testCheckQueueName_TooLong() {
         val longName = "a".repeat(Const.QUEUE_NAME_MAX_LENGTH + 1)
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.MAIN)
+            Checks.checkQueueName(longName, QueueRole.MAIN)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.DLQ)
+            Checks.checkQueueName(longName, QueueRole.DLQ)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.ARCHIVE)
+            Checks.checkQueueName(longName, QueueRole.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidSymbols() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue$", QueueType.MAIN)
+            Checks.checkQueueName("queue$", QueueRole.MAIN)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue\$_dlq", QueueType.DLQ)
+            Checks.checkQueueName("queue\$_dlq", QueueRole.DLQ)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue\$_arc", QueueType.ARCHIVE)
+            Checks.checkQueueName("queue\$_arc", QueueRole.ARCHIVE)
         }
     }
 
@@ -211,64 +211,64 @@ internal class ChecksTest {
     @Test
     fun testCheckQueueName_MainQueueCannotEndWithDlqSuffix() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders_dlq", QueueType.MAIN)
+            Checks.checkQueueName("orders_dlq", QueueRole.MAIN)
         }
     }
 
     @Test
     fun testCheckQueueName_MainQueueCannotEndWithArchiveSuffix() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders_arc", QueueType.MAIN)
+            Checks.checkQueueName("orders_arc", QueueRole.MAIN)
         }
     }
 
     @Test
     fun testCheckQueueName_DlqQueueMustEndWithDlqSuffix() {
         assertDoesNotThrow {
-            Checks.checkQueueName("orders_dlq", QueueType.DLQ)
+            Checks.checkQueueName("orders_dlq", QueueRole.DLQ)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders", QueueType.DLQ)
+            Checks.checkQueueName("orders", QueueRole.DLQ)
         }
     }
 
     @Test
     fun testCheckQueueName_ArchiveQueueMustEndWithArchiveSuffix() {
         assertDoesNotThrow {
-            Checks.checkQueueName("orders_arc", QueueType.ARCHIVE)
+            Checks.checkQueueName("orders_arc", QueueRole.ARCHIVE)
         }
         assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders", QueueType.ARCHIVE)
+            Checks.checkQueueName("orders", QueueRole.ARCHIVE)
         }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckQueueType_MainCanHaveDlq() {
+    fun testCheckQueueRole_MainCanHaveDlq() {
         assertDoesNotThrow {
-            Checks.checkQueueType(QueueType.MAIN, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.MAIN, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_MainCanHaveArchive() {
+    fun testCheckQueueRole_MainCanHaveArchive() {
         assertDoesNotThrow {
-            Checks.checkQueueType(QueueType.MAIN, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.MAIN, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_DlqCannotHaveDlq() {
+    fun testCheckQueueRole_DlqCannotHaveDlq() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueType(QueueType.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_ArchiveCannotHaveArchive() {
+    fun testCheckQueueRole_ArchiveCannotHaveArchive() {
         assertThrows<IllegalStateException> {
-            Checks.checkQueueType(QueueType.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
         }
     }
 

@@ -3,17 +3,17 @@ package kolbasa.queue
 /**
  * Defines the role of a [Queue].
  *
- * Every queue has exactly one type that determines how messages enter and leave it.
+ * Every queue has exactly one role that determines how messages enter and leave it.
  * Users can only create [MAIN] queues directly. [DLQ] and [ARCHIVE] queues are
  * created automatically by the library when the corresponding options are enabled
  * in [QueueOptions].
  */
-enum class QueueType {
+enum class QueueRole {
     /**
      * A standard queue used for normal message processing.
      *
      * Messages are sent by producers, received by consumers, and deleted after
-     * successful processing. This is the only type that users can create directly.
+     * successful processing. This is the only role that users can create directly.
      */
     MAIN,
 

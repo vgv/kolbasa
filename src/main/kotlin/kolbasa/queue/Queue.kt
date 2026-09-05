@@ -100,17 +100,17 @@ data class Queue<Data> internal constructor(
     val metadata: Metadata,
 
     /**
-     * The role of this queue: [MAIN][QueueType.MAIN], [DLQ][QueueType.DLQ], or [ARCHIVE][QueueType.ARCHIVE].
+     * The role of this queue: [MAIN][QueueRole.MAIN], [DLQ][QueueRole.DLQ], or [ARCHIVE][QueueRole.ARCHIVE].
      *
-     * Users can only create [MAIN][QueueType.MAIN] queues directly. [DLQ][QueueType.DLQ] and
-     * [ARCHIVE][QueueType.ARCHIVE] queues are created automatically when the corresponding options
+     * Users can only create [MAIN][QueueRole.MAIN] queues directly. [DLQ][QueueRole.DLQ] and
+     * [ARCHIVE][QueueRole.ARCHIVE] queues are created automatically when the corresponding options
      * are enabled in [QueueOptions].
      */
-    val queueType: QueueType
+    val queueRole: QueueRole
 ) {
 
     /**
-     * Creates a [MAIN][QueueType.MAIN] queue, the only kind that can be created directly.
+     * Creates a [MAIN][QueueRole.MAIN] queue, the only kind that can be created directly.
      *
      * DLQ and archive queues are not created this way. Enable them in [QueueOptions] and read them back from
      * [deadLetterQueue] and [archiveQueue].
@@ -122,11 +122,11 @@ data class Queue<Data> internal constructor(
         databaseDataType: DatabaseQueueDataType<Data>,
         options: QueueOptions = QueueOptions.DEFAULT,
         metadata: Metadata = Metadata.EMPTY
-    ) : this(name, databaseDataType, options, metadata, QueueType.MAIN)
+    ) : this(name, databaseDataType, options, metadata, QueueRole.MAIN)
 
     init {
-        Checks.checkQueueName(name, queueType)
-        Checks.checkQueueType(queueType, options)
+        Checks.checkQueueName(name, queueRole)
+        Checks.checkQueueRole(queueRole, options)
     }
 
     internal val dbTableName = QueueHelpers.generateQueueDbName(name)
@@ -135,8 +135,8 @@ data class Queue<Data> internal constructor(
      * Returns the Dead Letter Queue for this queue, or null if DLQ feature is not enabled.
      * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
      */
-    val deadLetterQueue: Queue<Data>? = if (queueType == QueueType.MAIN && options.dlqOptions != null)
-        createCompanionQueue(this, QueueType.DLQ, Const.DLQ_TABLE_NAME_SUFFIX)
+    val deadLetterQueue: Queue<Data>? = if (queueRole == QueueRole.MAIN && options.dlqOptions != null)
+        createCompanionQueue(this, QueueRole.DLQ, Const.DLQ_TABLE_NAME_SUFFIX)
     else
         null
 
@@ -144,8 +144,8 @@ data class Queue<Data> internal constructor(
      * Returns the Archive queue for this queue, or null if Archive feature is not enabled.
      * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
      */
-    val archiveQueue: Queue<Data>? = if (queueType == QueueType.MAIN && options.archiveQueueOptions != null)
-        createCompanionQueue(this, QueueType.ARCHIVE, Const.ARCHIVE_TABLE_NAME_SUFFIX)
+    val archiveQueue: Queue<Data>? = if (queueRole == QueueRole.MAIN && options.archiveQueueOptions != null)
+        createCompanionQueue(this, QueueRole.ARCHIVE, Const.ARCHIVE_TABLE_NAME_SUFFIX)
     else
         null
 
@@ -217,20 +217,20 @@ data class Queue<Data> internal constructor(
         }
 
         // Creates a companion queue for the given MAIN queue.
-        // Right now only two companion queue types exist: DLQ and ARCHIVE.
+        // Right now only two companion queue roles exist: DLQ and ARCHIVE.
         private fun <Data> createCompanionQueue(
             mainQueue: Queue<Data>,
-            type: QueueType,
+            role: QueueRole,
             queueNameSuffix: String
         ): Queue<Data> {
             // Main queue metadata with indexes stripped (no unique indexes on companions)
             val strippedParentFields = mainQueue.metadata.fields.map { it.withOption(FieldOption.NONE) }
 
             // Add predefined original-value meta fields
-            val companionFields = when (type) {
-                QueueType.DLQ -> Metadata.DLQ_FIELDS
-                QueueType.ARCHIVE -> Metadata.ARCHIVE_FIELDS
-                QueueType.MAIN -> error("MAIN queue cannot be a companion queue: ${mainQueue.name}")
+            val companionFields = when (role) {
+                QueueRole.DLQ -> Metadata.DLQ_FIELDS
+                QueueRole.ARCHIVE -> Metadata.ARCHIVE_FIELDS
+                QueueRole.MAIN -> error("MAIN queue cannot be a companion queue: ${mainQueue.name}")
             }
             val companionMetadata = Metadata(strippedParentFields + companionFields)
 
@@ -252,7 +252,7 @@ data class Queue<Data> internal constructor(
                 databaseDataType = mainQueue.databaseDataType,
                 options = companionOptions,
                 metadata = companionMetadata,
-                queueType = type
+                queueRole = role
             )
         }
     }

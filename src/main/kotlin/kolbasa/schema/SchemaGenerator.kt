@@ -3,7 +3,7 @@ package kolbasa.schema
 import kolbasa.cluster.Shard
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
-import kolbasa.queue.QueueType
+import kolbasa.queue.QueueRole
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaIndexType
 import kolbasa.schema.Table.Companion.hasIndex
@@ -54,7 +54,7 @@ internal object SchemaGenerator {
 
         // The put function name and body are derived from the queue name/table, so on rename we drop the old
         // function and (if enabled) create one bound to the new table. Only MAIN queues have put functions.
-        if (queue.queueType == QueueType.MAIN) {
+        if (queue.queueRole == QueueRole.MAIN) {
             if (existingTable.putFunction != null) {
                 // SQL put function exists for the old table
                 statements += "drop function if exists ${QueueHelpers.generatePutFunctionName(queue.name)}"
@@ -79,7 +79,7 @@ internal object SchemaGenerator {
         val statements = mutableListOf<String>()
 
         // Drop the put function (if any) before the table. Bare-name DROP works on PG 10+ and no-ops if absent.
-        if (queue.queueType == QueueType.MAIN) {
+        if (queue.queueRole == QueueRole.MAIN) {
             if (existingTable.putFunction != null) {
                 // SQL put function exists for the old table, drop it
                 statements += "drop function if exists ${QueueHelpers.generatePutFunctionName(queue.name)}"
@@ -291,7 +291,7 @@ internal object SchemaGenerator {
 
     private fun forPutFunction(queue: Queue<*>, existingTable: Table?, mutableSchema: MutableSchema) {
         // Only MAIN queues get a put function; DLQ/Archive companions never do.
-        if (queue.queueType != QueueType.MAIN) {
+        if (queue.queueRole != QueueRole.MAIN) {
             return
         }
 
