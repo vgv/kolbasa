@@ -18,7 +18,7 @@ class MetadataTest {
             MetaField.ofString("USER_ID"),
         )
 
-        assertThrows<IllegalStateException> { Metadata(fields) }
+        assertThrows<IllegalArgumentException> { Metadata(fields) }
     }
 
     @Test

@@ -31,7 +31,7 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
             }
 
             ps.executeQuery().use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "Query didn't return any results, it shouldn't happen. Query: '$query'"
                 }
 
@@ -99,7 +99,7 @@ class ConnectionAwareDatabaseInspector : ConnectionAwareInspector {
     override fun messageAge(connection: Connection, queue: Queue<*>): MessageAge {
         val query = InspectorSchemaHelpers.generateMessageAgeQuery(queue)
         return connection.useStatement(query) { resultSet ->
-            require(resultSet.next()) {
+            check(resultSet.next()) {
                 "Query didn't return any results, it shouldn't happen. Query: '$query'"
             }
 

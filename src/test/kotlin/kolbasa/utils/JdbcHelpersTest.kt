@@ -214,7 +214,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadInt_NoRows() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // No rows with str_value == 'z'
             dataSource.readInt("select int_value from full_table where str_value='z'")
         }
@@ -222,7 +222,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadInt_MoreThanOneRow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // More than one row
             dataSource.readInt("select int_value from full_table")
         }
@@ -237,7 +237,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLong_NoRows() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // No rows with str_value == 'z'
             dataSource.readLong("select long_value from full_table where str_value='z'")
         }
@@ -245,7 +245,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLong_MoreThanOneRow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // More than one row
             dataSource.readLong("select long_value from full_table")
         }
@@ -273,7 +273,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLongOrNull_NoRows() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // No rows with str_value == 'z'
             dataSource.readLongOrNull("select long_value from full_table where str_value='z'")
         }
@@ -281,7 +281,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadLongOrNull_MoreThanOneRow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // More than one row
             dataSource.readLongOrNull("select long_value from full_table")
         }
@@ -297,7 +297,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadBoolean_NoRows() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // No rows with str_value == 'z'
             dataSource.readBoolean("select boolean_value from full_table where str_value='z'")
         }
@@ -305,7 +305,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadBoolean_MoreThanOneRow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // More than one row
             dataSource.readBoolean("select boolean_value from full_table")
         }
@@ -321,7 +321,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadString_NoRows() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // No rows with int_value=123
             dataSource.readString("select str_value from full_table where int_value=123")
         }
@@ -329,7 +329,7 @@ internal class JdbcHelpersTest : AbstractPostgresqlTest() {
 
     @Test
     fun testReadString_MoreThanOneRow() {
-        assertThrows<IllegalArgumentException> {
+        assertThrows<IllegalStateException> {
             // More than one row
             dataSource.readString("select str_value from full_table")
         }

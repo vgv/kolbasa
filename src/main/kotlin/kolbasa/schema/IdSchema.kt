@@ -71,7 +71,7 @@ internal object IdSchema {
 
         return dataSource.useStatement { statement: Statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
                         "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$sql'"
                 }
