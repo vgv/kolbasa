@@ -26,12 +26,24 @@ This is a **Gradle** project (Kotlin DSL). Use the wrapper:
 - Build: `./gradlew build`
 - Compile only: `./gradlew compileKotlin`
 - Run tests: `./gradlew test`
-- Run a single example: `./gradlew example -P name=SimpleExample` (any file from
-  `src/test/kotlin/examples`)
+- Run a single example: `./gradlew example -Pname=SimpleExample` (any file from
+  `src/test/kotlin/examples`); add `-Plang=java` to run its Java twin instead
+- Run the benchmarks: `./gradlew performance`
 
 **Tests need Docker.** The test suite and the examples spin up PostgreSQL via Testcontainers, so a
 running Docker daemon is required. Examples can also point at a real PostgreSQL instance via
 `src/test/kotlin/examples/ExamplesDataSourceProvider.kt`.
+
+**`./gradlew test` picks a random PostgreSQL major.** `AbstractPostgresqlTest` chooses one image per
+JVM out of `src/test/resources/postgresql-test-images.txt`, so two runs are not the same environment,
+and a run can stall for minutes pulling an image Docker hasn't cached yet. To pin a version, use the
+per-image task — `./gradlew testPg_18_4`, one exists for every listed image. Setting
+`-Dkolbasa.test.postgresql.image=…` on `test` does **not** work: Gradle puts it on the daemon, not on
+the forked test JVM, and only the `testPg_*` tasks pass it through.
+
+**Changing SQL or schema generation? Run `./gradlew testBoundaryPgVersions`** — the whole `@unit-db`
+suite against the first and last patch of every supported major. kolbasa supports PostgreSQL 10
+through 18, and the single random image a plain `test` run picks proves very little about that span.
 
 Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 
@@ -41,7 +53,12 @@ Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/butcher` — the operator CLI), `stats` (Prometheus,
   OpenTelemetry).
-- `src/test/kotlin/examples/` — runnable, self-contained examples; the best on-ramp to the API.
+- `src/test/kotlin/examples/` — runnable, self-contained examples; the best on-ramp to the API. Most
+  come in **pairs**: `SimpleExample.kt` and `SimpleExample.java` are the same program written twice,
+  because kolbasa is meant to read well from Java too. Keep the pair in sync — if you change one, change
+  the other. The `.java` files sit under `src/test/kotlin/` deliberately: `build.gradle.kts` adds
+  `sourceSets.test { java.srcDir("src/test/kotlin") }` so javac compiles them. Move them to a "proper"
+  `src/test/java/` and nothing builds them — not `test`, not CI.
 - `docs/` — architecture and operator documentation (see below).
 
 ## Gotchas

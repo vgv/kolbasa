@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.sql.Statement
 import javax.sql.DataSource
@@ -22,16 +24,27 @@ class ClusterTest : AbstractPostgresqlTest() {
         val cluster = Cluster(emptyList())
 
         assertThrows<IllegalStateException> {
-            cluster.initAndScheduleStateUpdate()
+            cluster.updateStateOnce()
         }
     }
 
     @Test
-    fun testInitCluster_If_State_Not_Initialized() {
+    fun testInitCluster_Test_State_Init_And_Not() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val cluster = Cluster(dataSources)
 
+        // State not updated
+        assertFalse(cluster.clusterStateUpdatedAtLeastOnce())
         assertThrows<IllegalStateException> {
+            cluster.getState()
+        }
+
+        // Update the state
+        cluster.updateStateOnce()
+
+        // State updated
+        assertTrue(cluster.clusterStateUpdatedAtLeastOnce())
+        assertDoesNotThrow {
             cluster.getState()
         }
     }
