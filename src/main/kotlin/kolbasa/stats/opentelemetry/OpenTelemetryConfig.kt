@@ -20,12 +20,16 @@ import io.opentelemetry.api.OpenTelemetry
  *
  * ```kotlin
  * Kolbasa.openTelemetryConfig = OpenTelemetryConfig.Config(openTelemetry)
+ * // if you don't want any tracing at all
+ * Kolbasa.openTelemetryConfig = OpenTelemetryConfig.None;
  * ```
  *
  * The same from Java:
  *
  * ```java
  * Kolbasa.setOpenTelemetryConfig(new OpenTelemetryConfig.Config(openTelemetry));
+ * // if you don't want any tracing at all
+ * Kolbasa.setOpenTelemetryConfig(OpenTelemetryConfig.None.INSTANCE);
  * ```
  */
 sealed class OpenTelemetryConfig {

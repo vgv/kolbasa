@@ -20,12 +20,16 @@ import kolbasa.stats.prometheus.metrics.Const
  *
  * ```kotlin
  * Kolbasa.prometheusConfig = PrometheusConfig.Config()
+ * // or if you don't want any metrics at all:
+ * Kolbasa.prometheusConfig = PrometheusConfig.None;
  * ```
  *
  * The same from Java:
  *
  * ```java
  * Kolbasa.setPrometheusConfig(new PrometheusConfig.Config());
+ * // or if you don't want any metrics at all:
+ * Kolbasa.setPrometheusConfig(PrometheusConfig.None.INSTANCE);
  * ```
  */
 sealed class PrometheusConfig {
