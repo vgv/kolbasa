@@ -58,7 +58,7 @@ fun main() {
         queue = queueProhibited,
         request = SendRequest(
             data = messagesToSend,
-            sendOptions = SendOptions(
+            options = SendOptions(
                 partialInsert = PartialInsert.PROHIBITED,
                 batchSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
@@ -79,7 +79,7 @@ fun main() {
         queue = queueUntilFirstFailure,
         request = SendRequest(
             data = messagesToSend,
-            sendOptions = SendOptions(
+            options = SendOptions(
                 partialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
                 batchSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
@@ -100,7 +100,7 @@ fun main() {
         queue = queueAsManyAsPossible,
         request = SendRequest(
             data = messagesToSend,
-            sendOptions = SendOptions(
+            options = SendOptions(
                 partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE,
                 batchSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE

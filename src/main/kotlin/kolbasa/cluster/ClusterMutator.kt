@@ -57,7 +57,7 @@ import java.util.concurrent.CompletableFuture
  */
 class ClusterMutator @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
+    private val options: MutatorOptions = MutatorOptions.DEFAULT
 ) : Mutator {
 
     override fun <Data> mutate(
@@ -73,7 +73,7 @@ class ClusterMutator @JvmOverloads constructor(
         byNodes.forEach { (node, ids) ->
             if (node != null) {
                 val mutator = latestState.getMutator(this, node) { nodeId, dataSource ->
-                    val peer = ConnectionAwareDatabaseMutator(nodeId, mutatorOptions)
+                    val peer = ConnectionAwareDatabaseMutator(nodeId, options)
                     DatabaseMutator(dataSource, peer)
                 }
 
@@ -99,7 +99,7 @@ class ClusterMutator @JvmOverloads constructor(
         val latestState = cluster.getState()
 
         val allMutators = latestState.getMutators(this) { nodeId, dataSource ->
-            val peer = ConnectionAwareDatabaseMutator(nodeId, mutatorOptions)
+            val peer = ConnectionAwareDatabaseMutator(nodeId, options)
             DatabaseMutator(dataSource, peer)
         }
 
@@ -114,7 +114,7 @@ class ClusterMutator @JvmOverloads constructor(
 
             // accumulate results, but only up to maxMutatedMessagesKeepInMemory
             val currentSize = mutatedMessagesResult.size
-            val maxSize = mutatorOptions.maxMutatedMessagesKeepInMemory
+            val maxSize = options.maxMutatedMessagesKeepInMemory
             if (currentSize < maxSize) {
                 val needToAdd = maxSize - currentSize
                 mutatedMessagesResult += oneMutateResult.messages.subList(0, minOf(needToAdd, oneMutateResult.messages.size))
@@ -124,7 +124,7 @@ class ClusterMutator @JvmOverloads constructor(
         return MutateResult(
             mutatedMessages = mutatedMessagesCount,
             messages = mutatedMessagesResult,
-            truncated = mutatedMessagesCount > mutatorOptions.maxMutatedMessagesKeepInMemory
+            truncated = mutatedMessagesCount > options.maxMutatedMessagesKeepInMemory
         )
     }
 
@@ -135,7 +135,7 @@ class ClusterMutator @JvmOverloads constructor(
     ): CompletableFuture<MutateResult> {
         // TODO: make it smarter
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = mutatorOptions.asyncExecutor,
+            mutatorExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
@@ -149,7 +149,7 @@ class ClusterMutator @JvmOverloads constructor(
     ): CompletableFuture<MutateResult> {
         // TODO: make it smarter
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = mutatorOptions.asyncExecutor,
+            mutatorExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

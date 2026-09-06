@@ -62,7 +62,7 @@ class ClusterConsumerTest : AbstractPostgresqlTest() {
         (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
             val sendRequest = SendRequest(
                 data = listOf(SendMessage(data = message)),
-                sendOptions = SendOptions(shard = message)
+                options = SendOptions(shard = message)
             )
 
             clusterProducer.send(queue, sendRequest)

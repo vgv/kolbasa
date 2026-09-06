@@ -91,7 +91,7 @@ class DatabaseProducerTest : AbstractPostgresqlTest() {
         }
 
         // This message is sent by firstProducer, but with overridden producer name in SendOptions
-        val id3 = firstProducer.send(queue, SendRequest(listOf(SendMessage("bugaga")), sendOptions = SendOptions(producer = thirdProducerName))).let { result ->
+        val id3 = firstProducer.send(queue, SendRequest(listOf(SendMessage("bugaga")), options = SendOptions(producer = thirdProducerName))).let { result ->
             assertEquals(0, result.failedMessages)
             assertEquals(0, result.onlyFailed().size)
             assertEquals(0, result.onlyDuplicated().size)

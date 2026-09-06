@@ -51,14 +51,14 @@ import javax.sql.DataSource
  */
 class ClusterConsumer @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
+    private val options: ConsumerOptions = ConsumerOptions.DEFAULT
 ) : Consumer {
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
         val latestState = cluster.getState()
 
         val consumer = latestState.getActiveConsumer(this) { nodeId, dataSource, shards ->
-            val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, shards)
+            val peer = ConnectionAwareDatabaseConsumer(nodeId, options, shards)
             DatabaseConsumer(nodeId, dataSource, peer)
         }
 
@@ -85,7 +85,7 @@ class ClusterConsumer @JvmOverloads constructor(
                 }
 
                 val consumer = latestState.getConsumer(this, node) { nodeId, dataSource ->
-                    val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                    val peer = ConnectionAwareDatabaseConsumer(nodeId, options, Shards.ALL_SHARDS)
                     DatabaseConsumer(nodeId, dataSource, peer)
                 }
 
@@ -94,7 +94,7 @@ class ClusterConsumer @JvmOverloads constructor(
 
         if (deleted < messageIds.size) {
             val consumers = latestState.getConsumers(this) { nodeId, dataSource: DataSource ->
-                val peer = ConnectionAwareDatabaseConsumer(nodeId, consumerOptions, Shards.ALL_SHARDS)
+                val peer = ConnectionAwareDatabaseConsumer(nodeId, options, Shards.ALL_SHARDS)
                 DatabaseConsumer(nodeId, dataSource, peer)
             }
 

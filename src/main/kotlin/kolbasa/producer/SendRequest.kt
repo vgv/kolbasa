@@ -11,7 +11,7 @@ data class SendRequest<Data>(
     /**
      * Options for sending this list of messages, allows to override [ProducerOptions][kolbasa.producer.ProducerOptions] options
      */
-    val sendOptions: SendOptions = SendOptions.DEFAULT
+    val options: SendOptions = SendOptions.DEFAULT
 ) {
 
     // Effective shard, depends of many factors
@@ -39,7 +39,7 @@ data class SendRequest<Data>(
     private fun makeView(firstIndex: Int, lastIndex: Int): SendRequest<Data> {
         val partialCopy = this.copy(
             data = data.subList(firstIndex, lastIndex),
-            sendOptions = sendOptions,
+            options = options,
         )
         partialCopy.effectiveShard = effectiveShard
         partialCopy.openTelemetryContext = openTelemetryContext

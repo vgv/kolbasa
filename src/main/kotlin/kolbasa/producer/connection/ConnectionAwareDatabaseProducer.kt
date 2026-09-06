@@ -17,7 +17,7 @@ import java.sql.Connection
  */
 class ConnectionAwareDatabaseProducer internal constructor(
     internal val nodeId: NodeId,
-    internal val producerOptions: ProducerOptions
+    internal val options: ProducerOptions
 ) : ConnectionAwareProducer {
 
     /**
@@ -28,13 +28,13 @@ class ConnectionAwareDatabaseProducer internal constructor(
      *
      * The producer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
-     * @param producerOptions defaults for every `send()` of this producer. Without it,
+     * @param options defaults for every `send()` of this producer. Without it,
      * [ProducerOptions.DEFAULT] is used and every message follows the queue defaults.
      */
     @JvmOverloads
-    constructor(producerOptions: ProducerOptions = ProducerOptions.DEFAULT) : this(
+    constructor(options: ProducerOptions = ProducerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
-        producerOptions = producerOptions
+        options = options
     )
 
     override fun <Data> send(
@@ -43,7 +43,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): SendResult<Data> {
         val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
-        val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(producerOptions, request.sendOptions)
+        val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
         val (execution, result) = TimeHelper.measure {
             queue.queueTracing.makeProducerCall(nodeId, request) {
@@ -76,7 +76,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
 
         request.chunked(batchSize).forEach { chunk ->
             try {
@@ -100,7 +100,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
     ): SendResult<Data> {
         val results = ArrayList<MessageResult<Data>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data>>()
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
         lateinit var exception: Throwable
 
         request.chunked(batchSize).forEach { chunk ->
@@ -131,7 +131,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, request.sendOptions)
+        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
         var failedMessages = 0
 
         request.chunked(batchSize).forEach { chunk ->
@@ -163,16 +163,16 @@ class ConnectionAwareDatabaseProducer internal constructor(
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>
     ): List<MessageResult<Data>> {
-        val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(producerOptions, request.sendOptions)
+        val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 
         val cacheKey =
-            CacheKey(queue, producerOptions, deduplicationMode, request.sendOptions, request.openTelemetryContext != null)
+            CacheKey(queue, options, deduplicationMode, request.options, request.openTelemetryContext != null)
         val query = sendQueryCache.getOrPut(cacheKey) {
             ProducerSchemaHelpers.generateInsertPreparedQuery(
                 queue = queue,
-                producerOptions = producerOptions,
+                producerOptions = options,
                 deduplicationMode = deduplicationMode,
-                sendOptions = request.sendOptions,
+                sendOptions = request.options,
                 hasOpenTelemetry = request.openTelemetryContext != null
             )
         }
@@ -181,7 +181,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             connection.usePreparedStatement(query) { preparedStatement ->
                 ProducerSchemaHelpers.fillInsertPreparedQuery(
                     queue = queue,
-                    producerOptions = producerOptions,
+                    producerOptions = options,
                     request = request,
                     preparedStatement = preparedStatement,
                     approxBytesCounter = approxStatsBytes
