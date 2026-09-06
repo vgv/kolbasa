@@ -3,7 +3,7 @@ package kolbasa.queue
 import java.time.Duration
 
 /**
- * Configuration for an Archive queue attached to a [MAIN][QueueType.MAIN] queue.
+ * Configuration for an Archive queue attached to a [MAIN][QueueRole.MAIN] queue.
  *
  * When a consumer calls [delete()][kolbasa.consumer.datasource.Consumer.delete] on a message,
  * the message is atomically moved to the Archive queue instead of being permanently deleted.

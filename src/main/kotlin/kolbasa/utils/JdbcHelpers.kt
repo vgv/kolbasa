@@ -163,14 +163,14 @@ internal object JdbcHelpers {
     fun Connection.readInt(sql: String): Int {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getInt(1)
 
                 // Do we have more rows than one?
-                require(!resultSet.next()) {
+                check(!resultSet.next()) {
                     "More than one row in the query '$sql'"
                 }
 
@@ -189,14 +189,14 @@ internal object JdbcHelpers {
     fun Connection.readLong(sql: String): Long {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getLong(1)
 
                 // Do we have more rows than one?
-                require(!resultSet.next()) {
+                check(!resultSet.next()) {
                     "More than one row in the query '$sql'"
                 }
 
@@ -215,7 +215,7 @@ internal object JdbcHelpers {
     fun Connection.readLongOrNull(sql: String): Long? {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "No rows in the query '$sql'"
                 }
 
@@ -224,7 +224,7 @@ internal object JdbcHelpers {
                 val result = if (resultSet.wasNull()) null else value
 
                 // Do we have more rows than one?
-                require(!resultSet.next()) {
+                check(!resultSet.next()) {
                     "More than one row in the query '$sql'"
                 }
 
@@ -243,14 +243,14 @@ internal object JdbcHelpers {
     fun Connection.readBoolean(sql: String): Boolean {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getBoolean(1)
 
                 // Do we have more rows than one?
-                require(!resultSet.next()) {
+                check(!resultSet.next()) {
                     "More than one row in the query '$sql'"
                 }
 
@@ -269,14 +269,14 @@ internal object JdbcHelpers {
     fun Connection.readString(sql: String): String {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
-                require(resultSet.next()) {
+                check(resultSet.next()) {
                     "No rows in the query '$sql'"
                 }
 
                 val value = resultSet.getString(1)
 
                 // Do we have more rows than one?
-                require(!resultSet.next()) {
+                check(!resultSet.next()) {
                     "More than one row in the query '$sql'"
                 }
 

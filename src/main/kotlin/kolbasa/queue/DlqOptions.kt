@@ -3,7 +3,7 @@ package kolbasa.queue
 import java.time.Duration
 
 /**
- * Configuration for a Dead Letter Queue (DLQ) attached to a [MAIN][QueueType.MAIN] queue.
+ * Configuration for a Dead Letter Queue (DLQ) attached to a [MAIN][QueueRole.MAIN] queue.
  *
  * When a message exhausts all processing attempts (`remaining_attempts` reaches 0), the next
  * sweep cycle moves it atomically to the DLQ instead of permanently deleting it. Since sweep

@@ -16,7 +16,7 @@ internal object QueueHelpers {
     fun generateDatabaseName(vararg parts: String, separator: String = ""): String {
         val result = parts.joinToString(separator = separator)
 
-        check(result.length <= Const.MAX_DATABASE_OBJECT_NAME_LENGTH) {
+        require(result.length <= Const.MAX_DATABASE_OBJECT_NAME_LENGTH) {
             "Your identifier name is too long ($result). Max allowed length is ${Const.MAX_DATABASE_OBJECT_NAME_LENGTH} symbols"
         }
 
@@ -50,14 +50,14 @@ internal object QueueHelpers {
             // Queue name + field name + index suffix is less than max length, everything is ok
             // Name is like "q_audit_queue_account_id_j"
             generateDatabaseName(queueName, fieldName, indexSuffix, separator = "_")
-        } catch (_: IllegalStateException) {
+        } catch (_: IllegalArgumentException) {
             try {
                 // Try to keep the queue name and use short hash for field name.
                 // Name is like "q_audit_queue_6f00606e20_j"
                 generateDatabaseName(queueName, Helpers.shortHash(fieldName), indexSuffix, separator = "_")
-            } catch (_: IllegalStateException) {
+            } catch (_: IllegalArgumentException) {
                 // Even a queue name is too long, use hash for both queue name and field name
-                // // Name is like "idx_6390e56c695bc1df858b9c185e10aba6_j"
+                // Name is like "idx_6390e56c695bc1df858b9c185e10aba6_j"
                 generateDatabaseName("idx", Helpers.md5Hash(queueName + fieldName), indexSuffix, separator = "_")
             }
         }

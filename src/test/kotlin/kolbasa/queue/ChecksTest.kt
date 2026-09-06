@@ -36,7 +36,7 @@ internal class ChecksTest {
     @Test
     fun testCheckDelay_Negative_Fails() {
         // Check other negative values fail
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkDelay(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
         }
     }
@@ -58,10 +58,10 @@ internal class ChecksTest {
     @Test
     fun testCheckAttempts_ZeroOrNegative_Fails() {
         // Check other negative or zero values fail
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkAttempts(0)
         }
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkAttempts(Random.nextInt(Int.MIN_VALUE, 0))
         }
     }
@@ -74,13 +74,13 @@ internal class ChecksTest {
         Checks.checkProducerName("just value shorter than 255 symbols")
 
         // too long name
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
             Checks.checkProducerName(longName)
         }
 
         // wrong symbols
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             val wrongName = "producer;name"
             Checks.checkProducerName(wrongName)
         }
@@ -90,10 +90,10 @@ internal class ChecksTest {
 
     @Test
     fun testBatchSize_ZeroOrNegative_Fails() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkBatchSize(0)
         }
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkBatchSize(-1)
         }
 
@@ -116,13 +116,13 @@ internal class ChecksTest {
         Checks.checkConsumerName("just value shorter than 255 symbols")
 
         // too long name
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             val longName = "a".repeat(Const.PRODUCER_CONSUMER_VALUE_MAX_LENGTH + 1)
             Checks.checkConsumerName(longName)
         }
 
         // wrong symbols
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             val wrongName = "consumer;name"
             Checks.checkConsumerName(wrongName)
         }
@@ -146,7 +146,7 @@ internal class ChecksTest {
     @Test
     fun testCheckVisibilityTimeout_Negative_Fails() {
         // Check other negative values fail
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkVisibilityTimeout(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
         }
     }
@@ -155,54 +155,54 @@ internal class ChecksTest {
 
     @Test
     fun testCheckQueueName_IfEmpty() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("", QueueRole.MAIN)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.DLQ)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("", QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("", QueueType.ARCHIVE)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("", QueueRole.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidPrefix() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email", QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("q_customer_email", QueueRole.MAIN)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email_dlq", QueueType.DLQ)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("q_customer_email_dlq", QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("q_customer_email_arc", QueueType.ARCHIVE)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("q_customer_email_arc", QueueRole.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_TooLong() {
         val longName = "a".repeat(Const.QUEUE_NAME_MAX_LENGTH + 1)
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName(longName, QueueRole.MAIN)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.DLQ)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName(longName, QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName(longName, QueueType.ARCHIVE)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName(longName, QueueRole.ARCHIVE)
         }
     }
 
     @Test
     fun testCheckQueueName_InvalidSymbols() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue$", QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("queue$", QueueRole.MAIN)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue\$_dlq", QueueType.DLQ)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("queue\$_dlq", QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("queue\$_arc", QueueType.ARCHIVE)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("queue\$_arc", QueueRole.ARCHIVE)
         }
     }
 
@@ -210,65 +210,65 @@ internal class ChecksTest {
 
     @Test
     fun testCheckQueueName_MainQueueCannotEndWithDlqSuffix() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders_dlq", QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("orders_dlq", QueueRole.MAIN)
         }
     }
 
     @Test
     fun testCheckQueueName_MainQueueCannotEndWithArchiveSuffix() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders_arc", QueueType.MAIN)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("orders_arc", QueueRole.MAIN)
         }
     }
 
     @Test
     fun testCheckQueueName_DlqQueueMustEndWithDlqSuffix() {
         assertDoesNotThrow {
-            Checks.checkQueueName("orders_dlq", QueueType.DLQ)
+            Checks.checkQueueName("orders_dlq", QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders", QueueType.DLQ)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("orders", QueueRole.DLQ)
         }
     }
 
     @Test
     fun testCheckQueueName_ArchiveQueueMustEndWithArchiveSuffix() {
         assertDoesNotThrow {
-            Checks.checkQueueName("orders_arc", QueueType.ARCHIVE)
+            Checks.checkQueueName("orders_arc", QueueRole.ARCHIVE)
         }
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueName("orders", QueueType.ARCHIVE)
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueName("orders", QueueRole.ARCHIVE)
         }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckQueueType_MainCanHaveDlq() {
+    fun testCheckQueueRole_MainCanHaveDlq() {
         assertDoesNotThrow {
-            Checks.checkQueueType(QueueType.MAIN, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.MAIN, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_MainCanHaveArchive() {
+    fun testCheckQueueRole_MainCanHaveArchive() {
         assertDoesNotThrow {
-            Checks.checkQueueType(QueueType.MAIN, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+            Checks.checkQueueRole(QueueRole.MAIN, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_DlqCannotHaveDlq() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueType(QueueType.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
+    fun testCheckQueueRole_DlqCannotHaveDlq() {
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueRole(QueueRole.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
         }
     }
 
     @Test
-    fun testCheckQueueType_ArchiveCannotHaveArchive() {
-        assertThrows<IllegalStateException> {
-            Checks.checkQueueType(QueueType.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
+    fun testCheckQueueRole_ArchiveCannotHaveArchive() {
+        assertThrows<IllegalArgumentException> {
+            Checks.checkQueueRole(QueueRole.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
         }
     }
 
@@ -276,14 +276,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckDlqRetention_TooShort() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkDlqRetention(DlqOptions.MIN_RETENTION.minusNanos(1))
         }
     }
 
     @Test
     fun testCheckDlqRetention_TooLong() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkDlqRetention(DlqOptions.MAX_RETENTION.plusNanos(1))
         }
     }
@@ -294,16 +294,18 @@ internal class ChecksTest {
         assertDoesNotThrow { Checks.checkDlqRetention(DlqOptions.MAX_RETENTION) }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckArchiveQueueRetention_TooShort() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MIN_RETENTION.minusNanos(1))
         }
     }
 
     @Test
     fun testCheckArchiveQueueRetention_TooLong() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MAX_RETENTION.plusNanos(1))
         }
     }
@@ -314,6 +316,8 @@ internal class ChecksTest {
         assertDoesNotThrow { Checks.checkArchiveQueueRetention(ArchiveQueueOptions.MAX_RETENTION) }
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+
     @Test
     fun testCheckRetentionMaxMessages_Positive() {
         assertDoesNotThrow { Checks.checkRetentionMaxMessages(1) }
@@ -322,8 +326,8 @@ internal class ChecksTest {
 
     @Test
     fun testCheckRetentionMaxMessages_ZeroOrNegative() {
-        assertThrows<IllegalStateException> { Checks.checkRetentionMaxMessages(0) }
-        assertThrows<IllegalStateException> { Checks.checkRetentionMaxMessages(-1) }
+        assertThrows<IllegalArgumentException> { Checks.checkRetentionMaxMessages(0) }
+        assertThrows<IllegalArgumentException> { Checks.checkRetentionMaxMessages(-1) }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -335,7 +339,7 @@ internal class ChecksTest {
             MetaField.ofString("USER_ID"),
         )
 
-        val exception = assertThrows<IllegalStateException> { Checks.checkMetaFieldsUnique(fields) }
+        val exception = assertThrows<IllegalArgumentException> { Checks.checkMetaFieldsUnique(fields) }
         val message = assertNotNull(exception.message)
         assertEquals("Meta fields [user_id, userId, USER_ID] all map to the same database column 'meta_user_id'", message)
     }
@@ -344,14 +348,14 @@ internal class ChecksTest {
     @Test
     fun testCheckUserDefinedMetaFieldName_CannotEndWithReservedSuffix() {
         // DLQ
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_dlq") }
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_DLQ") }
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldDlq") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("field_dlq") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("FIELD_DLQ") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("fieldDlq") }
 
         // Archive queues
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("field_arc") }
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("fieldArc") }
-        assertThrows<IllegalStateException> { Checks.checkUserDefinedMetaFieldName("FIELD_ARC") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("field_arc") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("fieldArc") }
+        assertThrows<IllegalArgumentException> { Checks.checkUserDefinedMetaFieldName("FIELD_ARC") }
     }
 
     @Test
@@ -364,7 +368,7 @@ internal class ChecksTest {
 
     @Test
     fun testCheckMetaFieldName_IfEmpty() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMetaFieldName("")
         }
     }
@@ -372,14 +376,14 @@ internal class ChecksTest {
     @Test
     fun testCheckMetaFieldName_TooLong() {
         val longName = "a".repeat(Const.META_FIELD_NAME_MAX_LENGTH + 1)
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMetaFieldName(longName)
         }
     }
 
     @Test
     fun testCheckMetaFieldName_InvalidSymbols() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMetaFieldName("meta$")
         }
     }
@@ -388,14 +392,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckSweepMaxMessages_LessThanMin() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkSweepMaxMessages(SweepConfig.MIN_SWEEP_MESSAGES - 1)
         }
     }
 
     @Test
     fun testCheckSweepMaxMessages_MoreThanMax() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkSweepMaxMessages(SweepConfig.MAX_SWEEP_MESSAGES + 1)
         }
     }
@@ -404,14 +408,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckSweepProbability_LessThanMin() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkSweepProbability(SweepConfig.MIN_SWEEP_PROBABILITY - Math.ulp(SweepConfig.MIN_SWEEP_PROBABILITY))
         }
     }
 
     @Test
     fun testCheckSweepPeriod_MoreThanMax() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkSweepProbability(SweepConfig.MAX_SWEEP_PROBABILITY + Math.ulp(SweepConfig.MAX_SWEEP_PROBABILITY))
         }
     }
@@ -420,7 +424,7 @@ internal class ChecksTest {
 
     @Test
     fun testCheckClusterStateUpdateInterval() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             val ulp = Duration.ofNanos(1)
             val aBitSmaller = ClusterStateUpdateConfig.MIN_INTERVAL - ulp
             Checks.checkClusterStateUpdateInterval(aBitSmaller)
@@ -442,9 +446,9 @@ internal class ChecksTest {
 
     @Test
     fun testCheckSamplePercent_InvalidValues() {
-        assertThrows<IllegalStateException> { Checks.checkSamplePercent(0.0f) }
-        assertThrows<IllegalStateException> { Checks.checkSamplePercent(-1.0f) }
-        assertThrows<IllegalStateException> { Checks.checkSamplePercent(100.01f) }
+        assertThrows<IllegalArgumentException> { Checks.checkSamplePercent(0.0f) }
+        assertThrows<IllegalArgumentException> { Checks.checkSamplePercent(-1.0f) }
+        assertThrows<IllegalArgumentException> { Checks.checkSamplePercent(100.01f) }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -460,17 +464,17 @@ internal class ChecksTest {
     @Test
     fun testCheckMutations_Error() {
         // Only remaining_attempts field mutations
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMutations(listOf(AddRemainingAttempts(1), SetRemainingAttempts(2)))
         }
 
         // Only scheduled_at field mutations
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMutations(listOf(AddScheduledAt(Duration.ZERO), SetScheduledAt(Duration.ZERO)))
         }
 
         // More than one field
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkMutations(
                 listOf(
                     AddScheduledAt(Duration.ZERO),

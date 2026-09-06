@@ -23,7 +23,7 @@ internal class QueueHelpersTest {
     @Test
     fun testGenerateDatabaseName_TooLong() {
         val longName = "a".repeat(Const.MAX_DATABASE_OBJECT_NAME_LENGTH + 1)
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             QueueHelpers.generateDatabaseName(longName, longName, longName, separator = "-")
         }
     }

@@ -37,7 +37,7 @@ import java.sql.PreparedStatement
  *
  * @see Filter
  */
-abstract class Condition {
+sealed class Condition {
 
     /**
      * PostgreSQL `and` operator.

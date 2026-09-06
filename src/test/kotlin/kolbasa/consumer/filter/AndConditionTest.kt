@@ -3,45 +3,81 @@ package kolbasa.consumer.filter
 import io.mockk.confirmVerified
 import io.mockk.mockk
 import io.mockk.verifySequence
+import kolbasa.consumer.filter.Filter.between
+import kolbasa.consumer.filter.Filter.eq
+import kolbasa.consumer.filter.Filter.greaterEq
+import kolbasa.consumer.filter.Filter.like
+import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 internal class AndConditionTest {
 
+    private val now = Instant.now()
+    private val then = now.plus(1, ChronoUnit.DAYS)
+
+    private val userId = MetaField.ofInt("user_id")
+    private val userEmail = MetaField.ofString("user_email")
+    private val userBirth = MetaField.ofInstant("user_birth")
+    private val userAge = MetaField.ofByte("user_age")
+
+    private val idCondition = userId eq 42
+    private val emailCondition = userEmail like "kolbasa%"
+    private val birthCondition = userBirth between now and then
+    private val ageCondition = userAge greaterEq 21
+
+
     @Test
     fun testSimpleToSql() {
-        val expression =  AndCondition(TestCondition("1"), TestCondition("2"))
-        //val queue =
+        val expression = AndCondition(idCondition, emailCondition)
 
-        assertEquals("(1) and (2)", expression.toSqlClause())
+        assertEquals("(${idCondition.toSqlClause()}) and (${emailCondition.toSqlClause()})", expression.toSqlClause())
     }
 
     @Test
     fun testListAndObjectToSql() {
-        val first = AndCondition(TestCondition("1"), TestCondition("2"))
-        val second = TestCondition("3")
-        val expression = AndCondition(first, second)
+        // ((1 and 2) and 3) converts to (1 and 2 and 3)
+        val expression = AndCondition(
+            AndCondition(idCondition, emailCondition),
+            birthCondition
+        )
 
-        assertEquals("(1) and (2) and (3)", expression.toSqlClause())
+        assertEquals(
+            "(${idCondition.toSqlClause()}) and (${emailCondition.toSqlClause()}) and (${birthCondition.toSqlClause()})",
+            expression.toSqlClause()
+        )
     }
+
     @Test
     fun testObjectAndListToSql() {
-        val first = TestCondition("1")
-        val second = AndCondition(TestCondition("2"), TestCondition("3"))
-        val expression = AndCondition(first, second)
+        // (1 and (2 and 3)) converts to (1 and 2 and 3)
+        val expression = AndCondition(
+            idCondition,
+            AndCondition(emailCondition, birthCondition)
+        )
 
-        assertEquals("(1) and (2) and (3)", expression.toSqlClause())
+        assertEquals(
+            "(${idCondition.toSqlClause()}) and (${emailCondition.toSqlClause()}) and (${birthCondition.toSqlClause()})",
+            expression.toSqlClause()
+        )
     }
 
     @Test
     fun testListAndListToSql() {
-        val first = AndCondition(TestCondition("1"), TestCondition("2"))
-        val second = AndCondition(TestCondition("3"), TestCondition("4"))
-        val expression = AndCondition(first, second)
+        // ((1 and 2) and (3 and 4)) converts to (1 and 2 and 3 and 4)
+        val expression = AndCondition(
+            AndCondition(idCondition, emailCondition),
+            AndCondition(birthCondition, ageCondition)
+        )
 
-        assertEquals("(1) and (2) and (3) and (4)", expression.toSqlClause())
+        assertEquals(
+            "(${idCondition.toSqlClause()}) and (${emailCondition.toSqlClause()}) and (${birthCondition.toSqlClause()}) and (${ageCondition.toSqlClause()})",
+            expression.toSqlClause()
+        )
     }
 
     @Test
