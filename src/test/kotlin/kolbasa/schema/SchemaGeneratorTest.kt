@@ -121,11 +121,11 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
         // Should have schemas for both main and DLQ
         assertEquals(2, schemas.size)
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.MAIN })
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.DLQ })
+        assertTrue(schemas.keys.any { it.role == QueueRole.MAIN })
+        assertTrue(schemas.keys.any { it.role == QueueRole.DLQ })
 
         // DLQ schema should include columns for original-value meta fields
-        val dlqSchema = schemas.entries.first { it.key.queueRole == QueueRole.DLQ }.value
+        val dlqSchema = schemas.entries.first { it.key.role == QueueRole.DLQ }.value
         val allStatements = dlqSchema.tableStatements.joinToString(" ")
         Metadata.DLQ_FIELDS.forEach { dlqOriginalFields ->
             assertTrue(
@@ -148,11 +148,11 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
         // Should have schemas for both main and Archive
         assertEquals(2, schemas.size)
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.MAIN })
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.ARCHIVE })
+        assertTrue(schemas.keys.any { it.role == QueueRole.MAIN })
+        assertTrue(schemas.keys.any { it.role == QueueRole.ARCHIVE })
 
         // Archive schema should include columns for original-value meta fields
-        val arcSchema = schemas.entries.first { it.key.queueRole == QueueRole.ARCHIVE }.value
+        val arcSchema = schemas.entries.first { it.key.role == QueueRole.ARCHIVE }.value
         val allStatements = arcSchema.tableStatements.joinToString(" ")
         Metadata.ARCHIVE_FIELDS.forEach { archiveField ->
             assertTrue(
@@ -178,8 +178,8 @@ class SchemaGeneratorTest : AbstractPostgresqlTest() {
 
         // Should have schemas for main, DLQ, and Archive
         assertEquals(3, schemas.size)
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.MAIN })
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.DLQ })
-        assertTrue(schemas.keys.any { it.queueRole == QueueRole.ARCHIVE })
+        assertTrue(schemas.keys.any { it.role == QueueRole.MAIN })
+        assertTrue(schemas.keys.any { it.role == QueueRole.DLQ })
+        assertTrue(schemas.keys.any { it.role == QueueRole.ARCHIVE })
     }
 }

@@ -367,8 +367,8 @@ object SchemaHelpers {
 
     private fun checkAllQueuesAreMain(mainQueues: List<Queue<*>>) {
         mainQueues.forEach { queue ->
-            require(queue.queueRole == QueueRole.MAIN) {
-                "Only MAIN queues are allowed, but '${queue.name}' has type ${queue.queueRole}. " +
+            require(queue.role == QueueRole.MAIN) {
+                "Only MAIN queues are allowed, but '${queue.name}' has type ${queue.role}. " +
                     "DLQ and Archive queues are managed automatically through their parent MAIN queue."
             }
         }

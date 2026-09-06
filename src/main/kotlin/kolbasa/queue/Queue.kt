@@ -106,7 +106,7 @@ data class Queue<Data> internal constructor(
      * [ARCHIVE][QueueRole.ARCHIVE] queues are created automatically when the corresponding options
      * are enabled in [QueueOptions].
      */
-    val queueRole: QueueRole
+    val role: QueueRole
 ) {
 
     /**
@@ -125,8 +125,8 @@ data class Queue<Data> internal constructor(
     ) : this(name, databaseDataType, options, metadata, QueueRole.MAIN)
 
     init {
-        Checks.checkQueueName(name, queueRole)
-        Checks.checkQueueRole(queueRole, options)
+        Checks.checkQueueName(name, role)
+        Checks.checkQueueRole(role, options)
     }
 
     internal val dbTableName = QueueHelpers.generateQueueDbName(name)
@@ -135,7 +135,7 @@ data class Queue<Data> internal constructor(
      * Returns the Dead Letter Queue for this queue, or null if DLQ feature is not enabled.
      * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
      */
-    val deadLetterQueue: Queue<Data>? = if (queueRole == QueueRole.MAIN && options.dlqOptions != null)
+    val deadLetterQueue: Queue<Data>? = if (role == QueueRole.MAIN && options.dlqOptions != null)
         createCompanionQueue(this, QueueRole.DLQ, Const.DLQ_TABLE_NAME_SUFFIX)
     else
         null
@@ -144,7 +144,7 @@ data class Queue<Data> internal constructor(
      * Returns the Archive queue for this queue, or null if Archive feature is not enabled.
      * The returned Queue can be used with Consumer, Inspector, Mutator, etc.
      */
-    val archiveQueue: Queue<Data>? = if (queueRole == QueueRole.MAIN && options.archiveQueueOptions != null)
+    val archiveQueue: Queue<Data>? = if (role == QueueRole.MAIN && options.archiveQueueOptions != null)
         createCompanionQueue(this, QueueRole.ARCHIVE, Const.ARCHIVE_TABLE_NAME_SUFFIX)
     else
         null
@@ -252,7 +252,7 @@ data class Queue<Data> internal constructor(
                 databaseDataType = mainQueue.databaseDataType,
                 options = companionOptions,
                 metadata = companionMetadata,
-                queueRole = role
+                role = role
             )
         }
     }

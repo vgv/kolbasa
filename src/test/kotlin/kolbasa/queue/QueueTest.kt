@@ -91,7 +91,7 @@ class QueueTest {
 
         val dlq = requireNotNull(queue.deadLetterQueue)
         assertEquals("orders${Const.DLQ_TABLE_NAME_SUFFIX}", dlq.name)
-        assertEquals(QueueRole.DLQ, dlq.queueRole)
+        assertEquals(QueueRole.DLQ, dlq.role)
         assertNull(dlq.deadLetterQueue)
         assertNull(dlq.archiveQueue)
 
@@ -124,7 +124,7 @@ class QueueTest {
 
         val archive = requireNotNull(queue.archiveQueue)
         assertEquals("orders${Const.ARCHIVE_TABLE_NAME_SUFFIX}", archive.name)
-        assertEquals(QueueRole.ARCHIVE, archive.queueRole)
+        assertEquals(QueueRole.ARCHIVE, archive.role)
         assertNull(archive.deadLetterQueue)
         assertNull(archive.archiveQueue)
 
