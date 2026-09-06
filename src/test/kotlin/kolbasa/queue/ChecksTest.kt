@@ -227,7 +227,7 @@ internal class ChecksTest {
         assertDoesNotThrow {
             Checks.checkQueueName("orders_dlq", QueueRole.DLQ)
         }
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkQueueName("orders", QueueRole.DLQ)
         }
     }
@@ -237,7 +237,7 @@ internal class ChecksTest {
         assertDoesNotThrow {
             Checks.checkQueueName("orders_arc", QueueRole.ARCHIVE)
         }
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkQueueName("orders", QueueRole.ARCHIVE)
         }
     }
@@ -260,14 +260,14 @@ internal class ChecksTest {
 
     @Test
     fun testCheckQueueRole_DlqCannotHaveDlq() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkQueueRole(QueueRole.DLQ, QueueOptions(dlqOptions = DlqOptions.DEFAULT))
         }
     }
 
     @Test
     fun testCheckQueueRole_ArchiveCannotHaveArchive() {
-        assertThrows<IllegalStateException> {
+        assertThrows<IllegalArgumentException> {
             Checks.checkQueueRole(QueueRole.ARCHIVE, QueueOptions(archiveQueueOptions = ArchiveQueueOptions.DEFAULT))
         }
     }

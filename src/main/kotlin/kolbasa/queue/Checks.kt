@@ -100,14 +100,14 @@ internal object Checks {
 
             QueueRole.DLQ -> {
                 // DLQ queues must end with the _dlq suffix
-                check(queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
+                require(queueName.endsWith(Const.DLQ_TABLE_NAME_SUFFIX)) {
                     "DLQ queue name must end with '${Const.DLQ_TABLE_NAME_SUFFIX}' (current: $queueName)"
                 }
             }
 
             QueueRole.ARCHIVE -> {
                 // Archive queues must end with the _arc suffix
-                check(queueName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
+                require(queueName.endsWith(Const.ARCHIVE_TABLE_NAME_SUFFIX)) {
                     "Archive queue name must end with '${Const.ARCHIVE_TABLE_NAME_SUFFIX}' (current: $queueName)"
                 }
             }
@@ -117,10 +117,10 @@ internal object Checks {
     fun checkQueueRole(queueRole: QueueRole, options: QueueOptions) {
         // DLQ and ARCHIVE queues cannot have their own DLQ/Archive (prevent recursion)
         if (queueRole != QueueRole.MAIN) {
-            check(options.dlqOptions == null) {
+            require(options.dlqOptions == null) {
                 "Only MAIN queues can have a DLQ (current queue role: $queueRole)"
             }
-            check(options.archiveQueueOptions == null) {
+            require(options.archiveQueueOptions == null) {
                 "Only MAIN queues can have an Archive (current queue role: $queueRole)"
             }
         }
