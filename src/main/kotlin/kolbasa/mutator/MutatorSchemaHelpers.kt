@@ -69,7 +69,7 @@ internal object MutatorSchemaHelpers {
                     from ${queue.dbTableName}
                     where (${Const.ID_COLUMN_NAME} > $lastKnownId) and ($query)
                     order by ${Const.ID_COLUMN_NAME}
-                    limit $MUTATE_BATCH_SIZE
+                    limit $MUTATE_CHUNK_SIZE
                  )
             returning $fields"""
     }
@@ -106,5 +106,5 @@ internal object MutatorSchemaHelpers {
     private const val ALL_FIELDS =
         "${Const.ID_COLUMN_NAME},${Const.SHARD_COLUMN_NAME},${Const.SCHEDULED_AT_COLUMN_NAME},${Const.REMAINING_ATTEMPTS_COLUMN_NAME}"
 
-    private const val MUTATE_BATCH_SIZE = 10_000
+    private const val MUTATE_CHUNK_SIZE = 10_000
 }

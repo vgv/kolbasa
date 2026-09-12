@@ -217,8 +217,8 @@ internal object ProducerSchemaHelpers {
         return sendOptions.deduplicationMode ?: producerOptions.deduplicationMode
     }
 
-    fun calculateBatchSize(producerOptions: ProducerOptions, sendOptions: SendOptions): Int {
-        return sendOptions.batchSize ?: producerOptions.batchSize
+    fun calculateChunkSize(producerOptions: ProducerOptions, sendOptions: SendOptions): Int {
+        return sendOptions.chunkSize ?: producerOptions.chunkSize
     }
 
     fun calculatePartialInsert(producerOptions: ProducerOptions, sendOptions: SendOptions): PartialInsert {

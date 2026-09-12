@@ -76,9 +76,9 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
+        val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
 
-        request.chunked(batchSize).forEach { chunk ->
+        request.chunked(chunkSize).forEach { chunk ->
             try {
                 result += executeChunk(connection, queue, approxStatsBytes, chunk)
             } catch (e: Exception) {
@@ -100,10 +100,10 @@ class ConnectionAwareDatabaseProducer internal constructor(
     ): SendResult<Data> {
         val results = ArrayList<MessageResult<Data>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data>>()
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
+        val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
         lateinit var exception: Throwable
 
-        request.chunked(batchSize).forEach { chunk ->
+        request.chunked(chunkSize).forEach { chunk ->
             if (failResults.isNotEmpty()) {
                 // If we have at least one failed message – let's fail others
                 failResults += chunk.data
@@ -131,10 +131,10 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(options, request.options)
+        val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
         var failedMessages = 0
 
-        request.chunked(batchSize).forEach { chunk ->
+        request.chunked(chunkSize).forEach { chunk ->
             executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk)
                 .onSuccess { result += it }
                 .onFailure { ex ->

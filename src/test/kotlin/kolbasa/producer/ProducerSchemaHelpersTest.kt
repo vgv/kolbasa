@@ -67,21 +67,21 @@ class ProducerSchemaHelpersTest {
     }
 
     @Test
-    fun testCalculateBatchSize_SendOptionsDefined() {
-        val sendOptions = SendOptions(batchSize = 100)
-        val producerOptions = ProducerOptions(batchSize = 200)
+    fun testCalculateChunkSize_SendOptionsDefined() {
+        val sendOptions = SendOptions(chunkSize = 100)
+        val producerOptions = ProducerOptions(chunkSize = 200)
 
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
-        assertEquals(100, batchSize)
+        val chunkSize = ProducerSchemaHelpers.calculateChunkSize(producerOptions, sendOptions)
+        assertEquals(100, chunkSize)
     }
 
     @Test
-    fun testCalculateBatchSize_SendOptionsNotDefined() {
+    fun testCalculateChunkSize_SendOptionsNotDefined() {
         val sendOptions = SendOptions.DEFAULT
-        val producerOptions = ProducerOptions(batchSize = 200)
+        val producerOptions = ProducerOptions(chunkSize = 200)
 
-        val batchSize = ProducerSchemaHelpers.calculateBatchSize(producerOptions, sendOptions)
-        assertEquals(200, batchSize)
+        val chunkSize = ProducerSchemaHelpers.calculateChunkSize(producerOptions, sendOptions)
+        assertEquals(200, chunkSize)
     }
 
     @Test

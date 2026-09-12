@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService
  * ## Usage Example
  *
  * ```kotlin
- * val options = ProducerOptions(producer = "billing", batchSize = 1000)
+ * val options = ProducerOptions(producer = "billing", chunkSize = 1000)
  *
  * val producer = DatabaseProducer(dataSource, options)
  * ```
@@ -36,7 +36,7 @@ import java.util.concurrent.ExecutorService
  * ```java
  * var options = ProducerOptions.builder()
  *     .producer("billing")
- *     .batchSize(1000)
+ *     .chunkSize(1000)
  *     .build();
  *
  * var producer = new DatabaseProducer(dataSource, options);
@@ -123,19 +123,19 @@ data class ProducerOptions(
     val deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE,
 
     /**
-     * Batch size for sending messages. Default value is 500.
+     * Chunk size for sending messages. Default value is 500.
      *
-     * Batch size controls two things:
+     * Chunk size controls two things:
      * 1) Performance.
      * When you send N messages using one producer.send() call, Kolbasa doesn't send N separate INSERT statements
-     * to PostgreSQL. Instead, it splits the list into chunks of size [batchSize] and sends one INSERT statement
-     * per chunk. So, if you send 10,000 messages using one producer.send() call and [batchSize] is 500, kolbasa
+     * to PostgreSQL. Instead, it splits the list into chunks of size [chunkSize] and sends one INSERT statement
+     * per chunk. So, if you send 10,000 messages using one producer.send() call and [chunkSize] is 500, kolbasa
      * will only make 20 calls to the database.
      *
      * 2) Failure granularity.
-     * Batch size helps you to control how big (or small) has to be a 'failure' chunk. See [PartialInsert] for details.
+     * Chunk size helps you to control how big (or small) has to be a 'failure' chunk. See [PartialInsert] for details.
      */
-    val batchSize: Int = DEFAULT_BATCH_SIZE,
+    val chunkSize: Int = DEFAULT_CHUNK_SIZE,
 
     /**
      * Partial insert strategy. See [PartialInsert] for details.
@@ -178,7 +178,7 @@ data class ProducerOptions(
         Checks.checkDelay(delay)
         Checks.checkAttempts(attempts)
         Checks.checkProducerName(producer)
-        Checks.checkBatchSize(batchSize)
+        Checks.checkChunkSize(chunkSize)
     }
 
     /** Builder for flexible [ProducerOptions] creation, when only some of the properties need to be set. */
@@ -187,7 +187,7 @@ data class ProducerOptions(
         private var attempts: Int? = null
         private var producer: String? = null
         private var deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
-        private var batchSize: Int = DEFAULT_BATCH_SIZE
+        private var chunkSize: Int = DEFAULT_CHUNK_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
@@ -204,8 +204,8 @@ data class ProducerOptions(
         /** Sets [ProducerOptions.deduplicationMode] – whether a duplicate key fails the send or is silently skipped. */
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
 
-        /** Sets [ProducerOptions.batchSize] – how many messages go into a single INSERT statement. */
-        fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
+        /** Sets [ProducerOptions.chunkSize] – how many messages go into a single INSERT statement. */
+        fun chunkSize(chunkSize: Int) = apply { this.chunkSize = chunkSize }
 
         /** Sets [ProducerOptions.partialInsert] – what happens to the rest of the batch when one chunk fails. */
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
@@ -222,7 +222,7 @@ data class ProducerOptions(
             attempts = attempts,
             producer = producer,
             deduplicationMode = deduplicationMode,
-            batchSize = batchSize,
+            chunkSize = chunkSize,
             partialInsert = partialInsert,
             shard = shard,
             asyncExecutor = asyncExecutor
@@ -231,8 +231,8 @@ data class ProducerOptions(
 
     companion object {
 
-        /** The default [ProducerOptions.batchSize] – 500 messages per INSERT statement. */
-        const val DEFAULT_BATCH_SIZE = 500
+        /** The default [ProducerOptions.chunkSize] – 500 messages per INSERT statement. */
+        const val DEFAULT_CHUNK_SIZE = 500
 
         /** Default options: they override nothing and leave the default behaviour in place. */
         @JvmField

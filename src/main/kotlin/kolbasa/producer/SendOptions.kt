@@ -130,13 +130,13 @@ data class SendOptions(
     val deduplicationMode: DeduplicationMode? = null,
 
     /**
-     * Overrides [ProducerOptions.batchSize] for this send() call – how many messages go into a single INSERT statement.
+     * Overrides [ProducerOptions.chunkSize] for this send() call – how many messages go into a single INSERT statement.
      *
      * `null`, the default, means "do not override": the value of the producer is used.
      *
-     * @see [ProducerOptions.batchSize]
+     * @see [ProducerOptions.chunkSize]
      */
-    val batchSize: Int? = null,
+    val chunkSize: Int? = null,
 
     /**
      * Overrides [ProducerOptions.partialInsert] for this send() call – what happens to the rest of the batch when one part
@@ -172,7 +172,7 @@ data class SendOptions(
         Checks.checkDelay(delay)
         Checks.checkAttempts(attempts)
         Checks.checkProducerName(producer)
-        Checks.checkBatchSize(batchSize)
+        Checks.checkChunkSize(chunkSize)
     }
 
     /** Builder for flexible [SendOptions] creation, when only some of the properties need to be set. */
@@ -181,7 +181,7 @@ data class SendOptions(
         private var attempts: Int? = null
         private var producer: String? = null
         private var deduplicationMode: DeduplicationMode? = null
-        private var batchSize: Int? = null
+        private var chunkSize: Int? = null
         private var partialInsert: PartialInsert? = null
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
@@ -198,8 +198,8 @@ data class SendOptions(
         /** Sets [SendOptions.deduplicationMode] – whether a duplicate key fails the send or is silently skipped. */
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
 
-        /** Sets [SendOptions.batchSize] – how many messages go into a single INSERT statement. */
-        fun batchSize(batchSize: Int) = apply { this.batchSize = batchSize }
+        /** Sets [SendOptions.chunkSize] – how many messages go into a single INSERT statement. */
+        fun chunkSize(chunkSize: Int) = apply { this.chunkSize = chunkSize }
 
         /** Sets [SendOptions.partialInsert] – what happens to the rest of the batch when one chunk fails. */
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
@@ -216,7 +216,7 @@ data class SendOptions(
             attempts = attempts,
             producer = producer,
             deduplicationMode = deduplicationMode,
-            batchSize = batchSize,
+            chunkSize = chunkSize,
             partialInsert = partialInsert,
             shard = shard,
             asyncExecutor = asyncExecutor

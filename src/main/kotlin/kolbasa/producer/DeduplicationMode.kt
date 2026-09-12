@@ -72,7 +72,7 @@ enum class DeduplicationMode {
      * result.failedMessages         // 100 - all messages failed
      * ```
      *
-     * @see PartialInsert for controlling batch failure granularity
+     * @see PartialInsert for controlling chunk failure granularity
      */
     FAIL_ON_DUPLICATE,
 

@@ -40,11 +40,11 @@ internal object Checks {
         }
     }
 
-    fun checkBatchSize(batchSize: Int?) {
-        if (batchSize == null) return
+    fun checkChunkSize(chunkSize: Int?) {
+        if (chunkSize == null) return
 
-        require(batchSize >= 1) {
-            "Batch size must be greater than or equal to 1 (current: $batchSize)"
+        require(chunkSize >= 1) {
+            "Chunk size must be greater than or equal to 1 (current: $chunkSize)"
         }
     }
 

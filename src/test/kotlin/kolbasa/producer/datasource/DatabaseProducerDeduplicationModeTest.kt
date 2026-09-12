@@ -58,7 +58,7 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE, batchSize = 1000)
+            ProducerOptions(deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE, chunkSize = 1000)
         )
 
         // First send – success
@@ -108,7 +108,7 @@ class DatabaseProducerDeduplicationModeTest : AbstractPostgresqlTest() {
         val messageToSend = SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE, batchSize = 1000)
+            ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE, chunkSize = 1000)
         )
 
         // First send – success

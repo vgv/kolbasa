@@ -38,7 +38,7 @@ class ProducerConsumerTest : PerformanceTest {
         val sendMessages = AtomicLong()
         val receiveMessages = AtomicLong()
 
-        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(batchSize = Env.ProducerConsumer.batchSize))
+        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(chunkSize = Env.ProducerConsumer.chunkSize))
         val consumer = DatabaseConsumer(Env.Common.dataSource)
 
         val producerThreads = (1..Env.ProducerConsumer.producerThreads).map {

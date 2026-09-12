@@ -376,7 +376,7 @@ deduplication.
 
 | `DeduplicationMode` | On a duplicate key |
 |---|---|
-| `FAIL_ON_DUPLICATE` (default) | The send fails. The duplicate — and, because failures are handled per batch, the rest of its batch — is rejected. Use when a duplicate signals a bug worth surfacing. |
+| `FAIL_ON_DUPLICATE` (default) | The send fails. The duplicate — and, because failures are handled per chunk, the rest of its chunk — is rejected. Use when a duplicate signals a bug worth surfacing. |
 | `IGNORE_DUPLICATE` | The duplicate is silently skipped (`INSERT … ON CONFLICT DO NOTHING`); every other message inserts normally. Use for idempotent sends. |
 
 The difference shows up directly in the `SendResult` that `send()` returns. Each input message lands in exactly one bucket,
@@ -385,7 +385,7 @@ messages of which one is a duplicate:
 
 | | `onlySuccessful()` | `onlyDuplicated()` | `onlyFailed()` |
 |---|---|---|---|
-| `FAIL_ON_DUPLICATE` | 0 | 0 | 1 error covering the whole failed batch |
+| `FAIL_ON_DUPLICATE` | 0 | 0 | 1 error covering the whole failed chunk |
 | `IGNORE_DUPLICATE` | 99 | 1 | 0 |
 
 Under `FAIL_ON_DUPLICATE` a duplicate is reported as a *failure*, never a duplicate; under `IGNORE_DUPLICATE` it is reported as a
@@ -393,20 +393,20 @@ Under `FAIL_ON_DUPLICATE` a duplicate is reported as a *failure*, never a duplic
 
 ### Batching and partial inserts
 
-A single `send()` does not insert messages one by one — that would be far too slow. The producer splits them into batches of
-`batchSize` (default 500) and inserts each batch as one statement. Failures are therefore handled **at batch boundaries**: if any
-message in a batch is invalid (e.g. a duplicate under `FAIL_ON_DUPLICATE`), the *whole batch* is rejected, not just that message.
+A single `send()` does not insert messages one by one — that would be far too slow. The producer splits them into chunks of
+`chunkSize` (default 500) and inserts each chunk as one statement. Failures are therefore handled **at chunk boundaries**: if any
+message in a chunk is invalid (e.g. a duplicate under `FAIL_ON_DUPLICATE`), the *whole chunk* is rejected, not just that message.
 
-What happens to the *other* batches is governed by `PartialInsert`:
+What happens to the *other* chunks is governed by `PartialInsert`:
 
-| `PartialInsert` | On a failing batch | Use when |
+| `PartialInsert` | On a failing chunk | Use when |
 |---|---|---|
-| `PROHIBITED` | The entire `send()` fails — no message is inserted, even from clean batches. | All-or-nothing sends. |
-| `UNTIL_FIRST_FAILURE` | Insert batches up to the first failing one, then stop; later batches are not sent. | You need to preserve causal ordering. |
-| `INSERT_AS_MANY_AS_POSSIBLE` | Skip only the failing batch(es); insert every other batch. | Messages are independent and you want to land as many as possible. |
+| `PROHIBITED` | The entire `send()` fails — no message is inserted, even from clean chunks. | All-or-nothing sends. |
+| `UNTIL_FIRST_FAILURE` | Insert chunks up to the first failing one, then stop; later chunks are not sent. | You need to preserve causal ordering. |
+| `INSERT_AS_MANY_AS_POSSIBLE` | Skip only the failing chunk(s); insert every other chunk. | Messages are independent and you want to land as many as possible. |
 
-For example, sending 10,000 messages with `batchSize = 1000` where message 6,500 is invalid: `PROHIBITED` inserts 0,
-`UNTIL_FIRST_FAILURE` inserts the first 6,000 (batches 1–6), and `INSERT_AS_MANY_AS_POSSIBLE` inserts 9,000 (every batch except
+For example, sending 10,000 messages with `chunkSize = 1000` where message 6,500 is invalid: `PROHIBITED` inserts 0,
+`UNTIL_FIRST_FAILURE` inserts the first 6,000 (chunks 1–6), and `INSERT_AS_MANY_AS_POSSIBLE` inserts 9,000 (every chunk except
 6001–7000). The README's [Partial insert and batching](../README.md#partial-insert-and-batching) section walks through a smaller
 example with diagrams and a runnable sample.
 
@@ -619,10 +619,10 @@ commits the transaction for you.
 
 ### Producer
 
-Constructs and inserts messages. A single `send()` can carry many messages; kolbasa splits them into batches of `batchSize`
-(default 500) and inserts each batch as one `INSERT … unnest(…)` statement. Behavior is governed by
+Constructs and inserts messages. A single `send()` can carry many messages; kolbasa splits them into chunks of `chunkSize`
+(default 500) and inserts each chunk as one `INSERT … unnest(…)` statement. Behavior is governed by
 [`ProducerOptions`](#configuration-reference) and refined per call by `SendOptions` / per message by `MessageOptions`.
-Partial-batch failure handling is controlled by [`PartialInsert`](#deduplication) (see [Batching and partial
+Chunk-level failure handling is controlled by [`PartialInsert`](#deduplication) (see [Batching and partial
 inserts](#batching-and-partial-inserts)).
 
 ### Consumer
@@ -819,7 +819,7 @@ options you construct and pass to a specific queue, role, or call.
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |
-| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `batchSize` (500), `partialInsert`, `shard`, `asyncExecutor` |
+| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `shard`, `asyncExecutor` |
 | `SendOptions` | One `send()` call | per-call overrides of the producer options |
 | `MessageOptions` | One message | per-message `delay`, `attempts` |
 | `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout` |
@@ -854,7 +854,7 @@ Kolbasa                process-wide defaults (sweep, shard strategy, async execu
 
 Each role narrows to the depth its work needs. The producer side goes deepest — a *send* setting like `delay` or `attempts` can be
 pinned all the way down to one message — while a *receive* setting like `visibilityTimeout` narrows through the consumer instead.
-A few producer knobs (`deduplicationMode`, `partialInsert`, `batchSize`, `shard`) live only on the producer level and can be
+A few producer knobs (`deduplicationMode`, `partialInsert`, `chunkSize`, `shard`) live only on the producer level and can be
 overridden per `send()`. The mutator is the shallowest: it has no per-call options, so its settings live on `MutatorOptions`
 alone.
 

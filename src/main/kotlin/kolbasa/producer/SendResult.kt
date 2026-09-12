@@ -19,7 +19,7 @@ import kolbasa.producer.MessageResult.Duplicate
  * var result = producer.send(messages)
  * while (result.failedMessages > 0) {
  *     // resend only failed messages again
- *     result = producer.send(result.gatherFailedMessages(), <optionally reduce batchSize>)
+ *     result = producer.send(result.gatherFailedMessages(), <optionally reduce chunkSize>)
  * }
  * ```
  * Of course, in a real application you should add some kind of limit (time or attempts number) to prevent
@@ -198,8 +198,8 @@ sealed class MessageResult<Data> {
     /**
      * Result of unsuccessful sending of several messages.
      *
-     * Unlike [Success], this class contains a list of messages which failed to send, because, due to batching,
-     * we can send several messages at once and got one exception for the whole batch. It's impossible to say which
+     * Unlike [Success], this class contains a list of messages which failed to send, because, due to chunking,
+     * we can send several messages at once and got one exception for the whole chunk. It's impossible to say which
      * message failed to send in this case, so we just return a list of messages and link all of them to one exception
      */
     data class Error<Data>(

@@ -15,7 +15,7 @@
 * Ability to receive messages sorted by one or more meta-fields (like `priority desc, registration_date asc`)
 * Supports working in "external" transaction context (send/receive messages from a queue will follow "external" transaction commit/rollback)
 * Batch send/receive to improve performance
-* Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
+* Different modes to deal with sending failures (fail the whole send, send all until first failure, send as many as possible)
 * Dead Letter Queue (DLQ) for messages that exhaust all processing attempts
 * Archive queue for retaining successfully processed messages (auditing, compliance, replay)
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
@@ -146,11 +146,11 @@ preserve causal ordering
 in any way, and you just want to send as many messages as possible to the queue
 
 However, Kolbasa does not send all messages to the queue one by one, this is very bad for performance. The library sends
-messages to the queue in [batches](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
-boundary of these batches, so if a specific batch contains a invalid message, the entire batch will be discarded.
+messages to the queue in [chunks](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
+boundary of these chunks, so if a specific chunk contains a invalid message, the entire chunk will be discarded.
 
 The easiest way to show the difference between these approaches is with pictures.
-In the example below, we send 6 messages with `batchSize=2` and one poison message. It turns out, three batches, one of
+In the example below, we send 6 messages with `chunkSize=2` and one poison message. It turns out, three chunks, one of
 which (the second) contains an incorrect message.
 
 Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
@@ -167,7 +167,7 @@ Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) 
 
 Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
 
-`./gradlew example -P name=PartialInsertExample`
+`./gradlew example -Pname=PartialInsertExample`
 
 
 ### Transaction context

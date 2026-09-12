@@ -89,22 +89,22 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testBatchSize_ZeroOrNegative_Fails() {
+    fun testChunkSize_ZeroOrNegative_Fails() {
         assertThrows<IllegalArgumentException> {
-            Checks.checkBatchSize(0)
+            Checks.checkChunkSize(0)
         }
         assertThrows<IllegalArgumentException> {
-            Checks.checkBatchSize(-1)
+            Checks.checkChunkSize(-1)
         }
 
         // any value >= 1 should pass
         assertDoesNotThrow {
-            Checks.checkBatchSize(Random.nextInt(1, 1_000_000))
+            Checks.checkChunkSize(Random.nextInt(1, 1_000_000))
         }
 
         // null should pass
         assertDoesNotThrow {
-            Checks.checkBatchSize(null)
+            Checks.checkChunkSize(null)
         }
     }
 

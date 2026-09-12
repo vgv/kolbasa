@@ -60,7 +60,7 @@ fun main() {
             data = messagesToSend,
             options = SendOptions(
                 partialInsert = PartialInsert.PROHIBITED,
-                batchSize = 2,
+                chunkSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
@@ -68,11 +68,11 @@ fun main() {
 
     // -------------------------------------------------------------------------------------------
     // PartialInsert mode: UNTIL_FIRST_FAILURE
-    // A poison message will cause an exception, batch with this message and next batches will be rejected
-    // Since we have 6 messages to send and batch size is 2, we will have 3 batches:
-    // 1) First batch - success
-    // 2) Second batch - error
-    // 3) Third batch - error (don't even try to send, immediately mark it as rejected)
+    // A poison message will cause an exception, chunk with this message and next chunks will be rejected
+    // Since we have 6 messages to send and chunk size is 2, we will have 3 chunks:
+    // 1) First chunk - success
+    // 2) Second chunk - error
+    // 3) Third chunk - error (don't even try to send, immediately mark it as rejected)
     println("---------------------------------------------------------------------")
     println("Try to insert ${messagesToSend.size} messages, partial insert mode: ${PartialInsert.UNTIL_FIRST_FAILURE}")
     producer.send(
@@ -81,7 +81,7 @@ fun main() {
             data = messagesToSend,
             options = SendOptions(
                 partialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
-                batchSize = 2,
+                chunkSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
@@ -89,11 +89,11 @@ fun main() {
 
     // -------------------------------------------------------------------------------------------
     // PartialInsert mode: INSERT_AS_MANY_AS_POSSIBLE
-    // A poison message will cause an exception, batch with this message will be rejected
-    // Since we have 6 messages to send and batch size is 2, we will have 3 batches:
-    // 1) First batch - success
-    // 2) Second batch - error
-    // 3) Third batch - success
+    // A poison message will cause an exception, chunk with this message will be rejected
+    // Since we have 6 messages to send and chunk size is 2, we will have 3 chunks:
+    // 1) First chunk - success
+    // 2) Second chunk - error
+    // 3) Third chunk - success
     println("---------------------------------------------------------------------")
     println("Try to insert ${messagesToSend.size} messages, partial insert mode: ${PartialInsert.INSERT_AS_MANY_AS_POSSIBLE}")
     producer.send(
@@ -102,7 +102,7 @@ fun main() {
             data = messagesToSend,
             options = SendOptions(
                 partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE,
-                batchSize = 2,
+                chunkSize = 2,
                 deduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
             )
         )
