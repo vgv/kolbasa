@@ -304,7 +304,7 @@ object Filter {
      */
     @JvmStatic
     fun nativeSql(sqlPattern: String, vararg fields: MetaField<*>): Condition {
-        return NativeSqlCondition(sqlPattern, fields)
+        return NativeSqlCondition(sqlPattern, fields.asList())
     }
 
 }

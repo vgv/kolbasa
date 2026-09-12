@@ -6,6 +6,8 @@ import io.mockk.verifySequence
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
@@ -39,5 +41,19 @@ internal class NotConditionTest {
         }
         confirmVerified(testCondition)
     }
+
+    @Test
+    fun testEqualsAndHashCode() {
+        val condition1 = NotCondition(EqCondition(userId, 123))
+        val condition2 = NotCondition(EqCondition(userId, 123))
+        val condition3 = NotCondition(EqCondition(userId, 456))
+
+        assertEquals(condition1, condition2)
+        assertEquals(condition1.hashCode(), condition2.hashCode())
+        assertNotSame(condition1, condition2)
+
+        assertNotEquals(condition1, condition3)
+    }
+
 }
 

@@ -7,15 +7,17 @@ import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
 internal class BetweenConditionTest {
 
+    private val intField = MetaField.ofInt("int_value", FieldOption.SEARCH)
+
     @Test
     fun testToSql() {
-        val betweenExpression = BetweenCondition(INT_VALUE, 10, 20)
+        val betweenExpression = BetweenCondition(intField, 10, 20)
 
         val sql = betweenExpression.toSqlClause()
         assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " between ? and ?", sql)
@@ -23,7 +25,7 @@ internal class BetweenConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val betweenExpression = BetweenCondition(INT_VALUE, 10, 20)
+        val betweenExpression = BetweenCondition(intField, 10, 20)
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -38,7 +40,16 @@ internal class BetweenConditionTest {
         confirmVerified(preparedStatement)
     }
 
-    companion object {
-        private val INT_VALUE = MetaField.ofInt("int_value", FieldOption.SEARCH)
+    @Test
+    fun testEqualsAndHashCode() {
+        val condition1 = BetweenCondition(intField, 10, 20)
+        val condition2 = BetweenCondition(intField, 10, 20)
+        val condition3 = BetweenCondition(intField, 10, 30)
+
+        assertEquals(condition1, condition2)
+        assertEquals(condition1.hashCode(), condition2.hashCode())
+        assertNotSame(condition1, condition2)
+
+        assertNotEquals(condition1, condition3)
     }
 }

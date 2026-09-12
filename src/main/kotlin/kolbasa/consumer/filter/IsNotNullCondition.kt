@@ -6,9 +6,9 @@ import java.sql.PreparedStatement
 
 internal data class IsNotNullCondition(private val field: MetaField<*>) : Condition() {
 
-    override fun toSqlClause(): String {
-        return "${field.dbColumnName} is not null"
-    }
+    private val sqlClause = "${field.dbColumnName} is not null"
+
+    override fun toSqlClause() = sqlClause
 
     override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         // NOP
