@@ -1,20 +1,20 @@
 package kolbasa.consumer.filter
 
 import kolbasa.consumer.filter.Filter.between
-import kolbasa.consumer.filter.Filter.like
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greater
 import kolbasa.consumer.filter.Filter.greaterEq
 import kolbasa.consumer.filter.Filter.isNotNull
+import kolbasa.consumer.filter.Filter.isNull
 import kolbasa.consumer.filter.Filter.less
 import kolbasa.consumer.filter.Filter.lessEq
-import kolbasa.consumer.filter.Filter.neq
-import kolbasa.consumer.filter.Filter.isNull
+import kolbasa.consumer.filter.Filter.like
 import kolbasa.consumer.filter.Filter.nativeSql
+import kolbasa.consumer.filter.Filter.neq
 import kolbasa.consumer.filter.Filter.oneOf
 import kolbasa.queue.meta.MetaField
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertInstanceOf
 
 internal class FilterTest {
 
@@ -22,61 +22,97 @@ internal class FilterTest {
 
     @Test
     fun testEq() {
-        assertInstanceOf<EqCondition<*>>(strField eq "local")
+        val expected = EqCondition(strField, "local")
+        val actual = strField eq "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testNeq() {
-        assertInstanceOf<NeqCondition<*>>(strField neq "local")
+        val expected = NeqCondition(strField, "local")
+        val actual = strField neq "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testGreater() {
-        assertInstanceOf<GreaterThanCondition<*>>(strField greater "local")
+        val expected = GreaterThanCondition(strField, "local")
+        val actual = strField greater "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testGreaterEq() {
-        assertInstanceOf<GreaterThanOrEqCondition<*>>(strField greaterEq "local")
+        val expected = GreaterThanOrEqCondition(strField, "local")
+        val actual = strField greaterEq "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testLess() {
-        assertInstanceOf<LessThanCondition<*>>(strField less "local")
+        val expected = LessThanCondition(strField, "local")
+        val actual = strField less "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testLessEq() {
-        assertInstanceOf<LessThanOrEqCondition<*>>(strField lessEq "local")
+        val expected = LessThanOrEqCondition(strField, "local")
+        val actual = strField lessEq "local"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testBetween() {
-        assertInstanceOf<BetweenCondition<*>>(strField between "a" and "b")
+        val expected = BetweenCondition(strField, "a", "b")
+        val actual = strField between "a" and "b"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testLike() {
-        assertInstanceOf<LikeCondition>(strField like "asd")
+        val expected = LikeCondition(strField, "asd")
+        val actual = strField like "asd"
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testIsNull() {
-        assertInstanceOf<IsNullCondition>(isNull(strField))
+        val expected = IsNullCondition(strField)
+        val actual = isNull(strField)
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testIsNotNull() {
-        assertInstanceOf<IsNotNullCondition>(isNotNull(strField))
+        val expected = IsNotNullCondition(strField)
+        val actual = isNotNull(strField)
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testOneOf() {
-        assertInstanceOf<OneOfCondition<*>>(strField oneOf listOf("local"))
+        val expected = OneOfCondition(strField, listOf("a", "b", "c"))
+        val actual = strField oneOf listOf("a", "b", "c")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testNativeSql() {
-        assertInstanceOf<NativeSqlCondition>(nativeSql("{0} like '%asd%'", strField))
+        val expected = NativeSqlCondition("{0} ilike '%asd%'", listOf(strField))
+        val actual = nativeSql("{0} ilike '%asd%'", strField)
+
+        assertEquals(expected, actual)
     }
 }
