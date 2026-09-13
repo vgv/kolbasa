@@ -9,6 +9,7 @@ import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.SetRemainingAttempts
 import kolbasa.mutator.SetScheduledAt
+import kolbasa.queue.meta.InstantField
 import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -385,6 +386,25 @@ internal class ChecksTest {
     fun testCheckMetaFieldName_InvalidSymbols() {
         assertThrows<IllegalArgumentException> {
             Checks.checkMetaFieldName("meta$")
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
+    fun testCheckTimestamp_OutOfRange() {
+        val tooEarly = InstantField.MIN_TIMESTAMPTZ - Duration.ofNanos(1)
+        val tooLate = InstantField.MAX_TIMESTAMPTZ + Duration.ofNanos(1)
+        val ok = InstantField.MIN_TIMESTAMPTZ + Duration.ofNanos(1)
+
+        assertThrows<IllegalArgumentException> {
+            Checks.checkTimestamp("field", tooEarly)
+        }
+        assertThrows<IllegalArgumentException> {
+            Checks.checkTimestamp("field", tooLate)
+        }
+        assertDoesNotThrow {
+            Checks.checkTimestamp("field", ok)
         }
     }
 
