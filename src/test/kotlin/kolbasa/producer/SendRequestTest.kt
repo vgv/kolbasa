@@ -16,7 +16,7 @@ class SendRequestTest {
         sendRequest.openTelemetryContext = mutableListOf("1", "2", "3")
 
         sendRequest.chunked(10).forEachIndexed { index, chunk ->
-            assertSame(sendRequest.sendOptions, chunk.sendOptions)
+            assertSame(sendRequest.options, chunk.options)
             assertSame(sendRequest.openTelemetryContext, chunk.openTelemetryContext)
             val expected = messages.subList(index * 10, (index + 1) * 10)
             assertEquals(expected, chunk.data)

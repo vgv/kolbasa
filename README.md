@@ -15,7 +15,7 @@
 * Ability to receive messages sorted by one or more meta-fields (like `priority desc, registration_date asc`)
 * Supports working in "external" transaction context (send/receive messages from a queue will follow "external" transaction commit/rollback)
 * Batch send/receive to improve performance
-* Different modes to deal with sending failures (fail all messages in a batch, send all until first failure, send as many as possible)
+* Different modes to deal with sending failures (fail the whole send, send all until first failure, send as many as possible)
 * Dead Letter Queue (DLQ) for messages that exhaust all processing attempts
 * Archive queue for retaining successfully processed messages (auditing, compliance, replay)
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
@@ -57,7 +57,7 @@ modify them, set breakpoints, and see how everything goes step by step. But you 
 
 To run from Gradle, you need to execute the command 
 
-`./gradlew example -P name=FilterExample -P lang=kotlin`
+`./gradlew example -Pname=FilterExample -Plang=kotlin`
 
 where `name` is the name of the file from the [examples](src/test/kotlin/examples) folder and `lang` is `java` or `kotlin`.
 
@@ -74,7 +74,7 @@ The simplest possible example to send and receive one simple text message:
 
 No filtering, no message deduplication, sharding or other features. Just send and receive one message.
 
-`./gradlew example -P name=SimpleExample`
+`./gradlew example -Pname=SimpleExample`
 
 ### Filtering and sorting
 What if every message is associated with additional, user-defined meta-data such as `userId` and `priority` (for example) and
@@ -86,11 +86,11 @@ filtering and ordering are performed on the queue broker side (PostgreSQL) to ma
 For simplicity, this example is broken into two parts:
 1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
 
-`./gradlew example -P name=FilterExample`
+`./gradlew example -Pname=FilterExample`
 
 2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
 
-`./gradlew example -P name=FilterAndSortExample`
+`./gradlew example -Pname=FilterAndSortExample`
 
 ### Deduplication
 Kolbasa has the ability to use deduplication when sending messages to the queue.
@@ -108,7 +108,7 @@ In this case, only 95 messages will be added to the queue and no errors will occ
 
 Example: [DeduplicationExample](src/test/kotlin/examples/DeduplicationExample.kt)
 
-`./gradlew example -P name=DeduplicationExample`
+`./gradlew example -Pname=DeduplicationExample`
 
 
 ### Send delay
@@ -125,11 +125,11 @@ giving the client the opportunity to change their mind. In this case, you can se
 queue and set a delivery delay of 30 days. The message will be stored in the queue all this time, and after 30 days it will
 become available for reading by consumers. No additional actions are required for this, Kolbasa will do it automatically.
 
-![Send delay](docs/img/send_delay.png)
+![Send delay](docs/img/send_delay.svg)
 
 Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
 
-`./gradlew example -P name=SendDelayExample`
+`./gradlew example -Pname=SendDelayExample`
 
 
 ### Partial insert and batching
@@ -146,28 +146,31 @@ preserve causal ordering
 in any way, and you just want to send as many messages as possible to the queue
 
 However, Kolbasa does not send all messages to the queue one by one, this is very bad for performance. The library sends
-messages to the queue in [batches](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
-boundary of these batches, so if a specific batch contains a invalid message, the entire batch will be discarded.
+messages to the queue in [chunks](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
+boundary of these chunks, so if a specific chunk contains a invalid message, the entire chunk will be discarded.
 
 The easiest way to show the difference between these approaches is with pictures.
-In the example below, we send 6 messages with `batchSize=2` and one poison message. It turns out, three batches, one of
+In the example below, we send 6 messages with `chunkSize=2` and one poison message. It turns out, three chunks, one of
 which (the second) contains an incorrect message.
 
 Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
 
 `PartialInsert.PROHIBITED`
-![Prohibited](docs/img/partial_insert_prohibited.png)
+
+![Prohibited](docs/img/partial_insert_prohibited.svg)
 
 `PartialInsert.UNTIL_FIRST_FAILURE`
-![Until first failure](docs/img/partial_insert_until_first_failure.png)
+
+![Until first failure](docs/img/partial_insert_until_first_failure.svg)
 
 `PartialInsert.INSERT_AS_MANY_AS_POSSIBLE`
-![As manu as possible](docs/img/partial_insert_as_many_as_possible.png)
+
+![As many as possible](docs/img/partial_insert_as_many_as_possible.svg)
 
 
 Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
 
-`./gradlew example -P name=PartialInsertExample`
+`./gradlew example -Pname=PartialInsertExample`
 
 
 ### Transaction context
@@ -191,7 +194,7 @@ to the calling code. It works perfectly with plain JDBC or more complex framewor
 
 Example: [TransactionContextExample](src/test/kotlin/examples/TransactionContextExample.kt)
 
-`./gradlew example -P name=TransactionContextExample`
+`./gradlew example -Pname=TransactionContextExample`
 
 
 ### Dead Letter Queue (DLQ)
@@ -222,7 +225,7 @@ val queue = Queue(
 
 Example: [DlqExample](src/test/kotlin/examples/DlqExample.kt)
 
-`./gradlew example -P name=DlqExample`
+`./gradlew example -Pname=DlqExample`
 
 
 ### Archive queue
@@ -251,7 +254,7 @@ val queue = Queue(
 
 Example: [ArchiveExample](src/test/kotlin/examples/ArchiveExample.kt)
 
-`./gradlew example -P name=ArchiveExample`
+`./gradlew example -Pname=ArchiveExample`
 
 ### Sending from SQL (triggers, batch jobs)
 Sometimes the event that should create a message originates in the database itself — an `AFTER INSERT` trigger on a
@@ -277,7 +280,7 @@ perform q_events_put(data => new.message);
 
 Example: [SqlPutFunctionExample](src/test/kotlin/examples/SqlPutFunctionExample.kt)
 
-`./gradlew example -P name=SqlPutFunctionExample`
+`./gradlew example -Pname=SqlPutFunctionExample`
 
 
 ## Documentation

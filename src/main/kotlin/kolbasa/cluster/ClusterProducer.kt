@@ -53,19 +53,19 @@ import java.util.concurrent.CompletableFuture
  */
 class ClusterProducer @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val producerOptions: ProducerOptions = ProducerOptions.DEFAULT
+    private val options: ProducerOptions = ProducerOptions.DEFAULT
 ) : Producer {
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
-            sendOptions = request.sendOptions,
-            producerOptions = producerOptions,
+            sendOptions = request.options,
+            producerOptions = options,
             shardStrategy = Kolbasa.shardStrategy
         )
 
         val currentState = cluster.getState()
         val producer = currentState.getProducer(this, request.effectiveShard) { nodeId, dataSource ->
-            val p = ConnectionAwareDatabaseProducer(nodeId, producerOptions)
+            val p = ConnectionAwareDatabaseProducer(nodeId, options)
             DatabaseProducer(nodeId, dataSource, p)
         }
 
@@ -75,8 +75,8 @@ class ClusterProducer @JvmOverloads constructor(
     override fun <Data> sendAsync(queue: Queue<Data>, request: SendRequest<Data>): CompletableFuture<SendResult<Data>> {
         // TODO: make it smarter
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            callExecutor = request.sendOptions.asyncExecutor,
-            producerExecutor = producerOptions.asyncExecutor,
+            callExecutor = request.options.asyncExecutor,
+            producerExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

@@ -1,15 +1,15 @@
 package kolbasa.consumer.filter
 
-import io.mockk.confirmVerified
 import io.mockk.mockk
-import io.mockk.verifySequence
+import io.mockk.verifyCount
+import io.mockk.verifyOrder
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.filter.Filter.eq
 import kolbasa.consumer.filter.Filter.greaterEq
 import kolbasa.consumer.filter.Filter.like
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 import java.time.Instant
@@ -82,28 +82,44 @@ internal class AndConditionTest {
 
     @Test
     internal fun testFillPreparedQuery() {
-        val firstCondition = mockk<Condition>(relaxed = true)
-        val secondCondition = mockk<Condition>(relaxed = true)
-        val thirdCondition = mockk<Condition>(relaxed = true)
+        // IsNullCondition - nothing special, just a simple condition without generics etc.
+        val firstCondition = mockk<IsNullCondition>(relaxed = true)
+        val secondCondition = mockk<IsNullCondition>(relaxed = true)
+        val thirdCondition = mockk<IsNullCondition>(relaxed = true)
 
         val preparedStatement = mockk<PreparedStatement>()
         val column = mockk<ColumnIndex>()
 
         // make a call
         val andCondition = AndCondition(AndCondition(firstCondition, secondCondition), thirdCondition)
-        andCondition.toSqlClause() // to initialize queue
         andCondition.fillPreparedQuery(preparedStatement, column)
 
         // check
-        verifySequence {
-            firstCondition.toSqlClause()
-            secondCondition.toSqlClause()
-            thirdCondition.toSqlClause()
+        verifyOrder {
             firstCondition.fillPreparedQuery(preparedStatement, column)
             secondCondition.fillPreparedQuery(preparedStatement, column)
             thirdCondition.fillPreparedQuery(preparedStatement, column)
         }
-        confirmVerified(firstCondition, secondCondition, thirdCondition)
+        verifyCount {
+            1 * {
+                firstCondition.fillPreparedQuery(preparedStatement, column)
+                secondCondition.fillPreparedQuery(preparedStatement, column)
+                thirdCondition.fillPreparedQuery(preparedStatement, column)
+            }
+        }
+    }
+
+    @Test
+    fun testEqualsAndHashCode() {
+        val condition1 = AndCondition(idCondition, emailCondition)
+        val condition2 = AndCondition(idCondition, emailCondition)
+        val condition3 = AndCondition(emailCondition, idCondition)
+
+        assertEquals(condition1, condition2)
+        assertEquals(condition1.hashCode(), condition2.hashCode())
+        assertNotSame(condition1, condition2)
+
+        assertNotEquals(condition1, condition3)
     }
 
 }

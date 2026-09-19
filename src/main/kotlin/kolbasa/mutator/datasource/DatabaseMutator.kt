@@ -32,15 +32,15 @@ class DatabaseMutator(
      * The mutator is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
      * @param dataSource the pool this mutator takes connections from
-     * @param mutatorOptions defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
+     * @param options defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
      */
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
+        options: MutatorOptions = MutatorOptions.DEFAULT
     ) : this(
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseMutator(mutatorOptions)
+        peer = ConnectionAwareDatabaseMutator(options)
     )
 
     override fun <Data> mutate(
@@ -69,7 +69,7 @@ class DatabaseMutator(
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
@@ -82,7 +82,7 @@ class DatabaseMutator(
         filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.mutatorOptions?.asyncExecutor,
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

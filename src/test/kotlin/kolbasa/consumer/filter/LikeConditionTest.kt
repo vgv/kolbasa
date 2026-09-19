@@ -6,17 +6,18 @@ import io.mockk.verify
 import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
-import kolbasa.queue.meta.MetaHelpers
 import kolbasa.utils.ColumnIndex
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
 internal class LikeConditionTest {
 
+    private val strField = MetaField.ofString("string_value", FieldOption.SEARCH)
+
     @Test
     fun testToSql() {
-        val likeExpression = LikeCondition(STRING_VALUE, "123%")
+        val likeExpression = LikeCondition(strField, "123%")
 
         val sql = likeExpression.toSqlClause()
         assertEquals(QueueHelpers.generateMetaColumnDbName("stringValue") + " like ?", sql)
@@ -24,7 +25,7 @@ internal class LikeConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val likeExpression = LikeCondition(STRING_VALUE, "123%")
+        val likeExpression = LikeCondition(strField, "123%")
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -38,7 +39,17 @@ internal class LikeConditionTest {
         confirmVerified(preparedStatement)
     }
 
-    companion object {
-        private val STRING_VALUE = MetaField.ofString("string_value", FieldOption.SEARCH)
+    @Test
+    fun testEqualsAndHashCode() {
+        val condition1 = LikeCondition(strField, "123")
+        val condition2 = LikeCondition(strField, "123")
+        val condition3 = LikeCondition(strField, "456")
+
+        assertEquals(condition1, condition2)
+        assertEquals(condition1.hashCode(), condition2.hashCode())
+        assertNotSame(condition1, condition2)
+
+        assertNotEquals(condition1, condition3)
     }
+
 }

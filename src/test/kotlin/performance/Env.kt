@@ -54,7 +54,7 @@ object Env {
 
         val totalSendCalls = System.getenv("total-send-calls")?.toLongOrNull() ?: Long.MAX_VALUE
         val oneSendMessages = System.getenv("one-send-messages")?.toIntOrNull() ?: 1_000
-        val batchSize = System.getenv("batch-size")?.toIntOrNull() ?: 500
+        val chunkSize = System.getenv("chunk-size")?.toIntOrNull() ?: 500
         val oneMessageSizeBytes = System.getenv("one-message-size-bytes")?.toIntOrNull() ?: 500
 
         fun report() {
@@ -63,7 +63,7 @@ object Env {
             println("Threads: $threads")
             println("Total send calls: ${if (totalSendCalls == Long.MAX_VALUE) "unlimited" else totalSendCalls}")
             println("Messages per one send call: $oneSendMessages")
-            println("Producer batch size: $batchSize")
+            println("Producer chunk size: $chunkSize")
             println("One message size (bytes): $oneMessageSizeBytes")
             println("--------------------------------------------------")
         }
@@ -140,7 +140,7 @@ object Env {
 
         val oneSendMessages = System.getenv("one-send-messages")?.toIntOrNull() ?: 1_000
 
-        val batchSize = System.getenv("batch-size")?.toIntOrNull() ?: 500
+        val chunkSize = System.getenv("chunk-size")?.toIntOrNull() ?: 500
 
         val oneMessageSizeBytes = System.getenv("one-message-size-bytes")?.toIntOrNull() ?: 500
 
@@ -154,7 +154,7 @@ object Env {
             println("Total send calls: ${if (totalSendCalls == Long.MAX_VALUE) "unlimited" else totalSendCalls}")
             println("Queue size baseline: $queueSizeBaseline")
             println("Messages per one send call: $oneSendMessages")
-            println("Producer batch size: $batchSize")
+            println("Producer chunk size: $chunkSize")
             println("One message size (bytes): $oneMessageSizeBytes")
             println("Consumer receive limit: $consumerReceiveLimit")
             println("--------------------------------------------------")

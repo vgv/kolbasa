@@ -4,15 +4,15 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class BetweenCondition<T>(
+internal data class BetweenCondition<T>(
     private val field: MetaField<T>,
     private val from: T,
     private val to: T,
 ) : Condition() {
 
-    override fun toSqlClause(): String {
-        return "${field.dbColumnName} between ? and ?"
-    }
+    private val sqlClause = "${field.dbColumnName} between ? and ?"
+
+    override fun toSqlClause() = sqlClause
 
     override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), from)

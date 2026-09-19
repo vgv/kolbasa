@@ -29,7 +29,7 @@ class OnlySendTest : PerformanceTest {
         val calls = AtomicLong()
         val messages = AtomicLong()
 
-        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(batchSize = Env.OnlySend.batchSize))
+        val producer = DatabaseProducer(Env.Common.dataSource, ProducerOptions(chunkSize = Env.OnlySend.chunkSize))
 
         val producerThreads = (1..Env.OnlySend.threads).map {
             thread {

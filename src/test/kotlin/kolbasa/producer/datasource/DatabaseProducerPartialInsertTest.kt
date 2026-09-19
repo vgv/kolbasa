@@ -62,7 +62,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
     fun testSend_PartialInsert_Prohibited() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.PROHIBITED)
+            ProducerOptions(chunkSize = 5, partialInsert = PartialInsert.PROHIBITED)
         )
 
         val result = producer.send(queue, items)
@@ -84,7 +84,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
     fun testSend_PartialInsert_UntilFirstFailure() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
+            ProducerOptions(chunkSize = 5, partialInsert = PartialInsert.UNTIL_FIRST_FAILURE)
         )
 
         val result = producer.send(queue, items)
@@ -114,7 +114,7 @@ class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
     fun testSend_PartialInsert_AsManyAsPossible() {
         val producer = DatabaseProducer(
             dataSource,
-            ProducerOptions(batchSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
+            ProducerOptions(chunkSize = 5, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         )
 
         val result = producer.send(queue, items)

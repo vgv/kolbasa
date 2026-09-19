@@ -31,17 +31,17 @@ class DatabaseProducer internal constructor(
      * The producer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
      * @param dataSource the pool this producer takes connections from
-     * @param producerOptions defaults for every `send()` of this producer. Without it,
+     * @param options defaults for every `send()` of this producer. Without it,
      * [ProducerOptions.DEFAULT] is used and every message follows the queue defaults.
      */
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        producerOptions: ProducerOptions = ProducerOptions.DEFAULT
+        options: ProducerOptions = ProducerOptions.DEFAULT
     ) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseProducer(producerOptions)
+        peer = ConnectionAwareDatabaseProducer(options)
     )
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
@@ -55,9 +55,9 @@ class DatabaseProducer internal constructor(
         request: SendRequest<Data>
     ): CompletableFuture<SendResult<Data>> {
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
-            callExecutor = request.sendOptions.asyncExecutor,
+            callExecutor = request.options.asyncExecutor,
             // make it better somehow
-            producerExecutor = (peer as? ConnectionAwareDatabaseProducer)?.producerOptions?.asyncExecutor,
+            producerExecutor = (peer as? ConnectionAwareDatabaseProducer)?.options?.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

@@ -29,7 +29,7 @@ import java.sql.Connection
  */
 class ConnectionAwareDatabaseConsumer internal constructor(
     private val nodeId: NodeId,
-    private val consumerOptions: ConsumerOptions,
+    private val options: ConsumerOptions,
     private val shards: Shards
 ) : ConnectionAwareConsumer {
 
@@ -42,13 +42,13 @@ class ConnectionAwareDatabaseConsumer internal constructor(
      *
      * The consumer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
-     * @param consumerOptions defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
+     * @param options defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
      * and every call follows the queue defaults.
      */
     @JvmOverloads
-    constructor(consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT) : this(
+    constructor(options: ConsumerOptions = ConsumerOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
-        consumerOptions = consumerOptions,
+        options = options,
         shards = Shards.ALL_SHARDS
     )
 
@@ -80,13 +80,13 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         // read
         val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
-        val query = receiveQueryCache.getOrPut(CacheKey(queue, consumerOptions, shards, receiveOptions, limit)) {
-            ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, consumerOptions, shards, receiveOptions, limit)
+        val query = receiveQueryCache.getOrPut(CacheKey(queue, options, shards, receiveOptions, limit)) {
+            ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, options, shards, receiveOptions, limit)
         }
 
         val (execution, result) = TimeHelper.measure {
             connection.prepareStatement(query).use { preparedStatement ->
-                ConsumerSchemaHelpers.fillSelectPreparedQuery(consumerOptions, receiveOptions, preparedStatement)
+                ConsumerSchemaHelpers.fillSelectPreparedQuery(options, receiveOptions, preparedStatement)
                 preparedStatement.executeQuery().use { resultSet ->
                     val result = ArrayList<Message<Data>>(limit)
 

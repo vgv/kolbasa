@@ -16,10 +16,10 @@ enum class PartialInsert {
     PROHIBITED,
 
     /**
-     * We will send 10,000 messages chunk by chunk (chunk size is ProducerOptions.batchSize). When we encounter
+     * We will send 10,000 messages chunk by chunk (chunk size is ProducerOptions.chunkSize). When we encounter
      * the first chunk with an invalid message (or messages), we stop sending and commit all chunks we sent before.
      *
-     * For example, batchSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
+     * For example, chunkSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
      * first send 6000 messages, then we will meet a chunk with an invalid message and stop.
      *
      * So, in total we will send 6,000 messages and not send 4,000:
@@ -39,11 +39,11 @@ enum class PartialInsert {
     UNTIL_FIRST_FAILURE,
 
     /**
-     * We will send 10,000 messages chunk by chunk (chunk size is ProducerOptions.batchSize). When we encounter
+     * We will send 10,000 messages chunk by chunk (chunk size is ProducerOptions.chunkSize). When we encounter
      * the first chunk with an invalid message (or messages), we skip this chunk and continue sending next chunks.
      * At the end, commit all successfully sent chunks.
      *
-     * For example, batchSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
+     * For example, chunkSize is 1000 and invalid message is 6,500th among 10,000 messages. In this case, we will
      * first send 6000 messages, then we will meet a chunk with an invalid message, skip it and continue sending
      * another 3000 messages.
      *

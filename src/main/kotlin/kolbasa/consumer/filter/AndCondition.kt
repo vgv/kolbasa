@@ -3,7 +3,7 @@ package kolbasa.consumer.filter
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class AndCondition(first: Condition, second: Condition) : Condition() {
+internal data class AndCondition(val first: Condition, val second: Condition) : Condition() {
 
     private val conditions: List<Condition> = when {
         first is AndCondition && second is AndCondition -> {
@@ -23,11 +23,11 @@ internal class AndCondition(first: Condition, second: Condition) : Condition() {
         }
     }
 
-    override fun toSqlClause(): String {
-        return conditions.joinToString(separator = " and ") {
-            "(" + it.toSqlClause() + ")"
-        }
+    private val sqlClause = conditions.joinToString(separator = " and ") {
+        "(" + it.toSqlClause() + ")"
     }
+
+    override fun toSqlClause() = sqlClause
 
     override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         conditions.forEach { expression ->

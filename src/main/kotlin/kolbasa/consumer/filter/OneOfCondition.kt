@@ -4,14 +4,14 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import java.sql.PreparedStatement
 
-internal class OneOfCondition<T>(
+internal data class OneOfCondition<T>(
     private val field: MetaField<T>,
     private val values: Collection<T>
 ) : Condition() {
 
-    override fun toSqlClause(): String {
-        return "${field.dbColumnName} = ANY (?)"
-    }
+    private val sqlClause = "${field.dbColumnName} = ANY (?)"
+
+    override fun toSqlClause() = sqlClause
 
     override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
         field.fillPreparedStatementForValues(preparedStatement, columnIndex.nextIndex(), values)

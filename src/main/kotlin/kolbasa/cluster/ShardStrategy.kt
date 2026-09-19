@@ -111,9 +111,9 @@ sealed class ShardStrategy {
      * The interval is checked on send, not by a timer: a thread that stops sending keeps its shard until it sends
      * again.
      *
-     * @property interval how long one thread keeps the same shard. 15 minutes by default.
+     * @property interval how long one thread keeps the same shard. 5 minutes by default.
      */
-    data class ThreadLocalWithInterval(val interval: Duration = Duration.ofMinutes(15)) : ShardStrategy() {
+    data class ThreadLocalWithInterval(val interval: Duration = Duration.ofMinutes(5)) : ShardStrategy() {
 
         private val intervalMillis = interval.toMillis()
 

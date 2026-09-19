@@ -34,17 +34,17 @@ class DatabaseConsumer internal constructor(
      * The consumer is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
      * @param dataSource the pool this consumer takes connections from
-     * @param consumerOptions defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
+     * @param options defaults for every call of this consumer. Without it, [ConsumerOptions.DEFAULT] is used
      * and every call follows the queue defaults.
      */
     @JvmOverloads
     constructor(
         dataSource: DataSource,
-        consumerOptions: ConsumerOptions = ConsumerOptions.DEFAULT
+        options: ConsumerOptions = ConsumerOptions.DEFAULT
     ) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
         dataSource = dataSource,
-        peer = ConnectionAwareDatabaseConsumer(consumerOptions)
+        peer = ConnectionAwareDatabaseConsumer(options)
     )
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {

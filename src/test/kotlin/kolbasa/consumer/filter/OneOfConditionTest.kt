@@ -7,15 +7,17 @@ import kolbasa.queue.QueueHelpers
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.sql.PreparedStatement
 
 internal class OneOfConditionTest {
 
+    private val intField = MetaField.ofInt("int_value", FieldOption.SEARCH)
+
     @Test
     fun testToSql() {
-        val oneOfExpression = OneOfCondition(INT_VALUE, listOf(123))
+        val oneOfExpression = OneOfCondition(intField, listOf(123))
 
         val sql = oneOfExpression.toSqlClause()
         assertEquals(QueueHelpers.generateMetaColumnDbName("intValue") + " = ANY (?)", sql)
@@ -23,7 +25,7 @@ internal class OneOfConditionTest {
 
     @Test
     fun testFillPreparedQuery() {
-        val oneOfExpression = OneOfCondition(INT_VALUE, listOf(123))
+        val oneOfExpression = OneOfCondition(intField, listOf(123))
 
         val preparedStatement = mockk<PreparedStatement>(relaxed = true)
         val column = ColumnIndex()
@@ -40,7 +42,17 @@ internal class OneOfConditionTest {
         confirmVerified(preparedStatement)
     }
 
-    companion object {
-        private val INT_VALUE = MetaField.ofInt("int_value", FieldOption.SEARCH)
+    @Test
+    fun testEqualsAndHashCode() {
+        val condition1 = OneOfCondition(intField, listOf(123))
+        val condition2 = OneOfCondition(intField, listOf(123))
+        val condition3 = OneOfCondition(intField, listOf(456))
+
+        assertEquals(condition1, condition2)
+        assertEquals(condition1.hashCode(), condition2.hashCode())
+        assertNotSame(condition1, condition2)
+
+        assertNotEquals(condition1, condition3)
     }
+
 }

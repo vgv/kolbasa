@@ -5,9 +5,13 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
 import kolbasa.mutator.MutationField
+import kolbasa.queue.meta.InstantField.Companion.MAX_TIMESTAMPTZ
+import kolbasa.queue.meta.InstantField.Companion.MIN_TIMESTAMPTZ
+import kolbasa.queue.meta.InstantField.Companion.TIMESTAMPTZ_RANGE
 import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
 import java.time.Duration
+import java.time.Instant
 
 internal object Checks {
 
@@ -40,11 +44,11 @@ internal object Checks {
         }
     }
 
-    fun checkBatchSize(batchSize: Int?) {
-        if (batchSize == null) return
+    fun checkChunkSize(chunkSize: Int?) {
+        if (chunkSize == null) return
 
-        require(batchSize >= 1) {
-            "Batch size must be greater than or equal to 1 (current: $batchSize)"
+        require(chunkSize >= 1) {
+            "Chunk size must be greater than or equal to 1 (current: $chunkSize)"
         }
     }
 
@@ -192,6 +196,13 @@ internal object Checks {
         // check all symbols
         require(fieldName.all { it in Const.META_FIELD_NAME_ALLOWED_SYMBOLS_SET }) {
             "Meta field name contains illegal symbols. Allowed: ${Const.META_FIELD_NAME_ALLOWED_SYMBOLS} (current=$fieldName)"
+        }
+    }
+
+    fun checkTimestamp(fieldName: String, value: Instant) {
+        require(value in TIMESTAMPTZ_RANGE) {
+            "Meta field '$fieldName' must be between $MIN_TIMESTAMPTZ and $MAX_TIMESTAMPTZ, " +
+                "the range a PostgreSQL timestamptz can hold (current: $value)"
         }
     }
 

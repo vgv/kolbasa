@@ -9,8 +9,15 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
 import java.time.Instant
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.time.chrono.IsoEra
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
+import java.time.format.SignStyle
+import java.time.temporal.ChronoField
+import java.util.Locale
 
 /**
  * Represents a typed metadata field that can be attached to queue message.
@@ -187,7 +194,7 @@ sealed class MetaField<T>(
      * [InstantField] overrides this to map [Instant] → [OffsetDateTime] (UTC) because pgjdbc
      * has no [Instant] writer for `timestamptz` arrays.
      */
-    protected open fun toJdbcArrayElement(value: T): Any = value as Any
+    internal open fun toJdbcArrayElement(value: T): Any = value as Any
 
     companion object {
 
@@ -724,10 +731,70 @@ data class InstantField internal constructor(
     }
 
     override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: Instant) {
+        Checks.checkTimestamp(name, value)
+
         ps.setObject(columnIndex, OffsetDateTime.ofInstant(value, ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
     }
 
     override fun toJdbcArrayElement(value: Instant): Any {
-        return OffsetDateTime.ofInstant(value, ZoneOffset.UTC)
+        Checks.checkTimestamp(name, value)
+
+        return PG_TIMESTAMPTZ.format(OffsetDateTime.ofInstant(value, ZoneOffset.UTC))
+    }
+
+    companion object {
+
+        /**
+         * PostgreSQL timestamptz min value is 4713-01-01 00:00:00+00 BC
+         * Kolbasa checks that the value is within the range of PostgreSQL timestamptz
+         *
+         * https://www.postgresql.org/docs/current/datatype-datetime.html
+         */
+        val MIN_TIMESTAMPTZ: Instant = LocalDate.of(4713, 1, 1)
+            .with(ChronoField.ERA, IsoEra.BCE.value.toLong())
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+
+        /**
+         * PostgreSQL timestamptz max value is 294276-12-31 23:59:59.999999
+         * Kolbasa checks that the value is within the range of PostgreSQL timestamptz
+         *
+         * https://www.postgresql.org/docs/current/datatype-datetime.html
+         */
+        val MAX_TIMESTAMPTZ: Instant = OffsetDateTime
+            .of(294276, 12, 31, 23, 59, 59, 999_999_000, ZoneOffset.UTC)
+            .toInstant()
+
+        /**
+         * A formatter that produces the string PostgreSQL expects for a `timestamptz` bind.
+         *
+         * The format is: `31197-09-14 02:48:05.4+00 AD`
+         */
+        internal val PG_TIMESTAMPTZ: DateTimeFormatter = DateTimeFormatterBuilder()
+            .appendValue(ChronoField.YEAR_OF_ERA, 4, 10, SignStyle.NEVER)
+            .appendLiteral('-')
+            .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+            .appendLiteral('-')
+            .appendValue(ChronoField.DAY_OF_MONTH, 2)
+            .appendLiteral(' ')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .appendFraction(ChronoField.MICRO_OF_SECOND, 0, 6, true)
+            .appendLiteral("+00")
+            // Add era only for BC dates
+            .appendText(
+                ChronoField.ERA,
+                mapOf(
+                    IsoEra.BCE.value.toLong() to " BC",
+                    IsoEra.CE.value.toLong() to ""
+                )
+            )
+            .toFormatter(Locale.ROOT)
+
+        // Just pre-allocated range
+        internal val TIMESTAMPTZ_RANGE = MIN_TIMESTAMPTZ..MAX_TIMESTAMPTZ
     }
 }

@@ -30,7 +30,7 @@ import kotlin.math.min
  */
 class ConnectionAwareDatabaseMutator internal constructor(
     internal val nodeId: NodeId,
-    internal val mutatorOptions: MutatorOptions
+    internal val options: MutatorOptions
 ) : ConnectionAwareMutator {
 
     /**
@@ -41,12 +41,12 @@ class ConnectionAwareDatabaseMutator internal constructor(
      *
      * The mutator is thread-safe and holds no state between calls, so create one per set of defaults and share it.
      *
-     * @param mutatorOptions defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
+     * @param options defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
      */
     @JvmOverloads
-    constructor(mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT) : this(
+    constructor(options: MutatorOptions = MutatorOptions.DEFAULT) : this(
         nodeId = NodeId.EMPTY_NODE_ID,
-        mutatorOptions = mutatorOptions
+        options = options
     )
 
     override fun <Data> mutate(
@@ -114,13 +114,13 @@ class ConnectionAwareDatabaseMutator internal constructor(
 
                 // copy processed messages
                 val currentSize = mutatedMessages.size
-                val maxSize = mutatorOptions.maxMutatedMessagesKeepInMemory
+                val maxSize = options.maxMutatedMessagesKeepInMemory
                 if (currentSize < maxSize) {
                     val needToCopy = maxSize - currentSize
                     mutatedMessages += processedMessages.subList(0, min(processedMessages.size, needToCopy))
                 }
 
-                truncated = mutatedMessages.size >= mutatorOptions.maxMutatedMessagesKeepInMemory
+                truncated = mutatedMessages.size >= options.maxMutatedMessagesKeepInMemory
             } while (processedMessagesCount > 0 && lastMessageId < IdRange.MAX_ID)
         }
 

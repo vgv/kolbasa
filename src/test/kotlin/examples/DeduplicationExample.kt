@@ -50,7 +50,7 @@ fun main() {
         queue = queue,
         request = SendRequest(
             data = messagesToSend,
-            sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
+            options = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
         )
     )
 

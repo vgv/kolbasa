@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" width="760" height="220" role="img" aria-labelledby="t d">
+  <title id="t">Send delay</title>
+  <desc id="d">A timeline. A message is sent at time zero with a delay of three minutes, so it stays invisible to consumers for the whole three-minute window and only becomes receivable once the delay has elapsed.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a202c"/>
+    </marker>
+    <style>
+      .big  { font: 600 15px ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #1a202c; text-anchor: middle; }
+      .sub  { font: 12px ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #6b7280; text-anchor: middle; }
+      .tick { font: 12px ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #6b7280; text-anchor: middle; }
+      .axis { stroke: #1a202c; stroke-width: 1.6; fill: none; }
+      .drop { stroke: #6b7280; stroke-width: 1.4; fill: none; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="760" height="220" fill="#ffffff"/>
+
+  <!-- bands: before send / delay window / receivable -->
+  <rect x="60"  y="138" width="90"  height="24" fill="#c3d9f7"/>
+  <rect x="150" y="138" width="410" height="24" fill="#f9c6c0"/>
+  <rect x="560" y="138" width="130" height="24" fill="#c2e7cd"/>
+
+  <!-- axis -->
+  <path class="axis" d="M 60 150 H 694" marker-end="url(#arrow)"/>
+  <text class="tick" x="714" y="154" text-anchor="start">time</text>
+
+  <!-- ticks -->
+  <path class="axis" d="M 150 138 V 162"/>
+  <path class="axis" d="M 287 140 V 160"/>
+  <path class="axis" d="M 423 140 V 160"/>
+  <path class="axis" d="M 560 138 V 162"/>
+
+  <text class="tick" x="150" y="184">0</text>
+  <text class="tick" x="287" y="184">1 min</text>
+  <text class="tick" x="423" y="184">2 min</text>
+  <text class="tick" x="560" y="184">3 min</text>
+
+  <!-- send -->
+  <text class="big" x="150" y="58">send</text>
+  <text class="sub" x="150" y="78">delay = 3 min</text>
+  <path class="drop" d="M 150 90 V 132" marker-end="url(#arrow)"/>
+
+  <!-- receive -->
+  <text class="big" x="560" y="58">receive</text>
+  <text class="sub" x="560" y="78">first moment it is visible</text>
+  <path class="drop" d="M 560 90 V 132" marker-end="url(#arrow)"/>
+
+  <!-- window caption -->
+  <text class="sub" x="355" y="207">not visible to consumers</text>
+</svg>

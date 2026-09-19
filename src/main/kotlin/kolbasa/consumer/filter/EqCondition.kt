@@ -1,10 +1,16 @@
 package kolbasa.consumer.filter
 
 import kolbasa.queue.meta.MetaField
+import kolbasa.utils.ColumnIndex
+import java.sql.PreparedStatement
 
-internal class EqCondition<T>(field: MetaField<T>, value: T) :
-    AbstractOneValueCondition<T>(field, value) {
+internal data class EqCondition<T>(val field: MetaField<T>, val value: T) : Condition() {
 
-    override val operator = "="
+    private val sqlClause = "${field.dbColumnName}=?"
 
+    override fun toSqlClause() = sqlClause
+
+    override fun fillPreparedQuery(preparedStatement: PreparedStatement, columnIndex: ColumnIndex) {
+        field.fillPreparedStatementForValue(preparedStatement, columnIndex.nextIndex(), value)
+    }
 }
