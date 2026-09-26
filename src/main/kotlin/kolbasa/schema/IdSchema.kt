@@ -47,14 +47,6 @@ internal object IdSchema {
             """
         }
 
-        // remove after few releases
-        if (existingTable != null) {
-            val idColumn = existingTable.findColumn(ID_COLUMN_NAME)
-            if (idColumn != null && idColumn.nullable) {
-                ddlStatements += "alter table $NODE_TABLE_NAME alter $ID_COLUMN_NAME set not null"
-            }
-        }
-
         dataSource.useConnectionWithAutocommit { connection ->
             // separate transaction for each statement
             connection.createStatement().use { statement ->
