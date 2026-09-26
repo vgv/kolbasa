@@ -1,6 +1,7 @@
 package kolbasa.schema
 
 import java.sql.Types
+import java.util.EnumSet
 
 /**
  * The SQL statements that bring the database in line with a queue – built, but not executed yet.
@@ -98,9 +99,9 @@ internal data class Table(
             return false
         }
 
-        val allRequiredColumnsExist = REQUIRED_QUEUE_COLUMNS.all { requiredColumn ->
-            val currentColumn = columns.find { it.name == requiredColumn.key }
-            currentColumn != null && currentColumn.type == requiredColumn.value
+        val allRequiredColumnsExist = REQUIRED_QUEUE_COLUMNS.all { (columnName, columnTypes) ->
+            val currentColumn = columns.find { it.name == columnName }
+            currentColumn != null && currentColumn.type in columnTypes
         }
 
         if (!allRequiredColumnsExist) {
@@ -176,15 +177,15 @@ internal data class PutFunction(
 )
 
 // Every queue table should have these columns
-private val REQUIRED_QUEUE_COLUMNS = mapOf(
-    Const.ID_COLUMN_NAME to ColumnType.BIGINT,
-    Const.USELESS_COUNTER_COLUMN_NAME to ColumnType.INT,
-    Const.OPENTELEMETRY_COLUMN_NAME to ColumnType.VARCHAR_ARRAY,
-    Const.SHARD_COLUMN_NAME to ColumnType.INT,
-    Const.CREATED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-    Const.SCHEDULED_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-    Const.PROCESSING_AT_COLUMN_NAME to ColumnType.TIMESTAMP,
-    Const.PRODUCER_COLUMN_NAME to ColumnType.VARCHAR,
-    Const.CONSUMER_COLUMN_NAME to ColumnType.VARCHAR,
-    Const.REMAINING_ATTEMPTS_COLUMN_NAME to ColumnType.INT
+private val REQUIRED_QUEUE_COLUMNS: Map<String, Set<ColumnType>> = mapOf(
+    Const.ID_COLUMN_NAME to EnumSet.of(ColumnType.BIGINT),
+    Const.USELESS_COUNTER_COLUMN_NAME to EnumSet.of(ColumnType.INT),
+    Const.OPENTELEMETRY_COLUMN_NAME to EnumSet.of(ColumnType.VARCHAR_ARRAY),
+    Const.SHARD_COLUMN_NAME to EnumSet.of(ColumnType.INT),
+    Const.CREATED_AT_COLUMN_NAME to EnumSet.of(ColumnType.TIMESTAMP, ColumnType.TIMESTAMPTZ),
+    Const.SCHEDULED_AT_COLUMN_NAME to EnumSet.of(ColumnType.TIMESTAMP, ColumnType.TIMESTAMPTZ),
+    Const.PROCESSING_AT_COLUMN_NAME to EnumSet.of(ColumnType.TIMESTAMP, ColumnType.TIMESTAMPTZ),
+    Const.PRODUCER_COLUMN_NAME to EnumSet.of(ColumnType.VARCHAR),
+    Const.CONSUMER_COLUMN_NAME to EnumSet.of(ColumnType.VARCHAR),
+    Const.REMAINING_ATTEMPTS_COLUMN_NAME to EnumSet.of(ColumnType.INT)
 )
