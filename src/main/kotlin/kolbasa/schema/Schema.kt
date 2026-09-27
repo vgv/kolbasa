@@ -116,11 +116,7 @@ internal data class Table(
 
     companion object {
         fun Table?.hasIndex(name: String): Boolean {
-            return if (this == null) {
-                false
-            } else {
-                name in indexes
-            }
+            return this != null && name in indexes
         }
     }
 }
