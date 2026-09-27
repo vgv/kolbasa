@@ -37,22 +37,25 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
             SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
         }
         // Direct database checks, all tables and indexes should be created
-        assertEquals(queues, dataSource.readInt(tablesSql))
-        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        // +1 because of the q__node table (that is always created by the library) and its primary key index
+        assertEquals(queues + 1, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6 + 1, dataSource.readInt(indexesSql))
         assertTrue(emptyDatabaseMillis < 12_000, "Creating $queues tables took too long: $emptyDatabaseMillis) ms")
 
 
         // ------------------------------------------------------------------------------------
         // Second test - drop half of the tables and measure time to create or update all tables again
         SchemaHelpers.deleteQueues(dataSource, randomQueues.shuffled().take(queues / 2))
-        assertEquals(queues / 2, dataSource.readInt(tablesSql))
-        assertEquals(queues * 3, dataSource.readInt(indexesSql))
+        // +1 because of the q__node table (that is always created by the library) and its primary key index
+        assertEquals(queues / 2 + 1, dataSource.readInt(tablesSql))
+        assertEquals(queues * 3 + 1, dataSource.readInt(indexesSql))
         val halfDatabaseMillis = measureTimeMillis {
             SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
         }
         // All tables and indexes should be created again
-        assertEquals(queues, dataSource.readInt(tablesSql))
-        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        // +1 because of the q__node table (that is always created by the library) and its primary key index
+        assertEquals(queues + 1, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6 + 1, dataSource.readInt(indexesSql))
         assertTrue(halfDatabaseMillis < 6_000, "Creating $queues tables took too long: $halfDatabaseMillis) ms")
 
 
@@ -62,8 +65,9 @@ class SchemaHelpersTest : AbstractPostgresqlTest() {
             SchemaHelpers.createOrUpdateQueues(dataSource, randomQueues)
         }
         // All tables and indexes should remain the same
-        assertEquals(queues, dataSource.readInt(tablesSql))
-        assertEquals(queues * 6, dataSource.readInt(indexesSql))
+        // +1 because of the q__node table (that is always created by the library) and its primary key index
+        assertEquals(queues + 1, dataSource.readInt(tablesSql))
+        assertEquals(queues * 6 + 1, dataSource.readInt(indexesSql))
         assertTrue(upToDateDatabaseMillis < 1000, "Creating $queues tables took too long: $upToDateDatabaseMillis) ms")
     }
 
