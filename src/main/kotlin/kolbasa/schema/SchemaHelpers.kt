@@ -106,7 +106,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateCreateOrUpdateStatements(dataSource: DataSource, vararg mainQueues: Queue<*>): Map<Queue<*>, Schema> {
-        return generateCreateOrUpdateStatements(dataSource, mainQueues.toList())
+        return generateCreateOrUpdateStatements(dataSource, mainQueues.asList())
     }
 
     /**
@@ -144,7 +144,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun createOrUpdateQueues(dataSource: DataSource, vararg mainQueues: Queue<*>): SchemaResult {
-        return createOrUpdateQueues(dataSource, mainQueues.toList())
+        return createOrUpdateQueues(dataSource, mainQueues.asList())
     }
 
     // ----------------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ object SchemaHelpers {
         vararg mainQueues: Queue<*>,
         renameFunction: (Queue<*>) -> String
     ): Map<Queue<*>, Schema> {
-        return generateRenameStatements(dataSource, mainQueues.toList(), renameFunction)
+        return generateRenameStatements(dataSource, mainQueues.asList(), renameFunction)
     }
 
     /**
@@ -223,7 +223,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun renameQueues(dataSource: DataSource, vararg mainQueues: Queue<*>, renameFunction: (Queue<*>) -> String): SchemaResult {
-        return renameQueues(dataSource, mainQueues.toList(), renameFunction)
+        return renameQueues(dataSource, mainQueues.asList(), renameFunction)
     }
 
 
@@ -260,7 +260,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun generateDeleteStatements(dataSource: DataSource, vararg mainQueues: Queue<*>): Map<Queue<*>, Schema> {
-        return generateDeleteStatements(dataSource, mainQueues.toList())
+        return generateDeleteStatements(dataSource, mainQueues.asList())
     }
 
     /**
@@ -284,7 +284,7 @@ object SchemaHelpers {
      */
     @JvmStatic
     fun deleteQueues(dataSource: DataSource, vararg mainQueues: Queue<*>): SchemaResult {
-        return deleteQueues(dataSource, mainQueues.toList())
+        return deleteQueues(dataSource, mainQueues.asList())
     }
 
 
