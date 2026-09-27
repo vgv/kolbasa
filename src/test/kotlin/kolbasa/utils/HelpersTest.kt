@@ -14,7 +14,10 @@ class HelpersTest {
 
     @Test
     fun testArrayToMap_IfEven() {
-        assertEquals(mapOf("1" to "2", "3" to "4"), Helpers.arrayToMap(arrayOf("1", "2", "3", "4")))
+        val expected = mapOf("1" to "2", "3" to "4")
+        val actual = Helpers.arrayToMap(arrayOf("1", "2", "3", "4"))
+
+        assertEquals(expected, actual)
     }
 
     @Test

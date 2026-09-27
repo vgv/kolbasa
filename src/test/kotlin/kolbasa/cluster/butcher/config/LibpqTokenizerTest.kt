@@ -1,7 +1,8 @@
 package kolbasa.cluster.butcher.config
 
 import kolbasa.cluster.butcher.ButcherException
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -9,109 +10,115 @@ class LibpqTokenizerTest {
 
     @Test
     fun testTokenize_EmptyString() {
-        Assertions.assertEquals(emptyMap<String, String>(), LibpqTokenizer.tokenize(""))
+        val expected = emptyMap<String, String>()
+        val actual = LibpqTokenizer.tokenize("")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_OnlyWhitespace() {
-        Assertions.assertEquals(emptyMap<String, String>(), LibpqTokenizer.tokenize("   \t  "))
+        val expected = emptyMap<String, String>()
+        val actual = LibpqTokenizer.tokenize("   \t  ")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_SinglePair() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1"),
-            LibpqTokenizer.tokenize("host=db1")
-        )
+        val expected = mapOf("host" to "db1")
+        val actual = LibpqTokenizer.tokenize("host=db1")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_MultiplePairs() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1", "port" to "5432", "dbname" to "orders"),
-            LibpqTokenizer.tokenize("host=db1 port=5432 dbname=orders")
-        )
+        val expected = mapOf("host" to "db1", "port" to "5432", "dbname" to "orders")
+        val actual = LibpqTokenizer.tokenize("host=db1 port=5432 dbname=orders")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_LastDuplicateWins() {
-        Assertions.assertEquals(
-            mapOf("host" to "db5"),
-            LibpqTokenizer.tokenize("host=db1 host=db2 host=db3 host=db4 host=db5")
-        )
+        val expected = mapOf("host" to "db5")
+        val actual = LibpqTokenizer.tokenize("host=db1 host=db2 host=db3 host=db4 host=db5")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_WhitespaceAroundEquals() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1", "port" to "5432"),
-            LibpqTokenizer.tokenize("host = db1   port= 5432")
-        )
+        val expected = mapOf("host" to "db1", "port" to "5432")
+        val actual = LibpqTokenizer.tokenize("host = db1   port= 5432")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_TabsAndMultipleSpacesBetweenPairs() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1", "port" to "5432", "dbname" to "orders"),
-            LibpqTokenizer.tokenize("host=db1 \t  port=5432\tdbname=orders")
-        )
+        val expected = mapOf("host" to "db1", "port" to "5432", "dbname" to "orders")
+        val actual = LibpqTokenizer.tokenize("host=db1 \t  port=5432\tdbname=orders")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_LeadingAndTrailingWhitespace() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1"),
-            LibpqTokenizer.tokenize("   host=db1   ")
-        )
+        val expected = mapOf("host" to "db1")
+        val actual = LibpqTokenizer.tokenize("   host=db1   ")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_QuotedValueWithSpaces() {
-        Assertions.assertEquals(
-            mapOf("password" to "p@ss word"),
-            LibpqTokenizer.tokenize("password='p@ss word'")
-        )
+        val expected = mapOf("password" to "p@ss word")
+        val actual = LibpqTokenizer.tokenize("password='p@ss word'")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_QuotedValueWithEscapedQuote() {
-        Assertions.assertEquals(
-            mapOf("password" to "it's"),
-            LibpqTokenizer.tokenize("""password='it\'s'""")
-        )
+        val expected = mapOf("password" to "it's")
+        val actual = LibpqTokenizer.tokenize("""password='it\'s'""")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_QuotedValueWithEscapedBackslash() {
-        Assertions.assertEquals(
-            mapOf("password" to """a\b"""),
-            LibpqTokenizer.tokenize("""password='a\\b'""")
-        )
+        val expected = mapOf("password" to """a\b""")
+        val actual = LibpqTokenizer.tokenize("""password='a\\b'""")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_EmptyQuotedValue() {
-        Assertions.assertEquals(
-            mapOf("password" to ""),
-            LibpqTokenizer.tokenize("password=''")
-        )
+        val expected = mapOf("password" to "")
+        val actual = LibpqTokenizer.tokenize("password=''")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_UnrecognizedEscapesAreKeptLiteral() {
         // libpq: only \' and \\ are recognized inside quotes; \n stays as backslash + n.
-        Assertions.assertEquals(
-            mapOf("k" to """a\nb"""),
-            LibpqTokenizer.tokenize("""k='a\nb'""")
-        )
+        val expected = mapOf("k" to """a\nb""")
+        val actual = LibpqTokenizer.tokenize("""k='a\nb'""")
+
+        assertEquals(expected, actual)
     }
 
     @Test
     fun testTokenize_MixQuotedAndUnquoted() {
-        Assertions.assertEquals(
-            mapOf("host" to "db1", "password" to "p ss", "port" to "5432"),
-            LibpqTokenizer.tokenize("host=db1 password='p ss' port=5432")
-        )
+        val expected = mapOf("host" to "db1", "password" to "p ss", "port" to "5432")
+        val actual = LibpqTokenizer.tokenize("host=db1 password='p ss' port=5432")
+
+        assertEquals(expected, actual)
     }
 
     @Test
@@ -119,8 +126,9 @@ class LibpqTokenizerTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             LibpqTokenizer.tokenize("password='abc")
         }
-        Assertions.assertTrue(ex.messageToShow.contains("Unterminated"), ex.messageToShow)
-        Assertions.assertTrue(ex.messageToShow.contains("password"), ex.messageToShow)
+
+        assertTrue(ex.messageToShow.contains("Unterminated"), ex.messageToShow)
+        assertTrue(ex.messageToShow.contains("password"), ex.messageToShow)
     }
 
     @Test
@@ -128,16 +136,16 @@ class LibpqTokenizerTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             LibpqTokenizer.tokenize("host db1")
         }
-        Assertions.assertTrue(ex.messageToShow.contains("Expected '='"), ex.messageToShow)
-        Assertions.assertTrue(ex.messageToShow.contains("host"), ex.messageToShow)
+        assertTrue(ex.messageToShow.contains("Expected '='"), ex.messageToShow)
+        assertTrue(ex.messageToShow.contains("host"), ex.messageToShow)
     }
 
     @Test
     fun testTokenize_KeyWithoutValueThrows() {
         // "host=" with nothing after: unquoted value is empty — legal at end of line.
-        Assertions.assertEquals(
-            mapOf("host" to ""),
-            LibpqTokenizer.tokenize("host=")
-        )
+        val expected = mapOf("host" to "")
+        val actual = LibpqTokenizer.tokenize("host=")
+
+        assertEquals(expected, actual)
     }
 }
