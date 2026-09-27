@@ -89,7 +89,7 @@ data class MetaValues(val values: List<MetaValue<*>>) {
 
         /** Collects already built values – see [MetaField.value] – into the metadata of one message. */
         @JvmStatic
-        fun of(vararg values: MetaValue<*>) = of(values.toList())
+        fun of(vararg values: MetaValue<*>) = of(values.asList())
     }
 }
 

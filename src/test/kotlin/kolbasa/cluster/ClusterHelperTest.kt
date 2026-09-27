@@ -30,11 +30,11 @@ class ClusterHelperTest : AbstractPostgresqlTest() {
     }
 
     @Test
-    fun testReadNodes_If_Duplicate_Server_Id() {
-        // Check that all nodes have unique serverIds
+    fun testReadNodes_If_Duplicate_Node_Id() {
+        // Check that all nodes have unique node ids
         ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
-        // Make one of the nodes have the same serverId as another node
+        // Make one of the nodes have the same nodeId as another node
         val first = requireNotNull(IdSchema.readNodeInfo(dataSource))
         val stringId: String = first.id.id
         dataSourceFirstSchema.useStatement() { statement ->

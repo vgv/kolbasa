@@ -54,7 +54,7 @@ data class Metadata(val fields: List<MetaField<*>>) {
 
         /** Declares the meta fields of a queue. Field names must be unique, otherwise the call throws. */
         @JvmStatic
-        fun of(vararg fields: MetaField<*>) = of(fields.toList())
+        fun of(vararg fields: MetaField<*>) = of(fields.asList())
 
         /** Declares the meta fields of a queue. Field names must be unique, otherwise the call throws. */
         @JvmStatic

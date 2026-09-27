@@ -72,7 +72,9 @@ private fun findAndCompareAllSchemas(
     dataSources.forEach { dataSource ->
         SchemaExtractor.extractRawSchema(dataSource, includeTables).forEach { (tableName, table) ->
             if (excludeTables == null ||  tableName !in excludeTables) {
-                allSchemas.computeIfAbsent(tableName) { mutableListOf() }.add(dataSource to table)
+                if (table.isQueueTable()) {
+                    allSchemas.computeIfAbsent(tableName) { mutableListOf() }.add(dataSource to table)
+                }
             }
         }
     }

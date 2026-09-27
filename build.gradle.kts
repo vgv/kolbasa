@@ -73,10 +73,11 @@ tasks.register<JavaExec>("performance") {
     classpath += java.sourceSets.getByName("test").runtimeClasspath
 }
 
-// Examples
-// ./gradlew example -Pname=FilterExample              - runs the Kotlin example (default)
-// ./gradlew example -Pname=FilterExample -Plang=java  - runs its Java twin
 tasks.register<JavaExec>("example") {
+    description = "Run a single example from src/test/kotlin/examples, either Kotlin or Java. Specify the example name " +
+        "with -Pname=<ExampleName> and optionally the language with -Plang=java|kotlin (default: kotlin). " +
+        "For example: ./gradlew example -Pname=FilterExample -Plang=java"
+
     val exampleName = project.providers.gradleProperty("name").orElse("SimpleExample")
     val exampleLang = project.providers.gradleProperty("lang").orElse("kotlin")
 
@@ -374,7 +375,14 @@ fun printDevSnapshotReleaseNote(groupId: String, artifactId: String, sanitizedVe
     println("	version: $sanitizedVersion")
     println()
     println("Discover on Maven Central:")
-    println("	https://central.sonatype.com/repository/maven-snapshots/${groupId.replace('.', '/')}/$artifactId/$sanitizedVersion/maven-metadata.xml")
+    println(
+        "	https://central.sonatype.com/repository/maven-snapshots/${
+            groupId.replace(
+                '.',
+                '/'
+            )
+        }/$artifactId/$sanitizedVersion/maven-metadata.xml"
+    )
     println()
     println("========================================================")
     println()
@@ -414,6 +422,7 @@ class SettingsProvider {
         // it should be a so-called "ascii-armored in-memory PGP secret key"
         private const val GPG_SIGNING_KEY_PROPERTY = "GPG_SIGNING_KEY"
         private const val GPG_SIGNING_PASSWORD_PROPERTY = "GPG_SIGNING_PASSWORD"
+
         // generate a name/password at https://central.sonatype.com/usertoken
         private const val SONATYPE_USERNAME_PROPERTY = "SONATYPE_USERNAME"
         private const val SONATYPE_PASSWORD_PROPERTY = "SONATYPE_PASSWORD"
