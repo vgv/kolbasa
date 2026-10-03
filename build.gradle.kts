@@ -37,6 +37,11 @@ dependencies {
     compileOnly(libs.opentelemetry.instrumentation.api)
     compileOnly(libs.opentelemetry.instrumentation.api.incubator)
 
+    // ------------------------------------------------------------------------
+    // Butcher CLI, not part of the library's surface - see the kolbasa.butcher convention plugin
+    butcherClasspath(libs.clikt)
+
+    // ------------------------------------------------------------------------
     // Test
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
