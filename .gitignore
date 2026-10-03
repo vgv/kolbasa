@@ -1,15 +1,15 @@
 # Gradle
-/.gradle/
+.gradle/
 
 # Kotlin
-/.kotlin/
+.kotlin/
 
 # IntelliJ
-/.idea/
+.idea/
 
 # Build
-/build/
-/out/
+build/
+out/
 
 # Local development
 /src/test/kotlin/local/
