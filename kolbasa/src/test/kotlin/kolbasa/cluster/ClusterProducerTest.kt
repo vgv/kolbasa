@@ -9,6 +9,7 @@ import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
+import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -54,7 +55,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         val sendResult = clusterProducer.send(queue, sendRequest)
 
         // read directly from the producer node
-        val producerNode = requireNotNull(cluster.getState().shards[shard]?.producerNode)
+        val producerNode = requireNotNull(cluster.getState().shards[ShardId.of(shard)]?.producerNode)
         val dataSource = requireNotNull(cluster.getState().nodes[producerNode])
         val consumer = DatabaseConsumer(dataSource)
         val rawMessages = consumer.receive(queue, messagesToSend)
@@ -95,7 +96,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -141,7 +142,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -167,8 +168,8 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(shard, it.id.shard)
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(shard, it.id.shard.id)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -206,7 +207,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -238,7 +239,7 @@ fun findDataSourceWithInitializedShard(dataSources: List<DataSource>): DataSourc
         }
 
         // Shard table is 100% initialized
-        if (shards.size == Shard.SHARD_COUNT) {
+        if (shards.size == ShardId.SHARD_COUNT) {
             return ds
         }
     }

@@ -29,7 +29,7 @@ internal object MutatorSchemaHelpers {
         val mutatedFields = generateMutateExpressions(mutations)
 
         val idsList = messages.joinToString(separator = ",") { message ->
-            "(${message.localId},${message.shard})"
+            "(${message.localId},${message.shard.id})"
         }
 
         return """

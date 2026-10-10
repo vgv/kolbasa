@@ -15,7 +15,7 @@ internal object ConsoleProgressCallback : ProgressCallback {
                 "[producerNode=${diff.originalShard.producerNode.id}, consumerNode=${diff.originalShard.consumerNode?.id}, nextConsumerNode=${diff.originalShard.nextConsumerNode?.id}]"
             val updatedShard =
                 "[producerNode=${diff.updatedShard.producerNode.id}, consumerNode=${diff.updatedShard.consumerNode?.id}, nextConsumerNode=${diff.updatedShard.nextConsumerNode?.id}]"
-            println("\tShard #${diff.originalShard.shard} $originalShard=>$updatedShard")
+            println("\tShard #${diff.originalShard.shard.id} $originalShard=>$updatedShard")
         }
     }
 
@@ -49,7 +49,7 @@ internal object ConsoleProgressCallback : ProgressCallback {
                 "[producerNode=${diff.originalShard.producerNode.id}, consumerNode=${diff.originalShard.consumerNode?.id}, nextConsumerNode=${diff.originalShard.nextConsumerNode?.id}]"
             val updatedShard =
                 "[producerNode=${diff.updatedShard.producerNode.id}, consumerNode=${diff.updatedShard.consumerNode?.id}, nextConsumerNode=${diff.updatedShard.nextConsumerNode?.id}]"
-            println("\tShard #${diff.originalShard.shard} $originalShard=>$updatedShard")
+            println("\tShard #${diff.originalShard.shard.id} $originalShard=>$updatedShard")
         }
     }
 }

@@ -4,6 +4,7 @@ import kolbasa.Kolbasa
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import java.util.*
@@ -212,7 +213,7 @@ class Cluster @JvmOverloads constructor(
         return remappedAtLeastOnce
     }
 
-    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<Int, Shard> {
+    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
         // First, try to find a node with a 100% initialized shard table, if found, return it
         for ((_, dataSource) in nodes) {
             val shards = try {
@@ -223,7 +224,7 @@ class Cluster @JvmOverloads constructor(
             }
 
             // Shard table is 100% initialized, return it
-            if (shards.size == Shard.SHARD_COUNT) {
+            if (shards.size == ShardId.SHARD_COUNT) {
                 return shards
             }
         }

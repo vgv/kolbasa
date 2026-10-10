@@ -1,6 +1,5 @@
 package kolbasa.producer
 
-import kolbasa.cluster.Shard
 import kotlin.math.min
 
 data class SendRequest<Data>(
@@ -16,7 +15,7 @@ data class SendRequest<Data>(
 
     // Effective shard, depends of many factors
     // ----------------------------------------------------------------------------------------------
-    internal var effectiveShard: Int = Shard.MIN_SHARD
+    internal var effectiveShard: ShardId = ShardId.MIN_SHARD_ID
     // ----------------------------------------------------------------------------------------------
 
     // OpenTelemetry

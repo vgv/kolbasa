@@ -55,7 +55,7 @@ private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<Nod
     val targetsToShards = mutableMapOf<NodeId, MutableList<Int>>()
     shards.values.forEach { shard ->
         if (shard.nextConsumerNode != null) {
-            targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard)
+            targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard.id)
         }
     }
 

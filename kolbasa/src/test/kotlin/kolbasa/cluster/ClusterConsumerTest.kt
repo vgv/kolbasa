@@ -9,6 +9,7 @@ import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
+import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -45,21 +46,21 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
     fun testReceive_JustReceiveTest() {
         // Send N messages
         val clusterProducer = ClusterProducer(cluster)
-        (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
+        ShardId.SHARDS_RANGE.forEach { message ->
             clusterProducer.send(queue, message)
         }
 
         // Try to receive all messages and test that all messages are received
         val received = tryToReadEverything()
-        assertEquals(Shard.SHARD_COUNT, received.size)
-        assertEquals((Shard.MIN_SHARD..Shard.MAX_SHARD).toSet(), received.map { it.data }.toSet())
+        assertEquals(ShardId.SHARD_COUNT, received.size)
+        assertEquals(ShardId.SHARDS_RANGE.toSet(), received.map { it.data }.toSet())
     }
 
     @Test
     fun testMessagesDistribution_TestOneMigratingShard() {
         // Send N messages randomly to all nodes
         val clusterProducer = ClusterProducer(cluster)
-        (Shard.MIN_SHARD..Shard.MAX_SHARD).forEach { message ->
+        ShardId.SHARDS_RANGE.forEach { message ->
             val sendRequest = SendRequest(
                 data = listOf(SendMessage(data = message)),
                 options = SendOptions(shard = message)
@@ -90,7 +91,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
         // Try to receive as many messages as possible
         val received = tryToReadEverything()
         // Check we read everything except one migrating shard
-        assertEquals(Shard.SHARD_COUNT - 1, received.size, "received: $received")
+        assertEquals(ShardId.SHARD_COUNT - 1, received.size, "received: $received")
         assertTrue(received.none { it.data == migratingShard }, "received: $received")
 
         // Read from the specified shard using direct consumer and check that there is only one message from "migrating" shard
@@ -102,7 +103,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
 
     private fun readData(dataSource: DataSource): List<Message<Int>> {
         val consumer = DatabaseConsumer(dataSource)
-        val messages = consumer.receive(queue, Shard.SHARD_COUNT)
+        val messages = consumer.receive(queue, ShardId.SHARD_COUNT)
         consumer.delete(queue, messages)
         return messages
     }
@@ -114,7 +115,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
 
         var emptyReceiveAttempt = 0
         do {
-            val messages = clusterConsumer.receive(queue, Shard.SHARD_COUNT)
+            val messages = clusterConsumer.receive(queue, ShardId.SHARD_COUNT)
             received += messages
             clusterConsumer.delete(queue, messages)
 

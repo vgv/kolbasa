@@ -3,6 +3,7 @@ package kolbasa.cluster
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.inspector.datasource.Inspector
 import kolbasa.mutator.datasource.Mutator
+import kolbasa.producer.ShardId
 import kolbasa.producer.datasource.Producer
 import kolbasa.schema.NodeId
 import java.util.concurrent.ConcurrentHashMap
@@ -11,7 +12,7 @@ import javax.sql.DataSource
 
 internal data class ClusterState(
     val nodes: Map<NodeId, DataSource>,
-    val shards: Map<Int, Shard>
+    val shards: Map<ShardId, Shard>
 ) {
 
     // -------------------------------------------------------------------------------------------------
@@ -69,8 +70,8 @@ internal data class ClusterState(
 
     // Map of active shards to active consumer nodes
     // shard -> node
-    private val activeConsumerShardsToNodes: Map<Int, NodeId> by lazy {
-        val result = hashMapOf<Int, NodeId>()
+    private val activeConsumerShardsToNodes: Map<ShardId, NodeId> by lazy {
+        val result = hashMapOf<ShardId, NodeId>()
         activeConsumerNodesToShards.forEach { (node, shards) ->
             shards.shards.forEach { shard ->
                 result[shard] = node
@@ -106,14 +107,14 @@ internal data class ClusterState(
 
     fun getProducer(
         clusterProducer: ClusterProducer,
-        shard: Int,
+        shard: ShardId,
         generateProducer: (NodeId, DataSource) -> Producer
     ): Producer {
         val nodeToProducers = producers.computeIfAbsent(clusterProducer) { _ ->
             ConcurrentHashMap()
         }
 
-        val node = shards[shard]?.producerNode ?: throw IllegalArgumentException("Shard $shard is not found")
+        val node = shards[shard]?.producerNode ?: throw IllegalArgumentException("Shard ${shard.id} is not found")
 
         val producer = nodeToProducers.computeIfAbsent(node) { _ ->
             val dataSource = nodes.getOrElse(node) {
@@ -154,7 +155,7 @@ internal data class ClusterState(
         return consumer
     }
 
-    fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> Int): Map<NodeId?, List<T>> {
+    fun <T> mapShardsToNodes(list: List<T>, shardFunc: (T) -> ShardId): Map<NodeId?, List<T>> {
         return list.groupBy { item ->
             val shard = shardFunc(item)
             activeConsumerShardsToNodes[shard]

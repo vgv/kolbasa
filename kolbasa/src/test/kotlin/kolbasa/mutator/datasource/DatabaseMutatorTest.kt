@@ -81,7 +81,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // let's check firstIds list with changed remainingAttempts field
         run {
             val idList = firstIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
@@ -98,7 +98,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // let's check secondIds list with no changes
         run {
             val idList = secondIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
@@ -161,7 +161,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // let's check expectedMutatedIds list with changed remainingAttempts field
         run {
             val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
@@ -179,7 +179,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // no changes expected
         run {
             val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
@@ -248,7 +248,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // let's check expectedMutatedIds list with changed remainingAttempts field
         run {
             val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}
@@ -266,7 +266,7 @@ class DatabaseMutatorTest : AbstractPostgreSQLTest() {
         // no changes expected
         run {
             val idList = expectedMutatedIds.joinToString(separator = ",", prefix = "(", postfix = ")") { id ->
-                "(${id.localId}, ${id.shard})"
+                "(${id.localId}, ${id.shard.id})"
             }
             val query = """
                 select distinct ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}

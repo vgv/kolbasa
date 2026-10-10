@@ -14,10 +14,10 @@ class SendResultTest {
         val third = SendMessage("3")
         val fourth = SendMessage("4")
 
-        val firstResult = MessageResult.Success(Id(1, 1), first)
+        val firstResult = MessageResult.Success(Id(1, ShardId.of(1)), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))
         val thirdResult = MessageResult.Duplicate(third)
-        val fourthResult = MessageResult.Success(Id(3, 1), fourth)
+        val fourthResult = MessageResult.Success(Id(3, ShardId.of(1)), fourth)
 
         val sendResult = SendResult(
             failedMessages = 2,
@@ -36,9 +36,9 @@ class SendResultTest {
         val second2 = SendMessage("2-2")
         val third = SendMessage("3")
 
-        val firstResult = MessageResult.Success(Id(1, 1), first)
+        val firstResult = MessageResult.Success(Id(1, ShardId.of(1)), first)
         val secondResult = MessageResult.Error(Exception(), listOf(second1, second2))
-        val thirdResult = MessageResult.Success(Id(3, 1), third)
+        val thirdResult = MessageResult.Success(Id(3, ShardId.of(1)), third)
 
         val sendResult = SendResult(2, listOf(firstResult, secondResult, thirdResult))
         val failedMessages = sendResult.gatherFailedMessages()

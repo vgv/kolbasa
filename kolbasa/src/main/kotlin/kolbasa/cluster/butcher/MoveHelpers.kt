@@ -3,6 +3,7 @@ package kolbasa.cluster.butcher
 import kolbasa.cluster.Shard
 import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readString
@@ -12,7 +13,7 @@ import javax.sql.DataSource
 
 internal data class ShardInfo(
     val shardDataSource: DataSource,
-    val shards: Map<Int, Shard>
+    val shards: Map<ShardId, Shard>
 )
 
 internal data class SourceAndTargetNodes(
@@ -38,7 +39,7 @@ internal object MoveHelpers {
             }
 
             // Shard table is 100% initialized, return it
-            if (shards.size == Shard.SHARD_COUNT) {
+            if (shards.size == ShardId.SHARD_COUNT) {
                 return ShardInfo(dataSource, shards)
             }
         }
@@ -64,11 +65,11 @@ internal object MoveHelpers {
         return SourceAndTargetNodes(sourceNodes, targetNode)
     }
 
-    fun calculateShardsDiff(initialShards: Map<Int, Shard>, updatedShards: Map<Int, Shard>): List<ShardDiff> {
+    fun calculateShardsDiff(initialShards: Map<ShardId, Shard>, updatedShards: Map<ShardId, Shard>): List<ShardDiff> {
         val difference = mutableListOf<ShardDiff>()
 
-        initialShards.forEach { (shardNumber, initialShard) ->
-            val updatedShard = updatedShards[shardNumber] ?: throw IllegalStateException("Can't find updated shard $shardNumber")
+        initialShards.forEach { (shardId, initialShard) ->
+            val updatedShard = updatedShards[shardId] ?: throw IllegalStateException("Can't find updated shard ${shardId.id}")
 
             if (initialShard != updatedShard) {
                 difference += ShardDiff(initialShard, updatedShard)
