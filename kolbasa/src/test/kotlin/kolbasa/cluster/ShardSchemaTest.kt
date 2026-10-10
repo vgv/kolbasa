@@ -110,12 +110,13 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
         checkFullShardsTable(fullAfterDelete, nodes)
     }
 
-    private fun checkFullShardsTable(shards: Map<Int, Shard>, nodes: List<Node>) {
+    private fun checkFullShardsTable(shards: Map<ShardId, Shard>, nodes: List<Node>) {
         assertEquals(ShardId.SHARD_COUNT, shards.size)
 
         ShardId.SHARDS_RANGE.forEach { shardNumber ->
-            val shard = requireNotNull(shards[shardNumber])
-            assertEquals(shardNumber, shard.shard, "Shard: $shard")
+            val shardId = ShardId.of(shardNumber)
+            val shard = requireNotNull(shards[shardId])
+            assertEquals(shardId, shard.shard, "Shard: $shard")
             assertEquals(shard.producerNode, shard.consumerNode, "Shard: $shard")
             assertNull(shard.nextConsumerNode, "Shard: $shard")
             assertTrue(nodes.any { it.id == shard.producerNode }, "Shard: $shard")

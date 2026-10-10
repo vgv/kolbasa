@@ -20,7 +20,7 @@ import java.time.Duration
  * - [ThreadLocal] keeps the messages of one thread together for the life of that thread.
  * - [ThreadLocalWithInterval] keeps them together for a while, then moves on. This is the default.
  *
- * Messages that share a shard are stored on the same node, which is worth knowing when you want related messages to
+ * Messages that share a shard are stored on the same database node, which is worth knowing when you want related messages to
  * arrive together. Messages with different shards may be split over many nodes.
  *
  * ## Usage Example
@@ -38,7 +38,7 @@ import java.time.Duration
  * ```java
  * Kolbasa.setShardStrategy(ShardStrategy.Random.INSTANCE);
  *
- * Kolbasa.setShardStrategy(new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5)));
+ * Kolbasa.setShardStrategy(new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(10)));
  * ```
  *
  * You can also write your own strategy, but there is no reason to: the four below cover the useful cases, and a
@@ -56,8 +56,8 @@ sealed class ShardStrategy {
      * Called once per `send()` call, so it must be fast and safe to call from many threads at once.
      *
      * Any [Int] is allowed. Kolbasa folds the value into the `0..1023` range itself
-     * (from [ShardId.MIN_SHARD] to [ShardId.MAX_SHARD]), so a strategy may return, for example, a hash code without doing
-     * anything about its size or sign.
+     * (from [kolbasa.producer.ShardId.MIN_SHARD] to [kolbasa.producer.ShardId.MAX_SHARD]), so a strategy may return,
+     * for example, a hash code without doing anything about its size or sign.
      */
     abstract fun getShard(): Int
 

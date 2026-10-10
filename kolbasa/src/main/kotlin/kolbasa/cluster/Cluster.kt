@@ -213,7 +213,7 @@ class Cluster @JvmOverloads constructor(
         return remappedAtLeastOnce
     }
 
-    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<Int, Shard> {
+    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
         // First, try to find a node with a 100% initialized shard table, if found, return it
         for ((_, dataSource) in nodes) {
             val shards = try {

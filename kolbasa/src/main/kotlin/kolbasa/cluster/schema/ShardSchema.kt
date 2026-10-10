@@ -82,13 +82,13 @@ internal object ShardSchema {
         }
     }
 
-    fun readShards(dataSource: DataSource): Map<Int, Shard> {
-        val shards = hashMapOf<Int, Shard>()
+    fun readShards(dataSource: DataSource): Map<ShardId, Shard> {
+        val shards = hashMapOf<ShardId, Shard>()
 
         dataSource.useStatement { statement: Statement ->
             statement.executeQuery(READ_SHARD_TABLE_STATEMENT).use { resultSet ->
                 while (resultSet.next()) {
-                    val shard = resultSet.getInt(SHARD_COLUMN_NAME)
+                    val shard = ShardId.of(resultSet.getInt(SHARD_COLUMN_NAME))
                     val producerNode = NodeId(resultSet.getString(PRODUCER_NODE_COLUMN_NAME))
                     val consumerNode = resultSet.getString(CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }
                     val nextConsumerNode = resultSet.getString(NEXT_CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }

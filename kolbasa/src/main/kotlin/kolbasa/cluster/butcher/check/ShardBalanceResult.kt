@@ -21,7 +21,7 @@ internal data class ShardBalanceResult(
         sortedNodes.forEach { node ->
             val shards = currentDistribution[node] ?: emptyList()
             val shardsCount = shards.size
-            val allShardsString = shards.joinToString(separator = ", ", prefix = "[", postfix = "]") { it.shard.toString() }
+            val allShardsString = shards.joinToString(separator = ", ", prefix = "[", postfix = "]") { it.shard.id.toString() }
             appendLine("    ${node.id.padEnd(width)}  $shardsCount shards $allShardsString")
         }
 
@@ -34,7 +34,7 @@ internal data class ShardBalanceResult(
         proposedMoves.toSortedMap().forEach { (target, shards) ->
             val sorted = shards.sortedBy { it.shard }
             appendLine("    ⟶ ${target.id} (${sorted.size} shards):")
-            appendLine("      shards: ${sorted.joinToString(separator = ",") { it.shard.toString() }}")
+            appendLine("      shards: ${sorted.joinToString(separator = ",") { it.shard.id.toString() }}")
             appendLine("      target: ${target.id}")
         }
     }.trimEnd()

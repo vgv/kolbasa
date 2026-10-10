@@ -17,7 +17,7 @@ internal fun prepare(command: Command.Prepare, progressCallback: ProgressCallbac
     // Check that we are not going to migrate shard to the same node where the shard is located right now
     initialShards
         .filterKeys { shard ->
-            shard in command.shards
+            shard.id in command.shards
         }.forEach { (_, shard) ->
             if (shard.producerNode == command.target && shard.consumerNode == command.target) {
                 throw ButcherException.MoveToTheSameShardException(shard, command.target)

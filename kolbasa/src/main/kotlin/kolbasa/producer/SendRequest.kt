@@ -15,7 +15,7 @@ data class SendRequest<Data>(
 
     // Effective shard, depends of many factors
     // ----------------------------------------------------------------------------------------------
-    internal var effectiveShard: Int = ShardId.MIN_SHARD
+    internal var effectiveShard: ShardId = ShardId.MIN_SHARD_ID
     // ----------------------------------------------------------------------------------------------
 
     // OpenTelemetry

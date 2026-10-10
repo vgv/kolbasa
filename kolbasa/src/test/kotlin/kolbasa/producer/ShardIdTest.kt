@@ -2,7 +2,6 @@ package kolbasa.producer
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class ShardIdTest {
 
@@ -10,6 +9,11 @@ class ShardIdTest {
     fun testShardBoundaries() {
         assertEquals(0, ShardId.MIN_SHARD)
         assertEquals(ShardId.SHARD_COUNT, ShardId.MAX_SHARD + 1)
+
+        // positive value > MAX_SHARD
+        assertEquals(123, ShardId.of(ShardId.SHARD_COUNT + 123).id)
+        // negative value < -MAX_SHARD
+        assertEquals(123, ShardId.of(-ShardId.SHARD_COUNT - 123).id)
     }
 
     @Test
@@ -48,20 +52,5 @@ class ShardIdTest {
     @Test
     fun testToString() {
         assertEquals("shard[5]", ShardId.of(5).toString())
-    }
-
-    @Test
-    fun testInitialConditions() {
-        // Wrong shard
-        assertThrows<IllegalStateException> {
-            ShardId.of(ShardId.MAX_SHARD + 1)
-        }
-        assertThrows<IllegalStateException> {
-            ShardId.of(ShardId.MIN_SHARD - 1)
-        }
-
-        // Boundaries themselves are valid
-        assertEquals(ShardId.MIN_SHARD, ShardId.of(ShardId.MIN_SHARD).id)
-        assertEquals(ShardId.MAX_SHARD, ShardId.of(ShardId.MAX_SHARD).id)
     }
 }

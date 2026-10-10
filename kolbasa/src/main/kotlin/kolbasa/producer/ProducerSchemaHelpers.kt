@@ -9,7 +9,6 @@ import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.util.concurrent.ExecutorService
-import kotlin.math.abs
 
 internal object ProducerSchemaHelpers {
 
@@ -128,7 +127,7 @@ internal object ProducerSchemaHelpers {
         var columnIndex = 1
 
         // 1. Scalar: shard
-        preparedStatement.setInt(columnIndex++, request.effectiveShard)
+        preparedStatement.setInt(columnIndex++, request.effectiveShard.id)
 
         // 2. Scalar: OpenTelemetry context (if present)
         request.openTelemetryContext?.let { otContext ->
@@ -224,16 +223,20 @@ internal object ProducerSchemaHelpers {
         return sendOptions.partialInsert ?: producerOptions.partialInsert
     }
 
-    fun calculateEffectiveShard(sendOptions: SendOptions, producerOptions: ProducerOptions, shardStrategy: ShardStrategy): Int {
+    fun calculateEffectiveShard(
+        sendOptions: SendOptions,
+        producerOptions: ProducerOptions,
+        shardStrategy: ShardStrategy
+    ): ShardId {
         if (sendOptions.shard != null) {
-            return abs(sendOptions.shard % ShardId.SHARD_COUNT)
+            return ShardId.of(sendOptions.shard)
         }
 
         if (producerOptions.shard != null) {
-            return abs(producerOptions.shard % ShardId.SHARD_COUNT)
+            return ShardId.of(producerOptions.shard)
         }
 
-        return abs(shardStrategy.getShard() % ShardId.SHARD_COUNT)
+        return ShardId.of(shardStrategy.getShard())
     }
 
     fun calculateAsyncExecutor(

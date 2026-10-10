@@ -217,10 +217,10 @@ class ShardBalanceTest {
     // ---------- helpers ----------
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
-        Shard(shard = shardNum, producerNode = node, consumerNode = node, nextConsumerNode = null)
+        Shard(shard = ShardId.of(shardNum), producerNode = node, consumerNode = node, nextConsumerNode = null)
 
     private fun migratingShard(shardNum: Int, target: NodeId): Shard =
-        Shard(shard = shardNum, producerNode = target, consumerNode = null, nextConsumerNode = target)
+        Shard(shard = ShardId.of(shardNum), producerNode = target, consumerNode = null, nextConsumerNode = target)
 
     /**
      * Build [counts.values.sum()] distinct stable shards distributed per the given counts.

@@ -10,6 +10,7 @@ import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult.Companion.onlySuccessful
+import kolbasa.producer.ShardId
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
@@ -59,7 +60,7 @@ internal class MoveOneTableTest : AbstractPostgreSQLTest() {
         val producer = DatabaseProducer(dataSource)
         dataToSend.forEach { (shard, messages) ->
             val request = SendRequest(messages, SendOptions(shard = shard))
-            request.effectiveShard = shard
+            request.effectiveShard = ShardId.of(shard)
             val (failedCount, result) = producer.send(queue, request)
 
             assertEquals(0, failedCount)

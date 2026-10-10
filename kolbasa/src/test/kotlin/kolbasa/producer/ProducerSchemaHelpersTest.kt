@@ -4,7 +4,6 @@ import kolbasa.cluster.ShardStrategy
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.concurrent.Executors
-import kotlin.math.abs
 
 class ProducerSchemaHelpersTest {
 
@@ -106,8 +105,8 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
-        assertEquals(abs(-10000 % ShardId.SHARD_COUNT), effectiveShard)
+        assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
+        assertEquals(ShardId.of(-10000), effectiveShard)
     }
 
     @Test
@@ -117,8 +116,8 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
-        assertEquals(abs(-20000 % ShardId.SHARD_COUNT), effectiveShard)
+        assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
+        assertEquals(ShardId.of(-20000), effectiveShard)
     }
 
     @Test
@@ -128,8 +127,8 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
-        assertEquals(abs(-30000 % ShardId.SHARD_COUNT), effectiveShard)
+        assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
+        assertEquals(ShardId.of(-30000), effectiveShard)
     }
 
     @Test

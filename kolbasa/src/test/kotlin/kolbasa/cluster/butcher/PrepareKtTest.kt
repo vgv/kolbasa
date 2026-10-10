@@ -5,8 +5,8 @@ import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
@@ -36,7 +36,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .sorted()
 
         // RUN
-        prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove), ConsoleProgressCallback)
+        prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove.map { it.id }), ConsoleProgressCallback)
 
         // CHECK
         // first, check the table content
@@ -45,9 +45,10 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
                 select
                     ${ShardSchema.PRODUCER_NODE_COLUMN_NAME}, ${ShardSchema.CONSUMER_NODE_COLUMN_NAME}, ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME}
                 from ${ShardSchema.SHARD_TABLE_NAME}
-                where ${ShardSchema.SHARD_COLUMN_NAME} in (${shardsToMove.joinToString(",")})
+                where ${ShardSchema.SHARD_COLUMN_NAME} in (${shardsToMove.joinToString(",") { it.id.toString() }})
             """.trimIndent()
             statement.executeQuery(sql).use { resultSet ->
+                var checkedShards = 0
                 while (resultSet.next()) {
                     val producerNode = resultSet.getString(1)
                     val consumerNode = resultSet.getString(2)
@@ -56,7 +57,12 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
                     assertEquals(targetNode.id.id, producerNode)
                     assertNull(consumerNode)
                     assertEquals(targetNode.id.id, nextConsumerNode)
+                    checkedShards++
                 }
+
+                // The assertions above live inside the loop, so without this check an empty
+                // result set would make the test pass having verified nothing
+                assertEquals(shardsToMove.size, checkedShards)
             }
         }
 
@@ -109,7 +115,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToTheSameShardException> {
-            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove), ConsoleProgressCallback)
+            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove.map { it.id }), ConsoleProgressCallback)
         }
 
         // CHECK

@@ -55,7 +55,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         val sendResult = clusterProducer.send(queue, sendRequest)
 
         // read directly from the producer node
-        val producerNode = requireNotNull(cluster.getState().shards[shard]?.producerNode)
+        val producerNode = requireNotNull(cluster.getState().shards[ShardId.of(shard)]?.producerNode)
         val dataSource = requireNotNull(cluster.getState().nodes[producerNode])
         val consumer = DatabaseConsumer(dataSource)
         val rawMessages = consumer.receive(queue, messagesToSend)

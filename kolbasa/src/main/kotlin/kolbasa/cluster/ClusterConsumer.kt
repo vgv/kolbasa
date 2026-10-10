@@ -7,6 +7,7 @@ import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
+import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import javax.sql.DataSource
 
@@ -76,7 +77,7 @@ class ClusterConsumer @JvmOverloads constructor(
     override fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int {
         val latestState = cluster.getState()
 
-        val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
+        val byNodes = latestState.mapShardsToNodes(messageIds) { ShardId.of(it.shard) }
 
         var deleted = byNodes
             .map { (node, ids) ->

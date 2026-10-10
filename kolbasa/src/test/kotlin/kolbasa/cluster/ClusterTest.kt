@@ -4,6 +4,7 @@ import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.producer.ShardId
 import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -83,7 +84,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // ---------------------------------------------------------------------------------------
         // Make shard changes
-        val shardToChange = Shard.randomShard()
+        val shardToChange = ShardId.random()
         val currentProducerConsumerNode = requireNotNull(firstState.shards[shardToChange]?.producerNode)
         val newProducerConsumerNode = (firstState.nodes.keys - currentProducerConsumerNode).random()
         assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
@@ -100,7 +101,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
                     ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}',
                     ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}'
                 where
-                    ${ShardSchema.SHARD_COLUMN_NAME} = $shardToChange
+                    ${ShardSchema.SHARD_COLUMN_NAME} = ${shardToChange.id}
             """.trimIndent()
             statement.execute(sql)
         }

@@ -21,7 +21,7 @@ internal data class MigrationStateResult(
         migratingShardsByTarget.toSortedMap().forEach { (target, shards) ->
             val sorted = shards.sortedBy { it.shard }
             appendLine("  ⟶ ${target.id} (${sorted.size} shards):")
-            appendLine("    shards: ${sorted.joinToString(separator = ",") { it.shard.toString() }}")
+            appendLine("    shards: ${sorted.joinToString(separator = ",") { it.shard.id.toString() }}")
             appendLine("    target: ${target.id}")
         }
     }.trimEnd()

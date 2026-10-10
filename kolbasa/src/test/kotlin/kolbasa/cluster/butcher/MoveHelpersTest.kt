@@ -4,6 +4,7 @@ import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -64,9 +65,9 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     @Test
     fun testCalculateShardsDiff_SameShards() {
         val shards = mapOf(
-            1 to Shard(1, NodeId("node1"), NodeId("node1"), null),
-            2 to Shard(2, NodeId("node2"), NodeId("node2"), null),
-            3 to Shard(3, NodeId("node3"), NodeId("node3"), null),
+            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null),
+            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null),
+            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null),
         )
 
         val updatedShards = buildMap { putAll(shards) } // to create the copy of the map
@@ -78,20 +79,20 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     @Test
     fun testCalculateShardsDiff_DifferentShards() {
         val shards = mapOf(
-            1 to Shard(1, NodeId("node1"), NodeId("node1"), null),
-            2 to Shard(2, NodeId("node2"), NodeId("node2"), null),
-            3 to Shard(3, NodeId("node3"), NodeId("node3"), null),
-            4 to Shard(4, NodeId("node4"), NodeId("node4"), null),
-            5 to Shard(5, NodeId("node5"), NodeId("node5"), null),
+            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null),
+            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null),
+            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null),
+            ShardId.of(4) to Shard(ShardId.of(4), NodeId("node4"), NodeId("node4"), null),
+            ShardId.of(5) to Shard(ShardId.of(5), NodeId("node5"), NodeId("node5"), null),
         )
 
         val randomShardToChange = shards.keys.random()
         val updatedShards = shards.mapValues { (shardNumber, shard) ->
             if (shardNumber == randomShardToChange) {
                 shard.copy(
-                    producerNode = NodeId("another_node_$shardNumber"),
+                    producerNode = NodeId("another_node_${shardNumber.id}"),
                     consumerNode = null,
-                    nextConsumerNode = NodeId("another_node_$shardNumber"),
+                    nextConsumerNode = NodeId("another_node_${shardNumber.id}"),
                 )
             } else {
                 shard

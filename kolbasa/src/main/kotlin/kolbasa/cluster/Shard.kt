@@ -5,7 +5,7 @@ import kolbasa.schema.NodeId
 import kotlin.random.Random
 
 internal data class Shard(
-    val shard: Int,
+    val shard: ShardId,
     val producerNode: NodeId,
     val consumerNode: NodeId?,
     val nextConsumerNode: NodeId?
@@ -14,12 +14,9 @@ internal data class Shard(
     init {
         val stableState = (producerNode == consumerNode) && (nextConsumerNode == null)
         val migrationState = (producerNode == nextConsumerNode) && (consumerNode == null)
+
         check(stableState xor migrationState) {
             "Invalid shard state: producerNode=$producerNode, consumerNode=$consumerNode, nextConsumerNode=$nextConsumerNode"
-        }
-
-        check(shard in ShardId.SHARDS_RANGE) {
-            "Invalid shard value: $shard, possible values: [${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]"
         }
     }
 

@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -36,7 +37,7 @@ class MigrationStateTest {
 
         assertFalse(result.isClean)
         assertEquals(1, result.totalMigratingShards)
-        assertEquals(listOf(42), result.migratingShardsByTarget[target]?.map { it.shard })
+        assertEquals(listOf(42), result.migratingShardsByTarget[target]?.map { it.shard.id })
     }
 
     @Test
@@ -54,7 +55,7 @@ class MigrationStateTest {
         val result = MigrationState(shards).compute()
 
         assertEquals(2, result.totalMigratingShards)
-        assertEquals(listOf(2, 4), result.migratingShardsByTarget[n2]?.map { it.shard })
+        assertEquals(listOf(2, 4), result.migratingShardsByTarget[n2]?.map { it.shard.id })
     }
 
     @Test
@@ -71,8 +72,8 @@ class MigrationStateTest {
         val result = MigrationState(shards).compute()
 
         assertEquals(4, result.totalMigratingShards)
-        assertEquals(listOf(10, 30), result.migratingShardsByTarget[n2]?.map { it.shard }?.sorted())
-        assertEquals(listOf(20, 40), result.migratingShardsByTarget[n3]?.map { it.shard }?.sorted())
+        assertEquals(listOf(10, 30), result.migratingShardsByTarget[n2]?.map { it.shard.id }?.sorted())
+        assertEquals(listOf(20, 40), result.migratingShardsByTarget[n3]?.map { it.shard.id }?.sorted())
     }
 
     @Test
@@ -111,8 +112,8 @@ class MigrationStateTest {
     // ---------- helpers ----------
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
-        Shard(shard = shardNum, producerNode = node, consumerNode = node, nextConsumerNode = null)
+        Shard(shard = ShardId.of(shardNum), producerNode = node, consumerNode = node, nextConsumerNode = null)
 
     private fun migratingShard(shardNum: Int, target: NodeId): Shard =
-        Shard(shard = shardNum, producerNode = target, consumerNode = null, nextConsumerNode = target)
+        Shard(shard = ShardId.of(shardNum), producerNode = target, consumerNode = null, nextConsumerNode = target)
 }
