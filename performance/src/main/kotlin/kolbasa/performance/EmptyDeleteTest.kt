@@ -2,6 +2,7 @@ package kolbasa.performance
 
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
+import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -20,7 +21,7 @@ class EmptyDeleteTest : PerformanceTest {
 
         val randomIdsToDelete = (1..1000).map {
             (1..Env.EmptyDelete.oneDeleteMessages).map {
-                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(0, SHARD_COUNT))
+                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(0, ShardId.SHARD_COUNT))
             }
         }
 
@@ -72,7 +73,3 @@ class EmptyDeleteTest : PerformanceTest {
 fun main() {
     EmptyDeleteTest().run()
 }
-
-// kolbasa.cluster.Shard is internal, so the range is spelled out here: a shard is 10 bits wide, 0..1023.
-// Any value in range will do - these ids are deliberately pointing at messages that do not exist.
-private const val SHARD_COUNT = 1024
