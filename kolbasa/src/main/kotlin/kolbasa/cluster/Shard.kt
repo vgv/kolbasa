@@ -18,7 +18,7 @@ internal data class Shard(
             "Invalid shard state: producerNode=$producerNode, consumerNode=$consumerNode, nextConsumerNode=$nextConsumerNode"
         }
 
-        check(shard in ShardId.MIN_SHARD..ShardId.MAX_SHARD) {
+        check(shard in ShardId.SHARDS_RANGE) {
             "Invalid shard value: $shard, possible values: [${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]"
         }
     }

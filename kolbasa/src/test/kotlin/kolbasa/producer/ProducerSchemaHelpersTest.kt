@@ -106,7 +106,7 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.MIN_SHARD..ShardId.MAX_SHARD, "effectiveShard=$effectiveShard")
+        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
         assertEquals(abs(-10000 % ShardId.SHARD_COUNT), effectiveShard)
     }
 
@@ -117,7 +117,7 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.MIN_SHARD..ShardId.MAX_SHARD, "effectiveShard=$effectiveShard")
+        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
         assertEquals(abs(-20000 % ShardId.SHARD_COUNT), effectiveShard)
     }
 
@@ -128,7 +128,7 @@ class ProducerSchemaHelpersTest {
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
         val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.MIN_SHARD..ShardId.MAX_SHARD, "effectiveShard=$effectiveShard")
+        assertTrue(effectiveShard in ShardId.SHARDS_RANGE, "effectiveShard=$effectiveShard")
         assertEquals(abs(-30000 % ShardId.SHARD_COUNT), effectiveShard)
     }
 

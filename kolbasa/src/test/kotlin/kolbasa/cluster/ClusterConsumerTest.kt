@@ -46,21 +46,21 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
     fun testReceive_JustReceiveTest() {
         // Send N messages
         val clusterProducer = ClusterProducer(cluster)
-        (ShardId.MIN_SHARD..ShardId.MAX_SHARD).forEach { message ->
+        ShardId.SHARDS_RANGE.forEach { message ->
             clusterProducer.send(queue, message)
         }
 
         // Try to receive all messages and test that all messages are received
         val received = tryToReadEverything()
         assertEquals(ShardId.SHARD_COUNT, received.size)
-        assertEquals((ShardId.MIN_SHARD..ShardId.MAX_SHARD).toSet(), received.map { it.data }.toSet())
+        assertEquals(ShardId.SHARDS_RANGE.toSet(), received.map { it.data }.toSet())
     }
 
     @Test
     fun testMessagesDistribution_TestOneMigratingShard() {
         // Send N messages randomly to all nodes
         val clusterProducer = ClusterProducer(cluster)
-        (ShardId.MIN_SHARD..ShardId.MAX_SHARD).forEach { message ->
+        ShardId.SHARDS_RANGE.forEach { message ->
             val sendRequest = SendRequest(
                 data = listOf(SendMessage(data = message)),
                 options = SendOptions(shard = message)

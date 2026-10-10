@@ -79,7 +79,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
         checkFullShardsTable(full, nodes)
 
         // Ok, let's delete some random shards and try to fill them again
-        val shardsToDelete = (ShardId.MIN_SHARD..ShardId.MAX_SHARD)
+        val shardsToDelete = ShardId.SHARDS_RANGE
             .toList()
             .shuffled()
             .take(Random.nextInt(50, 150))
@@ -113,7 +113,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
     private fun checkFullShardsTable(shards: Map<Int, Shard>, nodes: List<Node>) {
         assertEquals(ShardId.SHARD_COUNT, shards.size)
 
-        (ShardId.MIN_SHARD..ShardId.MAX_SHARD).forEach { shardNumber ->
+        ShardId.SHARDS_RANGE.forEach { shardNumber ->
             val shard = requireNotNull(shards[shardNumber])
             assertEquals(shardNumber, shard.shard, "Shard: $shard")
             assertEquals(shard.producerNode, shard.consumerNode, "Shard: $shard")
