@@ -8,7 +8,6 @@ import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.Id
-import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import java.util.concurrent.CompletableFuture
 
@@ -67,7 +66,7 @@ class ClusterMutator @JvmOverloads constructor(
         messages: List<Id>
     ): MutateResult {
         val latestState = cluster.getState()
-        val byNodes = latestState.mapShardsToNodes(messages) { ShardId.of(it.shard) }
+        val byNodes = latestState.mapShardsToNodes(messages) { it.shard }
 
         var mutatedMessagesCount = 0
         val mutatedMessagesResult = mutableListOf<MessageResult>()

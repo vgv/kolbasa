@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.producer.Id
+import kolbasa.producer.ShardId
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -10,7 +11,7 @@ class MessageTest {
     @Test
     fun testIsLastAttempt_False() {
         val lastMessage = Message(
-            id = Id(1, 1),
+            id = Id(1, ShardId.of(1)),
             createdAt = 1L,
             processingAt = 1L,
             scheduledAt = 1L,

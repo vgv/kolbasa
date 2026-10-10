@@ -3,6 +3,7 @@ package kolbasa.consumer
 import kolbasa.cluster.Shards
 import kolbasa.consumer.order.OrderClause
 import kolbasa.producer.Id
+import kolbasa.producer.ShardId
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
@@ -132,7 +133,7 @@ internal object ConsumerSchemaHelpers {
         var columnIndex = 1
 
         val localId = resultSet.getLong(columnIndex++)
-        val shard = resultSet.getInt(columnIndex++)
+        val shard = ShardId.of(resultSet.getInt(columnIndex++))
         val createdAt = resultSet.getTimestamp(columnIndex++).time
         val processingAt = resultSet.getTimestamp(columnIndex++).time
         val scheduledAt = resultSet.getTimestamp(columnIndex++).time
@@ -212,7 +213,7 @@ internal object ConsumerSchemaHelpers {
         }
 
         val idsList = ids.joinToString(separator = ",") { id ->
-            "(${id.localId},${id.shard})"
+            "(${id.localId},${id.shard.id})"
         }
 
         return """
@@ -315,7 +316,9 @@ internal object ConsumerSchemaHelpers {
     ): String {
         check(ids.isNotEmpty()) { "ID list must not be empty" }
 
-        val idsList = ids.joinToString(separator = ",") { id -> "(${id.localId},${id.shard})" }
+        val idsList = ids.joinToString(separator = ",") { id ->
+            "(${id.localId},${id.shard.id})"
+        }
 
         // Columns to read from source via RETURNING
         val returningColumns = buildList {

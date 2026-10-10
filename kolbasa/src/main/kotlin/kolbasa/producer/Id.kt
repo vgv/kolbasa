@@ -11,15 +11,15 @@ data class Id(
     val localId: Long,
 
     /**
-     * The value of the queue table's `shard` column, always in `0..1023`.
+     * The value of the queue table's `shard` column.
      *
      * In a cluster the shard decides which server stores the message.
      */
-    val shard: Int
+    val shard: ShardId
 ) {
 
     override fun toString(): String {
-        return "$localId/$shard"
+        return "$localId/${shard.id}"
     }
 
     companion object {
@@ -27,11 +27,21 @@ data class Id(
         /**
          * Parses the string representation of the ID
          *
-         * String format: `localId/shard`
+         * Optimized implementation without string allocations and 2.5x faster than naive
+         * implementation. String format: `localId/shard`
+         *
+         * **This method validates nothing and trusts its input completely.**
+         *
+         * 1. It always assumes the `number/number` format. A string without `/`, or an empty one, fails with
+         *    [StringIndexOutOfBoundsException]; a non-digit character or a number too large for its type is not
+         *    detected at all and silently produces a wrong [Id].
+         * 2. It does not check that the shard is a real shard. A value outside `0..1023` is folded into that
+         *    range by [ShardId.of], so the returned [Id] then points at a different shard than the string named.
+         *
+         * In other words, feed it only strings produced by [toString]; anything else is the caller's problem.
          */
         @JvmStatic
         fun fromString(stringId: String): Id {
-            // Optimized implementation without string allocations and 2.5x faster than naive implementation
             var index = stringId.length - 1
 
             var shard = 0
@@ -50,7 +60,7 @@ data class Id(
                 localId = localId * 10 + (stringId[i] - '0')
             }
 
-            return Id(localId, shard)
+            return Id(localId, ShardId.of(shard))
         }
     }
 

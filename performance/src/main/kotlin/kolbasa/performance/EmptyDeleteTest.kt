@@ -21,7 +21,7 @@ class EmptyDeleteTest : PerformanceTest {
 
         val randomIdsToDelete = (1..1000).map {
             (1..Env.EmptyDelete.oneDeleteMessages).map {
-                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(0, ShardId.SHARD_COUNT))
+                Id(Random.nextLong(0, Long.MAX_VALUE), ShardId.random())
             }
         }
 

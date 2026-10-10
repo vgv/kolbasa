@@ -96,7 +96,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -142,7 +142,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -168,8 +168,8 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(shard, it.id.shard)
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(shard, it.id.shard.id)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 
@@ -207,7 +207,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         results.forEach { sendResult ->
             assertEquals(0, sendResult.failedMessages)
             sendResult.onlySuccessful().forEach {
-                assertEquals(it.message.data, it.id.shard)
+                assertEquals(it.message.data, it.id.shard.id)
             }
         }
 

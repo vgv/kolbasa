@@ -3,9 +3,8 @@ package kolbasa.mutator.connection
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.*
-import kolbasa.utils.JdbcHelpers.usePreparedStatement
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
+import kolbasa.producer.ShardId
 import kolbasa.queue.Checks
 import kolbasa.queue.Queue
 import kolbasa.schema.IdRange
@@ -13,6 +12,8 @@ import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
 import kolbasa.utils.ColumnIndex
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.TimeHelper
 import java.sql.Connection
 import java.sql.ResultSet
@@ -226,7 +227,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
 
     private fun readAllFields(resultSet: ResultSet): MessageResult.Mutated {
         val localId = resultSet.getLong(1)
-        val shard = resultSet.getInt(2)
+        val shard = ShardId.of(resultSet.getInt(2))
         val scheduledAt = resultSet.getTimestamp(3).time
         val remainingAttempts = resultSet.getInt(4)
 

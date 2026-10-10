@@ -42,6 +42,7 @@ class ShardId private constructor(
             return CACHE[effectiveShard]
         }
 
-        internal fun random(): ShardId = CACHE[Random.nextInt(SHARD_COUNT)]
+        @JvmStatic
+        fun random(): ShardId = CACHE[Random.nextInt(SHARD_COUNT)]
     }
 }

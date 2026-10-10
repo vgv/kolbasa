@@ -196,7 +196,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
 
                         when (deduplicationMode) {
                             DeduplicationMode.FAIL_ON_DUPLICATE -> {
-                                val id = Id(localId, request.effectiveShard.id)
+                                val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
 
@@ -206,7 +206,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                                     result += MessageResult.Duplicate(message = request.data[currentIndex++])
                                 }
 
-                                val id = Id(localId, request.effectiveShard.id)
+                                val id = Id(localId, request.effectiveShard)
                                 result += MessageResult.Success(id = id, message = request.data[currentIndex++])
                             }
                         }
