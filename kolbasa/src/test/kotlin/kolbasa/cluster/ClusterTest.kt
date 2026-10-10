@@ -1,6 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.assertThrows
 import java.sql.Statement
 import javax.sql.DataSource
 
-class ClusterTest : AbstractPostgresqlTest() {
+class ClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testInitCluster_If_No_DataSources() {

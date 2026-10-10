@@ -1,6 +1,6 @@
 package kolbasa.consumer.sweep
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.MessageOptions
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
-class RetentionCleanupTest : AbstractPostgresqlTest() {
+class RetentionCleanupTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testDlqRetentionCleanupByDuration() {

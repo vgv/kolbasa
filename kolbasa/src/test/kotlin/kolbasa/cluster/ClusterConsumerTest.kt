@@ -1,6 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.Kolbasa
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 import java.sql.Statement
 import javax.sql.DataSource
 
-class ClusterConsumerTest : AbstractPostgresqlTest() {
+class ClusterConsumerTest : AbstractPostgreSQLTest() {
 
     private val queue = Queue.of("test", PredefinedDataTypes.Int)
 

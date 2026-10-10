@@ -1,6 +1,6 @@
 package kolbasa.queue.meta
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -17,7 +17,7 @@ import java.time.ZoneOffset
  * [InstantFieldFormatTest] pins the rendering itself against pgjdbc without a database; this one is the round
  * trip – the values really go into a `timestamptz` column through `unnest` and really come back.
  */
-internal class InstantFieldArrayTest : AbstractPostgresqlTest() {
+internal class InstantFieldArrayTest : AbstractPostgreSQLTest() {
 
     override fun generateTestData(): List<String> {
         return listOf("create table $TABLE(v timestamptz)")

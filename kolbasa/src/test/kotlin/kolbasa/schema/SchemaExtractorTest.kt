@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.assertNotNull
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
 import java.time.Duration
 
-internal class SchemaExtractorTest : AbstractPostgresqlTest() {
+internal class SchemaExtractorTest : AbstractPostgreSQLTest() {
 
     private val queueName = "test_queue"
     private val minValue = IdRange.generateRange(Node.MIN_BUCKET).min

@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.queue.PredefinedDataTypes
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
-class SqlPutFunctionTest : AbstractPostgresqlTest() {
+class SqlPutFunctionTest : AbstractPostgreSQLTest() {
 
     // Meta fields. NB: the generated function param for a meta field is named after its *column*
     // (meta_<snake_case_name>), not the bare field name — see QueueHelpers.generateMetaColumnDbName.

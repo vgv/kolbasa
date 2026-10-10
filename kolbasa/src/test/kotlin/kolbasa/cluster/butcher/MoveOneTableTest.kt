@@ -2,7 +2,7 @@ package kolbasa.cluster.butcher
 
 import io.mockk.mockk
 import io.mockk.verifySequence
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
@@ -28,7 +28,7 @@ import java.math.BigInteger
 import java.time.Instant
 import kotlin.random.Random
 
-internal class MoveOneTableTest : AbstractPostgresqlTest() {
+internal class MoveOneTableTest : AbstractPostgreSQLTest() {
 
     val itemsToMove = 20_000
     val migrateBatchSize = 1000

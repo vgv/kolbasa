@@ -1,6 +1,6 @@
 package kolbasa.producer.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.ProducerOptions
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
-class DatabaseProducerTest : AbstractPostgresqlTest() {
+class DatabaseProducerTest : AbstractPostgreSQLTest() {
 
     private val FIELD = MetaField.ofInt("field", FieldOption.ALL_LIVE_UNIQUE)
 

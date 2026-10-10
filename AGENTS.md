@@ -36,7 +36,7 @@ that has it — `./gradlew test` runs the library's suite, `./gradlew :kolbasa:t
 running Docker daemon is required. Examples can also point at a real PostgreSQL instance via
 `examples/src/main/kotlin/kolbasa/example/ExamplesDataSourceProvider.kt`.
 
-**`./gradlew test` picks a random PostgreSQL major.** `AbstractPostgresqlTest` chooses one image per
+**`./gradlew test` picks a random PostgreSQL major.** `AbstractPostgreSQLTest` chooses one image per
 JVM out of `test-support/src/main/resources/postgresql-test-images.txt` (through `kolbasa.test.PostgreSQLImages`), so
 two runs are not the same environment, and a run can stall for minutes pulling an image Docker hasn't cached yet. To
 pin a version, use the per-image task — `./gradlew testPg_18_4`, one exists for every listed image. Setting

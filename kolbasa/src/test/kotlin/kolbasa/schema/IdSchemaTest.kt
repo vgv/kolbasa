@@ -1,10 +1,10 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class IdSchemaTest : AbstractPostgresqlTest() {
+class IdSchemaTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testInitNodeTable_Check_Existing_ID_Not_Change() {

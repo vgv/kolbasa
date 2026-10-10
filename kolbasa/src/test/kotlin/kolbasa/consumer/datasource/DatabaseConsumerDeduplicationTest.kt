@@ -1,6 +1,6 @@
 package kolbasa.consumer.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.assertNotNull
 private val ALL_LIVE_FIELD = MetaField.ofInt("all_live_unique_field", FieldOption.ALL_LIVE_UNIQUE)
 private val UNTOUCHED_FIELD = MetaField.ofInt("untouched_unique_field", FieldOption.UNTOUCHED_UNIQUE)
 
-class DatabaseConsumerDeduplicationTest : AbstractPostgresqlTest() {
+class DatabaseConsumerDeduplicationTest : AbstractPostgreSQLTest() {
 
     private val queue = Queue.of(
         "local",

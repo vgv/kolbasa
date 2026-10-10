@@ -1,6 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.Kolbasa
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
@@ -22,7 +22,7 @@ import java.sql.Statement
 import javax.sql.DataSource
 import kotlin.collections.isNotEmpty
 
-class ClusterProducerTest : AbstractPostgresqlTest() {
+class ClusterProducerTest : AbstractPostgreSQLTest() {
 
     private val messagesToSend = 1_000
 

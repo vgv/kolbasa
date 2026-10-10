@@ -1,6 +1,6 @@
 package kolbasa.utils
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.readIntList
@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
 
-internal class JdbcHelpersTest : AbstractPostgresqlTest() {
+internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
 
     override fun generateTestData(): List<String> {
         val statements = mutableListOf<String>()

@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.queue.*
 import kolbasa.queue.meta.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 
-class SchemaGeneratorTest : AbstractPostgresqlTest() {
+class SchemaGeneratorTest : AbstractPostgreSQLTest() {
 
     private val FIRST = MetaField.ofInt("first", FieldOption.SEARCH)
     private val SECOND = MetaField.ofLong("second", FieldOption.ALL_LIVE_UNIQUE)

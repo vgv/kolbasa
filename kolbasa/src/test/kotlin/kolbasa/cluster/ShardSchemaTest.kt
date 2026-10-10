@@ -1,7 +1,7 @@
 package kolbasa.cluster
 
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.schema.Node
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.assertNull
 import java.sql.Statement
 import kotlin.random.Random
 
-class ShardSchemaTest : AbstractPostgresqlTest() {
+class ShardSchemaTest : AbstractPostgreSQLTest() {
 
     private val nodes = listOf(
         Node(NodeId("node1"), 1),

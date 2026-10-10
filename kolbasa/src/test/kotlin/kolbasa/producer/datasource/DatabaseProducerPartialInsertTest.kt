@@ -1,6 +1,6 @@
 package kolbasa.producer.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertNotNull
 
-class DatabaseProducerPartialInsertTest : AbstractPostgresqlTest() {
+class DatabaseProducerPartialInsertTest : AbstractPostgreSQLTest() {
 
     private val FIELD = MetaField.ofInt("field", FieldOption.ALL_LIVE_UNIQUE)
 

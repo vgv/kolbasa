@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.butcher.config.Command
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
 
-class PrepareKtTest : AbstractPostgresqlTest() {
+class PrepareKtTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testPrepare_Success() {

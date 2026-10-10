@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.IllegalStateException
 
-class MoveHelpersTest : AbstractPostgresqlTest() {
+class MoveHelpersTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testReadShards_Success() {

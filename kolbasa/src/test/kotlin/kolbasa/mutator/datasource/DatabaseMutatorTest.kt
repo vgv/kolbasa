@@ -1,6 +1,6 @@
 package kolbasa.mutator.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
-class DatabaseMutatorTest : AbstractPostgresqlTest() {
+class DatabaseMutatorTest : AbstractPostgreSQLTest() {
 
     private val FIELD = MetaField.ofInt("field", FieldOption.SEARCH)
 

@@ -1,13 +1,13 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.IdSchema
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class ClusterHelperTest : AbstractPostgresqlTest() {
+class ClusterHelperTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testReadNodes_IfSuccess() {

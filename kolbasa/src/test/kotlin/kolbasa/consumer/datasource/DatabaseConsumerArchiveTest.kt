@@ -1,6 +1,6 @@
 package kolbasa.consumer.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class DatabaseConsumerArchiveTest : AbstractPostgresqlTest() {
+class DatabaseConsumerArchiveTest : AbstractPostgreSQLTest() {
 
     private val USER_ID = MetaField.ofInt("user_id")
 

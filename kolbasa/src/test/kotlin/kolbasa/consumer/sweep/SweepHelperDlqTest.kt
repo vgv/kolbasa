@@ -1,6 +1,6 @@
 package kolbasa.consumer.sweep
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.MessageOptions
@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 
-class SweepHelperDlqTest : AbstractPostgresqlTest() {
+class SweepHelperDlqTest : AbstractPostgreSQLTest() {
 
     private val USER_ID = MetaField.ofInt("user_id")
 

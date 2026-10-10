@@ -1,6 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.Kolbasa
 import kolbasa.assertNotNull
 import kolbasa.consumer.ReceiveOptions
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
 import java.time.Duration
 
-class ClusterInspectorTest : AbstractPostgresqlTest() {
+class ClusterInspectorTest : AbstractPostgreSQLTest() {
 
     private val FIELD = MetaField.ofInt("field", FieldOption.SEARCH)
 

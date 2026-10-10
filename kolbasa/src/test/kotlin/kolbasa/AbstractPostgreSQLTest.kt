@@ -13,7 +13,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 @Tag("unit-db")
-abstract class AbstractPostgresqlTest {
+abstract class AbstractPostgreSQLTest {
 
     @Container
     protected val pgContainer = PostgreSQLContainer(POSTGRESQL_IMAGE)

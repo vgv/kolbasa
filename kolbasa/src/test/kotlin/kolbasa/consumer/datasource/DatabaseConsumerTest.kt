@@ -1,6 +1,6 @@
 package kolbasa.consumer.datasource
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.assertNotNull
 import kolbasa.assertTrue
 import kolbasa.consumer.Message
@@ -37,7 +37,7 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 import kotlin.random.Random
 
-class DatabaseConsumerTest : AbstractPostgresqlTest() {
+class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
     private val FIELD = MetaField.ofInt("field", FieldOption.SEARCH)
 

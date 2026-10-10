@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 
-// Yes, this is a test class for test class AbstractPostgresqlTest :)
-internal class TestsForAbstractPostgresqlTest : AbstractPostgresqlTest() {
+// Yes, this is a test class for test class AbstractPostgreSQLTest :)
+internal class TestsForAbstractPostgreSQLTest : AbstractPostgreSQLTest() {
 
     @Test
     fun checkSchemas() {

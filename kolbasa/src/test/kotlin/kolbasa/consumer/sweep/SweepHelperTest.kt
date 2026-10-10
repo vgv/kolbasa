@@ -1,6 +1,6 @@
 package kolbasa.consumer.sweep
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.utils.JdbcHelpers.readInt
@@ -22,7 +22,7 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
-class SweepHelperTest : AbstractPostgresqlTest() {
+class SweepHelperTest : AbstractPostgreSQLTest() {
 
     private val queue = Queue.of("test", PredefinedDataTypes.String)
 

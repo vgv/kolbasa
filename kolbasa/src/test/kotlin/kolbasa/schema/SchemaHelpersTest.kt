@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.AbstractPostgreSQLTest
 import kolbasa.queue.*
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
@@ -14,7 +14,7 @@ import java.time.Duration
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
-class SchemaHelpersTest : AbstractPostgresqlTest() {
+class SchemaHelpersTest : AbstractPostgreSQLTest() {
 
     @Test
     @Disabled
