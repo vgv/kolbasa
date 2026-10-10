@@ -1,7 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.assertNotNull
+import kolbasa.test.assertNotNull
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions

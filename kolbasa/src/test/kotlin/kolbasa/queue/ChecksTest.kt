@@ -1,6 +1,6 @@
 package kolbasa.queue
 
-import kolbasa.assertNotNull
+import kolbasa.test.assertNotNull
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions

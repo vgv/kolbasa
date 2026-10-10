@@ -1,8 +1,8 @@
 package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.assertNotNull
-import kolbasa.assertTrue
+import kolbasa.test.assertNotNull
+import kolbasa.test.assertTrue
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between

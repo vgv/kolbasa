@@ -1,7 +1,7 @@
 package kolbasa.inspector.datasource
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.assertNotNull
+import kolbasa.test.assertNotNull
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.consumer.filter.Filter.lessEq

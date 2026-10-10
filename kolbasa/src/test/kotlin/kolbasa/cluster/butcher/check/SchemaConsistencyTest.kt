@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher.check
 
-import kolbasa.assertNotNull
+import kolbasa.test.assertNotNull
 import kolbasa.schema.Column
 import kolbasa.schema.ColumnType
 import kolbasa.schema.Const

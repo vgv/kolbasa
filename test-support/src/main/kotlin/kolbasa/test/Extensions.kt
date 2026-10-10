@@ -1,4 +1,4 @@
-package kolbasa
+package kolbasa.test
 
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract

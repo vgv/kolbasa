@@ -2,7 +2,7 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgreSQLTest
 import kolbasa.Kolbasa
-import kolbasa.assertNotNull
+import kolbasa.test.assertNotNull
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.inspector.CountOptions

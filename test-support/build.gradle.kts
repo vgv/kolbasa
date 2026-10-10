@@ -9,9 +9,9 @@ repositories {
     mavenCentral()
 }
 
-// Not published: this module exists so that the library's tests, the examples and the benchmarks agree
-// on which PostgreSQL versions they run against, without each of them keeping its own copy of the list.
-// It deliberately has no dependencies - it owns one resource file and the code that parses it.
+dependencies {
+    implementation(libs.junit.jupiter)
+}
 
 kotlin {
     jvmToolchain(17)
