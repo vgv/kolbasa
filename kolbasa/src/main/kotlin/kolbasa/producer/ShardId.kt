@@ -9,6 +9,7 @@ class ShardId private constructor(
     override fun compareTo(other: ShardId) = id.compareTo(other.id)
     override fun equals(other: Any?) = other is ShardId && id == other.id
     override fun hashCode() = id
+    override fun toString() = "shard[$id]"
 
     companion object {
         internal const val SHARD_BITS = 10
