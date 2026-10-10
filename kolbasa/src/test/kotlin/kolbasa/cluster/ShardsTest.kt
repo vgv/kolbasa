@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.producer.ShardId
 import kolbasa.schema.Const
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -14,9 +15,9 @@ class ShardsTest {
 
     @Test
     fun testAllShards() {
-        assertEquals(Shard.MIN_SHARD, Shards.ALL_SHARDS.shards.minOrNull())
-        assertEquals(Shard.MAX_SHARD, Shards.ALL_SHARDS.shards.maxOrNull())
-        assertEquals(Shard.SHARD_COUNT, Shards.ALL_SHARDS.shards.size)
+        assertEquals(ShardId.MIN_SHARD, Shards.ALL_SHARDS.shards.minOrNull())
+        assertEquals(ShardId.MAX_SHARD, Shards.ALL_SHARDS.shards.maxOrNull())
+        assertEquals(ShardId.SHARD_COUNT, Shards.ALL_SHARDS.shards.size)
     }
 
 }

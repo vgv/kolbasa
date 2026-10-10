@@ -56,7 +56,7 @@ sealed class ShardStrategy {
      * Called once per `send()` call, so it must be fast and safe to call from many threads at once.
      *
      * Any [Int] is allowed. Kolbasa folds the value into the `0..1023` range itself
-     * (from [Shard.MIN_SHARD] to [Shard.MAX_SHARD]), so a strategy may return, for example, a hash code without doing
+     * (from [ShardId.MIN_SHARD] to [ShardId.MAX_SHARD]), so a strategy may return, for example, a hash code without doing
      * anything about its size or sign.
      */
     abstract fun getShard(): Int

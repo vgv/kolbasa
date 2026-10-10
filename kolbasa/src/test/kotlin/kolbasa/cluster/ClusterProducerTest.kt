@@ -9,6 +9,7 @@ import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
+import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -238,7 +239,7 @@ fun findDataSourceWithInitializedShard(dataSources: List<DataSource>): DataSourc
         }
 
         // Shard table is 100% initialized
-        if (shards.size == Shard.SHARD_COUNT) {
+        if (shards.size == ShardId.SHARD_COUNT) {
             return ds
         }
     }

@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -22,19 +23,19 @@ class ShardBalanceTest {
     @Test
     fun testSingleNode() {
         val node = NodeId("n1")
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, node) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, node) }
 
         val result = ShardBalance(shards, setOf(node)).compute()
 
         assertTrue(result.isBalanced)
-        assertEquals(Shard.SHARD_COUNT, result.currentDistribution[node]?.size)
+        assertEquals(ShardId.SHARD_COUNT, result.currentDistribution[node]?.size)
     }
 
     @Test
     fun testAlreadyBalanced_Divisible() {
         // 4 nodes, 1024 shards -> 256 each
         val nodes = (1..4).map { NodeId("n$it") }
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, nodes[it % 4]) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[it % 4]) }
 
         val result = ShardBalance(shards, nodes.toSet()).compute()
 
@@ -60,7 +61,7 @@ class ShardBalanceTest {
     fun testSkewed_OneNodeHasAll() {
         // n1 has 1024, n2/n3/n4 have 0. Target 256/256/256/256 -> 768 moves.
         val nodes = (1..4).map { NodeId("n$it") }
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
 
         val result = ShardBalance(shards, nodes.toSet()).compute()
 
@@ -81,7 +82,7 @@ class ShardBalanceTest {
     fun testSkewed_NonDivisible() {
         // 3 nodes, 1024 shards on n1. Target 342/341/341. Surplus from n1 = 1024-342 = 682.
         val nodes = (1..3).map { NodeId("n$it") }
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
 
         val result = ShardBalance(shards, nodes.toSet()).compute()
 
@@ -179,7 +180,7 @@ class ShardBalanceTest {
     @Test
     fun testDeterminism_SameInputProducesSameOutput() {
         val nodes = (1..4).map { NodeId("n$it") }
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, nodes[it % 2]) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[it % 2]) }
 
         val first = ShardBalance(shards, nodes.toSet()).compute()
         val second = ShardBalance(shards, nodes.toSet()).compute()
@@ -196,12 +197,12 @@ class ShardBalanceTest {
         // After applying proposedMoves, each node should hold floor or ceil shards.
         val nodes = (1..5).map { NodeId("n$it") }
         // Skew: put 1024 shards on n1 alone
-        val shards = (0 until Shard.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
 
         val result = ShardBalance(shards, nodes.toSet()).compute()
 
-        val floor = Shard.SHARD_COUNT / nodes.size
-        val ceil = floor + if (Shard.SHARD_COUNT % nodes.size == 0) 0 else 1
+        val floor = ShardId.SHARD_COUNT / nodes.size
+        val ceil = floor + if (ShardId.SHARD_COUNT % nodes.size == 0) 0 else 1
         val final = nodes.associateWith { node ->
             (result.currentDistribution[node]?.size ?: 0) -
                 result.proposedMoves.values.flatten().count { it.producerNode == node } +

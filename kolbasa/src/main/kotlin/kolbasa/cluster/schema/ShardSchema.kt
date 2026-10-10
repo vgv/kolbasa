@@ -1,6 +1,7 @@
 package kolbasa.cluster.schema
 
 import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
@@ -38,7 +39,7 @@ internal object ShardSchema {
         from
             $SHARD_TABLE_NAME
         where
-            $SHARD_COLUMN_NAME between ${Shard.MIN_SHARD} and ${Shard.MAX_SHARD}
+            $SHARD_COLUMN_NAME between ${ShardId.MIN_SHARD} and ${ShardId.MAX_SHARD}
         order by
             $SHARD_COLUMN_NAME
     """
@@ -60,7 +61,7 @@ internal object ShardSchema {
 
     fun fillShardTable(dataSource: DataSource, nodes: List<Node>) {
         val shardsPerStatement = 100
-        val statements = (Shard.MIN_SHARD..Shard.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
+        val statements = (ShardId.MIN_SHARD..ShardId.MAX_SHARD).chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
                 val randomNodeStringId: String = randomNode.id.id

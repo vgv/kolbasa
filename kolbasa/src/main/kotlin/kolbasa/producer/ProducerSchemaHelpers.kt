@@ -1,6 +1,5 @@
 package kolbasa.producer
 
-import kolbasa.cluster.Shard
 import kolbasa.cluster.ShardStrategy
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.Queue
@@ -227,14 +226,14 @@ internal object ProducerSchemaHelpers {
 
     fun calculateEffectiveShard(sendOptions: SendOptions, producerOptions: ProducerOptions, shardStrategy: ShardStrategy): Int {
         if (sendOptions.shard != null) {
-            return abs(sendOptions.shard % Shard.SHARD_COUNT)
+            return abs(sendOptions.shard % ShardId.SHARD_COUNT)
         }
 
         if (producerOptions.shard != null) {
-            return abs(producerOptions.shard % Shard.SHARD_COUNT)
+            return abs(producerOptions.shard % ShardId.SHARD_COUNT)
         }
 
-        return abs(shardStrategy.getShard() % Shard.SHARD_COUNT)
+        return abs(shardStrategy.getShard() % ShardId.SHARD_COUNT)
     }
 
     fun calculateAsyncExecutor(

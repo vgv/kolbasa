@@ -3,6 +3,7 @@ package kolbasa.cluster.butcher
 import kolbasa.cluster.Shard
 import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readString
@@ -38,7 +39,7 @@ internal object MoveHelpers {
             }
 
             // Shard table is 100% initialized, return it
-            if (shards.size == Shard.SHARD_COUNT) {
+            if (shards.size == ShardId.SHARD_COUNT) {
                 return ShardInfo(dataSource, shards)
             }
         }
