@@ -88,6 +88,10 @@ Things that commonly trip people up:
 - **Failed sends don't throw.** `producer.send(…)` returns a `SendResult`; check
   `result.failedMessages` (or call `result.throwExceptionIfAny()`) — a partial failure won't surface as
   an exception on its own.
+- **Don't hand-roll a transaction.** For the `ConnectionAware*` case the library publishes the helper —
+  `import kolbasa.utils.JdbcHelpers.inTransaction`, then `dataSource.inTransaction { connection -> … }`.
+  It sets `autoCommit = false`, commits, and on a throw rolls back and rethrows the original exception.
+  `withAutoCommit` is its counterpart — a connection on which every statement is committed on its own.
 
 ## Conventions
 
@@ -95,6 +99,9 @@ Things that commonly trip people up:
   carry KDoc.
 - Both a `DataSource`-backed (`Database*`) and a `Connection`-aware (`ConnectionAware*`) variant exist
   for each role — keep them in sync when changing one.
+- `JdbcHelpers` is a **public object with an almost entirely `internal` body**: only `inTransaction` and
+  `withAutoCommit` are API, the other 24 functions are plumbing. Adding a `public fun` there publishes it
+  forever, so mark new helpers `internal` unless the intent is to extend the public API.
 - kolbasa runs on **vanilla PostgreSQL** (no extensions, no superuser). Don't introduce SQL that needs
   either.
 - Don't hand-edit a queue's generated DDL; schema generation owns table/index structure. Ad-hoc
