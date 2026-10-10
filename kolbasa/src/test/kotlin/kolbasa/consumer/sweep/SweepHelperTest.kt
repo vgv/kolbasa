@@ -4,13 +4,13 @@ import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -84,7 +84,7 @@ class SweepHelperTest : AbstractPostgreSQLTest() {
         assertEquals(100, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
 
         // Trigger sweep
-        val removedMessages = dataSource.useConnection {
+        val removedMessages = dataSource.inTransaction {
             SweepHelper.sweep(it, queue, 100)
         }
         assertEquals(70, removedMessages) // 70 messages must be removed

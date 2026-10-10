@@ -5,10 +5,10 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareConsumer
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.inTransaction
 import javax.sql.DataSource
 
 /**
@@ -52,12 +52,12 @@ class DatabaseConsumer internal constructor(
         receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
 
         return queue.queueTracing.makeConsumerCall(nodeId) {
-            dataSource.useConnection { peer.receive(it, queue, limit, receiveOptions) }
+            dataSource.inTransaction { peer.receive(it, queue, limit, receiveOptions) }
         }
     }
 
     override fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int {
-        return dataSource.useConnection { peer.delete(it, queue, messageIds) }
+        return dataSource.inTransaction { peer.delete(it, queue, messageIds) }
     }
 
 }

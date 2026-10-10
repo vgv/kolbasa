@@ -1,7 +1,6 @@
 package kolbasa.producer.datasource
 
 import kolbasa.Kolbasa
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.ProducerSchemaHelpers
 import kolbasa.producer.SendRequest
@@ -10,6 +9,7 @@ import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.connection.ConnectionAwareProducer
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.inTransaction
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 
@@ -46,7 +46,7 @@ class DatabaseProducer internal constructor(
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         return queue.queueTracing.makeProducerCall(nodeId, request) {
-            dataSource.useConnection { peer.send(it, queue, request) }
+            dataSource.inTransaction { peer.send(it, queue, request) }
         }
     }
 

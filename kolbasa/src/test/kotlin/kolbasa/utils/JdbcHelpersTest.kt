@@ -1,6 +1,7 @@
 package kolbasa.utils
 
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.readIntList
@@ -9,7 +10,6 @@ import kolbasa.utils.JdbcHelpers.readLongList
 import kolbasa.utils.JdbcHelpers.readLongOrNull
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.readStringList
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -33,26 +33,26 @@ internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testUseConnection_CheckAutoCommit() {
+    fun testInTransaction_CheckAutoCommit() {
         // Check auto-commit is off
-        dataSource.useConnection { connection: Connection ->
+        dataSource.inTransaction { connection: Connection ->
             Assertions.assertFalse(connection.autoCommit)
         }
     }
 
     @Test
-    fun testUseConnection_CheckTransactionBoundaries() {
+    fun testInTransaction_CheckTransactionBoundaries() {
         var firstTransaction: Long = -1
         var secondTransaction: Long = -1
 
-        dataSource.useConnection { connection: Connection ->
+        dataSource.inTransaction { connection: Connection ->
             Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
             connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
             Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
             firstTransaction = connection.readLong("select txid_current()")
 
             // read in another transaction
-            dataSource.useConnection { otherConnection ->
+            dataSource.inTransaction { otherConnection ->
                 Assertions.assertEquals(3, otherConnection.readInt("select count(*) from full_table"))
                 secondTransaction = otherConnection.readLong("select txid_current()")
             }
@@ -62,7 +62,7 @@ internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
         }
 
         // read again after commit^ above
-        dataSource.useConnection { connection: Connection ->
+        dataSource.inTransaction { connection: Connection ->
             Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
         }
 
@@ -120,7 +120,7 @@ internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testUseSavepoint() {
-        dataSource.useConnection { dataSourceConnection ->
+        dataSource.inTransaction { dataSourceConnection ->
             Assertions.assertEquals(3, dataSourceConnection.readInt("select count(*) from full_table"))
 
             // Successful savepoint

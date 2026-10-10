@@ -8,7 +8,7 @@ import kolbasa.inspector.connection.ConnectionAwareDatabaseInspector
 import kolbasa.inspector.connection.ConnectionAwareInspector
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.MetaField
-import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.inTransaction
 import javax.sql.DataSource
 
 /**
@@ -35,7 +35,7 @@ class DatabaseInspector(
     )
 
     override fun count(queue: Queue<*>, options: CountOptions): Messages {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.count(connection, queue, options)
         }
     }
@@ -46,31 +46,31 @@ class DatabaseInspector(
         limit: Int,
         options: DistinctValuesOptions
     ): Map<V?, Long> {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.distinctValues(connection, queue, metaField, limit, options)
         }
     }
 
     override fun size(queue: Queue<*>): Long {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.size(connection, queue)
         }
     }
 
     override fun isEmpty(queue: Queue<*>): Boolean {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.isEmpty(connection, queue)
         }
     }
 
     override fun isDeadOrEmpty(queue: Queue<*>): Boolean {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.isDeadOrEmpty(connection, queue)
         }
     }
 
     override fun messageAge(queue: Queue<*>): MessageAge {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.messageAge(connection, queue)
         }
     }

@@ -9,9 +9,9 @@ import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.MutatorSchemaHelpers
 import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
 import kolbasa.mutator.connection.ConnectionAwareMutator
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.utils.JdbcHelpers.inTransaction
 import java.util.concurrent.CompletableFuture
 import javax.sql.DataSource
 
@@ -48,7 +48,7 @@ class DatabaseMutator(
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.mutate(connection, queue, mutations, messages)
         }
     }
@@ -58,7 +58,7 @@ class DatabaseMutator(
         mutations: List<Mutation>,
         filter: Filter.() -> Condition
     ): MutateResult {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             peer.mutate(connection, queue, mutations, filter)
         }
     }

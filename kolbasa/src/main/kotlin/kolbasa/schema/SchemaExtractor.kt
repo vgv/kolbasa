@@ -1,7 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.utils.JdbcHelpers
-import kolbasa.utils.JdbcHelpers.useConnection
+import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
@@ -22,7 +22,7 @@ internal object SchemaExtractor {
      * @return map of table name to table definition
      */
     internal fun extractRawSchema(dataSource: DataSource, tableNames: Set<String>? = null): Map<TableName, Table> {
-        return dataSource.useConnection { connection ->
+        return dataSource.inTransaction { connection ->
             val tablesAndColumns = mutableMapOf<TableName, Set<Column>>()
 
             // Collect all the names of tables

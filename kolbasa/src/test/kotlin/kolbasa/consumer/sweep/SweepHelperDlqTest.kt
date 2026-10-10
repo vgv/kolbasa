@@ -11,8 +11,8 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.utils.JdbcHelpers.useConnection
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -56,7 +56,7 @@ class SweepHelperDlqTest : AbstractPostgreSQLTest() {
         )
 
         // Trigger sweep manually to move messages with exhausted attempts to DLQ
-        val removed = dataSource.useConnection {
+        val removed = dataSource.inTransaction {
             SweepHelper.sweep(it, queue, 100)
         }
 
@@ -78,7 +78,7 @@ class SweepHelperDlqTest : AbstractPostgreSQLTest() {
         val message = requireNotNull(consumer.receive(queue, receiveOptions = ReceiveOptions(visibilityTimeout = Duration.ZERO)))
 
         // Trigger sweep manually to move messages with exhausted attempts to DLQ
-        dataSource.useConnection { SweepHelper.sweep(it, queue, 100) }
+        dataSource.inTransaction { SweepHelper.sweep(it, queue, 100) }
 
         // Read from DLQ
         val dlqConsumer = DatabaseConsumer(dataSource)
@@ -117,7 +117,7 @@ class SweepHelperDlqTest : AbstractPostgreSQLTest() {
         )
 
         // Trigger sweep manually — plain delete, no DLQ
-        val removed = dataSource.useConnection {
+        val removed = dataSource.inTransaction {
             SweepHelper.sweep(it, plainQueue, 100)
         }
 

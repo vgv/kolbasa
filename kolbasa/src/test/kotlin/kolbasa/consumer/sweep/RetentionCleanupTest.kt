@@ -8,8 +8,8 @@ import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.*
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.utils.JdbcHelpers.useConnection
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -40,7 +40,7 @@ class RetentionCleanupTest : AbstractPostgreSQLTest() {
         consumer.receive(queue, limit = 5, receiveOptions = ReceiveOptions(visibilityTimeout = Duration.ZERO))
 
         // Trigger sweep manually — moves to DLQ
-        dataSource.useConnection {
+        dataSource.inTransaction {
             SweepHelper.sweep(it, queue, 100)
         }
         assertEquals(5, dataSource.readInt("select count(*) from ${dlq.dbTableName}"))
@@ -51,7 +51,7 @@ class RetentionCleanupTest : AbstractPostgreSQLTest() {
         }
 
         // Sweep again — should trigger retention cleanup on DLQ
-        dataSource.useConnection {
+        dataSource.inTransaction {
             SweepHelper.sweep(it, queue, 100)
         }
 
@@ -85,7 +85,7 @@ class RetentionCleanupTest : AbstractPostgreSQLTest() {
         }
 
         // Sweep again to trigger retention on archive
-        dataSource.useConnection { SweepHelper.sweep(it, queue, 100) }
+        dataSource.inTransaction { SweepHelper.sweep(it, queue, 100) }
 
         // Archive messages should be cleaned up
         assertEquals(0, dataSource.readInt("select count(*) from ${archiveQueue.dbTableName}"))

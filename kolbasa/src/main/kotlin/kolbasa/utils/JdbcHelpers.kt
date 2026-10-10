@@ -3,6 +3,7 @@ package kolbasa.utils
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -47,8 +48,25 @@ object JdbcHelpers {
      * @see withAutoCommit
      */
     @JvmStatic
+    @Throws(SQLException::class)
     fun <T> DataSource.inTransaction(block: java.util.function.Function<Connection, T>): T {
-        return useConnection(block::apply)
+        return connection.use { connection ->
+            connection.autoCommit = false
+
+            try {
+                val result = block.apply(connection)
+                connection.commit()
+                result
+            } catch (e: Throwable) {
+                try {
+                    connection.rollback()
+                } catch (rollbackError: Throwable) {
+                    e.addSuppressed(rollbackError)
+                }
+
+                throw e
+            }
+        }
     }
 
     /**
@@ -88,26 +106,6 @@ object JdbcHelpers {
         return useConnectionWithAutocommit(block::apply)
     }
 
-    internal fun <T> DataSource.useConnection(block: (Connection) -> T): T {
-        return connection.use { connection ->
-            connection.autoCommit = false
-
-            try {
-                val result = block(connection)
-                connection.commit()
-                result
-            } catch (e: Throwable) {
-                try {
-                    connection.rollback()
-                } catch (rollbackError: Throwable) {
-                    e.addSuppressed(rollbackError)
-                }
-
-                throw e
-            }
-        }
-    }
-
     internal fun <T> DataSource.useConnectionWithAutocommit(block: (Connection) -> T): T {
         return connection.use { connection ->
             connection.autoCommit = true
@@ -133,7 +131,7 @@ object JdbcHelpers {
     // -------------------------------------------------------------------------------------------
 
     internal fun <T> DataSource.useStatement(block: (Statement) -> T): T {
-        return useConnection { connection: Connection ->
+        return inTransaction { connection: Connection ->
             connection.useStatement(block)
         }
     }
@@ -145,7 +143,7 @@ object JdbcHelpers {
     }
 
     internal fun <T> DataSource.useStatement(query: String, block: (ResultSet) -> T): T {
-        return useConnection { connection: Connection ->
+        return inTransaction { connection: Connection ->
             connection.useStatement(query, block)
         }
     }
@@ -161,7 +159,7 @@ object JdbcHelpers {
     // -------------------------------------------------------------------------------------------
 
     internal fun <T> DataSource.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
-        return useConnection { connection: Connection ->
+        return inTransaction { connection: Connection ->
             connection.usePreparedStatement(query, block)
         }
     }
@@ -175,7 +173,7 @@ object JdbcHelpers {
     // -------------------------------------------------------------------------------------------
 
     internal fun DataSource.readStringList(query: String): List<String> {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readStringList(query)
         }
     }
@@ -197,7 +195,7 @@ object JdbcHelpers {
     // -------------------------------------------------------------------------------------------
 
     internal fun DataSource.readIntList(query: String): List<Int> {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readIntList(query)
         }
     }
@@ -219,7 +217,7 @@ object JdbcHelpers {
     // -------------------------------------------------------------------------------------------
 
     internal fun DataSource.readLongList(query: String): List<Long> {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readLongList(query)
         }
     }
@@ -240,7 +238,7 @@ object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
     internal fun DataSource.readInt(sql: String): Int {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readInt(sql)
         }
     }
@@ -266,7 +264,7 @@ object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
     internal fun DataSource.readLong(sql: String): Long {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readLong(sql)
         }
     }
@@ -292,7 +290,7 @@ object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
     internal fun DataSource.readLongOrNull(sql: String): Long? {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readLongOrNull(sql)
         }
     }
@@ -320,7 +318,7 @@ object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
     internal fun DataSource.readBoolean(sql: String): Boolean {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readBoolean(sql)
         }
     }
@@ -346,7 +344,7 @@ object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
     internal fun DataSource.readString(sql: String): String {
-        return useConnection { connection ->
+        return inTransaction { connection ->
             connection.readString(sql)
         }
     }
