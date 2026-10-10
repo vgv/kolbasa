@@ -192,6 +192,23 @@ work in the context of an existing transaction. They do not take over the transa
 to the calling code. It works perfectly with plain JDBC or more complex frameworks like [Hibernate](https://hibernate.org),
 [Exposed](https://jetbrains.github.io/Exposed/home.html) etc.
 
+With a framework you keep using its transactions and only need the JDBC `Connection` of the current one - `session.doWork { }` in
+Hibernate, `DataSourceUtils.getConnection(dataSource)` in Spring. With plain JDBC there is no boilerplate to write either: kolbasa
+publishes the same transaction helper it uses for its own queries.
+
+```kotlin
+import kolbasa.utils.JdbcHelpers.inTransaction
+
+dataSource.inTransaction { connection ->
+    // Your own insert and the send are committed together - or neither of them is
+    customerRepository.insert(connection, customer)
+    producer.send(connection, queue, "Customer with id=${customer.id} was registered")
+}
+```
+
+`inTransaction` sets `autoCommit` to `false`, commits when the block returns and rolls back if it throws, rethrowing the original
+exception.
+
 Example: [TransactionContextExample](examples/src/main/kotlin/kolbasa/example/TransactionContextExample.kt)
 
 `./gradlew example -Pname=TransactionContextExample`
