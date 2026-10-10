@@ -36,7 +36,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .sorted()
 
         // RUN
-        prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove))
+        prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove), ConsoleProgressCallback)
 
         // CHECK
         // first, check the table content
@@ -79,7 +79,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToNonExistingNodeException> {
-            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode, shardsToMove))
+            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode, shardsToMove), ConsoleProgressCallback)
         }
 
         // CHECK
@@ -109,7 +109,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToTheSameShardException> {
-            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove))
+            prepare(Command.Prepare(ClusterNodes(dataSources), targetNode.id, shardsToMove), ConsoleProgressCallback)
         }
 
         // CHECK
