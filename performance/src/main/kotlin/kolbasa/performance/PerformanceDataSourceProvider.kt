@@ -1,14 +1,14 @@
-package performance
+package kolbasa.performance
 
 import com.zaxxer.hikari.HikariDataSource
-import kolbasa.AbstractPostgresqlTest
+import kolbasa.test.PostgreSQLImages
 import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 object PerformanceDataSourceProvider {
 
     fun internalDatasource(): DataSource {
-        val pgContainer = PostgreSQLContainer(AbstractPostgresqlTest.NEWEST_POSTGRES_IMAGE)
+        val pgContainer = PostgreSQLContainer(PostgreSQLImages.newestImage)
 
         // Start PG container
         pgContainer.start()

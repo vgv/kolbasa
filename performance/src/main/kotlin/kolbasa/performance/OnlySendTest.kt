@@ -1,6 +1,5 @@
-package performance
+package kolbasa.performance
 
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -70,8 +69,8 @@ class OnlySendTest : PerformanceTest {
         // Truncate table
         thread {
             while (calls.get() < Env.OnlySend.totalSendCalls) {
-                Env.Common.dataSource.useStatement { statement ->
-                    statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
+                Env.Common.dataSource.withStatement { statement ->
+                    statement.execute("TRUNCATE TABLE ${queue.tableName}")
                 }
 
                 TimeUnit.SECONDS.sleep(1)

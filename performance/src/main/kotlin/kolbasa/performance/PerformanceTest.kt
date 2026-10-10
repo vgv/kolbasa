@@ -1,4 +1,4 @@
-package performance
+package kolbasa.performance
 
 interface PerformanceTest {
 

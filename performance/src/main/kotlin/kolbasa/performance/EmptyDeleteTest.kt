@@ -1,8 +1,6 @@
-package performance
+package kolbasa.performance
 
-import kolbasa.cluster.Shard
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.Id
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
@@ -22,13 +20,13 @@ class EmptyDeleteTest : PerformanceTest {
 
         val randomIdsToDelete = (1..1000).map {
             (1..Env.EmptyDelete.oneDeleteMessages).map {
-                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(Shard.MIN_SHARD, Shard.MAX_SHARD + 1))
+                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(0, SHARD_COUNT))
             }
         }
 
         // Truncate table before test
-        Env.Common.dataSource.useStatement { statement ->
-            statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
+        Env.Common.dataSource.withStatement { statement ->
+            statement.execute("TRUNCATE TABLE ${queue.tableName}")
         }
 
         val deleteCalls = AtomicLong()
@@ -74,3 +72,7 @@ class EmptyDeleteTest : PerformanceTest {
 fun main() {
     EmptyDeleteTest().run()
 }
+
+// kolbasa.cluster.Shard is internal, so the range is spelled out here: a shard is 10 bits wide, 0..1023.
+// Any value in range will do - these ids are deliberately pointing at messages that do not exist.
+private const val SHARD_COUNT = 1024

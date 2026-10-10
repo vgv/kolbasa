@@ -8,6 +8,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import java.time.Duration
 
 fun main() {
@@ -57,8 +58,7 @@ fun main() {
     // By default, sweep is probabilistic (every 10,000 receive/delete calls), which is efficient in production
     // but not suitable for a short example, so, for demonstration purposes, we invoke it manually here.
     // Sweep detects the dead message (remaining_attempts = 0) and moves it to the DLQ.
-    // Plain JDBC: kolbasa's own connection helpers are internal to the library
-    dataSource.connection.use { connection ->
+    dataSource.inTransaction { connection ->
         SweepHelper.sweep(connection, queue, limit = 100)
     }
 

@@ -5,6 +5,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -74,11 +75,8 @@ fun main() {
 }
 
 /**
- * Plain JDBC, so the example stays copy-pasteable: kolbasa's own JdbcHelpers is internal to the library
- * and a user of kolbasa has no access to it.
+ * Each call runs in its own transaction, committed at the end. [inTransaction] is kolbasa's own helper -
+ * the same one the library uses for its queries - so there is no JDBC boilerplate to copy here.
  */
-private fun DataSource.withStatement(block: (Statement) -> Unit) {
-    connection.use { connection ->
-        connection.createStatement().use(block)
-    }
-}
+private fun DataSource.withStatement(block: (Statement) -> Unit) =
+    inTransaction { connection -> connection.createStatement().use(block) }

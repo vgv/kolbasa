@@ -5,9 +5,9 @@ import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import java.sql.Connection
 import java.sql.Statement
-import javax.sql.DataSource
 
 fun main() {
     // Define queue with name `test_queue` and varchar type as data storage in PostgreSQL table
@@ -27,22 +27,24 @@ fun main() {
     SchemaHelpers.createOrUpdateQueues(dataSource, queue)
 
     // First, let's create a business table to emulate a real application
-    dataSource.withStatement { statement: Statement ->
-        val sql = """
-            create table customer(
-                 id int not null primary key,
-                 email text not null unique,
-                 name text not null,
-                 additional_info text
-            )""".trimIndent()
+    dataSource.inTransaction { connection ->
+        connection.withStatement { statement ->
+            val sql = """
+                create table customer(
+                     id int not null primary key,
+                     email text not null unique,
+                     name text not null,
+                     additional_info text
+                )""".trimIndent()
 
-        statement.execute(sql)
+            statement.execute(sql)
+        }
     }
 
     // -------------------------------------------------------------------------------------------
     // Create producer and send simple message using the same transaction with business query
     val producer = ConnectionAwareDatabaseProducer()
-    dataSource.connection.use { connection ->
+    dataSource.inTransaction { connection ->
         // Execute business query - insert new customer to the business table
         val businessQuery = "insert into customer(id, email, name) values(1, 'john.doe@example.com', 'John Doe')"
         connection.withStatement { it.execute(businessQuery) }
@@ -59,7 +61,7 @@ fun main() {
     // -------------------------------------------------------------------------------------------
     // Create consumer and try to read message from the queue, process it and delete
     val consumer = ConnectionAwareDatabaseConsumer()
-    dataSource.connection.use { connection ->
+    dataSource.inTransaction { connection ->
         // Receive the message from the queue using the same connection (and transaction) as the business query
         // Please note that the ConnectionAware* methods take the connection as the first argument. This is different from
         // the regular Producer/Consumer
@@ -80,16 +82,8 @@ fun main() {
     }
 }
 
-/**
- * Plain JDBC, so the example stays copy-pasteable: kolbasa's own JdbcHelpers is internal to the library
- * and a user of kolbasa has no access to it.
- */
-private fun DataSource.withStatement(block: (Statement) -> Unit) {
-    connection.use { connection ->
-        connection.withStatement(block)
-    }
-}
 
+// Local sugar only: kolbasa publishes the transaction helpers, but not this one
 private fun Connection.withStatement(block: (Statement) -> Unit) {
     createStatement().use(block)
 }

@@ -1,7 +1,6 @@
-package performance
+package kolbasa.performance
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -22,8 +21,8 @@ class ProducerConsumerTest : PerformanceTest {
         SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.Common.dataSource.useStatement { statement ->
-            statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
+        Env.Common.dataSource.withStatement { statement ->
+            statement.execute("TRUNCATE TABLE ${queue.tableName}")
         }
 
         // Generate test data

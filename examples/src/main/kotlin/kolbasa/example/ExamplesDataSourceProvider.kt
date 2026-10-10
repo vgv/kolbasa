@@ -1,28 +1,18 @@
 package kolbasa.example
 
 import com.zaxxer.hikari.HikariDataSource
+import kolbasa.test.PostgreSQLImages
 import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 object ExamplesDataSourceProvider {
 
     /**
-     * The examples are documentation first: anyone must be able to copy one into their own project and
-     * run it. So the image is spelled out here instead of being taken from the library's test
-     * infrastructure - `kolbasa.AbstractPostgresqlTest` is not something a user of kolbasa has.
-     *
-     * The test suite itself runs against every version in
-     * kolbasa/src/test/resources/postgresql-test-images.txt; an example only needs a recent PostgreSQL.
-     */
-    private const val POSTGRES_IMAGE = "postgres:18.6-alpine"
-
-
-    /**
      * Launch PostgreSQL in Docker container using TestContainers
      */
     @JvmStatic
     fun getDataSource(): DataSource {
-        val pgContainer = PostgreSQLContainer(POSTGRES_IMAGE)
+        val pgContainer = PostgreSQLContainer(PostgreSQLImages.newestImage)
 
         // Start PG container
         pgContainer.start()

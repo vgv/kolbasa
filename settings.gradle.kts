@@ -9,4 +9,6 @@ pluginManagement {
 }
 
 include("kolbasa")
+include("test-support")
 include("examples")
+include("performance")

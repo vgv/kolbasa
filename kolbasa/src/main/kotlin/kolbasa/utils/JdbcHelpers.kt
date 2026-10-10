@@ -6,9 +6,89 @@ import java.sql.ResultSet
 import java.sql.Statement
 import javax.sql.DataSource
 
-internal object JdbcHelpers {
+object JdbcHelpers {
 
-    fun <T> DataSource.useConnection(block: (Connection) -> T): T {
+    /**
+     * Runs [block] in one database transaction and commits it.
+     *
+     * Takes a connection from this [DataSource], sets `autoCommit` to `false`, calls [block] and commits. If [block] throws
+     * anything, the transaction is rolled back and the exception is rethrown unchanged (a failing rollback is attached to it
+     * as a suppressed exception, so the original failure is never lost). The connection is closed - returned to the pool -
+     * in all cases.
+     *
+     * Two things worth knowing:
+     * - `autoCommit` is set explicitly, on purpose. A connection from a pool arrives in whatever state the pool configured,
+     *   and with `autoCommit = true` every statement would be committed on its own - your own insert would already be saved
+     *   before the message is sent, and there would be nothing left to roll back.
+     * - Nesting does not join transactions. This function always takes its own connection, so calling it inside another
+     *   `inTransaction` block gives you a second, independent transaction, not a nested one. To share one transaction, pass
+     *   the same [Connection] down.
+     *
+     * ## Usage Example
+     *
+     * ```kotlin
+     * val producer = ConnectionAwareDatabaseProducer()
+     *
+     * dataSource.inTransaction { connection ->
+     * // Your business code
+     *     connection.prepareStatement("insert into orders(id, customer) values (?, ?)").use { statement ->
+     *         statement.setLong(1, orderId)
+     *         statement.setString(2, customer)
+     *         statement.executeUpdate()
+     *     }
+     *
+     *     // The same connection, so the same transaction: if the insert above is rolled back, this message is not sent
+     *     producer.send(connection, queue, "Order $orderId was created")
+     * }
+     * ```
+     *
+     * @param block work to do inside the transaction; the connection it receives is open until the block returns
+     * @return whatever [block] returned
+     * @see withAutoCommit
+     */
+    @JvmStatic
+    fun <T> DataSource.inTransaction(block: java.util.function.Function<Connection, T>): T {
+        return useConnection(block::apply)
+    }
+
+    /**
+     * Runs [block] on a connection with `autoCommit` turned on, so every statement is committed on its own.
+     *
+     * Takes a connection from this [DataSource], sets `autoCommit` to `true` and calls [block]. There is no transaction to
+     * commit or to roll back: each statement is final the moment it succeeds, and a statement that fails leaves the
+     * statements before it in place. The connection is closed - returned to the pool - in all cases.
+     *
+     * Use this for a series of independent statements, where a later failure should not undo what already succeeded. Do
+     * **not** use it when a send or a receive has to be atomic with your own data - that is what [inTransaction] is for, and
+     * it is the whole reason the `ConnectionAware*` roles exist.
+     *
+     * `autoCommit` is set explicitly here as well, for the same reason as in [inTransaction]: a pooled connection arrives in
+     * whatever state the pool configured, and a helper that inherited that state would behave differently depending on the
+     * pool. Note that the connection is handed back to the pool with `autoCommit = true`; pools normally reset connection
+     * state when a connection is returned, but it is worth knowing if yours does not.
+     *
+     * ## Usage Example
+     *
+     * ```kotlin
+     * // Each statement is committed on its own, so a failure in the middle keeps the earlier ones
+     * dataSource.withAutoCommit { connection ->
+     *     connection.createStatement().use { statement ->
+     *         statement.execute("vacuum analyze q_orders")
+     *         statement.execute("vacuum analyze q_customers")
+     *     }
+     * }
+     * ```
+     *
+     * @param block work to do on the connection; the connection it receives is open until the block returns
+     * @return whatever [block] returned
+     * @see inTransaction
+     */
+    @JvmStatic
+    fun <T> DataSource.withAutoCommit(block: java.util.function.Function<Connection, T>): T {
+        return useConnectionWithAutocommit(block::apply)
+    }
+
+    internal fun <T> DataSource.useConnection(block: (Connection) -> T): T {
         return connection.use { connection ->
             connection.autoCommit = false
 
@@ -28,7 +108,7 @@ internal object JdbcHelpers {
         }
     }
 
-    fun <T> DataSource.useConnectionWithAutocommit(block: (Connection) -> T): T {
+    internal fun <T> DataSource.useConnectionWithAutocommit(block: (Connection) -> T): T {
         return connection.use { connection ->
             connection.autoCommit = true
             block(connection)
@@ -37,7 +117,7 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun <T> Connection.useSavepoint(block: (Connection) -> T): Result<T> {
+    internal fun <T> Connection.useSavepoint(block: (Connection) -> T): Result<T> {
         val savepoint = this.setSavepoint()
 
         return try {
@@ -52,25 +132,25 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun <T> DataSource.useStatement(block: (Statement) -> T): T {
+    internal fun <T> DataSource.useStatement(block: (Statement) -> T): T {
         return useConnection { connection: Connection ->
             connection.useStatement(block)
         }
     }
 
-    fun <T> Connection.useStatement(block: (Statement) -> T): T {
+    internal fun <T> Connection.useStatement(block: (Statement) -> T): T {
         return createStatement().use { statement: Statement ->
             block(statement)
         }
     }
 
-    fun <T> DataSource.useStatement(query: String, block: (ResultSet) -> T): T {
+    internal fun <T> DataSource.useStatement(query: String, block: (ResultSet) -> T): T {
         return useConnection { connection: Connection ->
             connection.useStatement(query, block)
         }
     }
 
-    fun <T> Connection.useStatement(query: String, block: (ResultSet) -> T): T {
+    internal fun <T> Connection.useStatement(query: String, block: (ResultSet) -> T): T {
         return createStatement().use { statement: Statement ->
             statement.executeQuery(query).use { resultSet ->
                 block(resultSet)
@@ -80,13 +160,13 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun <T> DataSource.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
+    internal fun <T> DataSource.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
         return useConnection { connection: Connection ->
             connection.usePreparedStatement(query, block)
         }
     }
 
-    fun <T> Connection.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
+    internal fun <T> Connection.usePreparedStatement(query: String, block: (PreparedStatement) -> T): T {
         return prepareStatement(query).use { preparedStatement: PreparedStatement ->
             block(preparedStatement)
         }
@@ -94,13 +174,13 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun DataSource.readStringList(query: String): List<String> {
+    internal fun DataSource.readStringList(query: String): List<String> {
         return useConnection { connection ->
             connection.readStringList(query)
         }
     }
 
-    fun Connection.readStringList(query: String): List<String> {
+    internal fun Connection.readStringList(query: String): List<String> {
         val result = mutableListOf<String>()
 
         useStatement { statement ->
@@ -116,13 +196,13 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun DataSource.readIntList(query: String): List<Int> {
+    internal fun DataSource.readIntList(query: String): List<Int> {
         return useConnection { connection ->
             connection.readIntList(query)
         }
     }
 
-    fun Connection.readIntList(query: String): List<Int> {
+    internal fun Connection.readIntList(query: String): List<Int> {
         val result = mutableListOf<Int>()
 
         useStatement { statement ->
@@ -138,13 +218,13 @@ internal object JdbcHelpers {
 
     // -------------------------------------------------------------------------------------------
 
-    fun DataSource.readLongList(query: String): List<Long> {
+    internal fun DataSource.readLongList(query: String): List<Long> {
         return useConnection { connection ->
             connection.readLongList(query)
         }
     }
 
-    fun Connection.readLongList(query: String): List<Long> {
+    internal fun Connection.readLongList(query: String): List<Long> {
         val result = mutableListOf<Long>()
 
         useStatement { statement ->
@@ -159,13 +239,13 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun DataSource.readInt(sql: String): Int {
+    internal fun DataSource.readInt(sql: String): Int {
         return useConnection { connection ->
             connection.readInt(sql)
         }
     }
 
-    fun Connection.readInt(sql: String): Int {
+    internal fun Connection.readInt(sql: String): Int {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
                 check(resultSet.next()) {
@@ -185,13 +265,13 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun DataSource.readLong(sql: String): Long {
+    internal fun DataSource.readLong(sql: String): Long {
         return useConnection { connection ->
             connection.readLong(sql)
         }
     }
 
-    fun Connection.readLong(sql: String): Long {
+    internal fun Connection.readLong(sql: String): Long {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
                 check(resultSet.next()) {
@@ -211,13 +291,13 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun DataSource.readLongOrNull(sql: String): Long? {
+    internal fun DataSource.readLongOrNull(sql: String): Long? {
         return useConnection { connection ->
             connection.readLongOrNull(sql)
         }
     }
 
-    fun Connection.readLongOrNull(sql: String): Long? {
+    internal fun Connection.readLongOrNull(sql: String): Long? {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
                 check(resultSet.next()) {
@@ -239,13 +319,13 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun DataSource.readBoolean(sql: String): Boolean {
+    internal fun DataSource.readBoolean(sql: String): Boolean {
         return useConnection { connection ->
             connection.readBoolean(sql)
         }
     }
 
-    fun Connection.readBoolean(sql: String): Boolean {
+    internal fun Connection.readBoolean(sql: String): Boolean {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
                 check(resultSet.next()) {
@@ -265,13 +345,13 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun DataSource.readString(sql: String): String {
+    internal fun DataSource.readString(sql: String): String {
         return useConnection { connection ->
             connection.readString(sql)
         }
     }
 
-    fun Connection.readString(sql: String): String {
+    internal fun Connection.readString(sql: String): String {
         return useStatement { statement ->
             statement.executeQuery(sql).use { resultSet ->
                 check(resultSet.next()) {
@@ -291,7 +371,7 @@ internal object JdbcHelpers {
     }
 
     // -------------------------------------------------------------------------------------------
-    fun schemaNameOrDefault(schemaName: String?): String {
+    internal fun schemaNameOrDefault(schemaName: String?): String {
         return if (schemaName.isNullOrBlank()) {
             "public"
         } else {

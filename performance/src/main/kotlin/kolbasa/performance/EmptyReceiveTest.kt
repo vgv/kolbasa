@@ -1,7 +1,6 @@
-package performance
+package kolbasa.performance
 
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
@@ -18,8 +17,8 @@ class EmptyReceiveTest : PerformanceTest {
         SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
 
         // Truncate table before test
-        Env.Common.dataSource.useStatement { statement ->
-            statement.execute("TRUNCATE TABLE ${queue.dbTableName}")
+        Env.Common.dataSource.withStatement { statement ->
+            statement.execute("TRUNCATE TABLE ${queue.tableName}")
         }
 
         val receiveCalls = AtomicLong()

@@ -14,6 +14,9 @@ dependencies {
     // `internal` declaration to compile, it is not an example anyone could copy into their own project.
     implementation(project(":kolbasa"))
 
+    // Which PostgreSQL version to start, decided once for the whole repository
+    implementation(project(":test-support"))
+
     implementation(libs.testcontainers.postgresql)
     implementation(libs.hikaricp)
     implementation(libs.postgresql)

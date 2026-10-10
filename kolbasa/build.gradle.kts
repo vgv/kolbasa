@@ -32,6 +32,9 @@ dependencies {
     compileOnly(libs.opentelemetry.instrumentation.api.incubator)
 
     // Test
+    // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
+    testImplementation(project(":test-support"))
+
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
 
@@ -60,13 +63,6 @@ kotlin {
 }
 
 // =====================================================================================
-// Performance tests
-tasks.register<JavaExec>("performance") {
-    mainClass = "performance.MainKt"
-    classpath += java.sourceSets.getByName("test").runtimeClasspath
-}
-
-// =====================================================================================
 // Unit tests settings
 tasks.withType<Test> {
     enableAssertions = true
@@ -86,7 +82,7 @@ tasks.withType<Test> {
 
 // ===== Run the test suite against PostgreSQL versions =====
 // One visible Test task per image, so any specific version can be run directly (e.g. ./gradlew testPg_15_8).
-val pgImagesFile = file("src/test/resources/postgresql-test-images.txt")
+val pgImagesFile = rootProject.file("test-support/src/main/resources/postgresql-test-images.txt")
 val pgImages: List<String> = pgImagesFile.readLines()
     .map(String::trim)
     .filter { it.isNotEmpty() && !it.startsWith("#") }

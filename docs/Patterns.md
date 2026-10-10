@@ -231,33 +231,27 @@ when you consume a message: you process it, you write the result, and only then 
 **Mechanism — you own the transaction.** The [`ConnectionAware*`](Architecture.md#working-inside-your-transaction) roles
 take a `java.sql.Connection` as the first argument. They do not commit and they do not roll back. They only run their SQL
 on the connection you give them. You decide when to commit, and that one decision covers your own data and the queue
-at the same time. There is no kolbasa API for transactions, because JDBC already has one.
+at the same time. kolbasa has no transaction abstraction of its own, because JDBC already has one — what it ships is a
+thin wrapper over it.
 
-This also means you write the transaction code yourself. In plain JDBC it looks like this, and it is useful to keep one
-copy of it in your project:
+If you work with JDBC directly, kolbasa ships the plumbing, so there is nothing to write by hand:
 
 ```kotlin
-fun <T> DataSource.inTransaction(block: (Connection) -> T): T =
-    connection.use { connection ->
-        connection.autoCommit = false
-        try {
-            val result = block(connection)
-            connection.commit()
-            result
-        } catch (e: Throwable) {
-            try {
-                connection.rollback()
-            } catch (rollbackFailure: Throwable) {
-                e.addSuppressed(rollbackFailure)
-            }
-            throw e
-        }
-    }
+import kolbasa.utils.JdbcHelpers.inTransaction
+
+dataSource.inTransaction { connection ->
+    // your own writes and your sends, in one transaction
+}
 ```
 
-The helper above is for the case when you work with JDBC directly. If your project uses a framework or an ORM, it already
-has its own transaction handling, and you should keep using that. All kolbasa needs from it is the JDBC `Connection` of
-the current transaction. In Hibernate you get that connection with `doWork`:
+`inTransaction` takes a connection, sets `autoCommit` to `false`, runs your block and commits it. If the block throws,
+the transaction is rolled back and the exception is rethrown unchanged. The connection goes back to the pool either way.
+Its counterpart, `withAutoCommit`, does the opposite — every statement is committed on its own — and is there for work
+that is a series of independent statements.
+
+This helper is for direct JDBC. If your project uses a framework or an ORM, it already has its own transaction handling,
+and you should keep using that. All kolbasa needs from it is the JDBC `Connection` of the current transaction. In
+Hibernate you get that connection with `doWork`:
 
 ```kotlin
 // Inside a transaction that Hibernate already started
@@ -300,7 +294,7 @@ makes it so.
 
 ```kotlin
 dataSource.inTransaction { connection ->
-    // Your own data, however your project writes it
+    // Your business code here
     insertOrder(connection, orderId, customer)
 
     // One order, three kinds of follow-up work, three queues - and one producer for all of them, because a role
@@ -366,9 +360,10 @@ the message is an event that goes into the queue in the same transaction as your
 
 ### Caveats
 
-- **Set `autoCommit` to `false` yourself.** A connection from a pool often arrives with `autoCommit = true`. Then 
-  every statement is committed on its own: your insert is already saved before `send` runs, and there is nothing 
-  left to roll back. If you forget this line, nothing fails — you simply do not get the atomicity you wrote the code for.
+- **If you open the connection yourself, set `autoCommit` to `false`.** `inTransaction` does it for you, but a
+  connection taken straight from a pool often arrives with `autoCommit = true`. Then every statement is committed on its
+  own: your insert is already saved before `send` runs, and there is nothing left to roll back. Nothing fails, you simply
+  do not get the atomicity you wrote the code for.
 - **Check the `SendResult`.** `send` does not throw when a message is rejected — it returns a
   [`SendResult`](Architecture.md#batching-and-partial-inserts) with `failedMessages`, rolls that part back to a savepoint
   of its own, and leaves your transaction alive and ready to commit. With several sends in one transaction that is how
