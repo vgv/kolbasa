@@ -24,9 +24,9 @@ fun main(args: Array<String>) {
     val result = try {
         when (command) {
             is Command.Check -> check(command)
-            is Command.Prepare -> prepare(command)
-            is Command.Move -> move(command)
-            is Command.Finalize -> finalize(command)
+            is Command.Prepare -> prepare(command, ConsoleProgressCallback)
+            is Command.Move -> move(command, ConsoleProgressCallback)
+            is Command.Finalize -> finalize(command, ConsoleProgressCallback)
         }
     } catch (e: ButcherException.ExecutionException) {
         println("=================================================")

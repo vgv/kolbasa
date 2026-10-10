@@ -6,7 +6,7 @@ import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
-import java.util.SortedMap
+import java.util.*
 import javax.sql.DataSource
 
 /**
@@ -14,7 +14,7 @@ import javax.sql.DataSource
  * Can be re-run safely if interrupted — INSERT uses ON CONFLICT DO NOTHING,
  * so duplicate rows are silently skipped on retry.
  */
-internal fun move(command: Command.Move) {
+internal fun move(command: Command.Move, progressCallback: ProgressCallback) {
     val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
 
     // tablename => schema
@@ -37,7 +37,7 @@ internal fun move(command: Command.Move) {
                     val moveOneTable = MoveOneTable(
                         sourceDataSource = sourceDS,
                         targetDataSource = target,
-                        moveProgressCallback = ConsoleProgressCallback,
+                        moveProgressCallback = progressCallback,
                         shards = shards,
                         table = schema,
                         rowsPerBatch = 1000

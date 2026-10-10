@@ -5,7 +5,7 @@ import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.useStatement
 
-internal fun finalize(command: Command.Finalize) {
+internal fun finalize(command: Command.Finalize, progressCallback: ProgressCallback) {
     val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
     val (shardDataSource, initialShards) = MoveHelpers.readShards(nodes)
 
@@ -25,7 +25,7 @@ internal fun finalize(command: Command.Finalize) {
 
     // Calculate difference between initial and updated shards and notify
     val updatedShards = ShardSchema.readShards(shardDataSource)
-    ConsoleProgressCallback.finalizeSuccessful(
+    progressCallback.finalizeSuccessful(
         shardsDiff = MoveHelpers.calculateShardsDiff(initialShards, updatedShards)
     )
 }
