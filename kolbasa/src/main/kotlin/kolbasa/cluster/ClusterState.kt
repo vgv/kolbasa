@@ -64,7 +64,7 @@ internal data class ClusterState(
                 .keys
                 .toList()
 
-            Shards(thisNodeShards.map { it.id })
+            Shards(thisNodeShards)
         }
     }
 
@@ -73,8 +73,8 @@ internal data class ClusterState(
     private val activeConsumerShardsToNodes: Map<ShardId, NodeId> by lazy {
         val result = hashMapOf<ShardId, NodeId>()
         activeConsumerNodesToShards.forEach { (node, shards) ->
-            shards.shards.forEach { shard: Int ->
-                result[ShardId.of(shard)] = node
+            shards.shards.forEach { shard ->
+                result[shard] = node
             }
         }
 
