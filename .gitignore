@@ -1,19 +1,18 @@
 # Gradle
-/.gradle/
+.gradle/
 
 # Kotlin
-/.kotlin/
+.kotlin/
 
 # IntelliJ
 /.idea/
 
 # Build
-/build/
-/out/
+build/
+out/
 
-# Local development
-/src/test/kotlin/local/
-/src/test/java/local/
+# Local development: scratch code, one `local` package per module
+local/
 
 # OSX
 .DS_Store

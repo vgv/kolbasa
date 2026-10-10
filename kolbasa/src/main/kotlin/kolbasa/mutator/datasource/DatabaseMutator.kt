@@ -1,0 +1,91 @@
+package kolbasa.mutator.datasource
+
+import kolbasa.Kolbasa
+import kolbasa.consumer.filter.Condition
+import kolbasa.consumer.filter.Filter
+import kolbasa.mutator.MutateResult
+import kolbasa.mutator.Mutation
+import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.MutatorSchemaHelpers
+import kolbasa.mutator.connection.ConnectionAwareDatabaseMutator
+import kolbasa.mutator.connection.ConnectionAwareMutator
+import kolbasa.producer.Id
+import kolbasa.queue.Queue
+import kolbasa.utils.JdbcHelpers.inTransaction
+import java.util.concurrent.CompletableFuture
+import javax.sql.DataSource
+
+/**
+ * Default implementation of [Mutator]
+ */
+class DatabaseMutator(
+    private val dataSource: DataSource,
+    private val peer: ConnectionAwareMutator
+) : Mutator {
+
+    /**
+     * Creates a mutator that manages connections and transactions itself.
+     *
+     * Every call takes a connection from `dataSource`, changes the messages in one transaction and gives the
+     * connection back. You never open, commit, roll back or close anything.
+     *
+     * The mutator is thread-safe and holds no state between calls, so create one per set of defaults and share it.
+     *
+     * @param dataSource the pool this mutator takes connections from
+     * @param options defaults for every call of this mutator. Without it, [MutatorOptions.DEFAULT] is used.
+     */
+    @JvmOverloads
+    constructor(
+        dataSource: DataSource,
+        options: MutatorOptions = MutatorOptions.DEFAULT
+    ) : this(
+        dataSource = dataSource,
+        peer = ConnectionAwareDatabaseMutator(options)
+    )
+
+    override fun <Data> mutate(
+        queue: Queue<Data>,
+        mutations: List<Mutation>,
+        messages: List<Id>
+    ): MutateResult {
+        return dataSource.inTransaction { connection ->
+            peer.mutate(connection, queue, mutations, messages)
+        }
+    }
+
+    override fun <Data> mutate(
+        queue: Queue<Data>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition
+    ): MutateResult {
+        return dataSource.inTransaction { connection ->
+            peer.mutate(connection, queue, mutations, filter)
+        }
+    }
+
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
+        mutations: List<Mutation>,
+        messages: List<Id>
+    ): CompletableFuture<MutateResult> {
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
+            defaultExecutor = Kolbasa.asyncExecutor
+        )
+
+        return CompletableFuture.supplyAsync({ mutate(queue, mutations, messages) }, executor)
+    }
+
+    override fun <Data> mutateAsync(
+        queue: Queue<Data>,
+        mutations: List<Mutation>,
+        filter: Filter.() -> Condition
+    ): CompletableFuture<MutateResult> {
+        val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
+            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
+            defaultExecutor = Kolbasa.asyncExecutor
+        )
+
+        return CompletableFuture.supplyAsync({ mutate(queue, mutations, filter) }, executor)
+    }
+}

@@ -1,0 +1,202 @@
+package kolbasa.schema
+
+import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.assertNotNull
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
+import kolbasa.queue.QueueOptions
+import kolbasa.queue.meta.FieldOption
+import kolbasa.queue.meta.MetaField
+import kolbasa.queue.meta.Metadata
+import kolbasa.schema.Table.Companion.hasIndex
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
+import java.time.Duration
+
+internal class SchemaExtractorTest : AbstractPostgreSQLTest() {
+
+    private val queueName = "test_queue"
+    private val minValue = IdRange.generateRange(Node.MIN_BUCKET).min
+    private val maxValue = IdRange.generateRange(Node.MIN_BUCKET).max
+    private val cacheValue = 1000.toLong()
+    private val incrementValue = 1.toLong()
+
+    private val STRING_FIELD = MetaField.ofString("string_value")
+    private val LONG_FIELD = MetaField.ofLong("long_value", FieldOption.SEARCH)
+    private val INT_FIELD = MetaField.ofInt("int_value", FieldOption.ALL_LIVE_UNIQUE)
+    private val SHORT_FIELD = MetaField.ofShort("short_value", FieldOption.UNTOUCHED_UNIQUE)
+    private val BOOLEAN_FIELD = MetaField.ofBoolean("boolean_value")
+    private val DOUBLE_FIELD = MetaField.ofDouble("double_value")
+    private val FLOAT_FIELD = MetaField.ofFloat("float_value")
+    private val BIGINTEGER_FIELD = MetaField.ofBigInteger("big_integer_value")
+
+    private val testQueue = Queue(
+        queueName,
+        PredefinedDataTypes.ByteArray,
+        options = QueueOptions(
+            defaultDelay = Duration.ofMinutes(5),
+            defaultAttempts = 42,
+            sqlPutFunction = true
+        ),
+        metadata = Metadata.of(
+            STRING_FIELD,
+            LONG_FIELD,
+            INT_FIELD,
+            SHORT_FIELD,
+            BOOLEAN_FIELD,
+            DOUBLE_FIELD,
+            FLOAT_FIELD,
+            BIGINTEGER_FIELD
+        )
+    )
+
+    @BeforeEach
+    fun before() {
+        SchemaHelpers.createOrUpdateQueues(dataSource, testQueue)
+    }
+
+    @Test
+    fun testExtractRawSchema() {
+        // here we have to find objects (tables, indexes etc.) only from 'public' schema
+        val tables = SchemaExtractor.extractRawSchema(dataSource)
+
+        assertEquals(2, tables.size, "Tables: ${tables.keys}")
+
+        val testTable = requireNotNull(tables[testQueue.dbTableName]) {
+            "Table not found, tables: ${tables.keys}"
+        }
+
+        // check columns
+        assertEquals(19, testTable.columns.size, "Found columns: ${testTable.columns}")
+
+        // id and identity
+        assertNotNull(testTable.findColumn("id")).let { idColumn ->
+            assertEquals(ColumnType.BIGINT, idColumn.type)
+            assertFalse(idColumn.nullable)
+        }
+        assertNotNull(testTable.identity)
+        assertEquals(minValue, testTable.identity.min)
+        assertEquals(minValue, testTable.identity.start)
+        assertEquals(maxValue, testTable.identity.max)
+        assertEquals(cacheValue, testTable.identity.cache)
+        assertEquals(incrementValue, testTable.identity.increment)
+        assertEquals(true, testTable.identity.cycles)
+
+        // created_at
+        requireNotNull(testTable.findColumn("created_at")).let { createdAtColumn ->
+            assertEquals(ColumnType.TIMESTAMPTZ, createdAtColumn.type)
+            assertFalse(createdAtColumn.nullable)
+            assertNotNull(createdAtColumn.defaultExpression)
+        }
+
+        // scheduled_at
+        requireNotNull(testTable.findColumn("scheduled_at")).let { scheduledAtColumn ->
+            assertEquals(ColumnType.TIMESTAMPTZ, scheduledAtColumn.type)
+            assertFalse(scheduledAtColumn.nullable)
+            // Constant default on every queue, regardless of defaultDelay (this queue has a 5m delay).
+            assertEquals("clock_timestamp()", scheduledAtColumn.defaultExpression)
+        }
+
+        // attempts
+        requireNotNull(testTable.findColumn("remaining_attempts")).let { attemptsColumn ->
+            assertEquals(ColumnType.INT, attemptsColumn.type)
+            assertFalse(attemptsColumn.nullable)
+            assertEquals("42", attemptsColumn.defaultExpression)
+        }
+
+        // producer
+        assertNotNull(testTable.findColumn("producer")).let { producerColumn ->
+            assertEquals(ColumnType.VARCHAR, producerColumn.type)
+            assertTrue(producerColumn.nullable)
+            assertNull(producerColumn.defaultExpression)
+        }
+
+        // meta_string_value
+        requireNotNull(testTable.findColumn("meta_string_value")).let { metaStringValueColumn ->
+            assertEquals(ColumnType.VARCHAR, metaStringValueColumn.type)
+            assertTrue(metaStringValueColumn.nullable)
+            assertNull(metaStringValueColumn.defaultExpression)
+        }
+
+        // meta_long_value
+        requireNotNull(testTable.findColumn("meta_long_value")).let { metaLongValueColumn ->
+            assertEquals(ColumnType.BIGINT, metaLongValueColumn.type)
+            assertTrue(metaLongValueColumn.nullable)
+            assertNull(metaLongValueColumn.defaultExpression)
+        }
+
+        // meta_int_value
+        requireNotNull(testTable.findColumn("meta_int_value")).let { metaIntValueColumn ->
+            assertEquals(ColumnType.INT, metaIntValueColumn.type)
+            assertTrue(metaIntValueColumn.nullable)
+            assertNull(metaIntValueColumn.defaultExpression)
+        }
+
+        // meta_short_value
+        requireNotNull(testTable.findColumn("meta_short_value")).let { metaShortValueColumn ->
+            assertEquals(ColumnType.SMALLINT, metaShortValueColumn.type)
+            assertTrue(metaShortValueColumn.nullable)
+            assertNull(metaShortValueColumn.defaultExpression)
+        }
+
+        // meta_boolean_value
+        requireNotNull(testTable.findColumn("meta_boolean_value")).let { metaBooleanValueColumn ->
+            assertEquals(ColumnType.BOOLEAN, metaBooleanValueColumn.type)
+            assertTrue(metaBooleanValueColumn.nullable)
+            assertNull(metaBooleanValueColumn.defaultExpression)
+        }
+
+        // meta_double_value
+        requireNotNull(testTable.findColumn("meta_double_value")).let { metaDoubleValueColumn ->
+            assertEquals(ColumnType.DOUBLE, metaDoubleValueColumn.type)
+            assertTrue(metaDoubleValueColumn.nullable)
+            assertNull(metaDoubleValueColumn.defaultExpression)
+        }
+
+        // meta_float_value
+        requireNotNull(testTable.findColumn("meta_float_value")).let { metaFloatValueColumn ->
+            assertEquals(ColumnType.REAL, metaFloatValueColumn.type)
+            assertTrue(metaFloatValueColumn.nullable)
+            assertNull(metaFloatValueColumn.defaultExpression)
+        }
+
+        // meta_biginteger_value
+        requireNotNull(testTable.findColumn("meta_big_integer_value")).let { metaBigIntegerValueColumn ->
+            assertEquals(ColumnType.NUMERIC, metaBigIntegerValueColumn.type)
+            assertTrue(metaBigIntegerValueColumn.nullable)
+            assertNull(metaBigIntegerValueColumn.defaultExpression)
+        }
+
+        // Check indexes
+        assertEquals(6, testTable.indexes.size, "Indexes: ${testTable.indexes}")
+
+        // PK index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_pkey"))
+
+        // shard index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_shard"))
+
+        // scheduled_at index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_scheduled_at"))
+
+        // meta_long index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_long_value_j"))
+
+        // meta_int index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_int_value_su"))
+
+        // meta_short index
+        assertTrue(testTable.hasIndex("${testQueue.dbTableName}_short_value_pu"))
+
+        // Check the SQL put function (q_<name>_put). The extractor parses its content hash out of the
+        // 'kolbasa-put:<md5>' COMMENT (prefix stripped), so let's just check it looks like md5 string
+        requireNotNull(testTable.putFunction)
+        assertEquals("${testQueue.dbTableName}_put", testTable.putFunction.name)
+        assertTrue(
+            requireNotNull(testTable.putFunction.hash).matches(Regex("[0-9a-f]{32}")),
+            "Expected a bare md5 hash, got: ${testTable.putFunction.hash}"
+        )
+    }
+}

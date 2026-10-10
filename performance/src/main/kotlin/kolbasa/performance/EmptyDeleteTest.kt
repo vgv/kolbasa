@@ -1,0 +1,78 @@
+package kolbasa.performance
+
+import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.producer.Id
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
+import kolbasa.schema.SchemaHelpers
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
+import kotlin.random.Random
+
+class EmptyDeleteTest : PerformanceTest {
+
+    override fun run() {
+        Env.EmptyDelete.report()
+
+        // Update
+        SchemaHelpers.createOrUpdateQueues(Env.Common.dataSource, queue)
+
+        val randomIdsToDelete = (1..1000).map {
+            (1..Env.EmptyDelete.oneDeleteMessages).map {
+                Id(Random.nextLong(0, Long.MAX_VALUE), Random.nextInt(0, SHARD_COUNT))
+            }
+        }
+
+        // Truncate table before test
+        Env.Common.dataSource.withStatement { statement ->
+            statement.execute("TRUNCATE TABLE ${queue.tableName}")
+        }
+
+        val deleteCalls = AtomicLong()
+
+        val consumer = DatabaseConsumer(Env.Common.dataSource)
+
+        val deleteThreads = (1..Env.EmptyDelete.threads).map {
+            thread {
+                while (deleteCalls.incrementAndGet() <= Env.EmptyDelete.totalDeleteCalls) {
+                    consumer.delete(queue, randomIdsToDelete.random())
+                }
+            }
+        }
+
+        // Report stats
+        thread {
+            val start = System.currentTimeMillis()
+
+            while (deleteCalls.get() < Env.EmptyDelete.totalDeleteCalls) {
+                TimeUnit.SECONDS.sleep(1)
+
+                val seconds = ((System.currentTimeMillis() - start) / 1000)
+
+                val delCalls = deleteCalls.get()
+                val deleteRate = delCalls / seconds
+
+                println("Time: $seconds s, delete calls: $delCalls ($deleteRate calls/s)")
+                println("-------------------------------------------")
+            }
+        }
+
+        deleteThreads.forEach { it.join() }
+    }
+
+    companion object {
+        private val queue = Queue.of(
+            name = "empty_delete_test_queue",
+            databaseDataType = PredefinedDataTypes.ByteArray
+        )
+    }
+}
+
+fun main() {
+    EmptyDeleteTest().run()
+}
+
+// kolbasa.cluster.Shard is internal, so the range is spelled out here: a shard is 10 bits wide, 0..1023.
+// Any value in range will do - these ids are deliberately pointing at messages that do not exist.
+private const val SHARD_COUNT = 1024

@@ -6,8 +6,9 @@ build the patterns people reach for most often in a message broker:
 1. [Priority queue](#priority-queue) — process the most important messages first.
 2. [Time-to-live (TTL)](#time-to-live-ttl) — make a message stop being deliverable after some wall-clock deadline.
 3. [At-most-once delivery](#at-most-once-delivery) — accept losing a message rather than ever processing it twice.
+4. [Transactions](#transactions) — send or acknowledge a message in the same transaction as your own writes.
 
-All three are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
+All four are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
 dedicated knob for any of them — not because they're unsupported, but because they fall out so naturally from primitives
 it already has that a special-purpose feature would just be a thin wrapper over a few lines you can write yourself. Each
 pattern below is a small **composition** of building blocks that [Architecture.md](Architecture.md) already documents —
@@ -216,9 +217,173 @@ consumer.receive(orders)?.let { message ->
 
 ---
 
+## Transactions
+
+**Problem.** Imagine your service accepts an order, and the customer has to receive a confirmation email. The web
+request does not send the email itself: it saves the order, puts a message in the queue, and answers. A worker picks the
+message up and sends the email a moment later.
+
+So one user action changes two things — your own data and the queue — and they have to change together. The order and
+the message must either both exist or both not exist. An order without the message means the customer never gets the
+email. A message without the order keeps failing, because the order it needs is not there. The same question comes up
+when you consume a message: you process it, you write the result, and only then you acknowledge it.
+
+**Mechanism — you own the transaction.** The [`ConnectionAware*`](Architecture.md#working-inside-your-transaction) roles
+take a `java.sql.Connection` as the first argument. They do not commit and they do not roll back. They only run their SQL
+on the connection you give them. You decide when to commit, and that one decision covers your own data and the queue
+at the same time. kolbasa has no transaction abstraction of its own, because JDBC already has one — what it ships is a
+thin wrapper over it.
+
+If you work with JDBC directly, kolbasa ships the plumbing, so there is nothing to write by hand:
+
+```kotlin
+import kolbasa.utils.JdbcHelpers.inTransaction
+
+dataSource.inTransaction { connection ->
+    // your own writes and your sends, in one transaction
+}
+```
+
+`inTransaction` takes a connection, sets `autoCommit` to `false`, runs your block and commits it. If the block throws,
+the transaction is rolled back and the exception is rethrown unchanged. The connection goes back to the pool either way.
+Its counterpart, `withAutoCommit`, does the opposite — every statement is committed on its own — and is there for work
+that is a series of independent statements.
+
+This helper is for direct JDBC. If your project uses a framework or an ORM, it already has its own transaction handling,
+and you should keep using that. All kolbasa needs from it is the JDBC `Connection` of the current transaction. In
+Hibernate you get that connection with `doWork`:
+
+```kotlin
+// Inside a transaction that Hibernate already started
+session.doWork { connection ->
+    // Your own writes go through the session as usual, and the queue gets the very same connection
+    producer.send(connection, queue, SendMessage(payload))
+}
+```
+
+In Spring the same idea is `@Transactional` on the method plus `DataSourceUtils.getConnection(dataSource)`, which returns
+the connection of the current transaction. In both cases you do not commit anything yourself: the framework commits, and
+the message is committed with it.
+
+### The transactional outbox
+
+With a transaction of your own — the helper above, or the one your framework gives you — you can write the
+**transactional outbox**: one business write and one send that always agree with each other.
+
+```kotlin
+val producer = ConnectionAwareDatabaseProducer()
+
+dataSource.inTransaction { connection ->
+    connection.prepareStatement("insert into orders(id, customer) values (?, ?)").use { ps ->
+        ps.setLong(1, orderId)
+        ps.setString(2, customer)
+        ps.executeUpdate()
+    }
+
+    // The same connection, so the same transaction: if the insert above is rolled back, this message is not sent
+    producer.send(connection, queue, SendMessage(payload))
+}
+```
+
+### More than one message, more than one queue
+
+Nothing above ties one business write to one message. This is an ordinary PostgreSQL transaction, so it can hold as many
+sends as you need, to as many queues as you need. The order insert, the confirmation email, the picking task for the
+warehouse and two analytics events either all exist or none of them do — and it is still one decision, the commit, that
+makes it so.
+
+```kotlin
+dataSource.inTransaction { connection ->
+    // Your business code here
+    insertOrder(connection, orderId, customer)
+
+    // One order, three kinds of follow-up work, three queues - and one producer for all of them, because a role
+    // is not bound to a queue
+    producer.send(connection, emailsQueue, SendMessage(ConfirmationEmail(orderId)))
+    producer.send(connection, warehouseQueue, SendMessage(PickingTask(orderId)))
+
+    // Several messages for the same queue are better sent in one call: one statement instead of two
+    producer.send(connection, analyticsQueue, listOf(SendMessage(orderCreated), SendMessage(revenueBooked)))
+}
+```
+
+Until the commit none of this exists for anyone else. An uncommitted message is invisible to consumers, so no worker can
+start on the confirmation email before the picking task is there, and the order of the sends inside the block does not
+matter — all of them become visible at the same moment.
+
+### The consuming side
+
+The consuming side works the same way. Receive a message, write the result, delete the message:
+
+```kotlin
+val consumer = ConnectionAwareDatabaseConsumer()
+
+dataSource.inTransaction { connection ->
+    consumer.receive(connection, queue)?.let { message ->
+        // The real work goes here: send the confirmation email, call an external system, whatever this message asks for
+        sendConfirmationEmail(message.data)
+
+        // Now mark the order as confirmed
+        connection.prepareStatement("update orders set confirmed_at = now() where id = ?").use { ps ->
+            ps.setLong(1, message.data.orderId)
+            ps.executeUpdate()
+        }
+
+        // Acknowledge in the same transaction. If anything above throws, the delete is rolled back as well, and the
+        // message becomes RETRY again when its visibility timeout ends. That is the normal at-least-once behaviour.
+        consumer.delete(connection, queue, message)
+    }
+}
+```
+
+This is also what "effectively-once" means in the [at-most-once caveats](#at-most-once-delivery). The side effect and the
+acknowledgement are committed together, so after a crash you have either both of them or none.
+
+### Where else this comes up
+
+The same pattern appears in many other places, and often together with another recipe from this document. In all of them
+the message is an event that goes into the queue in the same transaction as your own data:
+
+- **A call to an external system** — a partner API, an outgoing webhook, a payment provider. You cannot make that call
+  inside the transaction: a network call keeps the transaction open for as long as the other side needs to answer. Save
+  your own data, put the message in the queue, and let a worker make the call later.
+- **A second store that has no transactions** — a search index, a cache, an analytics table in another database. The
+  message is the only link between the two stores, so it has to go into the queue together with the data it describes.
+- **An incoming webhook** — save the event and put a message in the queue to process it later. Payment providers resend
+  webhooks, so give the message a `dedup_key` meta-field with the event id from the provider, and let
+  [deduplication](Architecture.md#deduplication) drop the repeated ones.
+- **Work that has to happen later** — a trial period that ends in 14 days, an invoice reminder in 3 days. The transaction
+  saves your data and puts the message in the queue, and [`delay`](../README.md#send-delay) keeps the message invisible
+  until its time.
+- **Work that may have to be cancelled** — the same reminder, when the invoice is paid earlier. The
+  [Mutator](Architecture.md#mutator) sets `remaining_attempts` to 0, and the message dies before anyone receives it.
+
+### Caveats
+
+- **If you open the connection yourself, set `autoCommit` to `false`.** `inTransaction` does it for you, but a
+  connection taken straight from a pool often arrives with `autoCommit = true`. Then every statement is committed on its
+  own: your insert is already saved before `send` runs, and there is nothing left to roll back. Nothing fails, you simply
+  do not get the atomicity you wrote the code for.
+- **Check the `SendResult`.** `send` does not throw when a message is rejected — it returns a
+  [`SendResult`](Architecture.md#batching-and-partial-inserts) with `failedMessages`, rolls that part back to a savepoint
+  of its own, and leaves your transaction alive and ready to commit. With several sends in one transaction that is how
+  you end up with the order saved and the email message missing. Call `result.throwExceptionIfAny()` inside the block, so
+  a rejected message takes the whole transaction down with it.
+- **Inside your transaction use only the `ConnectionAware*` roles.** `DatabaseProducer` and `DatabaseConsumer` open their
+  own connection and commit it themselves, so their work goes into a different transaction and is committed separately
+  from yours.
+- **In PostgreSQL, DDL is part of the transaction.** A `create table` or an `alter table` inside the block is committed
+  and rolled back together with everything else, exactly like an `insert`. If your transaction changes the schema as well
+  as the data, be careful: this is PostgreSQL behaviour, and it is not how every database works.
+
+A runnable version of both halves is [TransactionContextExample](../examples/src/main/kotlin/kolbasa/example/TransactionContextExample.kt), in Kotlin and in Java.
+
+---
+
 ## See also
 
-- [Architecture.md](Architecture.md) — the primitives these recipes build on: [meta-fields](Architecture.md#meta-fields)
+- [Architecture.md](Architecture.md) — the primitives these recipes build on: [working inside your
+  transaction](Architecture.md#working-inside-your-transaction), [meta-fields](Architecture.md#meta-fields)
   and [`FieldOption`](Architecture.md#fieldoption--indexing-and-uniqueness),
   [ordering and filtering](Architecture.md#querying-by-meta-field), the [message
   lifecycle](Architecture.md#message-lifecycle) and [how states are stored](Architecture.md#how-states-are-stored), the

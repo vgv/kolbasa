@@ -1,0 +1,352 @@
+package kolbasa.utils
+
+import kolbasa.AbstractPostgreSQLTest
+import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.readBoolean
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.readIntList
+import kolbasa.utils.JdbcHelpers.readLong
+import kolbasa.utils.JdbcHelpers.readLongList
+import kolbasa.utils.JdbcHelpers.readLongOrNull
+import kolbasa.utils.JdbcHelpers.readString
+import kolbasa.utils.JdbcHelpers.readStringList
+import kolbasa.utils.JdbcHelpers.useSavepoint
+import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.utils.JdbcHelpers.withAutoCommit
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.sql.Connection
+
+internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
+
+    override fun generateTestData(): List<String> {
+        val statements = mutableListOf<String>()
+        // empty_table
+        statements += "create table empty_table(str_value varchar(200), int_value int, long_value bigint)"
+        // full_table
+        statements += "create table full_table(str_value varchar(200), int_value int, long_value bigint, boolean_value boolean)"
+        statements += "insert into full_table(str_value,int_value,long_value,boolean_value) values ('a',1,10,false),('b',2,20,true),('c',3,30,false)"
+
+        return statements
+    }
+
+    @Test
+    fun testInTransaction_CheckAutoCommit() {
+        // Check auto-commit is off
+        dataSource.inTransaction { connection: Connection ->
+            Assertions.assertFalse(connection.autoCommit)
+        }
+    }
+
+    @Test
+    fun testInTransaction_CheckTransactionBoundaries() {
+        var firstTransaction: Long = -1
+        var secondTransaction: Long = -1
+
+        dataSource.inTransaction { connection: Connection ->
+            Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
+            connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
+            firstTransaction = connection.readLong("select txid_current()")
+
+            // read in another transaction
+            dataSource.inTransaction { otherConnection ->
+                Assertions.assertEquals(3, otherConnection.readInt("select count(*) from full_table"))
+                secondTransaction = otherConnection.readLong("select txid_current()")
+            }
+
+            // read again in the first transaction
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
+        }
+
+        // read again after commit^ above
+        dataSource.inTransaction { connection: Connection ->
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
+        }
+
+        // Check that
+        Assertions.assertNotEquals(-1L, firstTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(-1L, secondTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testWithAutocommit_CheckAutoCommit() {
+        // Check auto-commit is off
+        dataSource.withAutoCommit { connection: Connection ->
+            Assertions.assertTrue(connection.autoCommit)
+        }
+    }
+
+    @Test
+    fun testWithAutocommit_CheckTransactionBoundaries() {
+        var firstTransaction: Long = -1
+        var secondTransaction: Long = -1
+
+        dataSource.withAutoCommit { connection: Connection ->
+            Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
+            connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
+            Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
+            firstTransaction = connection.readLong("select txid_current()")
+
+            // read in another transaction
+            dataSource.withAutoCommit { otherConnection ->
+                Assertions.assertEquals(0, otherConnection.readInt("select count(*) from full_table"))
+                otherConnection.useStatement { statement -> statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('a',1,10,false)") }
+                Assertions.assertEquals(1, otherConnection.readInt("select count(*) from full_table"))
+                secondTransaction = otherConnection.readLong("select txid_current()")
+            }
+
+            // read again in the first transaction
+            Assertions.assertEquals(1, connection.readInt("select count(*) from full_table"))
+        }
+
+        // read again after commit^ above
+        dataSource.withAutoCommit { connection: Connection ->
+            Assertions.assertEquals(1, connection.readInt("select count(*) from full_table"))
+        }
+
+        // Check that
+        Assertions.assertNotEquals(-1L, firstTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(-1L, secondTransaction) // transaction id was assigned
+        Assertions.assertNotEquals(firstTransaction, secondTransaction) // transactions were really different
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testUseSavepoint() {
+        dataSource.inTransaction { dataSourceConnection ->
+            Assertions.assertEquals(3, dataSourceConnection.readInt("select count(*) from full_table"))
+
+            // Successful savepoint
+            dataSourceConnection.useSavepoint { savepointConnection ->
+                // Connection in a savepoint block must be the same
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
+                savepointConnection.useStatement { statement ->
+                    statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('d',4,40,true)")
+                }
+            }
+
+            // Invalid savepoint
+            dataSourceConnection.useSavepoint { savepointConnection ->
+                // Connection in a savepoint block must be the same
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
+                savepointConnection.useStatement { statement ->
+                    // Insert into table with wrong name, PG throws an exception
+                    statement.executeUpdate("insert into full_table_wrong_name(str_value,int_value,long_value,boolean_value) values ('d',4,40,true)")
+                }
+            }
+
+            // Successful savepoint
+            dataSourceConnection.useSavepoint { savepointConnection ->
+                // Connection in a savepoint block must be the same
+                Assertions.assertSame(dataSourceConnection, savepointConnection)
+                savepointConnection.useStatement { statement ->
+                    statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('e',5,50,true)")
+                }
+            }
+
+            // Check inside the same transaction
+            Assertions.assertEquals(5, dataSourceConnection.readInt("select count(*) from full_table"))
+        }
+
+        // Check outside of transaction
+        Assertions.assertEquals(5, dataSource.readInt("select count(*) from full_table"))
+        assertEquals(
+            listOf(1, 2, 3, 4, 5),
+            dataSource.readIntList("select int_value from full_table order by int_value")
+        )
+    }
+
+    // -------------------------------------------------------------------------------------------
+    @Test
+    fun testReadStringList_ifEmpty() {
+        val list = dataSource.readStringList("select str_value from empty_table")
+        Assertions.assertTrue(list.isEmpty())
+    }
+
+    @Test
+    fun testReadStringList() {
+        val list = dataSource.readStringList("select str_value from full_table order by str_value")
+        assertEquals(listOf("a", "b", "c"), list)
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadIntList_ifEmpty() {
+        val list = dataSource.readIntList("select int_value from empty_table")
+        Assertions.assertTrue(list.isEmpty())
+    }
+
+    @Test
+    fun testReadIntList() {
+        val list = dataSource.readIntList("select int_value from full_table order by int_value")
+        assertEquals(listOf(1, 2, 3), list)
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadLongList_ifEmpty() {
+        val list = dataSource.readLongList("select long_value from empty_table")
+        Assertions.assertTrue(list.isEmpty())
+    }
+
+    @Test
+    fun testReadLongList() {
+        val list = dataSource.readLongList("select long_value from full_table order by long_value")
+        assertEquals(listOf<Long>(10, 20, 30), list)
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadInt() {
+        val value = dataSource.readInt("select int_value from full_table where str_value='a'")
+        Assertions.assertEquals(1, value)
+    }
+
+    @Test
+    fun testReadInt_NoRows() {
+        assertThrows<IllegalStateException> {
+            // No rows with str_value == 'z'
+            dataSource.readInt("select int_value from full_table where str_value='z'")
+        }
+    }
+
+    @Test
+    fun testReadInt_MoreThanOneRow() {
+        assertThrows<IllegalStateException> {
+            // More than one row
+            dataSource.readInt("select int_value from full_table")
+        }
+    }
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadLong() {
+        val value = dataSource.readLong("select long_value from full_table where str_value='a'")
+        Assertions.assertEquals(10, value)
+    }
+
+    @Test
+    fun testReadLong_NoRows() {
+        assertThrows<IllegalStateException> {
+            // No rows with str_value == 'z'
+            dataSource.readLong("select long_value from full_table where str_value='z'")
+        }
+    }
+
+    @Test
+    fun testReadLong_MoreThanOneRow() {
+        assertThrows<IllegalStateException> {
+            // More than one row
+            dataSource.readLong("select long_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadLongOrNull() {
+        val value = dataSource.readLongOrNull("select long_value from full_table where str_value='a'")
+        Assertions.assertEquals(10L, value)
+    }
+
+    @Test
+    fun testReadLongOrNull_Null() {
+        // A SQL NULL must come back as null...
+        Assertions.assertNull(dataSource.readLongOrNull("select null::bigint"))
+    }
+
+    @Test
+    fun testReadLongOrNull_Zero() {
+        // ...while a real 0 must NOT (getLong returns 0 for both, so this is the case that matters)
+        Assertions.assertEquals(0L, dataSource.readLongOrNull("select 0::bigint"))
+    }
+
+    @Test
+    fun testReadLongOrNull_NoRows() {
+        assertThrows<IllegalStateException> {
+            // No rows with str_value == 'z'
+            dataSource.readLongOrNull("select long_value from full_table where str_value='z'")
+        }
+    }
+
+    @Test
+    fun testReadLongOrNull_MoreThanOneRow() {
+        assertThrows<IllegalStateException> {
+            // More than one row
+            dataSource.readLongOrNull("select long_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadBoolean() {
+        val value = dataSource.readBoolean("select boolean_value from full_table where str_value='b'")
+        Assertions.assertTrue(value)
+    }
+
+    @Test
+    fun testReadBoolean_NoRows() {
+        assertThrows<IllegalStateException> {
+            // No rows with str_value == 'z'
+            dataSource.readBoolean("select boolean_value from full_table where str_value='z'")
+        }
+    }
+
+    @Test
+    fun testReadBoolean_MoreThanOneRow() {
+        assertThrows<IllegalStateException> {
+            // More than one row
+            dataSource.readBoolean("select boolean_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testReadString() {
+        val value = dataSource.readString("select str_value from full_table where int_value=1")
+        assertEquals("a", value)
+    }
+
+    @Test
+    fun testReadString_NoRows() {
+        assertThrows<IllegalStateException> {
+            // No rows with int_value=123
+            dataSource.readString("select str_value from full_table where int_value=123")
+        }
+    }
+
+    @Test
+    fun testReadString_MoreThanOneRow() {
+        assertThrows<IllegalStateException> {
+            // More than one row
+            dataSource.readString("select str_value from full_table")
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    @Test
+    fun testSchemaNameOrDefault() {
+        // Null or blank schema name returns "public"
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(null))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(""))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault(" "))
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault("     "))
+
+        // Non-empty schema name is returned as is
+        assertEquals("public", JdbcHelpers.schemaNameOrDefault("     "))
+    }
+
+}

@@ -49,7 +49,7 @@ implementation "io.github.vgv:kolbasa:0.211.0"
 
 ## Examples
 The easiest way to try kolbasa is to try running real, working examples, illustrating different features and modes. All examples
-can be found in the [examples](src/test/kotlin/examples) folder. Each example is a ready to run, complete mini-program that can
+can be found in the [examples](examples/src/main/kotlin/kolbasa/example) folder. Each example is a ready to run, complete mini-program that can
 be launched from the IDE or Gradle.
 
 The preferred way to run the examples is to use an IDE (like IntelliJ IDEA), as you can not only run the examples, but also
@@ -59,18 +59,18 @@ To run from Gradle, you need to execute the command
 
 `./gradlew example -Pname=FilterExample -Plang=kotlin`
 
-where `name` is the name of the file from the [examples](src/test/kotlin/examples) folder and `lang` is `java` or `kotlin`.
+where `name` is the name of the file from the [examples](examples/src/main/kotlin/kolbasa/example) folder and `lang` is `java` or `kotlin`.
 
 Examples needs to have a working PostgreSQL instance to run and here you have two options:
 1) The default (and easiest) way – just have running Docker on your machine. All examples will use Docker to start PostgreSQL instance.
 2) If you don't want to or can't use Docker, you have a second option – use a real PostgreSQL installation.
-File [ExamplesDataSourceProvider](src/test/kotlin/examples/ExamplesDataSourceProvider.kt) is the place where you can specify
+File [ExamplesDataSourceProvider](examples/src/main/kotlin/kolbasa/example/ExamplesDataSourceProvider.kt) is the place where you can specify
 url, username and password for your existing PostgreSQL instance.
 
 ### Simple example
 The simplest possible example to send and receive one simple text message:
-* [SimpleExample (Kotlin)](src/test/kotlin/examples/SimpleExample.kt)
-* [SimpleExample (Java)](src/test/kotlin/examples/SimpleExample.java)
+* [SimpleExample (Kotlin)](examples/src/main/kotlin/kolbasa/example/SimpleExample.kt)
+* [SimpleExample (Java)](examples/src/main/kotlin/kolbasa/example/SimpleExample.java)
 
 No filtering, no message deduplication, sharding or other features. Just send and receive one message.
 
@@ -84,21 +84,21 @@ Kolbasa can receive only specific messages from a queue, and only in a specific 
 filtering and ordering are performed on the queue broker side (PostgreSQL) to make receiving more efficient.
 
 For simplicity, this example is broken into two parts:
-1) First, let's look at filtering: [FilterExample](src/test/kotlin/examples/FilterExample.kt)
+1) First, let's look at filtering: [FilterExample](examples/src/main/kotlin/kolbasa/example/FilterExample.kt)
 
 `./gradlew example -Pname=FilterExample`
 
-2) Second, let's add sorting here: [FilterAndSortExample](src/test/kotlin/examples/FilterAndSortExample.kt)
+2) Second, let's add sorting here: [FilterAndSortExample](examples/src/main/kotlin/kolbasa/example/FilterAndSortExample.kt)
 
 `./gradlew example -Pname=FilterAndSortExample`
 
 ### Deduplication
 Kolbasa has the ability to use deduplication when sending messages to the queue.
 
-There are two different modes ([DeduplicationMode](src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `FAIL_ON_DUPLICATE` and `IGNORE_DUPLICATE`
+There are two different modes ([DeduplicationMode](kolbasa/src/main/kotlin/kolbasa/producer/DeduplicationMode.kt)): `FAIL_ON_DUPLICATE` and `IGNORE_DUPLICATE`
 
 The `FAIL_ON_DUPLICATE` mode is the default. If you try to send a message with an existing unique key, the operation will fail and,
-depending on the [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, only part of the messages (or none)
+depending on the [PartialInsert](kolbasa/src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, only part of the messages (or none)
 will be sent. In business code, you can handle this error and, for example, write to log, postpone sending the message or change
 the unique key. Since this mode is trivial, in this example we will consider the second option, the more interesting `IGNORE_DUPLICATE` mode.
 
@@ -106,7 +106,7 @@ The `IGNORE_DUPLICATE` mode allows you to simply silently ignore uniqueness erro
 are not already in the queue. For example, you send 100 messages, 5 of which are duplicates of existing messages in the queue.
 In this case, only 95 messages will be added to the queue and no errors will occur.
 
-Example: [DeduplicationExample](src/test/kotlin/examples/DeduplicationExample.kt)
+Example: [DeduplicationExample](examples/src/main/kotlin/kolbasa/example/DeduplicationExample.kt)
 
 `./gradlew example -Pname=DeduplicationExample`
 
@@ -127,7 +127,7 @@ become available for reading by consumers. No additional actions are required fo
 
 ![Send delay](docs/img/send_delay.svg)
 
-Example: [SendDelayExample](src/test/kotlin/examples/SendDelayExample.kt)
+Example: [SendDelayExample](examples/src/main/kotlin/kolbasa/example/SendDelayExample.kt)
 
 `./gradlew example -Pname=SendDelayExample`
 
@@ -146,14 +146,14 @@ preserve causal ordering
 in any way, and you just want to send as many messages as possible to the queue
 
 However, Kolbasa does not send all messages to the queue one by one, this is very bad for performance. The library sends
-messages to the queue in [chunks](src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
+messages to the queue in [chunks](kolbasa/src/main/kotlin/kolbasa/producer/SendOptions.kt) and all errors are processed along the
 boundary of these chunks, so if a specific chunk contains a invalid message, the entire chunk will be discarded.
 
 The easiest way to show the difference between these approaches is with pictures.
 In the example below, we send 6 messages with `chunkSize=2` and one poison message. It turns out, three chunks, one of
 which (the second) contains an incorrect message.
 
-Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
+Depending on [PartialInsert](kolbasa/src/main/kotlin/kolbasa/producer/PartialInsert.kt) mode, the sending result will be different:
 
 `PartialInsert.PROHIBITED`
 
@@ -168,7 +168,7 @@ Depending on [PartialInsert](src/main/kotlin/kolbasa/producer/PartialInsert.kt) 
 ![As many as possible](docs/img/partial_insert_as_many_as_possible.svg)
 
 
-Example: [PartialInsertExample](src/test/kotlin/examples/PartialInsertExample.kt)
+Example: [PartialInsertExample](examples/src/main/kotlin/kolbasa/example/PartialInsertExample.kt)
 
 `./gradlew example -Pname=PartialInsertExample`
 
@@ -186,13 +186,30 @@ non-unique email (for example), we do not want this task to appear in the queue 
 We want the sending of the message to the queue to be commited (or rolled back) along with the request for user registration.
 New record in the `customer` table and the new message in the queue or nothing at all.
 
-To do this, we need to use special [ConnectionAwareDatabaseProducer](src/main/kotlin/kolbasa/producer/connection/ConnectionAwareDatabaseProducer.kt)
-and [ConnectionAwareDatabaseConsumer](src/main/kotlin/kolbasa/consumer/connection/ConnectionAwareDatabaseConsumer.kt) that can
+To do this, we need to use special [ConnectionAwareDatabaseProducer](kolbasa/src/main/kotlin/kolbasa/producer/connection/ConnectionAwareDatabaseProducer.kt)
+and [ConnectionAwareDatabaseConsumer](kolbasa/src/main/kotlin/kolbasa/consumer/connection/ConnectionAwareDatabaseConsumer.kt) that can
 work in the context of an existing transaction. They do not take over the transaction management, completely delegating this work
 to the calling code. It works perfectly with plain JDBC or more complex frameworks like [Hibernate](https://hibernate.org),
 [Exposed](https://jetbrains.github.io/Exposed/home.html) etc.
 
-Example: [TransactionContextExample](src/test/kotlin/examples/TransactionContextExample.kt)
+With a framework you keep using its transactions and only need the JDBC `Connection` of the current one - `session.doWork { }` in
+Hibernate, `DataSourceUtils.getConnection(dataSource)` in Spring. With plain JDBC there is no boilerplate to write either: kolbasa
+publishes the same transaction helper it uses for its own queries.
+
+```kotlin
+import kolbasa.utils.JdbcHelpers.inTransaction
+
+dataSource.inTransaction { connection ->
+    // Your own insert and the send are committed together - or neither of them is
+    customerRepository.insert(connection, customer)
+    producer.send(connection, queue, "Customer with id=${customer.id} was registered")
+}
+```
+
+`inTransaction` sets `autoCommit` to `false`, commits when the block returns and rolls back if it throws, rethrowing the original
+exception.
+
+Example: [TransactionContextExample](examples/src/main/kotlin/kolbasa/example/TransactionContextExample.kt)
 
 `./gradlew example -Pname=TransactionContextExample`
 
@@ -223,7 +240,7 @@ val queue = Queue(
 )
 ```
 
-Example: [DlqExample](src/test/kotlin/examples/DlqExample.kt)
+Example: [DlqExample](examples/src/main/kotlin/kolbasa/example/DlqExample.kt)
 
 `./gradlew example -Pname=DlqExample`
 
@@ -252,7 +269,7 @@ val queue = Queue(
 )
 ```
 
-Example: [ArchiveExample](src/test/kotlin/examples/ArchiveExample.kt)
+Example: [ArchiveExample](examples/src/main/kotlin/kolbasa/example/ArchiveExample.kt)
 
 `./gradlew example -Pname=ArchiveExample`
 
@@ -278,7 +295,7 @@ val queue = Queue(
 perform q_events_put(data => new.message);
 ```
 
-Example: [SqlPutFunctionExample](src/test/kotlin/examples/SqlPutFunctionExample.kt)
+Example: [SqlPutFunctionExample](examples/src/main/kotlin/kolbasa/example/SqlPutFunctionExample.kt)
 
 `./gradlew example -Pname=SqlPutFunctionExample`
 

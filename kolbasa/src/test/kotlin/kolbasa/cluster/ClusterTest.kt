@@ -1,0 +1,201 @@
+package kolbasa.cluster
+
+import kolbasa.AbstractPostgreSQLTest
+import kolbasa.cluster.schema.ShardSchema
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.schema.IdSchema
+import kolbasa.schema.NodeId
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
+import java.sql.Statement
+import javax.sql.DataSource
+
+class ClusterTest : AbstractPostgreSQLTest() {
+
+    @Test
+    fun testInitCluster_If_No_DataSources() {
+        val cluster = Cluster(emptyList())
+
+        assertThrows<IllegalStateException> {
+            cluster.updateStateOnce()
+        }
+    }
+
+    @Test
+    fun testInitCluster_Test_State_Init_And_Not() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val cluster = Cluster(dataSources)
+
+        // State not updated
+        assertFalse(cluster.clusterStateUpdatedAtLeastOnce())
+        assertThrows<IllegalStateException> {
+            cluster.getState()
+        }
+
+        // Update the state
+        cluster.updateStateOnce()
+
+        // State updated
+        assertTrue(cluster.clusterStateUpdatedAtLeastOnce())
+        assertDoesNotThrow {
+            cluster.getState()
+        }
+    }
+
+    @Test
+    fun testInitCluster_If_State_The_Same() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+
+        val cluster = Cluster(dataSources)
+
+        // First initialization
+        cluster.updateStateOnce()
+        val firstState = cluster.getState()
+
+        // Second initialization, check that states are the same
+        cluster.updateStateOnce()
+        val secondState = cluster.getState()
+
+        assertSame(firstState, secondState)
+        assertTrue(firstState.nodes.isNotEmpty(), "State: $firstState")
+    }
+
+    @Test
+    fun testInitCluster_If_State_Not_The_Same() {
+        val dataSources = mapOf(
+            "public" to dataSource,
+            FIRST_SCHEMA_NAME to dataSourceFirstSchema,
+            SECOND_SCHEMA_NAME to dataSourceSecondSchema
+        )
+
+        val cluster = Cluster(dataSources.values.toList())
+
+        // First shard table initialization/read
+        cluster.updateStateOnce()
+        val firstState = cluster.getState()
+
+        // ---------------------------------------------------------------------------------------
+        // Make shard changes
+        val shardToChange = Shard.randomShard()
+        val currentProducerConsumerNode = requireNotNull(firstState.shards[shardToChange]?.producerNode)
+        val newProducerConsumerNode = (firstState.nodes.keys - currentProducerConsumerNode).random()
+        assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
+
+        val shardTables = findShardTables(dataSources).filter { foundShardTable ->
+            foundShardTable.numberOfTables > 0
+        }
+        assertEquals(1, shardTables.size)
+        shardTables.first().datasource.useStatement { statement: Statement ->
+            val sql = """
+                update
+                    ${ShardSchema.SHARD_TABLE_NAME}
+                set
+                    ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}',
+                    ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '${newProducerConsumerNode.id}'
+                where
+                    ${ShardSchema.SHARD_COLUMN_NAME} = $shardToChange
+            """.trimIndent()
+            statement.execute(sql)
+        }
+        // ---------------------------------------------------------------------------------------
+
+        // Second shard table read
+        cluster.updateStateOnce()
+        val secondState = cluster.getState()
+
+        assertNotEquals(firstState, secondState)
+        assertEquals(secondState.shards[shardToChange]?.producerNode, newProducerConsumerNode)
+        assertEquals(secondState.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
+    }
+
+    @Test
+    fun testInitCluster_All_Node_IDs_Initialized() {
+        val dataSources = mapOf(
+            "public" to dataSource,
+            FIRST_SCHEMA_NAME to dataSourceFirstSchema,
+            SECOND_SCHEMA_NAME to dataSourceSecondSchema
+        )
+
+        val cluster = Cluster(dataSources.values.toList())
+
+        // First initialization
+        cluster.updateStateOnce()
+        val firstShardIDs = dataSources.mapNotNull { (_, dataSource) ->
+            IdSchema.readNodeInfo(dataSource)
+        }
+        assertEquals(dataSources.size, firstShardIDs.size, "Data sources: $dataSources, shardIds: $firstShardIDs")
+
+        // Second initialization, check that IDs are the same
+        cluster.updateStateOnce()
+        val secondShardIDs = dataSources.mapNotNull { (_, dataSource) ->
+            IdSchema.readNodeInfo(dataSource)
+        }
+        assertEquals(dataSources.size, secondShardIDs.size, "Data sources: $dataSources, shardIds: $secondShardIDs")
+        assertEquals(firstShardIDs, secondShardIDs)
+    }
+
+    @Test
+    fun testInitCluster_If_No_Shard_Table_At_All() {
+        val dataSources = mapOf(
+            "public" to dataSource,
+            FIRST_SCHEMA_NAME to dataSourceFirstSchema,
+            SECOND_SCHEMA_NAME to dataSourceSecondSchema
+        )
+
+        val cluster = Cluster(dataSources.values.toList())
+        cluster.updateStateOnce()
+
+        // Number of created shard tables
+        val shardTables = findShardTables(dataSources)
+            .filter { foundShardTable ->
+                foundShardTable.numberOfTables > 0
+            }
+
+        // Check that only one shard table was created
+        assertEquals(1, shardTables.size)
+
+        // Check that shard table was created on the node with the smallest id
+        val nodeIdWithShardTable = shardTables.first().nodeId
+        val smallestExistingId = dataSources
+            .mapNotNull { (_, dataSource) ->
+                IdSchema.readNodeInfo(dataSource)
+            }
+            .minOf { it }
+        assertEquals(smallestExistingId.id, nodeIdWithShardTable)
+    }
+
+
+    private fun findShardTables(dataSources: Map<String, DataSource>): List<FoundShardTable> {
+        return dataSources
+            .map { (schema, dataSource) ->
+                val sql = """
+                    select
+                        count(*)
+                    from
+                        information_schema.tables
+                    where
+                        table_schema='$schema' and
+                        table_name='${ShardSchema.SHARD_TABLE_NAME}'
+                """.trimIndent()
+
+                val numberOfTables = dataSource.readInt(sql)
+                val thisNodeId = requireNotNull(IdSchema.readNodeInfo(dataSource))
+                FoundShardTable(numberOfTables, thisNodeId.id, schema, dataSource)
+            }
+    }
+
+    private data class FoundShardTable(
+        val numberOfTables: Int,
+        val nodeId: NodeId,
+        val schema: String,
+        val datasource: DataSource
+    )
+
+}

@@ -21,23 +21,25 @@ published to Maven Central as `io.github.vgv:kolbasa`. Requires PostgreSQL 10+ a
 
 ## Build, test, run
 
-This is a **Gradle** project (Kotlin DSL). Use the wrapper:
+This is a **Gradle** project (Kotlin DSL) with four modules — `:kolbasa`, `:test-support`, `:examples` and
+`:performance` (see [Layout](#layout)). Use the wrapper. A task name without a project prefix runs in every module
+that has it — `./gradlew test` runs the library's suite, `./gradlew :kolbasa:test` is the explicit form:
 
 - Build: `./gradlew build`
 - Compile only: `./gradlew compileKotlin`
 - Run tests: `./gradlew test`
 - Run a single example: `./gradlew example -Pname=SimpleExample` (any file from
-  `src/test/kotlin/examples`); add `-Plang=java` to run its Java twin instead
-- Run the benchmarks: `./gradlew performance`
+  `examples/src/main/kotlin/kolbasa/example`); add `-Plang=java` to run its Java twin instead
+- Run the benchmarks: `test=producer-consumer ./gradlew performance` (the scenario name is required)
 
 **Tests need Docker.** The test suite and the examples spin up PostgreSQL via Testcontainers, so a
 running Docker daemon is required. Examples can also point at a real PostgreSQL instance via
-`src/test/kotlin/examples/ExamplesDataSourceProvider.kt`.
+`examples/src/main/kotlin/kolbasa/example/ExamplesDataSourceProvider.kt`.
 
-**`./gradlew test` picks a random PostgreSQL major.** `AbstractPostgresqlTest` chooses one image per
-JVM out of `src/test/resources/postgresql-test-images.txt`, so two runs are not the same environment,
-and a run can stall for minutes pulling an image Docker hasn't cached yet. To pin a version, use the
-per-image task — `./gradlew testPg_18_4`, one exists for every listed image. Setting
+**`./gradlew test` picks a random PostgreSQL major.** `AbstractPostgreSQLTest` chooses one image per
+JVM out of `test-support/src/main/resources/postgresql-test-images.txt` (through `kolbasa.test.PostgreSQLImages`), so
+two runs are not the same environment, and a run can stall for minutes pulling an image Docker hasn't cached yet. To
+pin a version, use the per-image task — `./gradlew testPg_18_4`, one exists for every listed image. Setting
 `-Dkolbasa.test.postgresql.image=…` on `test` does **not** work: Gradle puts it on the daemon, not on
 the forked test JVM, and only the `testPg_*` tasks pass it through.
 
@@ -49,16 +51,28 @@ Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 
 ## Layout
 
-- `src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
+The build has four Gradle modules — only `:kolbasa` is published — plus `gradle/build-logic`, an included build
+holding the shared build logic. The root project has no code.
+
+- `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/butcher` — the operator CLI), `stats` (Prometheus,
   OpenTelemetry).
-- `src/test/kotlin/examples/` — runnable, self-contained examples; the best on-ramp to the API. Most
-  come in **pairs**: `SimpleExample.kt` and `SimpleExample.java` are the same program written twice,
-  because kolbasa is meant to read well from Java too. Keep the pair in sync — if you change one, change
-  the other. The `.java` files sit under `src/test/kotlin/` deliberately: `build.gradle.kts` adds
-  `sourceSets.test { java.srcDir("src/test/kotlin") }` so javac compiles them. Move them to a "proper"
-  `src/test/java/` and nothing builds them — not `test`, not CI.
+- `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules; today that is
+  `PostgreSQLImages`, which reads `postgresql-test-images.txt` from this module's resources. Which PostgreSQL versions the
+  repository is tested against is decided here, once, for the tests and the benchmarks alike.
+- `examples/src/main/kotlin/kolbasa/example/` — runnable, self-contained examples; the best on-ramp to the API.
+  Most come in **pairs**: `SimpleExample.kt` and `SimpleExample.java` are the same program written
+  twice, because kolbasa is meant to read well from Java too. Keep the pair in sync — if you change one,
+  change the other. The `.java` files sit next to their Kotlin twins deliberately:
+  `examples/build.gradle.kts` adds `sourceSets.main { java.srcDir("src/main/kotlin") }` so javac
+  compiles them. The module depends on `:kolbasa` the way a user would, so an example can only use the
+  **public** API — if it needs an `internal` declaration to compile, it is not an example anyone could
+  copy.
+- `performance/src/main/kotlin/kolbasa/performance/` — the benchmark suite, run with `./gradlew performance`. Which scenario
+  runs, and against which database, comes from environment variables, not from Gradle — `test=producer-consumer
+  ./gradlew performance`; `Env.kt` lists every variable it reads. Like the examples, it depends on `:kolbasa` the way a
+  user would, so it measures through the public API only.
 - `docs/` — architecture and operator documentation (see below).
 
 ## Gotchas
@@ -74,6 +88,10 @@ Things that commonly trip people up:
 - **Failed sends don't throw.** `producer.send(…)` returns a `SendResult`; check
   `result.failedMessages` (or call `result.throwExceptionIfAny()`) — a partial failure won't surface as
   an exception on its own.
+- **Don't hand-roll a transaction.** For the `ConnectionAware*` case the library publishes the helper —
+  `import kolbasa.utils.JdbcHelpers.inTransaction`, then `dataSource.inTransaction { connection -> … }`.
+  It sets `autoCommit = false`, commits, and on a throw rolls back and rethrows the original exception.
+  `withAutoCommit` is its counterpart — a connection on which every statement is committed on its own.
 
 ## Conventions
 
@@ -81,6 +99,9 @@ Things that commonly trip people up:
   carry KDoc.
 - Both a `DataSource`-backed (`Database*`) and a `Connection`-aware (`ConnectionAware*`) variant exist
   for each role — keep them in sync when changing one.
+- `JdbcHelpers` is a **public object with an almost entirely `internal` body**: only `inTransaction` and
+  `withAutoCommit` are API, the other 24 functions are plumbing. Adding a `public fun` there publishes it
+  forever, so mark new helpers `internal` unless the intent is to extend the public API.
 - kolbasa runs on **vanilla PostgreSQL** (no extensions, no superuser). Don't introduce SQL that needs
   either.
 - Don't hand-edit a queue's generated DDL; schema generation owns table/index structure. Ad-hoc
