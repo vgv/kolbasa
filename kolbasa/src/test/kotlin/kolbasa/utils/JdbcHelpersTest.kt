@@ -10,9 +10,9 @@ import kolbasa.utils.JdbcHelpers.readLongList
 import kolbasa.utils.JdbcHelpers.readLongOrNull
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.readStringList
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useSavepoint
 import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -75,26 +75,26 @@ internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
     // -------------------------------------------------------------------------------------------
 
     @Test
-    fun testUseConnectionWithAutocommit_CheckAutoCommit() {
+    fun testWithAutocommit_CheckAutoCommit() {
         // Check auto-commit is off
-        dataSource.useConnectionWithAutocommit { connection: Connection ->
+        dataSource.withAutoCommit { connection: Connection ->
             Assertions.assertTrue(connection.autoCommit)
         }
     }
 
     @Test
-    fun testUseConnectionWithAutocommit_CheckTransactionBoundaries() {
+    fun testWithAutocommit_CheckTransactionBoundaries() {
         var firstTransaction: Long = -1
         var secondTransaction: Long = -1
 
-        dataSource.useConnectionWithAutocommit { connection: Connection ->
+        dataSource.withAutoCommit { connection: Connection ->
             Assertions.assertEquals(3, connection.readInt("select count(*) from full_table"))
             connection.useStatement { statement -> statement.executeUpdate("delete from full_table") }
             Assertions.assertEquals(0, connection.readInt("select count(*) from full_table"))
             firstTransaction = connection.readLong("select txid_current()")
 
             // read in another transaction
-            dataSource.useConnectionWithAutocommit { otherConnection ->
+            dataSource.withAutoCommit { otherConnection ->
                 Assertions.assertEquals(0, otherConnection.readInt("select count(*) from full_table"))
                 otherConnection.useStatement { statement -> statement.executeUpdate("insert into full_table(str_value,int_value,long_value,boolean_value) values ('a',1,10,false)") }
                 Assertions.assertEquals(1, otherConnection.readInt("select count(*) from full_table"))
@@ -106,7 +106,7 @@ internal class JdbcHelpersTest : AbstractPostgreSQLTest() {
         }
 
         // read again after commit^ above
-        dataSource.useConnectionWithAutocommit { connection: Connection ->
+        dataSource.withAutoCommit { connection: Connection ->
             Assertions.assertEquals(1, connection.readInt("select count(*) from full_table"))
         }
 

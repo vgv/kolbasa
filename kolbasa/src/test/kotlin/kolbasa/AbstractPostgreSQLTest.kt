@@ -3,8 +3,8 @@ package kolbasa
 import kolbasa.test.PostgreSQLImages
 
 import com.zaxxer.hikari.HikariDataSource
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -58,19 +58,19 @@ abstract class AbstractPostgreSQLTest {
 
         // Insert test data for all schemas, if any
         // execute all statements in a separate transaction for each statement
-        dataSource.useConnectionWithAutocommit { connection ->
+        dataSource.withAutoCommit { connection ->
             connection.useStatement { statement ->
                 generateTestData().forEach(statement::execute)
             }
         }
         // execute all statements in a separate transaction for each statement
-        dataSourceFirstSchema.useConnectionWithAutocommit { connection ->
+        dataSourceFirstSchema.withAutoCommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataFirstSchema().forEach(statement::execute)
             }
         }
         // execute all statements in a separate transaction for each statement
-        dataSourceSecondSchema.useConnectionWithAutocommit { connection ->
+        dataSourceSecondSchema.withAutoCommit { connection ->
             connection.useStatement { statement ->
                 generateTestDataSecondSchema().forEach(statement::execute)
             }

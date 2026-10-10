@@ -1,8 +1,8 @@
 package kolbasa.schema
 
 import kolbasa.utils.Helpers
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -47,7 +47,7 @@ internal object IdSchema {
             """
         }
 
-        dataSource.useConnectionWithAutocommit { connection ->
+        dataSource.withAutoCommit { connection ->
             // separate transaction for each statement
             connection.createStatement().use { statement ->
                 ddlStatements.forEach { ddlStatement ->

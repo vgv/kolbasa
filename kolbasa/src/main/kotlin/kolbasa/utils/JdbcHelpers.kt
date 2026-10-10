@@ -102,14 +102,11 @@ object JdbcHelpers {
      * @see inTransaction
      */
     @JvmStatic
+    @Throws(SQLException::class)
     fun <T> DataSource.withAutoCommit(block: java.util.function.Function<Connection, T>): T {
-        return useConnectionWithAutocommit(block::apply)
-    }
-
-    internal fun <T> DataSource.useConnectionWithAutocommit(block: (Connection) -> T): T {
         return connection.use { connection ->
             connection.autoCommit = true
-            block(connection)
+            block.apply(connection)
         }
     }
 

@@ -1,9 +1,9 @@
 package kolbasa.schema
 
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueRole
 import kolbasa.schema.Schema.Companion.merge
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import javax.sql.DataSource
 
 /**
@@ -319,7 +319,7 @@ object SchemaHelpers {
         }
 
         // separate transaction for each statement
-        return dataSource.useConnectionWithAutocommit { connection ->
+        return dataSource.withAutoCommit { connection ->
             connection.createStatement().use { statement ->
 
                 // Execute table statements

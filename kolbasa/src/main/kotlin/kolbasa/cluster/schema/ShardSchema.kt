@@ -1,12 +1,12 @@
 package kolbasa.cluster.schema
 
 import kolbasa.cluster.Shard
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -48,7 +48,7 @@ internal object ShardSchema {
             CREATE_SHARD_TABLE_STATEMENT,
         )
 
-        dataSource.useConnectionWithAutocommit { connection ->
+        dataSource.withAutoCommit { connection ->
             // separate transaction for each statement
             connection.createStatement().use { statement ->
                 ddlStatements.forEach { ddlStatement ->

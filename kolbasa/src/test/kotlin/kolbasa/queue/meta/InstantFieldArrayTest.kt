@@ -1,7 +1,7 @@
 package kolbasa.queue.meta
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.utils.JdbcHelpers.useConnectionWithAutocommit
+import kolbasa.utils.JdbcHelpers.withAutoCommit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -47,7 +47,7 @@ internal class InstantFieldArrayTest : AbstractPostgreSQLTest() {
             InstantField.MIN_TIMESTAMPTZ
         )
 
-        dataSource.useConnectionWithAutocommit { connection ->
+        dataSource.withAutoCommit { connection ->
             connection.prepareStatement("insert into $TABLE select * from unnest(?)").use { statement ->
                 field.fillPreparedStatementForValues(statement, 1, values)
                 statement.execute()
@@ -55,7 +55,7 @@ internal class InstantFieldArrayTest : AbstractPostgreSQLTest() {
         }
 
         val readBack = mutableListOf<Instant>()
-        dataSource.useConnectionWithAutocommit { connection ->
+        dataSource.withAutoCommit { connection ->
             connection.prepareStatement("select v from $TABLE order by v").use { statement ->
                 statement.executeQuery().use { resultSet ->
                     while (resultSet.next()) {
