@@ -16,8 +16,13 @@ internal object JdbcHelpers {
                 val result = block(connection)
                 connection.commit()
                 result
-            } catch (e: Exception) {
-                connection.rollback()
+            } catch (e: Throwable) {
+                try {
+                    connection.rollback()
+                } catch (rollbackError: Throwable) {
+                    e.addSuppressed(rollbackError)
+                }
+
                 throw e
             }
         }
