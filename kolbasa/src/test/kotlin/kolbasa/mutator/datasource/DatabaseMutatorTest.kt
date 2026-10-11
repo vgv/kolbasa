@@ -6,7 +6,6 @@ import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt
 import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.SetScheduledAt
-import kolbasa.utils.JdbcHelpers.readIntList
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -18,6 +17,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.readIntList
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

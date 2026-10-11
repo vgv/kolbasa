@@ -1,7 +1,6 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.test.assertNotNull
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
@@ -9,6 +8,7 @@ import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Table.Companion.hasIndex
+import kolbasa.test.assertNotNull
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

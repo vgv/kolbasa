@@ -1,8 +1,6 @@
 package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.test.assertNotNull
-import kolbasa.test.assertTrue
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between
@@ -19,6 +17,8 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
+import kolbasa.test.assertNotNull
+import kolbasa.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame

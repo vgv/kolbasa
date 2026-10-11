@@ -1,0 +1,122 @@
+package kolbasa.cluster.admin
+
+import kolbasa.cluster.ClusterHelper
+import kolbasa.producer.ShardId
+import kolbasa.schema.Node
+import kolbasa.schema.NodeId
+import kolbasa.schema.SchemaExtractor
+import kolbasa.schema.Table
+import java.util.*
+import java.util.concurrent.atomic.AtomicLong
+import javax.sql.DataSource
+
+/**
+ * Transfer data from source nodes to target nodes for all shards in migration state.
+ * Can be re-run safely if interrupted — INSERT uses ON CONFLICT DO NOTHING,
+ * so duplicate rows are silently skipped on retry.
+ */
+internal fun move(
+    dataSources: List<DataSource>,
+    includeTables: Set<String>?,
+    excludeTables: Set<String>?,
+    progressCallback: ProgressCallback
+) {
+    val nodes = ClusterHelper.readNodes(dataSources)
+
+    // tablename => schema
+    val schemas = findAndCompareAllSchemas(
+        dataSources,
+        includeTables = includeTables,
+        excludeTables = excludeTables
+    )
+
+    // targetnode => shards (which should be migrated to this node)
+    val targetsToShards = findTargetNodeAndShards(nodes)
+
+    // Rows copied by this call, across every table and node. Lives here and not in MoveOneTable because
+    // that one is rebuilt for every table, source and round, while progress is about the whole run
+    val totalRowsMoved = AtomicLong(0)
+
+    // start move
+    targetsToShards.forEach { (targetNode, shards) ->
+        val (sources, target) = MoveHelpers.splitNodes(nodes, targetNode)
+
+        schemas.forEach { (_, schema) ->
+            do {
+                val migratedRows = sources.sumOf { sourceDS ->
+                    val moveOneTable = MoveOneTable(
+                        sourceDataSource = sourceDS,
+                        targetDataSource = target,
+                        moveProgressCallback = progressCallback,
+                        shards = shards,
+                        table = schema,
+                        rowsPerBatch = 1000,
+                        totalRowsMoved = totalRowsMoved
+                    )
+                    moveOneTable.move()
+                }
+            } while (migratedRows > 0)
+        }
+    }
+}
+
+private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<ShardId>> {
+    val (_, shards) = MoveHelpers.readShards(nodes)
+
+    val targetsToShards = mutableMapOf<NodeId, MutableList<ShardId>>()
+    shards.values.forEach { shard ->
+        if (shard.nextConsumerNode != null) {
+            targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard)
+        }
+    }
+
+    return targetsToShards
+}
+
+private fun findAndCompareAllSchemas(
+    dataSources: List<DataSource>,
+    includeTables: Set<String>?,
+    excludeTables: Set<String>?
+): Map<String, Table> {
+    // schemas
+    val allSchemas = mutableMapOf<String, MutableList<Pair<DataSource, Table>>>()
+    dataSources.forEach { dataSource ->
+        SchemaExtractor.extractRawSchema(dataSource, includeTables).forEach { (tableName, table) ->
+            if (excludeTables == null ||  tableName !in excludeTables) {
+                if (table.isQueueTable()) {
+                    allSchemas.computeIfAbsent(tableName) { mutableListOf() }.add(dataSource to table)
+                }
+            }
+        }
+    }
+
+    // check that all schemas are the same
+    allSchemas.forEach { (tableName, tables) ->
+        for (i in 0..tables.size - 2) {
+            val firstTable = tables[i]
+            for (j in i + 1..tables.size - 1) {
+                val secondTable = tables[j]
+                if (!partialEq(firstTable.second, secondTable.second)) {
+                    throw ClusterOperationException.InconsistentSchemaException(tableName)
+                }
+            }
+        }
+    }
+
+    return allSchemas.mapValues { it.value.first().second }
+}
+
+
+private fun partialEq(first: Table, second: Table): Boolean {
+    val name = first.name == second.name
+    if (!name) {
+        return false
+    }
+
+    val columns = first.columns.size == second.columns.size
+    if (!columns) {
+        return false
+    }
+
+    return first.indexes.size == second.indexes.size
+}

@@ -2,11 +2,11 @@ package kolbasa.cluster.schema
 
 import kolbasa.cluster.Shard
 import kolbasa.producer.ShardId
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.JdbcHelpers.withAutoCommit
 import java.sql.Statement
 import javax.sql.DataSource

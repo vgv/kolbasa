@@ -8,8 +8,8 @@ import kolbasa.stats.opentelemetry.EmptyQueueTracing
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
 import kolbasa.stats.opentelemetry.QueueTracing
-import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.EmptyQueueMetrics
+import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.PrometheusQueueMetrics
 import kolbasa.stats.prometheus.QueueMetrics
 import java.time.Duration

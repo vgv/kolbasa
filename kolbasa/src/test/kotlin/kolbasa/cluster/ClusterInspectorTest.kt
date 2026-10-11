@@ -2,7 +2,6 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgreSQLTest
 import kolbasa.Kolbasa
-import kolbasa.test.assertNotNull
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.inspector.CountOptions
@@ -16,6 +15,7 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
+import kolbasa.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
