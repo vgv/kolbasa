@@ -20,8 +20,8 @@ class SchemaTest {
 
         // Random schema
         val schema = Schema(
-            tableStatements = (1..Random.nextInt(20)).map { "create table test_$it(id int);" },
-            indexStatements = (1..Random.nextInt(20)).map { "create index index_${it}_id on test_$it(id);" }
+            tableStatements = (1..Random.nextInt(1, 20)).map { "create table test_$it(id int);" },
+            indexStatements = (1..Random.nextInt(1, 20)).map { "create index index_${it}_id on test_$it(id);" }
         )
         assertEquals(schema.tableStatements.size + schema.indexStatements.size, schema.size)
         assertFalse(schema.isEmpty)
