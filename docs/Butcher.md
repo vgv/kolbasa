@@ -587,24 +587,24 @@ Two questions that come up often:
 
 ## The same thing from code
 
-Every check and every migration step is also a method on `kolbasa.butcher.Butcher`, so a rebalance can be
-driven by a program instead of by hand. The CLI is a frontend over this class and uses nothing it does not
-offer.
+Every check and every migration step is also a method on `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance
+can be driven by a program instead of by hand. The CLI is a frontend over this class and uses nothing it does
+not offer — `butcher` is the name of the tool, not of the API.
 
 ```kotlin
-val butcher = Butcher(listOf(node01, node02, node03))   // the same DataSource list a Cluster is given
+val admin = ClusterAdmin(listOf(node01, node02, node03))   // the same DataSource list a Cluster is given
 
-val balance = butcher.checkShardBalance()
+val balance = admin.checkShardBalance()
 if (!balance.isBalanced) {
     balance.proposedMoves.forEach { (target, shards) ->
-        butcher.prepareMigration(target, shards)
-        butcher.moveData()
-        butcher.finalizeMigration()
+        admin.prepareMigration(target, shards)
+        admin.moveData()
+        admin.finalizeMigration()
     }
 }
 ```
 
-Creating a `Butcher` touches no database: it only remembers the nodes. That matters because you reach for it
+Creating a `ClusterAdmin` touches no database: it only remembers the nodes. That matters because you reach for it
 when a cluster is already in a bad state, and a tool that repaired the schema or seeded the shard table on
 its way in would destroy the evidence it was asked to look at. (`Cluster` does initialize what it needs when
 it starts, which is why it is the wrong thing to diagnose a cluster with.)

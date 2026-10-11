@@ -1,11 +1,11 @@
 package kolbasa.cluster
 
 import kolbasa.Kolbasa
-import kolbasa.schema.IdSchema
-import kolbasa.schema.Node
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
+import kolbasa.schema.IdSchema
+import kolbasa.schema.Node
 import kolbasa.schema.SchemaHelpers
 import java.util.*
 import java.util.concurrent.TimeUnit

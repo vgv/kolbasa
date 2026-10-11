@@ -56,8 +56,8 @@ holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
-  `cluster` (multi-node), `butcher` (the public cluster-operations API — `Butcher`, the check results, the
-  progress callback; `cluster/butcher` is its implementation), `stats` (Prometheus, OpenTelemetry).
+  `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the check results, the
+  progress callback, and the internal operations behind them), `stats` (Prometheus, OpenTelemetry).
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules; today that is
   `PostgreSQLImages`, which reads `postgresql-test-images.txt` from this module's resources. Which PostgreSQL versions the
   repository is tested against is decided here, once, for the tests and the benchmarks alike.
@@ -73,11 +73,12 @@ holding the shared build logic. The root project has no code.
   runs, and against which database, comes from environment variables, not from Gradle — `test=producer-consumer
   ./gradlew performance`; `Env.kt` lists every variable it reads. Like the examples, it depends on `:kolbasa` the way a
   user would, so it measures through the public API only.
-- `butcher/src/main/kotlin/kolbasa/butcher/cli/` — `butcher`, the operator CLI, built with
+- `butcher/src/main/kotlin/kolbasa/butcher/` — `butcher`, the operator CLI, built with
   [Clikt](https://ajalt.github.io/clikt/): the four commands, the cluster config-file parser and the
   renderers that turn a check result into tables. Like the examples and the benchmarks it depends on
   `:kolbasa` the way a user would, so it can only use the **public** API — which makes the CLI the proof
-  that `kolbasa.butcher` is complete: a missing handle fails to compile here. Not published to Maven; it
+  that `kolbasa.cluster.admin` is complete: a missing handle fails to compile here. The name `butcher` lives
+  only here — it is what the tool is called, not what the API is called. Not published to Maven; it
   ships as the `butcherJar` fat jar and a container image. Anything that talks to the database belongs in
   the library, not here.
 - `docs/` — architecture and operator documentation (see below).

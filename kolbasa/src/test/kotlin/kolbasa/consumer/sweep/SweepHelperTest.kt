@@ -3,7 +3,6 @@ package kolbasa.consumer.sweep
 import kolbasa.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -11,6 +10,7 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

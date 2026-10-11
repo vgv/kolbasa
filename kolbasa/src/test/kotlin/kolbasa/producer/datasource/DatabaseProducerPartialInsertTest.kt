@@ -1,7 +1,6 @@
 package kolbasa.producer.datasource
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
@@ -14,6 +13,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

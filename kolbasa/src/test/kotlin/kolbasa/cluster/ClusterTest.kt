@@ -2,16 +2,16 @@ package kolbasa.cluster
 
 import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.producer.ShardId
 import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows

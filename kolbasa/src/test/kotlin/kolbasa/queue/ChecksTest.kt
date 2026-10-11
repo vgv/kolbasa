@@ -1,6 +1,5 @@
 package kolbasa.queue
 
-import kolbasa.test.assertNotNull
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
@@ -12,6 +11,7 @@ import kolbasa.mutator.SetScheduledAt
 import kolbasa.queue.meta.InstantField
 import kolbasa.queue.meta.MetaField
 import kolbasa.schema.Const
+import kolbasa.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow

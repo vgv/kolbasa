@@ -1,8 +1,8 @@
 package kolbasa.producer
 
+import kolbasa.producer.MessageResult.Duplicate
 import kolbasa.producer.MessageResult.Error
 import kolbasa.producer.MessageResult.Success
-import kolbasa.producer.MessageResult.Duplicate
 
 /**
  * Result of sending a batch of messages

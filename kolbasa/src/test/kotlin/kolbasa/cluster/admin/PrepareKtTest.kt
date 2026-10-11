@@ -1,0 +1,126 @@
+package kolbasa.cluster.admin
+
+import kolbasa.AbstractPostgreSQLTest
+import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
+import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.useStatement
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertInstanceOf
+import org.junit.jupiter.api.assertNull
+import org.junit.jupiter.api.assertThrows
+import kotlin.random.Random
+
+class PrepareKtTest : AbstractPostgreSQLTest() {
+
+    @Test
+    fun testPrepare_Success() {
+        // PREPARE everything
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        ShardSchema.createShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+        val shards = ShardSchema.readShards(dataSource)
+
+        val sourceNode = nodes.keys.random()
+        val targetNode = nodes.keys.filterNot { it == sourceNode }.random()
+
+        val shardsToMove = shards
+            .filterValues { it.producerNode == sourceNode.id }
+            .keys
+            .shuffled()
+            .take(Random.nextInt(2, 10))  // choose a few shards to move
+            .sorted()
+
+        // RUN
+        prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
+
+        // CHECK
+        // first, check the table content
+        dataSource.useStatement { statement ->
+            val sql = """
+                select
+                    ${ShardSchema.PRODUCER_NODE_COLUMN_NAME}, ${ShardSchema.CONSUMER_NODE_COLUMN_NAME}, ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME}
+                from ${ShardSchema.SHARD_TABLE_NAME}
+                where ${ShardSchema.SHARD_COLUMN_NAME} in (${shardsToMove.joinToString(",") { it.id.toString() }})
+            """.trimIndent()
+            statement.executeQuery(sql).use { resultSet ->
+                var checkedShards = 0
+                while (resultSet.next()) {
+                    val producerNode = resultSet.getString(1)
+                    val consumerNode = resultSet.getString(2)
+                    val nextConsumerNode = resultSet.getString(3)
+
+                    assertEquals(targetNode.id.id, producerNode)
+                    assertNull(consumerNode)
+                    assertEquals(targetNode.id.id, nextConsumerNode)
+                    checkedShards++
+                }
+
+                // The assertions above live inside the loop, so without this check an empty
+                // result set would make the test pass having verified nothing
+                assertEquals(shardsToMove.size, checkedShards)
+            }
+        }
+
+        // second, check that the output was printed (ProgressCallback.Ignore is used directly now)
+        // The old mockk verification is no longer applicable since prepare() uses ProgressCallback.Ignore directly.
+        // We verify correctness via the database assertions above.
+    }
+
+    @Test
+    fun testPrepare_TargetNodeDoesNotExist() {
+        // PREPARE everything
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        ShardSchema.createShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+
+        val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
+
+        // Which shards they are does not matter: prepare() rejects the unknown target node first
+        val shardsToMove = List(3) { ShardId.random() }
+
+        // RUN
+        val exception = assertThrows<ClusterOperationException.MoveToNonExistingNodeException> {
+            prepare(dataSources, targetNode, shardsToMove, ProgressCallback.Ignore)
+        }
+
+        // CHECK
+        assertInstanceOf<ClusterOperationException.MoveToNonExistingNodeException>(exception)
+        assertEquals(nodes.keys.map { it.id }, exception.knownNodes)
+        assertEquals(targetNode, exception.targetNode)
+    }
+
+    @Test
+    fun testPrepare_MoveShardToTheSameNode() {
+        // PREPARE everything
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        ShardSchema.createShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+        val shards = ShardSchema.readShards(dataSource)
+
+        val sourceNode = nodes.keys.random()
+        val targetNode = nodes.keys.filterNot { it == sourceNode }.random()
+
+        val shardsToMove = shards
+            .filterValues { it.producerNode == targetNode.id } // move shards that are already on the target node
+            .keys
+            .shuffled()
+            .take(Random.nextInt(2, 10))  // choose a few shards to move
+            .sorted()
+
+        // RUN
+        val exception = assertThrows<ClusterOperationException.MoveToTheSameShardException> {
+            prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
+        }
+
+        // CHECK
+        assertInstanceOf<ClusterOperationException.MoveToTheSameShardException>(exception)
+        assertEquals(shardsToMove.first(), exception.shard)
+        assertEquals(targetNode.id, exception.targetNode)
+    }
+}

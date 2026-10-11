@@ -1,7 +1,6 @@
 package kolbasa.consumer.datasource
 
 import kolbasa.AbstractPostgreSQLTest
-import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendResult.Companion.onlyDuplicated
@@ -15,6 +14,7 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -80,7 +80,7 @@ tasks.register<Jar>("butcherJar") {
 
     manifest {
         attributes(
-            "Main-Class" to "kolbasa.butcher.cli.MainKt",
+            "Main-Class" to "kolbasa.butcher.MainKt",
             "Implementation-Title" to "butcher",
             "Implementation-Version" to project.sanitizeVersion(),
             // postgresql 42.7.x is a Multi-Release jar: it ships JDK11-specialized classes under META-INF/versions/11/
