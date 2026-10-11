@@ -7,6 +7,7 @@ import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
 import java.util.*
+import java.util.concurrent.atomic.AtomicLong
 import javax.sql.DataSource
 
 /**
@@ -32,6 +33,10 @@ internal fun move(
     // targetnode => shards (which should be migrated to this node)
     val targetsToShards = findTargetNodeAndShards(nodes)
 
+    // Rows copied by this call, across every table and node. Lives here and not in MoveOneTable because
+    // that one is rebuilt for every table, source and round, while progress is about the whole run
+    val totalRowsMoved = AtomicLong(0)
+
     // start move
     targetsToShards.forEach { (targetNode, shards) ->
         val (sources, target) = MoveHelpers.splitNodes(nodes, targetNode)
@@ -45,7 +50,8 @@ internal fun move(
                         moveProgressCallback = progressCallback,
                         shards = shards,
                         table = schema,
-                        rowsPerBatch = 1000
+                        rowsPerBatch = 1000,
+                        totalRowsMoved = totalRowsMoved
                     )
                     moveOneTable.move()
                 }

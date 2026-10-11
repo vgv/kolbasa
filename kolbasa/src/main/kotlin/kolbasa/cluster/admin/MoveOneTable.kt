@@ -10,6 +10,7 @@ import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Types
 import java.time.OffsetDateTime
+import java.util.concurrent.atomic.AtomicLong
 import javax.sql.DataSource
 
 internal class MoveOneTable(
@@ -18,10 +19,11 @@ internal class MoveOneTable(
     private val moveProgressCallback: ProgressCallback,
     private val shards: List<ShardId>,
     private val table: Table,
-    private val rowsPerBatch: Int
+    private val rowsPerBatch: Int,
+    private val totalRowsMoved: AtomicLong
 ) {
 
-    fun move(): Int {
+    fun move(): Long {
         val dbTableName = table.name
         val columns = table.columns.toList()
         val columnsString = columns.joinToString(",") { it.name }
@@ -32,16 +34,29 @@ internal class MoveOneTable(
 
         moveProgressCallback.moveStart(dbTableName, sourceDataSource, targetDataSource)
 
-        var totalMovedRows = 0
+        var tableRowsMoved: Long = 0
         do {
+            // move one batch
             val movedRows = moveOneBatch(insertQuery, selectQuery, columns, dbTableName)
-            totalMovedRows += movedRows
-            moveProgressCallback.moveNextBatch(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
+            tableRowsMoved += movedRows
+            totalRowsMoved.addAndGet(movedRows.toLong())
+
+            // An empty batch is how the loop learns the table is done, not progress worth reporting
+            if (movedRows > 0) {
+                moveProgressCallback.moveNextBatch(
+                    tableName = dbTableName,
+                    from = sourceDataSource,
+                    to = targetDataSource,
+                    batchRowsMoved = movedRows,
+                    tableRowsMoved = tableRowsMoved,
+                    totalRowsMoved = totalRowsMoved.get()
+                )
+            }
         } while (movedRows > 0)
 
-        moveProgressCallback.moveEnd(dbTableName, sourceDataSource, targetDataSource, totalMovedRows)
+        moveProgressCallback.moveEnd(dbTableName, sourceDataSource, targetDataSource, tableRowsMoved)
 
-        return totalMovedRows
+        return tableRowsMoved
     }
 
     private fun moveOneBatch(insertQuery: String, selectQuery: String, columns: List<Column>, dbTableName: String): Int {

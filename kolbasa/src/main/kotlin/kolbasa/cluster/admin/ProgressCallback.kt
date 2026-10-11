@@ -25,11 +25,27 @@ interface ProgressCallback {
     /** Copying of one table from one node to another is about to start */
     fun moveStart(tableName: String, from: DataSource, to: DataSource) {}
 
-    /** Copying of one table from one node to another has finished, having moved [migratedRows] rows in total */
-    fun moveEnd(tableName: String, from: DataSource, to: DataSource, migratedRows: Int) {}
+    /**
+     * One batch of rows has been copied
+     *
+     * @param batchRowsMoved how many rows this batch carried. Never zero: a batch that finds nothing left to
+     * copy ends the table instead of reporting itself
+     * @param tableRowsMoved how many rows have been copied from this table so far, including this batch
+     * @param totalRowsMoved how many rows have been copied from all tables so far, including this batch
+     */
+    fun moveNextBatch(
+        tableName: String,
+        from: DataSource,
+        to: DataSource,
+        batchRowsMoved: Int,
+        tableRowsMoved: Long,
+        totalRowsMoved: Long
+    ) {
+    }
 
-    /** One batch of [migratedRows] rows of one table has been copied */
-    fun moveNextBatch(tableName: String, from: DataSource, to: DataSource, migratedRows: Int) {}
+    /** Copying of one table from one node to another has finished, having moved [tableRowsMoved] rows in total */
+    fun moveEnd(tableName: String, from: DataSource, to: DataSource, tableRowsMoved: Long) {}
+
 
     /** The migrating shards now belong to their new node, and the migration is over */
     fun finalizeSuccessful(shardsDiff: List<ShardDiff>) {}

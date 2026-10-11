@@ -28,6 +28,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.time.Instant
 import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicLong
 
 internal class MoveOneTableTest : AbstractPostgreSQLTest() {
 
@@ -95,7 +96,8 @@ internal class MoveOneTableTest : AbstractPostgreSQLTest() {
             moveProgressCallback = callback,
             shards = shardsToMove.map(ShardId::of),
             table = tableSchema,
-            rowsPerBatch = migrateBatchSize
+            rowsPerBatch = migrateBatchSize,
+            totalRowsMoved = AtomicLong()
         )
         val migratedItems = moveOneTable.move()
 
@@ -120,21 +122,28 @@ internal class MoveOneTableTest : AbstractPostgreSQLTest() {
             foundItems += messages.size
         } while (messages.isNotEmpty())
 
-        assertEquals(migratedItems, foundItems)
+        assertEquals(migratedItems, foundItems.toLong())
 
         // check that the callback was called correctly
         verifySequence {
             callback.moveStart(queue.dbTableName, dataSource, dataSourceFirstSchema)
 
-            var totalRows = 0
-            while (totalRows < migratedItems) {
-                totalRows += migrateBatchSize
-                if (totalRows > migratedItems) {
-                    totalRows = migratedItems
-                }
-                callback.moveNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, totalRows)
+            // Every batch reports how much it moved plus both running totals; the empty batch that ends
+            // the loop is not reported at all. One MoveOneTable starts from a fresh counter, so here the
+            // table total and the run total are the same number
+            var movedSoFar = 0L
+            while (movedSoFar < migratedItems) {
+                val batchRowsMoved = minOf(migrateBatchSize.toLong(), migratedItems - movedSoFar).toInt()
+                movedSoFar += batchRowsMoved
+                callback.moveNextBatch(
+                    tableName = queue.dbTableName,
+                    from = dataSource,
+                    to = dataSourceFirstSchema,
+                    batchRowsMoved = batchRowsMoved,
+                    tableRowsMoved = movedSoFar,
+                    totalRowsMoved = movedSoFar
+                )
             }
-            callback.moveNextBatch(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
 
             callback.moveEnd(queue.dbTableName, dataSource, dataSourceFirstSchema, migratedItems)
         }
