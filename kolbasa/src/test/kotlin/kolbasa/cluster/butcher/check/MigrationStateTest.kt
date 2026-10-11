@@ -80,7 +80,7 @@ class MigrationStateTest {
     fun testToString_Clean() {
         val result = MigrationState(emptyList()).compute()
 
-        assertEquals("Migration state: no shards in migration", result.toString())
+        assertEquals("Migration state: no shards in migration", result.render())
     }
 
     @Test
@@ -95,7 +95,7 @@ class MigrationStateTest {
             migratingShard(20, n2),
         )
 
-        val text = MigrationState(shards).compute().toString()
+        val text = MigrationState(shards).compute().render()
 
         assertTrue(text.contains("5 shard(s) in migration"), text)
         assertTrue(text.contains("⟶ n2"), text)

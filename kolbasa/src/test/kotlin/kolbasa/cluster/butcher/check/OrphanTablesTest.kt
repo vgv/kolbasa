@@ -162,7 +162,7 @@ class OrphanTablesTest {
     fun testToString_Clean() {
         val result = OrphanTables(emptyMap()).compute()
 
-        assertEquals("Orphan tables: no orphan queue tables", result.toString())
+        assertEquals("Orphan tables: no orphan queue tables", result.render())
     }
 
     @Test
@@ -174,7 +174,7 @@ class OrphanTablesTest {
             n2 to setOf("q_payments_arc"),
         )
 
-        val text = OrphanTables(tables).compute().toString()
+        val text = OrphanTables(tables).compute().render()
 
         assertTrue(text.contains("3 orphan queue(s) across 2 node(s)"), text)
         assertTrue(text.contains("n1"), text)

@@ -315,7 +315,7 @@ class SchemaConsistencyTest {
             n3 to mapOf("q_orders" to drifted),
         )
 
-        val text = SchemaConsistency(schemas).compute().toString()
+        val text = SchemaConsistency(schemas).compute().render()
 
         assertTrue(text.contains("~column meta_foo INT NULL -> VARCHAR NULL"), text)
     }
@@ -324,7 +324,7 @@ class SchemaConsistencyTest {
     fun testToString_Clean() {
         val result = SchemaConsistency(emptyMap()).compute()
 
-        assertEquals("Schema consistency: all tables consistent across cluster", result.toString())
+        assertEquals("Schema consistency: all tables consistent across cluster", result.render())
     }
 
     @Test
@@ -338,7 +338,7 @@ class SchemaConsistencyTest {
             n4 to mapOf<String, Table>(),
         )
 
-        val text = SchemaConsistency(schemas).compute().toString()
+        val text = SchemaConsistency(schemas).compute().render()
 
         assertTrue(text.contains("1 table(s) inconsistent"), text)
         assertTrue(text.contains("q_orders"), text)
