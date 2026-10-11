@@ -20,7 +20,8 @@ This guide assumes you understand the cluster model. If a term here is unfamilia
 4. [Command reference](#command-reference)
 5. [Worked examples](#worked-examples)
 6. [Troubleshooting](#troubleshooting)
-7. [Limitations](#limitations)
+7. [The same thing from code](#the-same-thing-from-code)
+8. [Limitations](#limitations)
 
 ---
 
@@ -175,35 +176,42 @@ migration protocol, run in order.
 | `move-data` | yes (source + target rows) | yes — `INSERT ... ON CONFLICT DO NOTHING`, deletes only rows it just copied | minutes to hours | after prepare, before finalize |
 | `finalize-migration` | yes (only `q__shard`) | yes | seconds | once the data is fully moved |
 
-Run `butcher <command>` with no further arguments to see that command's built-in help.
+Run `butcher <command> --help` to see that command's built-in help, or `butcher --help` for the list of
+commands. `butcher` with no arguments prints the same list and exits `0` — it is a question, not a failure.
 
-> butcher reports outcomes with a clear banner: a green **"Completed successfully."** on success, or a red
-> **"Invalid configuration."** / **"Execution error."** on the two common failure classes. The exit code is
-> `0` on success and `1` on any failure, so it scripts cleanly. (A few rarer migration-specific errors print
-> as a raw stack trace rather than a red banner — see [Troubleshooting](#troubleshooting).)
+> **Confirmation.** The three commands that write anything ask before they do it, describing what is about to
+> happen. `--yes` (or `-y`) skips the question. With no terminal to read an answer from — a pipe, a CI job —
+> a command without `--yes` **fails** rather than assuming consent, so an unattended run has to say out loud
+> that it means it.
+>
+> **Outcome and exit code.** Success ends with a green **"Completed successfully."** and exit `0`. Any
+> failure prints `Error: <what went wrong>` (a usage error also prints the command's usage) and exits `1`.
+> That holds for every failure, including the migration-specific ones — nothing reports itself as a stack
+> trace.
 
 ## Command reference
 
 ### `check-cluster`
 
 ```
-butcher check-cluster [<check-name>] <config-file>...
+butcher check-cluster [--checks=<check,check,...>] <config-file>...
 ```
 
-Read-only inspection of the cluster. Safe to run at any time — it never modifies anything. If `<check-name>`
-is omitted (or is `all`), every check runs. Before running any check, butcher confirms it can connect to
-**every** node in the config (a fast `select 1` to each); if any node is unreachable it stops and tells you
-which ones.
+Read-only inspection of the cluster. Safe to run at any time — it never modifies anything, and it is the one
+command that has no `--yes` to forget. If `--checks` is omitted, every check runs; name several to run just
+those. Before running any check, butcher confirms it can connect to **every** node in the config (a fast
+`select 1` to each); if any node is unreachable it stops and tells you which ones.
 
 The available checks:
 
-| `<check-name>` | What it reports |
+| `--checks` value | What it reports |
 |---|---|
-| `shard-balance` | How the 1024 shards are spread across nodes, and a **proposed** minimum-movement rebalance if they are uneven. Proposes only — it does not move anything. |
+| `shard-balance` | How the 1024 shards are spread across nodes, and a **proposed** minimum-movement rebalance if they are uneven. "Uneven" means by shard **count**: butcher does not look at how much data or traffic a shard carries. Proposes only — it does not move anything. |
 | `schema-consistency` | Whether every kolbasa table exists on every node with the same shape (columns + indexes + identity *presence*). The per-node identity *value range* is meant to differ, so it is not compared. |
 | `find-orphans` | Companion `_dlq` / `_arc` tables whose main queue table is missing on the same node. |
 | `migration-state` | Which shards are currently mid-migration (between `prepare` and `finalize`), grouped by destination node. |
-| `all` | Runs all of the above. This is the default. |
+
+Omitting `--checks` runs all of them, which is the default.
 
 The concepts behind each check — what "balanced" means, why schemas must match, what an orphan is — are
 explained in [Cluster architecture.md](Cluster%20architecture.md#schema-consistency). This guide focuses on
@@ -212,15 +220,15 @@ reading the output, shown under [Worked examples](#worked-examples).
 ### `prepare-migration`
 
 ```
-butcher prepare-migration --target=<node-id> --shards=<0,1,2,...> <config-file>...
+butcher prepare-migration --target=<node-id> --shards=<0,1,2,...> [--yes] <config-file>...
 ```
 
 Marks the listed shards for migration to `--target`. Both flags are required. `--shards` is a comma-separated
 list of shard numbers (0–1023).
 
-`--target` is the destination node's **internal kolbasa node id** (the 16-character `q__node` identity), **not**
-the config line-id. You normally don't type it by hand — `check-cluster shard-balance` proposes the moves and
-prints the exact `target:` node id to copy into `--target`.
+`--target` is the destination node's **internal kolbasa node id** (`q__node` table identity), **not**
+the config line-id. You normally don't type it by hand — `check-cluster --checks=shard-balance` proposes the moves and
+prints the exact `--target=…` to copy.
 
 This updates **shard metadata only** — no data is copied. After it runs, for each listed shard:
 
@@ -240,7 +248,7 @@ butcher refuses two nonsensical requests up front:
 ### `move-data`
 
 ```
-butcher move-data [--include-tables=<t1,t2,...>] [--exclude-tables=<t1,t2,...>] <config-file>...
+butcher move-data [--include-tables=<t1,t2,...>] [--exclude-tables=<t1,t2,...>] [--yes] <config-file>...
 ```
 
 Moves the rows of every shard currently in the migrating state from their source nodes to the target. This is
@@ -275,7 +283,7 @@ butcher move-data --exclude-tables=q_experiment_tmp cluster.conf
 ### `finalize-migration`
 
 ```
-butcher finalize-migration <config-file>...
+butcher finalize-migration [--yes] <config-file>...
 ```
 
 Returns every migrating shard to a stable state owned by its destination: it sets `consumer_node` to the
@@ -297,7 +305,7 @@ The safe sequence is always: **prepare → move (re-run until it reports zero) �
 
 The cluster in these examples is the `orders` cluster from
 [Architecture.md](Architecture.md) — a single `orders` queue (table `q_orders`), now spread across PostgreSQL
-nodes. Output is shown lightly trimmed (the `====` rule lines and ANSI colors are omitted for readability).
+nodes. Output is shown as butcher prints it, minus the ANSI colours.
 
 ### Health check on a running cluster
 
@@ -309,23 +317,29 @@ butcher check-cluster cluster.conf
 
 ```
 Completed successfully.
-Shard balance:
-  Current distribution (1024 shards across 2 nodes):
-    node-01  512 shards [0, 1, 2, ..., 1022]
-    node-02  512 shards [3, 4, 7, ..., 1023]
-  Already balanced, no moves needed.
-=================================================
+Shard balance: 1024 shard(s) evenly spread across 2 node(s)
+┌─────────┬────────┐
+│ Node    │ Shards │
+├─────────┼────────┤
+│ node-01 │    512 │
+│ node-02 │    512 │
+└─────────┴────────┘
+────────────────────────────────────────────────────────────────────────────────
 Schema consistency: all tables consistent across cluster
-=================================================
+────────────────────────────────────────────────────────────────────────────────
 Orphan tables: no orphan queue tables
-=================================================
+────────────────────────────────────────────────────────────────────────────────
 Migration state: no shards in migration
 ```
 
-A single check by name:
+Each section's first line is green when there is nothing to do and yellow when there is, so a clean cluster
+is green all the way down.
+
+One check, or a few:
 
 ```sh
-butcher check-cluster schema-consistency cluster.conf
+butcher check-cluster --checks=schema-consistency cluster.conf
+butcher check-cluster --checks=shard-balance,migration-state cluster.conf
 ```
 
 ### What trouble looks like
@@ -336,19 +350,70 @@ The checks above all came back clean. Here is what each one reports when somethi
 the skew and proposes a minimum-movement rebalance:
 
 ```
-Shard balance:
-  Current distribution (1024 shards across 3 nodes):
-    node-01  512 shards [0, 1, 2, ..., 1022]
-    node-02  512 shards [3, 4, 7, ..., 1023]
-    node-03  0 shards []
-  Proposed moves (341):
-    ⟶ node-03 (341 shards):
-      shards: 0,1,2,3, ... ,340
-      target: node-03
+Shard balance: 1024 shard(s) across 3 node(s), 341 should move
+┌─────────┬────────┬────────┐
+│ Node    │ Shards │ Change │
+├─────────┼────────┼────────┤
+│ node-01 │    512 │   -171 │
+│ node-02 │    512 │   -170 │
+│ node-03 │      0 │   +341 │
+└─────────┴────────┴────────┘
+Proposed moves (341):
+  node-03 receives 341 shard(s):
+    --target=node-03 --shards=0,1,2,3, ... ,340
 ```
 
+`Change` is what the plan would do to each node: how many shards it takes over (`+`) or hands away (`-`).
+The three columns say the same thing three ways — where the shards are now, how the plan moves them, and
+(by addition) where they end up.
+
 The shard-balance proposal is **advice**, not an action — you carry it out with the three migration commands
-below.
+below. The last line is printed as the flags themselves, so the next step is a copy and a paste:
+
+```sh
+butcher prepare-migration --target=node-03 --shards=0,1,2,3, ... ,340 cluster.conf
+```
+
+> **The plan is a target state, not a single operation.** Those 341 shards do not have to move in one go.
+> The three migration commands act on whatever shards are prepared at that moment, so you can take the whole
+> plan in one round — or walk through it one shard at a time, ten at a time, fifty at a time — repeating
+> prepare → move → finalize for each batch.
+>
+> The size of a batch is a trade-off about *pause*, not about speed. Between `prepare-migration` and
+> `finalize-migration` the shards being moved are consumed by **no** node, so the messages sitting in them
+> wait. Preparing all 341 at once leaves a third of the queue unread for however long `move-data` takes;
+> preparing ten leaves 1% of it unread, and for much less time. Small batches also fail smaller: if
+> something looks wrong, you have moved ten shards rather than three hundred. Against that, each round costs
+> its own prepare and finalize, and the whole rebalance takes longer in wall-clock time.
+>
+> Nothing has to be planned ahead. After each round `check-cluster --checks=shard-balance` looks at the new
+> distribution and proposes whatever is still left to do, so you can stop between batches for as long as you
+> like — a cluster with some shards moved and some not is a perfectly ordinary cluster, not a half-finished
+> migration.
+
+> **The proposal counts shards and nothing else.** butcher does not look at how many messages a shard holds,
+> how much traffic it takes, or how big its rows are — it only makes the *number* of shards per node as equal
+> as it can. It treats all 1024 shards as interchangeable because, as far as the shard table is concerned,
+> they are.
+>
+> They usually are not, in practice. Which shard a message lands on comes from
+> [ShardStrategy](Cluster%20architecture.md#how-a-messages-shard-is-chosen), and some strategies concentrate
+> traffic: `Fixed` sends everything to one shard, `ThreadLocal` pins a thread's whole output to one for the
+> life of that thread, and a hand-picked `SendOptions.shard` goes wherever you put it. So an evenly numbered
+> cluster can still be lopsided by rows, and a plan that looks fair by count can move the one shard that
+> carries most of the queue.
+>
+> Two things follow. First, `move-data` takes as long as the *data* behind the shards you prepared, not as
+> long as their count suggests. Second, when the shards are known to be uneven, it is worth looking at the
+> real numbers before pasting the proposal — a plain query against the queue table answers it (ad-hoc reads
+> of `q_*` tables are expected, see [Architecture.md](Architecture.md)):
+>
+> ```sql
+> select shard, count(*) from q_orders group by shard order by count(*) desc limit 20;
+> ```
+>
+> and then you choose `--shards` yourself instead of taking the proposal as given. The proposal is advice
+> about counts; only you know what the counts are worth.
 
 **A schema that has drifted** — here `node-03` received a deploy that added a meta-field while the others
 lagged, so its `q_orders` carries an extra column and index the reference nodes don't have:
@@ -379,12 +444,12 @@ shards onto it.
 
 1. Add the new node to the config file (a new `line-3` row) and bring its database up. (A fresh node joins
    owning no shards; its schema is created automatically when the application's `Cluster` next starts. Run
-   `check-cluster schema-consistency` to confirm it matches before migrating onto it.)
+   `check-cluster --checks=schema-consistency` to confirm it matches before migrating onto it.)
 
 2. Ask for a balanced plan and pick the shards to move:
 
    ```sh
-   butcher check-cluster shard-balance cluster.conf
+   butcher check-cluster --checks=shard-balance cluster.conf
    # → proposes moving shards 0..340 to node-03
    ```
 
@@ -395,17 +460,17 @@ shards onto it.
    ```
 
    ```
-   Completed successfully.
    Prepare
    Shards: [0, 1, 2, ..., 340]
    Target node: node-03
    Shards prepared to move (341):
-       Shard #0 [producerNode=node-01, consumerNode=node-01, nextConsumerNode=null]=>[producerNode=node-03, consumerNode=null, nextConsumerNode=node-03]
+       shard[0]: stable on node-01 => migrating to node-03
        ...
+   Completed successfully.
    ```
 
-   `Target node:` and the `producerNode=…` / `consumerNode=…` values are all **internal node ids** — the same
-   ids you passed to `--target` and saw in the `shard-balance` proposal, not the config line-ids.
+   `Target node:` and the node names in `stable on …` / `migrating to …` are all **internal node ids** — the
+   same ids you passed to `--target` and saw in the `shard-balance` proposal, not the config line-ids.
 
 4. Move the data (re-run until it reports zero moved):
 
@@ -414,9 +479,9 @@ shards onto it.
    ```
 
    ```
-   Completed successfully.
    Move table 'q_orders' from DataSource(line-1 (db01.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 84213
    Move table 'q_orders' from DataSource(line-2 (db02.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 81902
+   Completed successfully.
    ```
 
    (`move-data` labels each source/target `DataSource` by its config **line-id** — `line-1`, `line-3` — since
@@ -429,14 +494,14 @@ shards onto it.
    ```
 
    ```
-   Completed successfully.
    Finalize
    Shards moved to stable state (341):
-       Shard #0 [producerNode=node-03, consumerNode=null, nextConsumerNode=node-03]=>[producerNode=node-03, consumerNode=node-03, nextConsumerNode=null]
+       shard[0]: migrating to node-03 => stable on node-03
        ...
+   Completed successfully.
    ```
 
-A `check-cluster shard-balance` now shows roughly 341 / 341 / 342.
+A `check-cluster --checks=shard-balance` now shows roughly 341 / 341 / 342.
 
 ### Cluster shrinking — remove a node
 
@@ -458,7 +523,7 @@ Goal: drain `node-03` and decommission it. Shrinking is just a migration whose t
 3. Confirm `node-03` is empty:
 
    ```sh
-   butcher check-cluster shard-balance cluster.conf   # node-03 → 0 shards
+   butcher check-cluster --checks=shard-balance cluster.conf   # node-03 → 0 shards
    ```
 
 4. Remove that node's `line-3` row from butcher's config file and decommission its database.
@@ -479,32 +544,36 @@ butcher move-data cluster.conf
 butcher finalize-migration cluster.conf
 ```
 
-Between prepare and finalize, `butcher check-cluster migration-state cluster.conf` shows shard 5 in flight:
+Between prepare and finalize, `butcher check-cluster --checks=migration-state cluster.conf` shows shard 5 in flight:
 
 ```
 Migration state: 1 shard(s) in migration
-  ⟶ node-02 (1 shards):
-    shards: 5
-    target: node-02
+┌───────────┬────────┐
+│ Moving to │ Shards │
+├───────────┼────────┤
+│ node-02   │      1 │
+└───────────┴────────┘
+  node-02: 5
 ```
 
 ## Troubleshooting
 
-butcher classifies failures and, for the two common classes, prints a red banner and exits `1`:
+Every failure prints `Error: <what went wrong>` and exits `1`. There are two kinds, and they differ only in
+whether butcher also prints the command's usage:
 
-| Message you see | Class | What it means / how to fix |
+| Kind | What it looks like | What it means / how to fix |
 |---|---|---|
-| **Invalid configuration.** | bad input | Malformed command line or config file: a missing required flag (`--target` / `--shards`), a flag not in `--key=value` form, an unknown flag, no config file given, an unreadable file, a node missing `host`/`dbname`, a bad port, or a duplicate line-id in one file. The message names the specific problem; fix it and re-run. |
-| **Execution error.** | runtime | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **this isn't an initialized cluster** — `Initialized shard table q__shard not found. Is it a Kolbasa cluster?`, meaning no node has a fully-seeded 1024-row `q__shard` (the cluster has never been started by an application, or you pointed butcher at the wrong databases). |
+| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards`), an unknown option, a shard number outside `0..1023`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, or a duplicate line-id in one file. The message names the specific problem; fix it and re-run. |
+| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **this isn't an initialized cluster** — `Initialized shard table q__shard not found. Is it a Kolbasa cluster?`, meaning no node has a fully-seeded 1024-row `q__shard` (the cluster has never been started by an application, or you pointed butcher at the wrong databases). |
 
-A few migration-specific errors currently surface as a **raw stack trace** (still exit `1`) rather than a red
-banner. If you see one of these, the exception name tells you the cause:
+Three migration-specific refusals are worth knowing by name, because the message states the rule rather than
+the fix:
 
-| Exception | Cause | Fix |
+| Refusal | Cause | Fix |
 |---|---|---|
-| `MoveToTheSameShardException` | `prepare-migration --target=X` for a shard node X already owns. | Pick a different target, or drop that shard from `--shards`. |
-| `MoveToNonExistingNodeException` | `--target` isn't a known node id in the cluster (remember it's the internal `q__node` id, not the config line-id). | Re-run `check-cluster shard-balance` and copy the exact node id from its `target:` line. |
-| `InconsistentSchemaException` | `move-data` found a table whose shape differs between nodes. | Resolve the drift first — run `check-cluster schema-consistency` to see exactly what differs, then re-run schema generation (start a `Cluster` against the lagging node) or restore the missing objects. Then re-run `move-data`. |
+| shard already belongs to the target | `prepare-migration --target=X` for a shard node X already owns. | Pick a different target, or drop that shard from `--shards`. |
+| target is not a node of this cluster | `--target` isn't a known node id in the cluster (remember it's the internal `q__node` id, not the config line-id). | Re-run `check-cluster --checks=shard-balance` and copy the exact node id from the `--target=…` line it prints. |
+| table schemas differ between nodes | `move-data` found a table whose shape differs between nodes. | Resolve the drift first — run `check-cluster --checks=schema-consistency` to see exactly what differs, then re-run schema generation (start a `Cluster` against the lagging node) or restore the missing objects. Then re-run `move-data`. |
 
 Two questions that come up often:
 
@@ -516,9 +585,38 @@ Two questions that come up often:
   you flipped by mistake, prepare it back to its original owner. As long as you haven't run `move-data`, the
   rows never left their node.
 
+## The same thing from code
+
+Every check and every migration step is also a method on `kolbasa.butcher.Butcher`, so a rebalance can be
+driven by a program instead of by hand. The CLI is a frontend over this class and uses nothing it does not
+offer.
+
+```kotlin
+val butcher = Butcher(listOf(node01, node02, node03))   // the same DataSource list a Cluster is given
+
+val balance = butcher.checkShardBalance()
+if (!balance.isBalanced) {
+    balance.proposedMoves.forEach { (target, shards) ->
+        butcher.prepareMigration(target, shards)
+        butcher.moveData()
+        butcher.finalizeMigration()
+    }
+}
+```
+
+Creating a `Butcher` touches no database: it only remembers the nodes. That matters because you reach for it
+when a cluster is already in a bad state, and a tool that repaired the schema or seeded the shard table on
+its way in would destroy the evidence it was asked to look at. (`Cluster` does initialize what it needs when
+it starts, which is why it is the wrong thing to diagnose a cluster with.)
+
+The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
+`migrationState.isClean`, `schemaConsistency.divergencesByTable` — so a program decides on the numbers
+rather than on parsed text. Progress during a long `moveData` is reported through `ProgressCallback`; pass
+`ProgressCallback.Ignore` when nobody is watching.
+
 ## Limitations
 
-- **butcher does not auto-rebalance.** `check-cluster shard-balance` *proposes* a minimum-movement plan, but
+- **butcher does not auto-rebalance.** `check-cluster --checks=shard-balance` *proposes* a minimum-movement plan, but
   carrying it out is a deliberate, operator-driven sequence of `prepare → move → finalize`. You choose which
   shards move where.
 - **butcher does not edit cluster membership.** Adding or removing a node means editing the config file (and
