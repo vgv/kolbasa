@@ -1,11 +1,12 @@
 package kolbasa.butcher.cli
 
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 
-internal class MoveData : ClusterCommand(name = "move-data") {
+internal class MoveData : MutatingClusterCommand(name = "move-data") {
 
     private val includeTables by option("--include-tables", metavar = "<t1,t2,...>")
         .split(",")
@@ -19,10 +20,12 @@ internal class MoveData : ClusterCommand(name = "move-data") {
         "Transfer data to target nodes for every shard in migration state. Safe to re-run if it crashed"
 
     override fun execute(): String? {
+        confirm("The rows of every shard that is currently migrating will be copied to the node taking it over. This can take a long time, and is safe to re-run if interrupted.")
+
         butcher().moveData(
             includeTables = includeTables?.map { it.trim() }?.toSet(),
             excludeTables = excludeTables?.map { it.trim() }?.toSet(),
-            progress = ConsoleProgressCallback
+            progress = ConsoleProgressCallback(terminal)
         )
         return null
     }

@@ -92,6 +92,36 @@ class ButcherCliTest {
     }
 
     @Test
+    fun testMutatingCommandRefusesToGuessWithoutATerminal() {
+        // No --yes and nothing to read an answer from: a tool that moves production data must not take
+        // silence for consent, and must not hang waiting for it either
+        val result = cli().test("finalize-migration ${config().absolutePath}")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("no terminal"), result.output)
+        assertTrue(result.output.contains("--yes"), result.output)
+    }
+
+    @Test
+    fun testCheckClusterNeedsNoConfirmation() {
+        // It changes nothing, so it must not have a --yes to forget about
+        val result = cli().test("check-cluster --help")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(!result.output.contains("--yes"), result.output)
+    }
+
+    @Test
+    fun testMutatingCommandsOfferYes() {
+        listOf("prepare-migration", "move-data", "finalize-migration").forEach { command ->
+            val result = cli().test("$command --help")
+
+            assertEquals(0, result.statusCode, result.output)
+            assertTrue(result.output.contains("--yes"), "$command:\n${result.output}")
+        }
+    }
+
+    @Test
     fun testMissingConfigFileIsReported() {
         val result = cli().test("finalize-migration /no/such/cluster.conf")
 

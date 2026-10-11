@@ -1,5 +1,6 @@
 package kolbasa.butcher.cli
 
+import com.github.ajalt.mordant.terminal.Terminal
 import kolbasa.butcher.ProgressCallback
 import kolbasa.butcher.ShardDiff
 import kolbasa.butcher.ShardOwnership
@@ -7,15 +8,15 @@ import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
-internal object ConsoleProgressCallback : ProgressCallback {
+internal class ConsoleProgressCallback(private val terminal: Terminal) : ProgressCallback {
 
     override fun prepareSuccessful(shards: List<ShardId>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {
-        println("Prepare")
-        println("Shards: ${shards.map { it.id }}")
-        println("Target node: ${targetNode.id}")
-        println("Shards prepared to move (${shardsDiff.size}):")
+        terminal.println("Prepare")
+        terminal.println("Shards: ${shards.map { it.id }}")
+        terminal.println("Target node: ${targetNode.id}")
+        terminal.println("Shards prepared to move (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
-            println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
+            terminal.println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
         }
     }
 
@@ -25,7 +26,7 @@ internal object ConsoleProgressCallback : ProgressCallback {
     }
 
     override fun moveStart(tableName: String, from: DataSource, to: DataSource) {
-        println("Move table '$tableName' from $from to $to")
+        terminal.println("Move table '$tableName' from $from to $to")
     }
 
     override fun moveEnd(
@@ -34,7 +35,7 @@ internal object ConsoleProgressCallback : ProgressCallback {
         to: DataSource,
         migratedRows: Int
     ) {
-        println("Move table '$tableName' from $from to $to finished, migrated rows: $migratedRows")
+        terminal.println("Move table '$tableName' from $from to $to finished, migrated rows: $migratedRows")
     }
 
     override fun moveNextBatch(
@@ -43,14 +44,14 @@ internal object ConsoleProgressCallback : ProgressCallback {
         to: DataSource,
         migratedRows: Int
     ) {
-        println("Move table '$tableName' from $from to $to, migrated rows: $migratedRows")
+        terminal.println("Move table '$tableName' from $from to $to, migrated rows: $migratedRows")
     }
 
     override fun finalizeSuccessful(shardsDiff: List<ShardDiff>) {
-        println("Finalize")
-        println("Shards moved to stable state (${shardsDiff.size}):")
+        terminal.println("Finalize")
+        terminal.println("Shards moved to stable state (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
-            println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
+            terminal.println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
         }
     }
 }

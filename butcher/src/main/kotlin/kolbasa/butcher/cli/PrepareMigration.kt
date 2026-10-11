@@ -1,6 +1,7 @@
 package kolbasa.butcher.cli
 
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.help
@@ -11,7 +12,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
-internal class PrepareMigration : ClusterCommand(name = "prepare-migration") {
+internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migration") {
 
     private val target by option("--target", metavar = "<node-id>")
         .convert { NodeId(it) }
@@ -34,7 +35,9 @@ internal class PrepareMigration : ClusterCommand(name = "prepare-migration") {
         "Mark shards for migration. Updates shard metadata only, run 'move-data' to start the migration"
 
     override fun execute(): String? {
-        butcher().prepareMigration(target, shards.map(ShardId::of), ConsoleProgressCallback)
+        confirm("Shards ${shards.joinToString(",")} will be marked for migration to node ${target.id}, and new messages for them will go there immediately.")
+
+        butcher().prepareMigration(target, shards.map(ShardId::of), ConsoleProgressCallback(terminal))
         return null
     }
 }
