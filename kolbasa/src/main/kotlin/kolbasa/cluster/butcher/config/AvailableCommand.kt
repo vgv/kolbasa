@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher.config
 
 import kolbasa.cluster.butcher.ButcherException
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
 /**
@@ -95,9 +96,18 @@ internal enum class AvailableCommand(
 
             val shards = shardsRaw.split(",").map {
                 val trimmed = it.trim()
-                trimmed.toIntOrNull() ?: throw ButcherException.InvalidConfigurationException(
+                val shard = trimmed.toIntOrNull() ?: throw ButcherException.InvalidConfigurationException(
                     "Invalid shard number '$trimmed' in '${FLAG_SHARDS}'"
                 )
+                // Validated here and not by ShardId.of(), which folds anything into the range: a shard the
+                // operator typed by hand is user input, and 9999 is a mistake rather than shard 783
+                if (shard !in ShardId.SHARDS_RANGE) {
+                    throw ButcherException.InvalidConfigurationException(
+                        "Shard $shard in '${FLAG_SHARDS}' is out of range " +
+                            "[${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]"
+                    )
+                }
+                ShardId.of(shard)
             }
 
             val nodes = ClusterNodes.buildClusterNodes(parsed.files)

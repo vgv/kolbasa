@@ -2,6 +2,7 @@ package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import javax.sql.DataSource
@@ -9,7 +10,7 @@ import javax.sql.DataSource
 internal fun prepare(
     dataSources: List<DataSource>,
     target: NodeId,
-    shards: List<Int>,
+    shards: List<ShardId>,
     progressCallback: ProgressCallback
 ) {
     val nodes = ClusterHelper.readNodes(dataSources)
@@ -23,7 +24,7 @@ internal fun prepare(
     // Check that we are not going to migrate shard to the same node where the shard is located right now
     initialShards
         .filterKeys { shard ->
-            shard.id in shards
+            shard in shards
         }.forEach { (_, shard) ->
             if (shard.producerNode == target && shard.consumerNode == target) {
                 throw ButcherException.MoveToTheSameShardException(shard, target)
@@ -38,7 +39,7 @@ internal fun prepare(
                 ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = null,
                 ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME} = ?
             where
-                ${ShardSchema.SHARD_COLUMN_NAME} in (${shards.joinToString(",")})
+                ${ShardSchema.SHARD_COLUMN_NAME} in (${shards.joinToString(",") { it.id.toString() }})
         """.trimIndent()
 
     shardDataSource.usePreparedStatement(query) { ps ->

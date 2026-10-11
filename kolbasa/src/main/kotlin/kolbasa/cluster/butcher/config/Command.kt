@@ -1,13 +1,14 @@
 package kolbasa.cluster.butcher.config
 
 import kolbasa.cluster.butcher.ButcherException
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
 internal sealed class Command(val nodes: ClusterNodes, val command: AvailableCommand) {
 
     class Check(nodes: ClusterNodes, val checks: Set<AvailableCheck>) : Command(nodes, AvailableCommand.CHECK_CLUSTER)
 
-    class Prepare(nodes: ClusterNodes, val target: NodeId, val shards: List<Int>) :
+    class Prepare(nodes: ClusterNodes, val target: NodeId, val shards: List<ShardId>) :
         Command(nodes, AvailableCommand.PREPARE_MIGRATION)
 
     /**

@@ -29,7 +29,7 @@ class CommandTest {
 
         assertInstanceOf<Command.Prepare>(cmd)
         assertEquals(NodeId("node-01"), cmd.target)
-        assertEquals(listOf(0, 1), cmd.shards)
+        assertEquals(listOf(0, 1), cmd.shards.map { it.id })
     }
 
     @Test

@@ -93,7 +93,7 @@ internal class MoveOneTableTest : AbstractPostgreSQLTest() {
             sourceDataSource = dataSource,
             targetDataSource = dataSourceFirstSchema,
             moveProgressCallback = callback,
-            shards = shardsToMove,
+            shards = shardsToMove.map(ShardId::of),
             table = tableSchema,
             rowsPerBatch = migrateBatchSize
         )

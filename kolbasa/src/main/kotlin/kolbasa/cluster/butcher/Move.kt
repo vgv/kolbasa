@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
@@ -53,13 +54,13 @@ internal fun move(
     }
 }
 
-private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<Int>> {
+private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<ShardId>> {
     val (_, shards) = MoveHelpers.readShards(nodes)
 
-    val targetsToShards = mutableMapOf<NodeId, MutableList<Int>>()
+    val targetsToShards = mutableMapOf<NodeId, MutableList<ShardId>>()
     shards.values.forEach { shard ->
         if (shard.nextConsumerNode != null) {
-            targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard.id)
+            targetsToShards.computeIfAbsent(shard.nextConsumerNode) { mutableListOf() }.add(shard.shard)
         }
     }
 

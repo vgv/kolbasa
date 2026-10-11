@@ -2,6 +2,7 @@ package kolbasa.cluster.butcher
 
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
+import kolbasa.producer.ShardId
 import kolbasa.schema.*
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
@@ -15,7 +16,7 @@ internal class MoveOneTable(
     private val sourceDataSource: DataSource,
     private val targetDataSource: DataSource,
     private val moveProgressCallback: ProgressCallback,
-    private val shards: List<Int>,
+    private val shards: List<ShardId>,
     private val table: Table,
     private val rowsPerBatch: Int
 ) {
@@ -24,7 +25,7 @@ internal class MoveOneTable(
         val dbTableName = table.name
         val columns = table.columns.toList()
         val columnsString = columns.joinToString(",") { it.name }
-        val shardsString = shards.joinToString(",") { it.toString() }
+        val shardsString = shards.joinToString(",") { it.id.toString() }
         val insertQuestionMarks = columns.joinToString(",") { "?" }
         val selectQuery = "select $columnsString from $dbTableName where shard in ($shardsString) limit $rowsPerBatch"
         val insertQuery = "insert into $dbTableName ($columnsString) values ($insertQuestionMarks) on conflict do nothing"

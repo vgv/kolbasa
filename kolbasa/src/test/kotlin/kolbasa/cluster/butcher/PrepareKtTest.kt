@@ -3,6 +3,7 @@ package kolbasa.cluster.butcher
 import kolbasa.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -34,7 +35,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .sorted()
 
         // RUN
-        prepare(dataSources, targetNode.id, shardsToMove.map { it.id }, ConsoleProgressCallback)
+        prepare(dataSources, targetNode.id, shardsToMove, ConsoleProgressCallback)
 
         // CHECK
         // first, check the table content
@@ -79,7 +80,8 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
 
-        val shardsToMove = listOf(Random.nextInt(1, 100000), Random.nextInt(1, 100000), Random.nextInt(1, 100000))
+        // Which shards they are does not matter: prepare() rejects the unknown target node first
+        val shardsToMove = List(3) { ShardId.random() }
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToNonExistingNodeException> {
@@ -113,7 +115,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToTheSameShardException> {
-            prepare(dataSources, targetNode.id, shardsToMove.map { it.id }, ConsoleProgressCallback)
+            prepare(dataSources, targetNode.id, shardsToMove, ConsoleProgressCallback)
         }
 
         // CHECK

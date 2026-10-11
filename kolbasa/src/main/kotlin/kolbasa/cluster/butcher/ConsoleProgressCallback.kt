@@ -1,13 +1,14 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 internal object ConsoleProgressCallback : ProgressCallback {
 
-    override fun prepareSuccessful(shards: List<Int>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {
+    override fun prepareSuccessful(shards: List<ShardId>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {
         println("Prepare")
-        println("Shards: $shards")
+        println("Shards: ${shards.map { it.id }}")
         println("Target node: ${targetNode.id}")
         println("Shards prepared to move (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->

@@ -120,7 +120,7 @@ class AvailableCommandTest {
 
         assertInstanceOf<Command.Prepare>(parsed)
         assertEquals(NodeId("node-01"), parsed.target)
-        assertEquals(listOf(0, 1, 5), parsed.shards)
+        assertEquals(listOf(0, 1, 5), parsed.shards.map { it.id })
     }
 
     @Test
@@ -131,7 +131,7 @@ class AvailableCommandTest {
         )
 
         assertInstanceOf<Command.Prepare>(parsed)
-        assertEquals(listOf(0, 1, 2), parsed.shards)
+        assertEquals(listOf(0, 1, 2), parsed.shards.map { it.id })
     }
 
     @Test
@@ -142,7 +142,33 @@ class AvailableCommandTest {
         )
 
         assertInstanceOf<Command.Prepare>(parsed)
-        assertEquals(listOf(7), parsed.shards)
+        assertEquals(listOf(7), parsed.shards.map { it.id })
+    }
+
+    @Test
+    fun testPrepareMigration_Parse_ShardOutOfRangeThrows() {
+        val file = configFile()
+        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+            AvailableCommand.PREPARE_MIGRATION.parse(
+                arrayOf("prepare-migration", "--target=node-01", "--shards=0,9999", file.absolutePath)
+            )
+        }
+
+        // ShardId.of() would have folded 9999 into a valid shard, so the range is checked where the
+        // operator's input arrives instead
+        assertTrue(ex.message.contains("9999"), ex.message)
+        assertTrue(ex.message.contains("out of range"), ex.message)
+    }
+
+    @Test
+    fun testPrepareMigration_Parse_NegativeShardThrows() {
+        val file = configFile()
+        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+            AvailableCommand.PREPARE_MIGRATION.parse(
+                arrayOf("prepare-migration", "--target=node-01", "--shards=-1", file.absolutePath)
+            )
+        }
+        assertTrue(ex.message.contains("out of range"), ex.message)
     }
 
     @Test
