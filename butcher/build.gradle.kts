@@ -85,6 +85,9 @@ tasks.register<Jar>("butcherJar") {
             "Implementation-Version" to project.sanitizeVersion(),
             // postgresql 42.7.x is a Multi-Release jar: it ships JDK11-specialized classes under META-INF/versions/11/
             "Multi-Release" to true,
+            // mordant's terminal backend goes through native code (JNA now, FFM later), and since JDK 24
+            // a restricted call without permission warns - and will throw in a future release
+            "Enable-Native-Access" to "ALL-UNNAMED",
         )
     }
 
