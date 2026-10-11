@@ -1,12 +1,11 @@
 package kolbasa.cluster.butcher.check
 
-internal data class CheckResult(val results: List<Any>) {
-
-    override fun toString(): String = buildString {
-        results.forEachIndexed { index, result ->
-            if (index > 0) appendLine()
-            appendLine("=================================================")
-            append(result)
-        }
-    }
-}
+/**
+ * What the requested checks found – one field per check, `null` for a check that was not asked for
+ */
+internal data class CheckResult(
+    val shardBalance: ShardBalanceResult? = null,
+    val schemaConsistency: SchemaConsistencyResult? = null,
+    val orphanTables: OrphanTablesResult? = null,
+    val migrationState: MigrationStateResult? = null
+)

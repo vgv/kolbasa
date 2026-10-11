@@ -1,6 +1,8 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.cluster.butcher.check.CheckResult
 import kolbasa.cluster.butcher.check.check
+import kolbasa.cluster.butcher.check.render
 import kolbasa.cluster.butcher.config.Command
 import java.lang.invoke.MethodHandles
 import kotlin.system.exitProcess
@@ -38,7 +40,9 @@ fun main(args: Array<String>) {
 
     println("=================================================")
     println(green("Completed successfully."))
-    println(result)
+    if (result is CheckResult) {
+        println(result.render())
+    }
     println("=================================================")
 }
 
