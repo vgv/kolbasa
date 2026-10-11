@@ -13,6 +13,7 @@ import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
+import kolbasa.butcher.ProgressCallback
 
 class PrepareKtTest : AbstractPostgreSQLTest() {
 
@@ -36,7 +37,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .sorted()
 
         // RUN
-        prepare(dataSources, targetNode.id, shardsToMove, ConsoleProgressCallback)
+        prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
 
         // CHECK
         // first, check the table content
@@ -66,8 +67,8 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             }
         }
 
-        // second, check that the output was printed (ConsoleProgressCallback is used directly now)
-        // The old mockk verification is no longer applicable since prepare() uses ConsoleProgressCallback directly.
+        // second, check that the output was printed (ProgressCallback.Ignore is used directly now)
+        // The old mockk verification is no longer applicable since prepare() uses ProgressCallback.Ignore directly.
         // We verify correctness via the database assertions above.
     }
 
@@ -86,7 +87,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToNonExistingNodeException> {
-            prepare(dataSources, targetNode, shardsToMove, ConsoleProgressCallback)
+            prepare(dataSources, targetNode, shardsToMove, ProgressCallback.Ignore)
         }
 
         // CHECK
@@ -116,7 +117,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ButcherException.MoveToTheSameShardException> {
-            prepare(dataSources, targetNode.id, shardsToMove, ConsoleProgressCallback)
+            prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
         }
 
         // CHECK
