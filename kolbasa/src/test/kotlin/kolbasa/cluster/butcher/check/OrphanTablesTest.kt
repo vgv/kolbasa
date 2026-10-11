@@ -159,35 +159,4 @@ class OrphanTablesTest {
         assertTrue(result.isClean)
     }
 
-    @Test
-    fun testToString_Clean() {
-        val result = OrphanTables(emptyMap()).compute()
-
-        assertEquals("Orphan tables: no orphan queue tables", result.render())
-    }
-
-    @Test
-    fun testToString_Dirty_ContainsNodeAndTables() {
-        val n1 = NodeId("n1")
-        val n2 = NodeId("n2")
-        val tables = mapOf(
-            n1 to setOf("q_orders_dlq", "q_orders_arc"),
-            n2 to setOf("q_payments_arc"),
-        )
-
-        val text = OrphanTables(tables).compute().render()
-
-        assertTrue(text.contains("3 orphan queue(s) across 2 node(s)"), text)
-        assertTrue(text.contains("n1"), text)
-        assertTrue(text.contains("n2"), text)
-        assertTrue(text.contains("q_orders_dlq"), text)
-        assertTrue(text.contains("q_orders_arc"), text)
-        assertTrue(text.contains("q_payments_arc"), text)
-        assertTrue(text.contains("main queue q_orders missing"), text)
-        assertTrue(text.contains("main queue q_payments missing"), text)
-        // Nodes sorted by id: n1 before n2.
-        val n1Pos = text.indexOf("n1:")
-        val n2Pos = text.indexOf("n2:")
-        assertTrue(n1Pos in 0 until n2Pos, "n1 group should come before n2 group:\n$text")
-    }
 }

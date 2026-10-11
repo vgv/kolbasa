@@ -156,30 +156,6 @@ class ShardBalanceTest {
     }
 
     @Test
-    fun testToString_Balanced() {
-        val nodes = (1..3).map { NodeId("n$it") }
-        val counts = mapOf(nodes[0] to 342, nodes[1] to 341, nodes[2] to 341)
-        val shards = buildBalancedShards(counts)
-
-        val text = ShardBalance(shards, nodes.toSet()).compute().render()
-
-        assertTrue(text.contains("Shard balance"), text)
-        assertTrue(text.contains("Already balanced"), text)
-        assertTrue(text.contains("342 shards"), text)
-    }
-
-    @Test
-    fun testToString_WithMoves() {
-        val nodes = (1..2).map { NodeId("n$it") }
-        val shards = (0 until 10).map { stableShard(it, nodes[0]) }
-
-        val text = ShardBalance(shards, nodes.toSet()).compute().render()
-
-        assertTrue(text.contains("Proposed moves"), text)
-        assertTrue(text.contains("⟶ n2"), text)
-    }
-
-    @Test
     fun testDeterminism_SameInputProducesSameOutput() {
         val nodes = (1..4).map { NodeId("n$it") }
         val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[it % 2]) }

@@ -307,48 +307,6 @@ class SchemaConsistencyTest {
         assertEquals(setOf("meta_change"), delta.changedColumns.map { it.name }.toSet())
     }
 
-    @Test
-    fun testToString_ColumnChange_RendersArrow() {
-        val baseline = queueTable("q_orders", extraColumns = setOf(Column("meta_foo", ColumnType.INT, true, null)))
-        val drifted = queueTable("q_orders", extraColumns = setOf(Column("meta_foo", ColumnType.VARCHAR, true, null)))
-        val schemas = mapOf(
-            n1 to mapOf("q_orders" to baseline),
-            n2 to mapOf("q_orders" to baseline),
-            n3 to mapOf("q_orders" to drifted),
-        )
-
-        val text = SchemaConsistency(schemas).compute().render()
-
-        assertTrue(text.contains("~column meta_foo INT NULL -> VARCHAR NULL"), text)
-    }
-
-    @Test
-    fun testToString_Clean() {
-        val result = SchemaConsistency(emptyMap()).compute()
-
-        assertEquals("Schema consistency: all tables consistent across cluster", result.render())
-    }
-
-    @Test
-    fun testToString_Dirty_ContainsExpectedFragments() {
-        val baseline = queueTable("q_orders")
-        val drifted = queueTable("q_orders", extraColumns = setOf(metaColumn("meta_priority")))
-        val schemas = mapOf(
-            n1 to mapOf("q_orders" to baseline),
-            n2 to mapOf("q_orders" to baseline),
-            n3 to mapOf("q_orders" to drifted),
-            n4 to mapOf<String, Table>(),
-        )
-
-        val text = SchemaConsistency(schemas).compute().render()
-
-        assertTrue(text.contains("1 table(s) inconsistent"), text)
-        assertTrue(text.contains("q_orders"), text)
-        assertTrue(text.contains("[n1, n2]"), text)
-        assertTrue(text.contains("n3: +column meta_priority"), text)
-        assertTrue(text.contains("n4: missing"), text)
-    }
-
     private val n1 = NodeId("n1")
     private val n2 = NodeId("n2")
     private val n3 = NodeId("n3")

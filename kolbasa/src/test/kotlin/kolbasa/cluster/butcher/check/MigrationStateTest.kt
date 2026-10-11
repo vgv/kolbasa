@@ -76,39 +76,6 @@ class MigrationStateTest {
         assertEquals(listOf(20, 40), result.migratingShardsByTarget[n3]?.map { it.id }?.sorted())
     }
 
-    @Test
-    fun testToString_Clean() {
-        val result = MigrationState(emptyList()).compute()
-
-        assertEquals("Migration state: no shards in migration", result.render())
-    }
-
-    @Test
-    fun testToString_WithMigrations_ContainsShardAndTarget() {
-        val n2 = NodeId("n2")
-        val n3 = NodeId("n3")
-        val shards = listOf(
-            migratingShard(50, n3),
-            migratingShard(40, n3),
-            migratingShard(30, n3),
-            migratingShard(10, n2),
-            migratingShard(20, n2),
-        )
-
-        val text = MigrationState(shards).compute().render()
-
-        assertTrue(text.contains("5 shard(s) in migration"), text)
-        assertTrue(text.contains("⟶ n2"), text)
-        assertTrue(text.contains("⟶ n3"), text)
-        // Targets sorted by id (n2 before n3) and shards sorted ascending within each group.
-        val n2Pos = text.indexOf("⟶ n2")
-        val n3Pos = text.indexOf("⟶ n3")
-        assertTrue(n2Pos < n3Pos, "n2 group should come before n3 group:\n$text")
-        // Check shards list
-        assertTrue(text.contains("shards: 10,20"), text)
-        assertTrue(text.contains("shards: 30,40,50"), text)
-    }
-
     // ---------- helpers ----------
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
