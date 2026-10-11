@@ -56,8 +56,8 @@ class CommandTest {
             Command.parseCommand(emptyArray())
         }
         // Empty args should produce the global usage, not a command-specific one.
-        Assertions.assertTrue(ex.messageToShow.contains("Usage:"), ex.messageToShow)
-        Assertions.assertTrue(ex.messageToShow.contains("check-cluster"), ex.messageToShow)
+        Assertions.assertTrue(ex.message.contains("Usage:"), ex.message)
+        Assertions.assertTrue(ex.message.contains("check-cluster"), ex.message)
     }
 
     @Test
@@ -65,9 +65,9 @@ class CommandTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             Command.parseCommand(arrayOf("do-the-thing", "some-file"))
         }
-        Assertions.assertTrue(ex.messageToShow.contains("Unknown command"), ex.messageToShow)
-        Assertions.assertTrue(ex.messageToShow.contains("do-the-thing"), ex.messageToShow)
-        Assertions.assertTrue(ex.messageToShow.contains("Usage:"), ex.messageToShow)
+        Assertions.assertTrue(ex.message.contains("Unknown command"), ex.message)
+        Assertions.assertTrue(ex.message.contains("do-the-thing"), ex.message)
+        Assertions.assertTrue(ex.message.contains("Usage:"), ex.message)
     }
 
     @Test
@@ -76,7 +76,7 @@ class CommandTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             Command.parseCommand(arrayOf("move-data"))
         }
-        Assertions.assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
+        Assertions.assertTrue(ex.message.contains("No cluster config files"), ex.message)
     }
 
     private fun configFile(content: String = "node-01 host=h1 dbname=db\n"): File {

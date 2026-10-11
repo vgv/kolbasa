@@ -127,8 +127,8 @@ class LibpqTokenizerTest {
             LibpqTokenizer.tokenize("password='abc")
         }
 
-        assertTrue(ex.messageToShow.contains("Unterminated"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("password"), ex.messageToShow)
+        assertTrue(ex.message.contains("Unterminated"), ex.message)
+        assertTrue(ex.message.contains("password"), ex.message)
     }
 
     @Test
@@ -136,8 +136,8 @@ class LibpqTokenizerTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             LibpqTokenizer.tokenize("host db1")
         }
-        assertTrue(ex.messageToShow.contains("Expected '='"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("host"), ex.messageToShow)
+        assertTrue(ex.message.contains("Expected '='"), ex.message)
+        assertTrue(ex.message.contains("host"), ex.message)
     }
 
     @Test

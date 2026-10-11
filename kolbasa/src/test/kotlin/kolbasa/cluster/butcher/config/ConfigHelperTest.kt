@@ -78,9 +78,9 @@ class ConfigHelperTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             ConfigHelper.parseClusterFile(file)
         }
-        assertTrue(ex.messageToShow.contains("node-01"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("Duplicate"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("line 2"), ex.messageToShow)
+        assertTrue(ex.message.contains("node-01"), ex.message)
+        assertTrue(ex.message.contains("Duplicate"), ex.message)
+        assertTrue(ex.message.contains("line 2"), ex.message)
     }
 
     @Test
@@ -90,9 +90,9 @@ class ConfigHelperTest {
             ConfigHelper.parseClusterFile(file)
         }
 
-        assertTrue(ex.messageToShow.contains("Invalid node id"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("node@01"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("line 1"), ex.messageToShow)
+        assertTrue(ex.message.contains("Invalid node id"), ex.message)
+        assertTrue(ex.message.contains("node@01"), ex.message)
+        assertTrue(ex.message.contains("line 1"), ex.message)
     }
 
     @Test
@@ -130,7 +130,7 @@ class ConfigHelperTest {
             ConfigHelper.parseClusterFile(file)
         }
 
-        assertTrue(ex.messageToShow.contains("Unterminated"), ex.messageToShow)
+        assertTrue(ex.message.contains("Unterminated"), ex.message)
     }
 
     @Test
@@ -261,8 +261,8 @@ class ConfigHelperTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             ConfigHelper.parseArgs(listOf("--target"), supportedFlags = setOf("--target"))
         }
-        assertTrue(ex.messageToShow.contains("--key=value"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("--target"), ex.messageToShow)
+        assertTrue(ex.message.contains("--key=value"), ex.message)
+        assertTrue(ex.message.contains("--target"), ex.message)
     }
 
     @Test
@@ -274,8 +274,8 @@ class ConfigHelperTest {
                 supportedFlags = setOf("--target")
             )
         }
-        assertTrue(ex.messageToShow.contains("Unknown flag"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("--wrong"), ex.messageToShow)
+        assertTrue(ex.message.contains("Unknown flag"), ex.message)
+        assertTrue(ex.message.contains("--wrong"), ex.message)
     }
 
     @Test
@@ -287,8 +287,8 @@ class ConfigHelperTest {
                 supportedFlags = setOf("--target")
             )
         }
-        assertTrue(ex.messageToShow.contains("Duplicate flag"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("--target"), ex.messageToShow)
+        assertTrue(ex.message.contains("Duplicate flag"), ex.message)
+        assertTrue(ex.message.contains("--target"), ex.message)
     }
 
     @Test
@@ -299,7 +299,7 @@ class ConfigHelperTest {
                 supportedFlags = emptySet()
             )
         }
-        assertTrue(ex.messageToShow.contains("Cannot read config file"), ex.messageToShow)
+        assertTrue(ex.message.contains("Cannot read config file"), ex.message)
     }
 
     @Test
@@ -310,7 +310,7 @@ class ConfigHelperTest {
                 supportedFlags = setOf("--target")
             )
         }
-        assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
+        assertTrue(ex.message.contains("No cluster config files"), ex.message)
     }
 
     @Test
@@ -318,7 +318,7 @@ class ConfigHelperTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             ConfigHelper.parseArgs(emptyList(), supportedFlags = emptySet())
         }
-        assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
+        assertTrue(ex.message.contains("No cluster config files"), ex.message)
     }
 
     private fun writeFile(content: String): File {

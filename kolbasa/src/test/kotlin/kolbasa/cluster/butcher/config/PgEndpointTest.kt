@@ -53,8 +53,8 @@ class PgEndpointTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint("node-01", mapOf("dbname" to "db"))
         }
-        assertTrue(ex.messageToShow.contains("host"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("node-01"), ex.messageToShow)
+        assertTrue(ex.message.contains("host"), ex.message)
+        assertTrue(ex.message.contains("node-01"), ex.message)
     }
 
     @Test
@@ -62,8 +62,8 @@ class PgEndpointTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint("node-01", mapOf("host" to "db.host"))
         }
-        assertTrue(ex.messageToShow.contains("dbname"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("node-01"), ex.messageToShow)
+        assertTrue(ex.message.contains("dbname"), ex.message)
+        assertTrue(ex.message.contains("node-01"), ex.message)
     }
 
     @Test
@@ -74,8 +74,8 @@ class PgEndpointTest {
                 mapOf("host" to "h", "dbname" to "db", "port" to "abc")
             )
         }
-        assertTrue(ex.messageToShow.contains("abc"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("node-01"), ex.messageToShow)
+        assertTrue(ex.message.contains("abc"), ex.message)
+        assertTrue(ex.message.contains("node-01"), ex.message)
     }
 
     @Test

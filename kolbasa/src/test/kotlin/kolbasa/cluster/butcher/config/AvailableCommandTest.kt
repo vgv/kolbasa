@@ -86,10 +86,10 @@ class AvailableCommandTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             AvailableCommand.CHECK_CLUSTER.parse(arrayOf("check-cluster"))
         }
-        assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
+        assertTrue(ex.message.contains("No cluster config files"), ex.message)
         // wrapWithUsage appends the command's fullUsage
-        assertTrue(ex.messageToShow.contains("check-cluster"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("shard-balance"), ex.messageToShow)
+        assertTrue(ex.message.contains("check-cluster"), ex.message)
+        assertTrue(ex.message.contains("shard-balance"), ex.message)
     }
 
     @Test
@@ -153,8 +153,8 @@ class AvailableCommandTest {
                 arrayOf("prepare-migration", "--shards=0", file.absolutePath)
             )
         }
-        assertTrue(ex.messageToShow.contains("--target"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("prepare-migration"), ex.messageToShow)
+        assertTrue(ex.message.contains("--target"), ex.message)
+        assertTrue(ex.message.contains("prepare-migration"), ex.message)
     }
 
     @Test
@@ -165,7 +165,7 @@ class AvailableCommandTest {
                 arrayOf("prepare-migration", "--target=node-01", file.absolutePath)
             )
         }
-        assertTrue(ex.messageToShow.contains("--shards"), ex.messageToShow)
+        assertTrue(ex.message.contains("--shards"), ex.message)
     }
 
     @Test
@@ -176,8 +176,8 @@ class AvailableCommandTest {
                 arrayOf("prepare-migration", "--target=node-01", "--shards=0,abc,2", file.absolutePath)
             )
         }
-        assertTrue(ex.messageToShow.contains("Invalid shard"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("abc"), ex.messageToShow)
+        assertTrue(ex.message.contains("Invalid shard"), ex.message)
+        assertTrue(ex.message.contains("abc"), ex.message)
     }
 
     @Test
@@ -188,9 +188,9 @@ class AvailableCommandTest {
                 arrayOf("prepare-migration", "--bogus=x", "--target=n", "--shards=0", file.absolutePath)
             )
         }
-        assertTrue(ex.messageToShow.contains("Unknown flag"), ex.messageToShow)
+        assertTrue(ex.message.contains("Unknown flag"), ex.message)
         // wrapped with fullUsage
-        assertTrue(ex.messageToShow.contains("prepare-migration"), ex.messageToShow)
+        assertTrue(ex.message.contains("prepare-migration"), ex.message)
     }
 
     // -------------------- MOVE_DATA.parse --------------------
@@ -246,8 +246,8 @@ class AvailableCommandTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             AvailableCommand.MOVE_DATA.parse(arrayOf("move-data"))
         }
-        assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("move-data"), ex.messageToShow)
+        assertTrue(ex.message.contains("No cluster config files"), ex.message)
+        assertTrue(ex.message.contains("move-data"), ex.message)
     }
 
     // -------------------- FINALIZE_MIGRATION.parse --------------------
@@ -268,8 +268,8 @@ class AvailableCommandTest {
         val ex = assertThrows<ButcherException.InvalidConfigurationException> {
             AvailableCommand.FINALIZE_MIGRATION.parse(arrayOf("finalize-migration"))
         }
-        assertTrue(ex.messageToShow.contains("No cluster config files"), ex.messageToShow)
-        assertTrue(ex.messageToShow.contains("finalize-migration"), ex.messageToShow)
+        assertTrue(ex.message.contains("No cluster config files"), ex.message)
+        assertTrue(ex.message.contains("finalize-migration"), ex.message)
     }
 
     @Test
@@ -280,7 +280,7 @@ class AvailableCommandTest {
                 arrayOf("finalize-migration", "--target=x", file.absolutePath)
             )
         }
-        assertTrue(ex.messageToShow.contains("Unknown flag"), ex.messageToShow)
+        assertTrue(ex.message.contains("Unknown flag"), ex.message)
     }
 
     // -------------------- Per-command meta --------------------

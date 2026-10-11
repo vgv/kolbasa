@@ -160,7 +160,7 @@ internal enum class AvailableCommand(
 
     /** Wrap a parse error with this command's full usage appended. */
     protected fun wrapWithUsage(e: ButcherException.InvalidConfigurationException): ButcherException.InvalidConfigurationException {
-        return ButcherException.InvalidConfigurationException("${e.messageToShow}\n\n$fullUsage")
+        return ButcherException.InvalidConfigurationException("${e.message}\n\n$fullUsage")
     }
 
     companion object {

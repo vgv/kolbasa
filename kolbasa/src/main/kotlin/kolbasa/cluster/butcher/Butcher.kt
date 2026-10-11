@@ -16,7 +16,7 @@ fun main(args: Array<String>) {
     } catch (e: ButcherException.InvalidConfigurationException) {
         println("=================================================")
         println(red("Invalid configuration."))
-        println(e.messageToShow)
+        println(e.message)
         println("=================================================")
         exitProcess(1)
     }
@@ -31,7 +31,7 @@ fun main(args: Array<String>) {
     } catch (e: ButcherException.ExecutionException) {
         println("=================================================")
         println(red("Execution error."))
-        println(e.messageToShow)
+        println(e.message)
         println("=================================================")
         exitProcess(1)
     }
