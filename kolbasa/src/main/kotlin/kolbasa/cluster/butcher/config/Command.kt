@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
@@ -22,14 +21,14 @@ internal sealed class Command(val nodes: ClusterNodes, val command: AvailableCom
     companion object {
         internal fun parseCommand(args: Array<String>): Command {
             if (args.isEmpty()) {
-                throw ButcherException.InvalidConfigurationException(AvailableCommand.globalUsage())
+                throw InvalidConfigurationException(AvailableCommand.globalUsage())
             }
 
             val commandName = args[0]
             val command = AvailableCommand.fromCommandName(commandName)
             if (command == null) {
                 val msg = "Unknown command: '$commandName'\n${AvailableCommand.globalUsage()}"
-                throw ButcherException.InvalidConfigurationException(msg)
+                throw InvalidConfigurationException(msg)
             }
 
             return command.parse(args)

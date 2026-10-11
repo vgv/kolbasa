@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -75,7 +74,7 @@ class ConfigHelperTest {
             """.trimIndent()
         )
 
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseClusterFile(file)
         }
         assertTrue(ex.message.contains("node-01"), ex.message)
@@ -86,7 +85,7 @@ class ConfigHelperTest {
     @Test
     fun testParseNodeFile_InvalidClusterIdThrows() {
         val file = writeFile("node@01 host=h1 dbname=db1\n")
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseClusterFile(file)
         }
 
@@ -126,7 +125,7 @@ class ConfigHelperTest {
     @Test
     fun testParseNodeFile_LibpqParseError_Propagates() {
         val file = writeFile("node-01 host=h1 dbname='unterminated\n")
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseClusterFile(file)
         }
 
@@ -258,7 +257,7 @@ class ConfigHelperTest {
 
     @Test
     fun testParseArgs_FlagWithoutEqualsThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(listOf("--target"), supportedFlags = setOf("--target"))
         }
         assertTrue(ex.message.contains("--key=value"), ex.message)
@@ -268,7 +267,7 @@ class ConfigHelperTest {
     @Test
     fun testParseArgs_UnknownFlagThrows() {
         val file = writeFile("")
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(
                 listOf("--wrong=value", file.absolutePath),
                 supportedFlags = setOf("--target")
@@ -281,7 +280,7 @@ class ConfigHelperTest {
     @Test
     fun testParseArgs_DuplicateFlagThrows() {
         val file = writeFile("")
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(
                 listOf("--target=a", "--target=b", file.absolutePath),
                 supportedFlags = setOf("--target")
@@ -293,7 +292,7 @@ class ConfigHelperTest {
 
     @Test
     fun testParseArgs_UnreadableFileThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(
                 listOf("/definitely/not/a/real/path/at/all-xyz-12345"),
                 supportedFlags = emptySet()
@@ -304,7 +303,7 @@ class ConfigHelperTest {
 
     @Test
     fun testParseArgs_NoFilesThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(
                 listOf("--target=node-01"),
                 supportedFlags = setOf("--target")
@@ -315,7 +314,7 @@ class ConfigHelperTest {
 
     @Test
     fun testParseArgs_EmptyArgsThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             ConfigHelper.parseArgs(emptyList(), supportedFlags = emptySet())
         }
         assertTrue(ex.message.contains("No cluster config files"), ex.message)

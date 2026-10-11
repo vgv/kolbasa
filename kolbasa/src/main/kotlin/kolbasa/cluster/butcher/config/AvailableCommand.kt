@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
@@ -58,7 +57,7 @@ internal enum class AvailableCommand(
 
             val parsed = try {
                 ConfigHelper.parseArgs(restArgs, supportedFlags = emptySet())
-            } catch (e: ButcherException.InvalidConfigurationException) {
+            } catch (e: InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
 
@@ -84,25 +83,25 @@ internal enum class AvailableCommand(
         override fun parse(args: Array<String>): Command.Prepare {
             val parsed = try {
                 ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(FLAG_TARGET, FLAG_SHARDS))
-            } catch (e: ButcherException.InvalidConfigurationException) {
+            } catch (e: InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
 
             val target = parsed.flags[FLAG_TARGET]
-                ?: throw ButcherException.InvalidConfigurationException("'${FLAG_TARGET}=<node-id>' is required for $commandName\n$fullUsage")
+                ?: throw InvalidConfigurationException("'${FLAG_TARGET}=<node-id>' is required for $commandName\n$fullUsage")
 
             val shardsRaw = parsed.flags[FLAG_SHARDS]
-                ?: throw ButcherException.InvalidConfigurationException("'${FLAG_SHARDS}=<0,1,2,...>' is required for $commandName\n$fullUsage")
+                ?: throw InvalidConfigurationException("'${FLAG_SHARDS}=<0,1,2,...>' is required for $commandName\n$fullUsage")
 
             val shards = shardsRaw.split(",").map {
                 val trimmed = it.trim()
-                val shard = trimmed.toIntOrNull() ?: throw ButcherException.InvalidConfigurationException(
+                val shard = trimmed.toIntOrNull() ?: throw InvalidConfigurationException(
                     "Invalid shard number '$trimmed' in '${FLAG_SHARDS}'"
                 )
                 // Validated here and not by ShardId.of(), which folds anything into the range: a shard the
                 // operator typed by hand is user input, and 9999 is a mistake rather than shard 783
                 if (shard !in ShardId.SHARDS_RANGE) {
-                    throw ButcherException.InvalidConfigurationException(
+                    throw InvalidConfigurationException(
                         "Shard $shard in '${FLAG_SHARDS}' is out of range " +
                             "[${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]"
                     )
@@ -132,7 +131,7 @@ internal enum class AvailableCommand(
         override fun parse(args: Array<String>): Command.Move {
             val parsed = try {
                 ConfigHelper.parseArgs(args.drop(1), supportedFlags = setOf(INCLUDE_FLAG_TABLES, EXCLUDE_FLAG_TABLES))
-            } catch (e: ButcherException.InvalidConfigurationException) {
+            } catch (e: InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
 
@@ -156,7 +155,7 @@ internal enum class AvailableCommand(
         override fun parse(args: Array<String>): Command.Finalize {
             val parsed = try {
                 ConfigHelper.parseArgs(args.drop(1), supportedFlags = emptySet())
-            } catch (e: ButcherException.InvalidConfigurationException) {
+            } catch (e: InvalidConfigurationException) {
                 throw wrapWithUsage(e)
             }
 
@@ -169,8 +168,8 @@ internal enum class AvailableCommand(
     abstract fun parse(args: Array<String>): Command
 
     /** Wrap a parse error with this command's full usage appended. */
-    protected fun wrapWithUsage(e: ButcherException.InvalidConfigurationException): ButcherException.InvalidConfigurationException {
-        return ButcherException.InvalidConfigurationException("${e.message}\n\n$fullUsage")
+    protected fun wrapWithUsage(e: InvalidConfigurationException): InvalidConfigurationException {
+        return InvalidConfigurationException("${e.message}\n\n$fullUsage")
     }
 
     companion object {

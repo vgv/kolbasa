@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 
 /**
  * Parsed PostgreSQL endpoint, holding all fields required to build a [javax.sql.DataSource].
@@ -38,13 +37,13 @@ internal data class PgEndpoint(
          */
         internal fun parsePgEndpoint(id: String, libpqValues: Map<String, String>): PgEndpoint {
             val host = libpqValues["host"]
-                ?: throw ButcherException.InvalidConfigurationException("'host' is required for node '$id'")
+                ?: throw InvalidConfigurationException("'host' is required for node '$id'")
 
             val dbName = libpqValues["dbname"]
-                ?: throw ButcherException.InvalidConfigurationException("'dbname' is required for node '$id'")
+                ?: throw InvalidConfigurationException("'dbname' is required for node '$id'")
 
             val port = libpqValues["port"]?.let {
-                it.toIntOrNull() ?: throw ButcherException.InvalidConfigurationException("Invalid port '$it' for node '$id'")
+                it.toIntOrNull() ?: throw InvalidConfigurationException("Invalid port '$it' for node '$id'")
             }
 
             return PgEndpoint(

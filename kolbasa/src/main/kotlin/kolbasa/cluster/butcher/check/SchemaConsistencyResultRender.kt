@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher.check
 
-import kolbasa.schema.Column
+import kolbasa.butcher.ColumnShape
 
 internal fun SchemaConsistencyResult.render(): String = buildString {
     if (isClean) {
@@ -43,7 +43,7 @@ private fun formatShapeDiff(diff: NodeDelta.ShapeDiff): String {
     return parts.joinToString(", ")
 }
 
-private fun describe(c: Column): String = buildString {
+private fun describe(c: ColumnShape): String = buildString {
     append(c.type)
     append(if (c.nullable) " NULL" else " NOT NULL")
     c.defaultExpression?.let { append(" default=$it") }

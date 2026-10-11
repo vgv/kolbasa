@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import kolbasa.cluster.butcher.HumanReadableDataSource
 import org.postgresql.ds.PGSimpleDataSource
 import java.io.File
@@ -18,7 +17,7 @@ internal data class ClusterNodes(
         internal fun buildClusterNodes(files: List<File>): ClusterNodes {
             val merged = ConfigHelper.mergeNodeFiles(files)
             if (merged.isEmpty()) {
-                throw ButcherException.InvalidConfigurationException("No nodes defined in config files")
+                throw InvalidConfigurationException("No nodes defined in config files")
             }
 
             val dataSources = merged.map { (id, libpqValues) ->

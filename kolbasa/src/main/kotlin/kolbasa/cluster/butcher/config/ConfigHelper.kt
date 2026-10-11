@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import java.io.File
 
 internal object ConfigHelper {
@@ -30,13 +29,13 @@ internal object ConfigHelper {
             }
 
             if (!NODE_ID_REGEX.matches(id)) {
-                throw ButcherException.InvalidConfigurationException(
+                throw InvalidConfigurationException(
                     "Invalid node id '$id' in ${file.name} line $lineNum. Must match ${NODE_ID_REGEX.pattern}"
                 )
             }
 
             if (result.containsKey(id)) {
-                throw ButcherException.InvalidConfigurationException("Duplicate node id '$id' in ${file.name} line $lineNum")
+                throw InvalidConfigurationException("Duplicate node id '$id' in ${file.name} line $lineNum")
             }
 
             val libpqValues = if (rest.isEmpty()) emptyMap() else LibpqTokenizer.tokenize(rest)
@@ -83,16 +82,16 @@ internal object ConfigHelper {
                 // this is an argument, like --shards or --target
                 val eq = arg.indexOf('=')
                 if (eq < 0) {
-                    throw ButcherException.InvalidConfigurationException("Flag '$arg' must be in '--key=value' form")
+                    throw InvalidConfigurationException("Flag '$arg' must be in '--key=value' form")
                 }
 
                 val key = arg.substring(0, eq)
                 val value = arg.substring(eq + 1)
                 if (key !in supportedFlags) {
-                    throw ButcherException.InvalidConfigurationException("Unknown flag '$key'. Supported flags: $supportedFlags")
+                    throw InvalidConfigurationException("Unknown flag '$key'. Supported flags: $supportedFlags")
                 }
                 if (key in flags) {
-                    throw ButcherException.InvalidConfigurationException("Duplicate flag '$key'")
+                    throw InvalidConfigurationException("Duplicate flag '$key'")
                 }
 
                 flags[key] = value
@@ -100,14 +99,14 @@ internal object ConfigHelper {
                 // this is a cluster file, one of
                 val file = File(arg)
                 if (!file.canRead()) {
-                    throw ButcherException.InvalidConfigurationException("Cannot read config file: ${file.absolutePath}")
+                    throw InvalidConfigurationException("Cannot read config file: ${file.absolutePath}")
                 }
                 files.add(file)
             }
         }
 
         if (files.isEmpty()) {
-            throw ButcherException.InvalidConfigurationException("No cluster config files provided. At least one config file is required.")
+            throw InvalidConfigurationException("No cluster config files provided. At least one config file is required.")
         }
 
         return ParsedArgs(files, flags)

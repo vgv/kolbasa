@@ -37,7 +37,7 @@ import javax.sql.DataSource
  * @param nodes one [DataSource] per cluster node, the same list a [Cluster][kolbasa.cluster.Cluster] would
  * be given
  */
-internal class Butcher(private val nodes: List<DataSource>) {
+class Butcher(private val nodes: List<DataSource>) {
 
     init {
         require(nodes.isNotEmpty()) {
@@ -73,7 +73,12 @@ internal class Butcher(private val nodes: List<DataSource>) {
      * After this the shards are still consumed from where their data is, but new messages are produced to
      * [target]. No data is moved yet – that is [moveData].
      */
-    fun prepareMigration(target: NodeId, shards: List<ShardId>, progress: ProgressCallback) {
+    @JvmOverloads
+    fun prepareMigration(
+        target: NodeId,
+        shards: List<ShardId>,
+        progress: ProgressCallback = ProgressCallback.Ignore
+    ) {
         prepare(nodes, target, shards, progress)
     }
 
@@ -82,7 +87,12 @@ internal class Butcher(private val nodes: List<DataSource>) {
      *
      * Safe to re-run after an interruption: rows already copied are skipped rather than duplicated.
      */
-    fun moveData(includeTables: Set<String>?, excludeTables: Set<String>?, progress: ProgressCallback) {
+    @JvmOverloads
+    fun moveData(
+        includeTables: Set<String>? = null,
+        excludeTables: Set<String>? = null,
+        progress: ProgressCallback = ProgressCallback.Ignore
+    ) {
         move(nodes, includeTables, excludeTables, progress)
     }
 
@@ -92,7 +102,8 @@ internal class Butcher(private val nodes: List<DataSource>) {
      * Only call it once [moveData] has nothing left to copy: it stops consuming the shards from their old
      * node, and any rows still there would stay unread.
      */
-    fun finalizeMigration(progress: ProgressCallback) {
+    @JvmOverloads
+    fun finalizeMigration(progress: ProgressCallback = ProgressCallback.Ignore) {
         finalize(nodes, progress)
     }
 }

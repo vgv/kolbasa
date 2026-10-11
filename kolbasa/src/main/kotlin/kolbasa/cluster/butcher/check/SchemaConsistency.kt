@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.butcher.toShape
 import kolbasa.schema.Column
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
@@ -85,12 +86,17 @@ internal class SchemaConsistency(
         val changedNames = refByName.keys intersect otherByName.keys
 
         val changed = changedNames
-            .map { ColumnChange(reference = refByName.getValue(it), other = otherByName.getValue(it)) }
+            .map {
+                ColumnChange(
+                    reference = refByName.getValue(it).toShape(),
+                    other = otherByName.getValue(it).toShape()
+                )
+            }
             .toSet()
 
         return NodeDelta.ShapeDiff(
-            addedColumns = rawAdded.filterNot { it.name in changedNames }.toSet(),
-            removedColumns = rawRemoved.filterNot { it.name in changedNames }.toSet(),
+            addedColumns = rawAdded.filterNot { it.name in changedNames }.mapTo(mutableSetOf()) { it.toShape() },
+            removedColumns = rawRemoved.filterNot { it.name in changedNames }.mapTo(mutableSetOf()) { it.toShape() },
             changedColumns = changed,
             addedIndexes = other.indexes - reference.indexes,
             removedIndexes = reference.indexes - other.indexes,

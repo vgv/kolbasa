@@ -90,7 +90,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // CHECK
         assertInstanceOf<ButcherException.MoveToNonExistingNodeException>(exception)
-        assertEquals(nodes.keys.toList(), exception.knownNodes)
+        assertEquals(nodes.keys.map { it.id }, exception.knownNodes)
         assertEquals(targetNode, exception.targetNode)
     }
 

@@ -11,6 +11,7 @@ import kolbasa.cluster.butcher.config.AvailableCheck
 import kolbasa.cluster.butcher.config.Command
 import java.lang.invoke.MethodHandles
 import kotlin.system.exitProcess
+import kolbasa.cluster.butcher.config.InvalidConfigurationException
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty() && (args[0] == "--version" || args[0] == "-v")) {
@@ -20,7 +21,7 @@ fun main(args: Array<String>) {
 
     val command = try {
         Command.parseCommand(args)
-    } catch (e: ButcherException.InvalidConfigurationException) {
+    } catch (e: InvalidConfigurationException) {
         println("=================================================")
         println(red("Invalid configuration."))
         println(e.message)

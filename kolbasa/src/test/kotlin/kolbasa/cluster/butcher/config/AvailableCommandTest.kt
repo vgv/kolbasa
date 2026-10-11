@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -83,7 +82,7 @@ class AvailableCommandTest {
 
     @Test
     fun testCheckCluster_Parse_NoArgs_WrapsUsage() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.CHECK_CLUSTER.parse(arrayOf("check-cluster"))
         }
         assertTrue(ex.message.contains("No cluster config files"), ex.message)
@@ -148,7 +147,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_ShardOutOfRangeThrows() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--target=node-01", "--shards=0,9999", file.absolutePath)
             )
@@ -163,7 +162,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_NegativeShardThrows() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--target=node-01", "--shards=-1", file.absolutePath)
             )
@@ -174,7 +173,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_MissingTargetThrows() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--shards=0", file.absolutePath)
             )
@@ -186,7 +185,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_MissingShardsThrows() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--target=node-01", file.absolutePath)
             )
@@ -197,7 +196,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_NonNumericShardThrows() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--target=node-01", "--shards=0,abc,2", file.absolutePath)
             )
@@ -209,7 +208,7 @@ class AvailableCommandTest {
     @Test
     fun testPrepareMigration_Parse_UnknownFlagThrows_AndWrapsUsage() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.PREPARE_MIGRATION.parse(
                 arrayOf("prepare-migration", "--bogus=x", "--target=n", "--shards=0", file.absolutePath)
             )
@@ -269,7 +268,7 @@ class AvailableCommandTest {
 
     @Test
     fun testMoveData_Parse_NoFilesThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.MOVE_DATA.parse(arrayOf("move-data"))
         }
         assertTrue(ex.message.contains("No cluster config files"), ex.message)
@@ -291,7 +290,7 @@ class AvailableCommandTest {
 
     @Test
     fun testFinalizeMigration_Parse_NoFilesThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.FINALIZE_MIGRATION.parse(arrayOf("finalize-migration"))
         }
         assertTrue(ex.message.contains("No cluster config files"), ex.message)
@@ -301,7 +300,7 @@ class AvailableCommandTest {
     @Test
     fun testFinalizeMigration_Parse_RejectsUnknownFlag() {
         val file = configFile()
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             AvailableCommand.FINALIZE_MIGRATION.parse(
                 arrayOf("finalize-migration", "--target=x", file.absolutePath)
             )

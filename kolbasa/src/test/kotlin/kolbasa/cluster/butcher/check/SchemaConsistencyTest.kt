@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.test.assertNotNull
+import kolbasa.butcher.toShape
 import kolbasa.schema.Column
 import kolbasa.schema.ColumnType
 import kolbasa.schema.Const
@@ -46,7 +47,7 @@ class SchemaConsistencyTest {
         val divergence = assertNotNull(result.divergencesByTable["q_orders"])
         assertEquals(setOf(n1, n2), divergence.referenceNodes)
         val delta = divergence.deltasByNode[n3] as NodeDelta.ShapeDiff
-        assertEquals(setOf(metaColumn("meta_priority")), delta.addedColumns)
+        assertEquals(setOf(metaColumn("meta_priority").toShape()), delta.addedColumns)
         assertTrue(delta.removedColumns.isEmpty())
     }
 
@@ -64,7 +65,7 @@ class SchemaConsistencyTest {
 
         val divergence = assertNotNull(result.divergencesByTable["q_orders"])
         val delta = divergence.deltasByNode[n3] as NodeDelta.ShapeDiff
-        assertEquals(setOf(metaColumn("meta_user_id")), delta.removedColumns)
+        assertEquals(setOf(metaColumn("meta_user_id").toShape()), delta.removedColumns)
         assertTrue(delta.addedColumns.isEmpty())
     }
 
@@ -98,7 +99,7 @@ class SchemaConsistencyTest {
 
         val divergence = assertNotNull(result.divergencesByTable["q_orders"])
         val delta = divergence.deltasByNode[n3] as NodeDelta.ShapeDiff
-        assertEquals(setOf(metaColumn("meta_priority")), delta.addedColumns)
+        assertEquals(setOf(metaColumn("meta_priority").toShape()), delta.addedColumns)
         assertEquals(setOf("q_orders_priority_idx"), delta.addedIndexes)
     }
 
@@ -116,8 +117,8 @@ class SchemaConsistencyTest {
 
         val divergence = assertNotNull(result.divergencesByTable["q_orders"])
         val delta = divergence.deltasByNode[n3] as NodeDelta.ShapeDiff
-        assertEquals(setOf(metaColumn("meta_priority")), delta.addedColumns)
-        assertEquals(setOf(metaColumn("meta_user_id")), delta.removedColumns)
+        assertEquals(setOf(metaColumn("meta_priority").toShape()), delta.addedColumns)
+        assertEquals(setOf(metaColumn("meta_user_id").toShape()), delta.removedColumns)
     }
 
     @Test
@@ -250,8 +251,8 @@ class SchemaConsistencyTest {
         assertEquals(1, delta.changedColumns.size)
         val change = delta.changedColumns.single()
         assertEquals("meta_foo", change.name)
-        assertEquals(ColumnType.INT, change.reference.type)
-        assertEquals(ColumnType.VARCHAR, change.other.type)
+        assertEquals("INT", change.reference.type)
+        assertEquals("VARCHAR", change.other.type)
     }
 
     @Test

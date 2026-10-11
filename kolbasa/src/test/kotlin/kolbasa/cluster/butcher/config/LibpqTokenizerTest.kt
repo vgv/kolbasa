@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -123,7 +122,7 @@ class LibpqTokenizerTest {
 
     @Test
     fun testTokenize_UnterminatedQuoteThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             LibpqTokenizer.tokenize("password='abc")
         }
 
@@ -133,7 +132,7 @@ class LibpqTokenizerTest {
 
     @Test
     fun testTokenize_MissingEqualsThrows() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             LibpqTokenizer.tokenize("host db1")
         }
         assertTrue(ex.message.contains("Expected '='"), ex.message)

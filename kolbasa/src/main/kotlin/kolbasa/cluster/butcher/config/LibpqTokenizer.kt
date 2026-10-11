@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 
 /**
  * Cursor-based parser for libpq `key=value` connection strings.
@@ -54,14 +53,14 @@ internal class LibpqTokenizer(private val line: String) {
 
         val key = line.substring(keyStart, cursor)
         if (key.isEmpty()) {
-            throw ButcherException.InvalidConfigurationException("Empty key at position $keyStart in '$line'")
+            throw InvalidConfigurationException("Empty key at position $keyStart in '$line'")
         }
         return key
     }
 
     private fun expectEquals(key: String) {
         if (atEnd() || peek() != '=') {
-            throw ButcherException.InvalidConfigurationException("Expected '=' after key '$key' in '$line'")
+            throw InvalidConfigurationException("Expected '=' after key '$key' in '$line'")
         }
         cursor++ // consume '='
     }
@@ -100,7 +99,7 @@ internal class LibpqTokenizer(private val line: String) {
             }
         }
 
-        throw ButcherException.InvalidConfigurationException("Unterminated quoted value for key '$key' in '$line'")
+        throw InvalidConfigurationException("Unterminated quoted value for key '$key' in '$line'")
     }
 
     private fun nextOrNull(): Char? = if (cursor + 1 < line.length) line[cursor + 1] else null

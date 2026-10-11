@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -52,7 +51,7 @@ class CommandTest {
 
     @Test
     fun testParseCommand_EmptyArgs_Throws() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             Command.parseCommand(emptyArray())
         }
         // Empty args should produce the global usage, not a command-specific one.
@@ -62,7 +61,7 @@ class CommandTest {
 
     @Test
     fun testParseCommand_UnknownCommand_Throws() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             Command.parseCommand(arrayOf("do-the-thing", "some-file"))
         }
         Assertions.assertTrue(ex.message.contains("Unknown command"), ex.message)
@@ -73,7 +72,7 @@ class CommandTest {
     @Test
     fun testParseCommand_DispatchedCommandErrorsArePropagated() {
         // move-data without a config file → command-level error, not a Command.parseCommand-level error.
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             Command.parseCommand(arrayOf("move-data"))
         }
         Assertions.assertTrue(ex.message.contains("No cluster config files"), ex.message)

@@ -18,7 +18,7 @@ internal fun prepare(
 
     // Check that target node exists
     if (nodes.none { (node, _) -> node.id == target }) {
-        throw ButcherException.MoveToNonExistingNodeException(nodes.keys.toList(), target)
+        throw ButcherException.MoveToNonExistingNodeException(nodes.keys.map { it.id }, target)
     }
 
     // Check that we are not going to migrate shard to the same node where the shard is located right now

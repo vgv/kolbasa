@@ -10,7 +10,7 @@ import kolbasa.schema.NodeId
  * A shard is always in exactly one of these two states, so a report never has to be read as a combination of
  * nullable fields. See [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md).
  */
-internal sealed interface ShardOwnership {
+sealed interface ShardOwnership {
 
     /** The shard this describes */
     val shard: ShardId

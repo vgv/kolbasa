@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher.config
 
-import kolbasa.cluster.butcher.ButcherException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -50,7 +49,7 @@ class PgEndpointTest {
 
     @Test
     fun testParsePgEndpoint_MissingHost_Throws() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint("node-01", mapOf("dbname" to "db"))
         }
         assertTrue(ex.message.contains("host"), ex.message)
@@ -59,7 +58,7 @@ class PgEndpointTest {
 
     @Test
     fun testParsePgEndpoint_MissingDbName_Throws() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint("node-01", mapOf("host" to "db.host"))
         }
         assertTrue(ex.message.contains("dbname"), ex.message)
@@ -68,7 +67,7 @@ class PgEndpointTest {
 
     @Test
     fun testParsePgEndpoint_InvalidPort_Throws() {
-        val ex = assertThrows<ButcherException.InvalidConfigurationException> {
+        val ex = assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint(
                 "node-01",
                 mapOf("host" to "h", "dbname" to "db", "port" to "abc")
@@ -80,7 +79,7 @@ class PgEndpointTest {
 
     @Test
     fun testParsePgEndpoint_BlankPort_Throws() {
-        assertThrows<ButcherException.InvalidConfigurationException> {
+        assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint(
                 "node-01",
                 mapOf("host" to "h", "dbname" to "db", "port" to "")

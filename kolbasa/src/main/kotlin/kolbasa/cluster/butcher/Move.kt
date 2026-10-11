@@ -91,7 +91,7 @@ private fun findAndCompareAllSchemas(
             for (j in i + 1..tables.size - 1) {
                 val secondTable = tables[j]
                 if (!partialEq(firstTable.second, secondTable.second)) {
-                    throw ButcherException.InconsistentSchemaException(tableName, firstTable.second, secondTable.second)
+                    throw ButcherException.InconsistentSchemaException(tableName)
                 }
             }
         }

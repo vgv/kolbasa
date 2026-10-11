@@ -1,6 +1,5 @@
 package kolbasa.cluster.butcher
 
-import kolbasa.butcher.ShardOwnership
 import kolbasa.butcher.toOwnership
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
@@ -20,11 +19,6 @@ internal data class ShardInfo(
 internal data class SourceAndTargetNodes(
     val sourceNodes: List<DataSource>,
     val targetNode: DataSource
-)
-
-internal data class ShardDiff(
-    val originalShard: ShardOwnership,
-    val updatedShard: ShardOwnership
 )
 
 internal object MoveHelpers {
