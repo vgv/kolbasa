@@ -3,8 +3,8 @@ package kolbasa.cluster.butcher.check
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.butcher.MoveHelpers
-import kolbasa.cluster.butcher.config.Command
 import kolbasa.schema.NodeId
+import javax.sql.DataSource
 
 /**
  * Propose a minimum-movement rebalance of [shards] across [knownNodes].
@@ -121,8 +121,8 @@ internal class ShardBalance(
     }
 
     companion object {
-        fun check(command: Command.Check): ShardBalanceResult {
-            val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
+        fun check(dataSources: List<DataSource>): ShardBalanceResult {
+            val nodes = ClusterHelper.readNodes(dataSources)
             val (_, shards) = MoveHelpers.readShards(nodes)
             val knownNodes = nodes.keys.map { it.id }.toSet()
             return ShardBalance(shards.values, knownNodes).compute()

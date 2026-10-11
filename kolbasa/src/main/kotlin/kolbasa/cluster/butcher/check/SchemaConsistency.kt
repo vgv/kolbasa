@@ -1,7 +1,6 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.cluster.ClusterHelper
-import kolbasa.cluster.butcher.config.Command
 import kolbasa.schema.Column
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
@@ -102,8 +101,8 @@ internal class SchemaConsistency(
     private fun Table.fingerprint() = TableFingerprint(columns, indexes, identity != null)
 
     companion object {
-        fun check(command: Command.Check): SchemaConsistencyResult {
-            val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
+        fun check(dataSources: List<DataSource>): SchemaConsistencyResult {
+            val nodes = ClusterHelper.readNodes(dataSources)
 
             val schemasByNode = ConcurrentHashMap<NodeId, Map<String, Table>>()
             nodes.entries.parallelStream().forEach { (node, dataSource: DataSource) ->

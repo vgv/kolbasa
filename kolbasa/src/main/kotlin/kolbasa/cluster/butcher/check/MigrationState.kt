@@ -3,7 +3,7 @@ package kolbasa.cluster.butcher.check
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.butcher.MoveHelpers
-import kolbasa.cluster.butcher.config.Command
+import javax.sql.DataSource
 
 /**
  * Report shards that are currently in migration state (`consumerNode == null`,
@@ -22,8 +22,8 @@ internal class MigrationState(private val shards: Collection<Shard>) {
     }
 
     companion object {
-        fun check(command: Command.Check): MigrationStateResult {
-            val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
+        fun check(dataSources: List<DataSource>): MigrationStateResult {
+            val nodes = ClusterHelper.readNodes(dataSources)
             val (_, shards) = MoveHelpers.readShards(nodes)
             return MigrationState(shards.values).compute()
         }

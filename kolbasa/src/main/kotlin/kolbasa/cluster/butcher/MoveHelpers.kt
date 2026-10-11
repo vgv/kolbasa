@@ -1,7 +1,6 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.Shard
-import kolbasa.cluster.butcher.config.ClusterNodes
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.Node
@@ -97,14 +96,14 @@ internal object MoveHelpers {
         return errors
     }
 
-    fun checkClusterNodes(nodes: ClusterNodes) {
-        val errors = checkConnection(nodes.dataSources)
+    fun checkClusterNodes(dataSources: List<DataSource>) {
+        val errors = checkConnection(dataSources)
         if (errors.isEmpty()) {
             return
         }
 
         val errorMessage = buildString {
-            appendLine("Can't connect to ${errors.size} of ${nodes.dataSources.size} kolbasa cluster nodes:")
+            appendLine("Can't connect to ${errors.size} of ${dataSources.size} kolbasa cluster nodes:")
 
             errors.forEach { (dataSource, error) ->
                 appendLine("  Node: $dataSource")

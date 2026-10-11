@@ -1,7 +1,6 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
-import kolbasa.cluster.butcher.config.Command
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
@@ -14,14 +13,19 @@ import javax.sql.DataSource
  * Can be re-run safely if interrupted — INSERT uses ON CONFLICT DO NOTHING,
  * so duplicate rows are silently skipped on retry.
  */
-internal fun move(command: Command.Move, progressCallback: ProgressCallback) {
-    val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
+internal fun move(
+    dataSources: List<DataSource>,
+    includeTables: Set<String>?,
+    excludeTables: Set<String>?,
+    progressCallback: ProgressCallback
+) {
+    val nodes = ClusterHelper.readNodes(dataSources)
 
     // tablename => schema
     val schemas = findAndCompareAllSchemas(
-        command.nodes.dataSources,
-        includeTables = command.includeTables,
-        excludeTables = command.excludeTables
+        dataSources,
+        includeTables = includeTables,
+        excludeTables = excludeTables
     )
 
     // targetnode => shards (which should be migrated to this node)

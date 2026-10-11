@@ -1,8 +1,16 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.butcher.check.CheckResult
-import kolbasa.cluster.butcher.check.check
+import kolbasa.cluster.butcher.check.MigrationState
+import kolbasa.cluster.butcher.check.MigrationStateResult
+import kolbasa.cluster.butcher.check.OrphanTables
+import kolbasa.cluster.butcher.check.OrphanTablesResult
+import kolbasa.cluster.butcher.check.SchemaConsistency
+import kolbasa.cluster.butcher.check.SchemaConsistencyResult
+import kolbasa.cluster.butcher.check.ShardBalance
+import kolbasa.cluster.butcher.check.ShardBalanceResult
 import kolbasa.cluster.butcher.check.render
+import kolbasa.cluster.butcher.config.AvailableCheck
 import kolbasa.cluster.butcher.config.Command
 import java.lang.invoke.MethodHandles
 import kotlin.system.exitProcess
@@ -25,10 +33,26 @@ fun main(args: Array<String>) {
 
     val result = try {
         when (command) {
-            is Command.Check -> check(command)
-            is Command.Prepare -> prepare(command, ConsoleProgressCallback)
-            is Command.Move -> move(command, ConsoleProgressCallback)
-            is Command.Finalize -> finalize(command, ConsoleProgressCallback)
+            is Command.Check -> runChecks(command)
+
+            is Command.Prepare -> prepare(
+                dataSources = command.nodes.dataSources,
+                target = command.target,
+                shards = command.shards,
+                progressCallback = ConsoleProgressCallback
+            )
+
+            is Command.Move -> move(
+                dataSources = command.nodes.dataSources,
+                includeTables = command.includeTables,
+                excludeTables = command.excludeTables,
+                progressCallback = ConsoleProgressCallback
+            )
+
+            is Command.Finalize -> finalize(
+                dataSources = command.nodes.dataSources,
+                progressCallback = ConsoleProgressCallback
+            )
         }
     } catch (e: ButcherException.ExecutionException) {
         println("=================================================")
@@ -44,6 +68,36 @@ fun main(args: Array<String>) {
         println(result.render())
     }
     println("=================================================")
+}
+
+/**
+ * Runs the checks the command asked for. Which checks exist and how they are named on the command line is a
+ * property of the CLI, so the mapping lives here and not in the library: every check is callable on its own.
+ */
+private fun runChecks(command: Command.Check): CheckResult {
+    val dataSources = command.nodes.dataSources
+    MoveHelpers.checkClusterNodes(dataSources)
+
+    var shardBalance: ShardBalanceResult? = null
+    var schemaConsistency: SchemaConsistencyResult? = null
+    var orphanTables: OrphanTablesResult? = null
+    var migrationState: MigrationStateResult? = null
+
+    command.checks.forEach { check ->
+        when (check) {
+            AvailableCheck.CHECK_SHARD_BALANCE -> shardBalance = ShardBalance.check(dataSources)
+            AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> schemaConsistency = SchemaConsistency.check(dataSources)
+            AvailableCheck.FIND_ORPHAN_TABLES -> orphanTables = OrphanTables.check(dataSources)
+            AvailableCheck.CHECK_MIGRATION_STATE -> migrationState = MigrationState.check(dataSources)
+        }
+    }
+
+    return CheckResult(
+        shardBalance = shardBalance,
+        schemaConsistency = schemaConsistency,
+        orphanTables = orphanTables,
+        migrationState = migrationState
+    )
 }
 
 private fun butcherVersion(): String {

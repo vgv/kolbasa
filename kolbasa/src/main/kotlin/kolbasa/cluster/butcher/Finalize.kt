@@ -1,12 +1,12 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.cluster.ClusterHelper
-import kolbasa.cluster.butcher.config.Command
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.useStatement
+import javax.sql.DataSource
 
-internal fun finalize(command: Command.Finalize, progressCallback: ProgressCallback) {
-    val nodes = ClusterHelper.readNodes(command.nodes.dataSources)
+internal fun finalize(dataSources: List<DataSource>, progressCallback: ProgressCallback) {
+    val nodes = ClusterHelper.readNodes(dataSources)
     val (shardDataSource, initialShards) = MoveHelpers.readShards(nodes)
 
     // Okay, everything looks good, let's switch the shard table to a stable state
