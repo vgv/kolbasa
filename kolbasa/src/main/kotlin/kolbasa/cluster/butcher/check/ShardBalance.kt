@@ -2,6 +2,7 @@ package kolbasa.cluster.butcher.check
 
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.cluster.butcher.MoveHelpers
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
@@ -32,15 +33,22 @@ internal class ShardBalance(
 
     fun compute(): ShardBalanceResult {
         if (knownNodes.isEmpty()) {
-            return ShardBalanceResult(currentDistribution, emptyMap())
+            return ShardBalanceResult(currentDistribution.toShardIds(), emptyMap())
         }
 
         val surplusShards = collectSurplusShards()
         val deficitByNode = collectDeficitByNode()
         val proposedMoves = assignSurplusToDeficit(surplusShards, deficitByNode)
 
-        return ShardBalanceResult(currentDistribution, proposedMoves)
+        return ShardBalanceResult(currentDistribution.toShardIds(), proposedMoves.toShardIds())
     }
+
+    /**
+     * The result only names the shards: which node holds them is the key of the map it goes into, and the
+     * full ownership record is an internal detail of the computation.
+     */
+    private fun Map<NodeId, List<Shard>>.toShardIds(): Map<NodeId, List<ShardId>> =
+        mapValues { (_, shards) -> shards.map { it.shard } }
 
     private fun groupShardsByNode(): Map<NodeId, List<Shard>> {
         val buckets: Map<NodeId, MutableList<Shard>> = knownNodes.associateWith { mutableListOf() }

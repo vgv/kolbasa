@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.butcher.ShardOwnership
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
@@ -12,12 +13,13 @@ internal object ConsoleProgressCallback : ProgressCallback {
         println("Target node: ${targetNode.id}")
         println("Shards prepared to move (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
-            val originalShard =
-                "[producerNode=${diff.originalShard.producerNode.id}, consumerNode=${diff.originalShard.consumerNode?.id}, nextConsumerNode=${diff.originalShard.nextConsumerNode?.id}]"
-            val updatedShard =
-                "[producerNode=${diff.updatedShard.producerNode.id}, consumerNode=${diff.updatedShard.consumerNode?.id}, nextConsumerNode=${diff.updatedShard.nextConsumerNode?.id}]"
-            println("\tShard #${diff.originalShard.shard.id} $originalShard=>$updatedShard")
+            println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
         }
+    }
+
+    private fun describe(ownership: ShardOwnership): String = when (ownership) {
+        is ShardOwnership.Stable -> "stable on ${ownership.node.id}"
+        is ShardOwnership.Migrating -> "migrating to ${ownership.target.id}"
     }
 
     override fun moveStart(tableName: String, from: DataSource, to: DataSource) {
@@ -46,11 +48,7 @@ internal object ConsoleProgressCallback : ProgressCallback {
         println("Finalize")
         println("Shards moved to stable state (${shardsDiff.size}):")
         shardsDiff.forEach { diff ->
-            val originalShard =
-                "[producerNode=${diff.originalShard.producerNode.id}, consumerNode=${diff.originalShard.consumerNode?.id}, nextConsumerNode=${diff.originalShard.nextConsumerNode?.id}]"
-            val updatedShard =
-                "[producerNode=${diff.updatedShard.producerNode.id}, consumerNode=${diff.updatedShard.consumerNode?.id}, nextConsumerNode=${diff.updatedShard.nextConsumerNode?.id}]"
-            println("\tShard #${diff.originalShard.shard.id} $originalShard=>$updatedShard")
+            println("\t${diff.originalShard.shard}: ${describe(diff.originalShard)} => ${describe(diff.updatedShard)}")
         }
     }
 }

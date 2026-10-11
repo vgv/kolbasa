@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.butcher.toOwnership
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
@@ -104,8 +105,8 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
 
         val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
         assertEquals(1, diff.size)
-        assertEquals(originalShard, diff.first().originalShard)
-        assertEquals(updatedShard, diff.first().updatedShard)
+        assertEquals(originalShard?.toOwnership(), diff.first().originalShard)
+        assertEquals(updatedShard?.toOwnership(), diff.first().updatedShard)
     }
 
 }

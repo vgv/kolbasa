@@ -17,7 +17,7 @@ internal class MigrationState(private val shards: Collection<Shard>) {
         // producerNode == nextConsumerNode (see Shard.init), so we can key by producerNode.
         val grouped = shards
             .filter { it.consumerNode == null }
-            .groupBy { it.producerNode }
+            .groupBy({ it.producerNode }, { it.shard })
         return MigrationStateResult(grouped)
     }
 

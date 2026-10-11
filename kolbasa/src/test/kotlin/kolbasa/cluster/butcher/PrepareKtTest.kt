@@ -120,7 +120,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // CHECK
         assertInstanceOf<ButcherException.MoveToTheSameShardException>(exception)
-        assertEquals(shards[shardsToMove.first()], exception.shard)
+        assertEquals(shardsToMove.first(), exception.shard)
         assertEquals(targetNode.id, exception.targetNode)
     }
 }

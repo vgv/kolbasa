@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher
 
-import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.Table
@@ -18,10 +18,10 @@ internal sealed class ButcherException(override val message: String) : RuntimeEx
     internal class ExecutionException(message: String) : ButcherException(message)
 
     internal class MoveToTheSameShardException(
-        val shard: Shard,
+        val shard: ShardId,
         val targetNode: NodeId
     ) : ButcherException(
-        "Shard ${shard.shard.id} is already both produced and consumed by node ${targetNode.id}, " +
+        "Shard ${shard.id} is already both produced and consumed by node ${targetNode.id}, " +
             "there is nothing to move"
     )
 

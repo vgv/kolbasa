@@ -37,7 +37,7 @@ class MigrationStateTest {
 
         assertFalse(result.isClean)
         assertEquals(1, result.totalMigratingShards)
-        assertEquals(listOf(42), result.migratingShardsByTarget[target]?.map { it.shard.id })
+        assertEquals(listOf(42), result.migratingShardsByTarget[target]?.map { it.id })
     }
 
     @Test
@@ -55,7 +55,7 @@ class MigrationStateTest {
         val result = MigrationState(shards).compute()
 
         assertEquals(2, result.totalMigratingShards)
-        assertEquals(listOf(2, 4), result.migratingShardsByTarget[n2]?.map { it.shard.id })
+        assertEquals(listOf(2, 4), result.migratingShardsByTarget[n2]?.map { it.id })
     }
 
     @Test
@@ -72,8 +72,8 @@ class MigrationStateTest {
         val result = MigrationState(shards).compute()
 
         assertEquals(4, result.totalMigratingShards)
-        assertEquals(listOf(10, 30), result.migratingShardsByTarget[n2]?.map { it.shard.id }?.sorted())
-        assertEquals(listOf(20, 40), result.migratingShardsByTarget[n3]?.map { it.shard.id }?.sorted())
+        assertEquals(listOf(10, 30), result.migratingShardsByTarget[n2]?.map { it.id }?.sorted())
+        assertEquals(listOf(20, 40), result.migratingShardsByTarget[n3]?.map { it.id }?.sorted())
     }
 
     @Test

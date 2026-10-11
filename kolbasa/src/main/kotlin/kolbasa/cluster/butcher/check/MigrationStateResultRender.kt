@@ -8,9 +8,9 @@ internal fun MigrationStateResult.render(): String = buildString {
 
     appendLine("Migration state: $totalMigratingShards shard(s) in migration")
     migratingShardsByTarget.toSortedMap().forEach { (target, shards) ->
-        val sorted = shards.sortedBy { it.shard }
+        val sorted = shards.sorted()
         appendLine("  ⟶ ${target.id} (${sorted.size} shards):")
-        appendLine("    shards: ${sorted.joinToString(separator = ",") { it.shard.id.toString() }}")
+        appendLine("    shards: ${sorted.joinToString(separator = ",") { it.id.toString() }}")
         appendLine("    target: ${target.id}")
     }
 }.trimEnd()

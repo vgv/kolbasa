@@ -27,7 +27,7 @@ internal fun prepare(
             shard in shards
         }.forEach { (_, shard) ->
             if (shard.producerNode == target && shard.consumerNode == target) {
-                throw ButcherException.MoveToTheSameShardException(shard, target)
+                throw ButcherException.MoveToTheSameShardException(shard.shard, target)
             }
         }
 

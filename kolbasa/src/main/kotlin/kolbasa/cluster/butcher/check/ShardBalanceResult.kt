@@ -1,11 +1,11 @@
 package kolbasa.cluster.butcher.check
 
-import kolbasa.cluster.Shard
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 
 internal data class ShardBalanceResult(
-    val currentDistribution: Map<NodeId, List<Shard>>,
-    val proposedMoves: Map<NodeId, List<Shard>>,
+    val currentDistribution: Map<NodeId, List<ShardId>>,
+    val proposedMoves: Map<NodeId, List<ShardId>>,
 ) {
 
     val totalMoves: Int = proposedMoves.values.sumOf { it.size }

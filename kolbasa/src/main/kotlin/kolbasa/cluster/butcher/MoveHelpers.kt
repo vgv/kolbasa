@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.butcher.ShardOwnership
+import kolbasa.butcher.toOwnership
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
@@ -21,8 +23,8 @@ internal data class SourceAndTargetNodes(
 )
 
 internal data class ShardDiff(
-    val originalShard: Shard,
-    val updatedShard: Shard
+    val originalShard: ShardOwnership,
+    val updatedShard: ShardOwnership
 )
 
 internal object MoveHelpers {
@@ -71,7 +73,7 @@ internal object MoveHelpers {
             val updatedShard = updatedShards[shardId] ?: throw IllegalStateException("Can't find updated shard ${shardId.id}")
 
             if (initialShard != updatedShard) {
-                difference += ShardDiff(initialShard, updatedShard)
+                difference += ShardDiff(initialShard.toOwnership(), updatedShard.toOwnership())
             }
         }
 

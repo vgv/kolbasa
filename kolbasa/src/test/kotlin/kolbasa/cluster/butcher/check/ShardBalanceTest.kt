@@ -67,14 +67,15 @@ class ShardBalanceTest {
 
         assertFalse(result.isBalanced)
         assertEquals(768, result.totalMoves)
-        assertEquals(256, result.currentDistribution[nodes[0]]?.size?.let { it - (result.proposedMoves.values.flatten().count { s -> s.producerNode == nodes[0] }) })
+        val owner = result.ownerOf()
+        assertEquals(256, result.currentDistribution[nodes[0]]?.size?.let { it - (result.proposedMoves.values.flatten().count { s -> owner[s] == nodes[0] }) })
         // After applying moves, each recipient gets 256; only one source (n1).
         assertEquals(256, result.proposedMoves[nodes[1]]?.size)
         assertEquals(256, result.proposedMoves[nodes[2]]?.size)
         assertEquals(256, result.proposedMoves[nodes[3]]?.size)
         // Sources are all n1
         result.proposedMoves.values.flatten().forEach { shard ->
-            assertEquals(nodes[0], shard.producerNode)
+            assertEquals(nodes[0], owner[shard])
         }
     }
 
@@ -186,10 +187,7 @@ class ShardBalanceTest {
         val second = ShardBalance(shards, nodes.toSet()).compute()
 
         assertEquals(first.totalMoves, second.totalMoves)
-        assertEquals(
-            first.proposedMoves.mapValues { (_, list) -> list.map { it.shard } },
-            second.proposedMoves.mapValues { (_, list) -> list.map { it.shard } }
-        )
+        assertEquals(first.proposedMoves, second.proposedMoves)
     }
 
     @Test
@@ -203,9 +201,10 @@ class ShardBalanceTest {
 
         val floor = ShardId.SHARD_COUNT / nodes.size
         val ceil = floor + if (ShardId.SHARD_COUNT % nodes.size == 0) 0 else 1
+        val owner = result.ownerOf()
         val final = nodes.associateWith { node ->
             (result.currentDistribution[node]?.size ?: 0) -
-                result.proposedMoves.values.flatten().count { it.producerNode == node } +
+                result.proposedMoves.values.flatten().count { owner[it] == node } +
                 (result.proposedMoves[node]?.size ?: 0)
         }
 
@@ -215,6 +214,10 @@ class ShardBalanceTest {
     }
 
     // ---------- helpers ----------
+
+    /** Inverts [ShardBalanceResult.currentDistribution]: which node holds a given shard right now */
+    private fun ShardBalanceResult.ownerOf(): Map<ShardId, NodeId> =
+        currentDistribution.flatMap { (node, shards) -> shards.map { it to node } }.toMap()
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
         Shard(shard = ShardId.of(shardNum), producerNode = node, consumerNode = node, nextConsumerNode = null)

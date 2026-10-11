@@ -9,7 +9,7 @@ internal fun ShardBalanceResult.render(): String = buildString {
     sortedNodes.forEach { node ->
         val shards = currentDistribution[node] ?: emptyList()
         val shardsCount = shards.size
-        val allShardsString = shards.joinToString(separator = ", ", prefix = "[", postfix = "]") { it.shard.id.toString() }
+        val allShardsString = shards.joinToString(separator = ", ", prefix = "[", postfix = "]") { it.id.toString() }
         appendLine("    ${node.id.padEnd(width)}  $shardsCount shards $allShardsString")
     }
 
@@ -20,9 +20,9 @@ internal fun ShardBalanceResult.render(): String = buildString {
 
     appendLine("  Proposed moves ($totalMoves):")
     proposedMoves.toSortedMap().forEach { (target, shards) ->
-        val sorted = shards.sortedBy { it.shard }
+        val sorted = shards.sorted()
         appendLine("    ⟶ ${target.id} (${sorted.size} shards):")
-        appendLine("      shards: ${sorted.joinToString(separator = ",") { it.shard.id.toString() }}")
+        appendLine("      shards: ${sorted.joinToString(separator = ",") { it.id.toString() }}")
         appendLine("      target: ${target.id}")
     }
 }.trimEnd()
