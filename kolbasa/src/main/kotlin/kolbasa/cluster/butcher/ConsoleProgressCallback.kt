@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.butcher.ProgressCallback
+import kolbasa.butcher.ShardDiff
 import kolbasa.butcher.ShardOwnership
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId

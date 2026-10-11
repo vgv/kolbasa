@@ -1,6 +1,7 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.butcher.ButcherException
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId

@@ -1,4 +1,4 @@
-package kolbasa.cluster.butcher.check
+package kolbasa.butcher
 
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId

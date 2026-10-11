@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.CheckResult
+
 internal fun CheckResult.render(): String = buildString {
     val sections = listOfNotNull(
         shardBalance?.render(),

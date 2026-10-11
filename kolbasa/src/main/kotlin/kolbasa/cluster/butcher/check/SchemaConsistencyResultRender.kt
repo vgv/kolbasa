@@ -1,6 +1,9 @@
 package kolbasa.cluster.butcher.check
 
 import kolbasa.butcher.ColumnShape
+import kolbasa.butcher.NodeDelta
+import kolbasa.butcher.SchemaConsistencyResult
+import kolbasa.butcher.TableDivergence
 
 internal fun SchemaConsistencyResult.render(): String = buildString {
     if (isClean) {

@@ -1,6 +1,5 @@
-package kolbasa.cluster.butcher
+package kolbasa.butcher
 
-import kolbasa.butcher.ShardOwnership
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource

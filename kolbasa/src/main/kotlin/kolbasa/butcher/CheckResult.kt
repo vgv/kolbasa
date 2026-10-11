@@ -1,4 +1,4 @@
-package kolbasa.cluster.butcher.check
+package kolbasa.butcher
 
 /**
  * What the requested checks found – one field per check, `null` for a check that was not asked for

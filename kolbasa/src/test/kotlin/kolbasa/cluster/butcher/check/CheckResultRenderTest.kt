@@ -1,5 +1,8 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.CheckResult
+import kolbasa.butcher.MigrationStateResult
+import kolbasa.butcher.ShardBalanceResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

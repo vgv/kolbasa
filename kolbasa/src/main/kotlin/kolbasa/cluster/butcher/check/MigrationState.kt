@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.MigrationStateResult
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.butcher.MoveHelpers

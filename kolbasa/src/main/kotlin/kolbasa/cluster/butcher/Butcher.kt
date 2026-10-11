@@ -1,17 +1,18 @@
 package kolbasa.cluster.butcher
 
 import kolbasa.butcher.Butcher
-import kolbasa.cluster.butcher.check.CheckResult
-import kolbasa.cluster.butcher.check.MigrationStateResult
-import kolbasa.cluster.butcher.check.OrphanTablesResult
-import kolbasa.cluster.butcher.check.SchemaConsistencyResult
-import kolbasa.cluster.butcher.check.ShardBalanceResult
+import kolbasa.butcher.ButcherException
+import kolbasa.butcher.CheckResult
+import kolbasa.butcher.MigrationStateResult
+import kolbasa.butcher.OrphanTablesResult
+import kolbasa.butcher.SchemaConsistencyResult
+import kolbasa.butcher.ShardBalanceResult
 import kolbasa.cluster.butcher.check.render
 import kolbasa.cluster.butcher.config.AvailableCheck
 import kolbasa.cluster.butcher.config.Command
+import kolbasa.cluster.butcher.config.InvalidConfigurationException
 import java.lang.invoke.MethodHandles
 import kotlin.system.exitProcess
-import kolbasa.cluster.butcher.config.InvalidConfigurationException
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty() && (args[0] == "--version" || args[0] == "-v")) {

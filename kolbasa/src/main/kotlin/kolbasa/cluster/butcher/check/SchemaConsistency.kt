@@ -1,7 +1,11 @@
 package kolbasa.cluster.butcher.check
 
-import kolbasa.cluster.ClusterHelper
+import kolbasa.butcher.ColumnChange
+import kolbasa.butcher.NodeDelta
+import kolbasa.butcher.SchemaConsistencyResult
+import kolbasa.butcher.TableDivergence
 import kolbasa.butcher.toShape
+import kolbasa.cluster.ClusterHelper
 import kolbasa.schema.Column
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor

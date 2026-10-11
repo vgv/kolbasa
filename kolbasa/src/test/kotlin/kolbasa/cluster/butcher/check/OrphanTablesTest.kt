@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.OrphanTable
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

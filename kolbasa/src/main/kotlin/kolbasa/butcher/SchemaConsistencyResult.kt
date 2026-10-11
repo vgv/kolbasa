@@ -1,6 +1,5 @@
-package kolbasa.cluster.butcher.check
+package kolbasa.butcher
 
-import kolbasa.butcher.ColumnShape
 import kolbasa.schema.NodeId
 
 /**

@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.butcher.ProgressCallback
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.utils.JdbcHelpers.useStatement

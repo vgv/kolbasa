@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.MigrationStateResult
+
 internal fun MigrationStateResult.render(): String = buildString {
     if (isClean) {
         append("Migration state: no shards in migration")

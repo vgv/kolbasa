@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.OrphanTable
+import kolbasa.butcher.OrphanTablesResult
 import kolbasa.cluster.ClusterHelper
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId

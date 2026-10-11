@@ -1,15 +1,10 @@
 package kolbasa.butcher
 
 import kolbasa.cluster.butcher.MoveHelpers
-import kolbasa.cluster.butcher.ProgressCallback
 import kolbasa.cluster.butcher.check.MigrationState
-import kolbasa.cluster.butcher.check.MigrationStateResult
 import kolbasa.cluster.butcher.check.OrphanTables
-import kolbasa.cluster.butcher.check.OrphanTablesResult
 import kolbasa.cluster.butcher.check.SchemaConsistency
-import kolbasa.cluster.butcher.check.SchemaConsistencyResult
 import kolbasa.cluster.butcher.check.ShardBalance
-import kolbasa.cluster.butcher.check.ShardBalanceResult
 import kolbasa.cluster.butcher.finalize
 import kolbasa.cluster.butcher.move
 import kolbasa.cluster.butcher.prepare

@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.ShardBalanceResult
+
 internal fun ShardBalanceResult.render(): String = buildString {
     val sortedNodes = currentDistribution.keys.sorted()
     val width = sortedNodes.maxOfOrNull { it.id.length } ?: 0

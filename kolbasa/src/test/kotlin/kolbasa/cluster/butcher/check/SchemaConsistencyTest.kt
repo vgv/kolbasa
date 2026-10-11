@@ -1,6 +1,6 @@
 package kolbasa.cluster.butcher.check
 
-import kolbasa.test.assertNotNull
+import kolbasa.butcher.NodeDelta
 import kolbasa.butcher.toShape
 import kolbasa.schema.Column
 import kolbasa.schema.ColumnType
@@ -8,6 +8,7 @@ import kolbasa.schema.Const
 import kolbasa.schema.Identity
 import kolbasa.schema.NodeId
 import kolbasa.schema.Table
+import kolbasa.test.assertNotNull
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

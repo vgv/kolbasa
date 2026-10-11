@@ -1,5 +1,6 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.ShardBalanceResult
 import kolbasa.cluster.Shard
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId

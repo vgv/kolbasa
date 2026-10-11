@@ -1,9 +1,10 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.ShardBalanceResult
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
-import kolbasa.producer.ShardId
 import kolbasa.cluster.butcher.MoveHelpers
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 

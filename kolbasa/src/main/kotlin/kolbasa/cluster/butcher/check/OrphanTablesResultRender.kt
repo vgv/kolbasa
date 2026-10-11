@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher.check
 
+import kolbasa.butcher.OrphanTablesResult
+
 internal fun OrphanTablesResult.render(): String = buildString {
     if (isClean) {
         append("Orphan tables: no orphan queue tables")

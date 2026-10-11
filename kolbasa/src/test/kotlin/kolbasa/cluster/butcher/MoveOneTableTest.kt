@@ -3,6 +3,7 @@ package kolbasa.cluster.butcher
 import io.mockk.mockk
 import io.mockk.verifySequence
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.butcher.ProgressCallback
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id

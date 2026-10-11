@@ -1,5 +1,7 @@
 package kolbasa.cluster.butcher
 
+import kolbasa.butcher.ButcherException
+import kolbasa.butcher.ShardDiff
 import kolbasa.butcher.toOwnership
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
