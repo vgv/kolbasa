@@ -7,8 +7,10 @@ import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.help
 import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.Widget
 import kolbasa.butcher.Butcher
 import kolbasa.butcher.ButcherException
 import kolbasa.butcher.cli.config.ClusterNodes
@@ -38,14 +40,12 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
             throw CliktError(e.message)
         }
 
-        echo(SEPARATOR)
         echo(TextColors.green("Completed successfully."))
-        output?.let { echo(it) }
-        echo(SEPARATOR)
+        output?.let { terminal.println(it) }
     }
 
-    /** Does the work, and returns the text to show after it, if any */
-    protected abstract fun execute(): String?
+    /** Does the work, and returns what to show after it, if anything */
+    protected abstract fun execute(): Widget?
 
     /**
      * Builds the operator handle for the cluster the config files describe
@@ -64,8 +64,6 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
         return Butcher(nodes.dataSources)
     }
 }
-
-internal const val SEPARATOR = "================================================="
 
 
 private val CONFIG_FILE_FORMAT_HELP = """

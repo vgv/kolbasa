@@ -1,8 +1,16 @@
 package kolbasa.butcher.cli
 
+import com.github.ajalt.mordant.rendering.Widget
+import com.github.ajalt.mordant.table.verticalLayout
+import com.github.ajalt.mordant.widgets.HorizontalRule
 import kolbasa.butcher.CheckResult
 
-internal fun CheckResult.render(): String = buildString {
+/**
+ * Renders a [CheckResult] the way butcher shows it, one section per check that was asked for
+ *
+ * Presentation only: it belongs to the CLI, and nothing except console output may depend on it.
+ */
+internal fun CheckResult.render(): Widget = verticalLayout {
     val sections = listOfNotNull(
         shardBalance?.render(),
         schemaConsistency?.render(),
@@ -11,10 +19,9 @@ internal fun CheckResult.render(): String = buildString {
     )
 
     sections.forEachIndexed { index, section ->
-        if (index > 0) appendLine()
-        appendLine(SECTION_SEPARATOR)
-        append(section)
+        if (index > 0) {
+            cell(HorizontalRule())
+        }
+        cell(section)
     }
 }
-
-private const val SECTION_SEPARATOR = "================================================="

@@ -27,4 +27,31 @@ data class ShardBalanceResult(
 
     /** True when nothing needs to move */
     val isBalanced: Boolean = totalMoves == 0
+
+    /**
+     * Node -> how many shards it gains or loses if [proposedMoves] is applied
+     *
+     * Positive means the node takes shards over, negative means it hands them away, and zero means the plan
+     * leaves it as it is. Every node of [currentDistribution] is in the map, and the values add up to zero –
+     * a move always has two sides.
+     *
+     * The giving side is not stated by [proposedMoves], which only says where each shard goes, so it is
+     * derived here from [currentDistribution]: whoever holds a shard now is the node that loses it.
+     */
+    val netChangeByNode: Map<NodeId, Int> = run {
+        val currentOwner = currentDistribution
+            .flatMap { (node, shards) -> shards.map { shard -> shard to node } }
+            .toMap()
+
+        val outgoing = proposedMoves.values
+            .flatten()
+            .mapNotNull { currentOwner[it] }
+            .groupingBy { it }
+            .eachCount()
+
+        val nodes = currentDistribution.keys + proposedMoves.keys
+        nodes.associateWith { node ->
+            (proposedMoves[node]?.size ?: 0) - (outgoing[node] ?: 0)
+        }
+    }
 }

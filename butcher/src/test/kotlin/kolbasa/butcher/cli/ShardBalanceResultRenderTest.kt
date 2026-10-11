@@ -20,11 +20,13 @@ class ShardBalanceResultRenderTest {
             proposedMoves = emptyMap()
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
-        assertTrue(text.contains("Shard balance"), text)
-        assertTrue(text.contains("Already balanced"), text)
-        assertTrue(text.contains("342 shards"), text)
+        assertTrue(text.contains("1024 shard(s) evenly spread across 3 node(s)"), text)
+        nodes.forEach { assertTrue(text.contains(it.id), text) }
+        // Nothing to move, so nothing to paste into prepare-migration and nothing to change
+        assertTrue(!text.contains("--shards="), text)
+        assertTrue(!text.contains("Change"), text)
     }
 
     @Test
@@ -36,10 +38,16 @@ class ShardBalanceResultRenderTest {
             proposedMoves = mapOf(n2 to shards(0, 5))
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
-        assertTrue(text.contains("Proposed moves"), text)
-        assertTrue(text.contains("⟶ n2"), text)
+        assertTrue(text.contains("5 should move"), text)
+        assertTrue(text.contains("Proposed moves (5)"), text)
+        // What each node gains or loses, as a column of its own
+        assertTrue(text.contains("Change"), text)
+        assertTrue(text.contains("-5"), text)
+        assertTrue(text.contains("+5"), text)
+        // The plan is printed as the flags it is about to be pasted into
+        assertTrue(text.contains("--target=n2 --shards=0,1,2,3,4"), text)
     }
 
     private fun shards(from: Int, count: Int): List<ShardId> = (from until from + count).map(ShardId::of)

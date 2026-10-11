@@ -16,7 +16,7 @@ class SchemaConsistencyResultRenderTest {
     fun testClean() {
         assertEquals(
             "Schema consistency: all tables consistent across cluster",
-            SchemaConsistencyResult(emptyMap()).render()
+            SchemaConsistencyResult(emptyMap()).render().renderToText()
         )
     }
 
@@ -38,7 +38,7 @@ class SchemaConsistencyResultRenderTest {
             )
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
         assertTrue(text.contains("~column meta_foo INT NULL -> VARCHAR NULL"), text)
     }
@@ -57,13 +57,15 @@ class SchemaConsistencyResultRenderTest {
             n4 to NodeDelta.Missing,
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
         assertTrue(text.contains("1 table(s) inconsistent"), text)
         assertTrue(text.contains("q_orders"), text)
         assertTrue(text.contains("[n1, n2]"), text)
-        assertTrue(text.contains("n3: +column meta_priority"), text)
-        assertTrue(text.contains("n4: missing"), text)
+        // Each node's difference is a table row now, so the node and its delta are asserted apart
+        assertTrue(text.contains("+column meta_priority INT NULL"), text)
+        assertTrue(text.contains("missing"), text)
+        assertTrue(text.indexOf("n3") < text.indexOf("n4"), text)
     }
 
     private fun divergence(vararg deltas: Pair<NodeId, NodeDelta>) = SchemaConsistencyResult(

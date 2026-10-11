@@ -1,6 +1,7 @@
 package kolbasa.butcher.cli
 
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.mordant.rendering.Widget
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.convert
@@ -34,7 +35,7 @@ internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migrati
     override fun help(context: Context) =
         "Mark shards for migration. Updates shard metadata only, run 'move-data' to start the migration"
 
-    override fun execute(): String? {
+    override fun execute(): Widget? {
         confirm("Shards ${shards.joinToString(",")} will be marked for migration to node ${target.id}, and new messages for them will go there immediately.")
 
         butcher().prepareMigration(target, shards.map(ShardId::of), ConsoleProgressCallback(terminal))

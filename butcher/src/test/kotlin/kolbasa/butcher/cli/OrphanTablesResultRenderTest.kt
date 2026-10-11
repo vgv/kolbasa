@@ -11,7 +11,7 @@ class OrphanTablesResultRenderTest {
 
     @Test
     fun testClean() {
-        assertEquals("Orphan tables: no orphan queue tables", OrphanTablesResult(emptyMap()).render())
+        assertEquals("Orphan tables: no orphan queue tables", OrphanTablesResult(emptyMap()).render().renderToText())
     }
 
     @Test
@@ -26,17 +26,19 @@ class OrphanTablesResultRenderTest {
             )
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
         assertTrue(text.contains("3 orphan queue(s) across 2 node(s)"), text)
         assertTrue(text.contains("q_orders_dlq"), text)
         assertTrue(text.contains("q_orders_arc"), text)
         assertTrue(text.contains("q_payments_arc"), text)
-        assertTrue(text.contains("main queue q_orders missing"), text)
-        assertTrue(text.contains("main queue q_payments missing"), text)
+        // The main queue each orphan belongs to is a column of its own now
+        assertTrue(text.contains("Missing main queue"), text)
+        assertTrue(text.contains("q_orders "), text)
+        assertTrue(text.contains("q_payments "), text)
         // Nodes sorted by id: n1 before n2.
-        val n1Pos = text.indexOf("n1:")
-        val n2Pos = text.indexOf("n2:")
+        val n1Pos = text.indexOf("n1")
+        val n2Pos = text.indexOf("n2")
         assertTrue(n1Pos in 0 until n2Pos, "n1 group should come before n2 group:\n$text")
     }
 

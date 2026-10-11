@@ -1,6 +1,7 @@
 package kolbasa.butcher.cli
 
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.mordant.rendering.Widget
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
@@ -24,7 +25,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
     override fun help(context: Context) =
         "Inspect cluster state (schema consistency, shards distribution etc.). Modifies nothing, safe at any time"
 
-    override fun execute(): String {
+    override fun execute(): Widget {
         val butcher = butcher()
         butcher.checkNodesAvailable()
 

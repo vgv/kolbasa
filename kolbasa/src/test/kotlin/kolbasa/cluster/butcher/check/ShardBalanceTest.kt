@@ -190,6 +190,35 @@ class ShardBalanceTest {
         }
     }
 
+    @Test
+    fun testNetChange_IsZeroWhenBalanced() {
+        val nodes = (1..4).map { NodeId("n$it") }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[it % 4]) }
+
+        val result = ShardBalance(shards, nodes.toSet()).compute()
+
+        assertTrue(result.isBalanced)
+        assertEquals(nodes.toSet(), result.netChangeByNode.keys)
+        result.netChangeByNode.forEach { (node, change) -> assertEquals(0, change, "$node") }
+    }
+
+    @Test
+    fun testNetChange_SumsToZeroAndMatchesTheMoves() {
+        val nodes = (1..4).map { NodeId("n$it") }
+        // Everything on n1, so it is the only one giving shards away
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+
+        val result = ShardBalance(shards, nodes.toSet()).compute()
+
+        // A move always has two sides
+        assertEquals(0, result.netChangeByNode.values.sum())
+        // The giving side is not in proposedMoves, it is derived from who holds the shard now
+        assertEquals(-result.totalMoves, result.netChangeByNode.getValue(nodes[0]))
+        nodes.drop(1).forEach { node ->
+            assertEquals(result.proposedMoves.getValue(node).size, result.netChangeByNode.getValue(node), "$node")
+        }
+    }
+
     // ---------- helpers ----------
 
     /** Inverts [ShardBalanceResult.currentDistribution]: which node holds a given shard right now */

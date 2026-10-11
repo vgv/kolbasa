@@ -44,7 +44,11 @@ internal class ConsoleProgressCallback(private val terminal: Terminal) : Progres
         to: DataSource,
         migratedRows: Int
     ) {
-        terminal.println("Move table '$tableName' from $from to $to, migrated rows: $migratedRows")
+        // One line per batch of 1000 rows is something to watch on a terminal and something to drown in a
+        // log file, so a redirected run gets the start and the end of each table only
+        if (terminal.terminalInfo.outputInteractive) {
+            terminal.println("Move table '$tableName' from $from to $to, migrated rows: $migratedRows")
+        }
     }
 
     override fun finalizeSuccessful(shardsDiff: List<ShardDiff>) {

@@ -1,53 +1,67 @@
 package kolbasa.butcher.cli
 
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.Widget
+import com.github.ajalt.mordant.table.table
+import com.github.ajalt.mordant.table.verticalLayout
 import kolbasa.butcher.ColumnShape
 import kolbasa.butcher.NodeDelta
 import kolbasa.butcher.SchemaConsistencyResult
 import kolbasa.butcher.TableDivergence
 
-internal fun SchemaConsistencyResult.render(): String = buildString {
+/**
+ * Renders a [SchemaConsistencyResult] the way butcher shows it
+ *
+ * Presentation only: it belongs to the CLI, and nothing except console output may depend on it.
+ */
+internal fun SchemaConsistencyResult.render(): Widget = verticalLayout {
     if (isClean) {
-        append("Schema consistency: all tables consistent across cluster")
-        return@buildString
+        cell(TextColors.green("Schema consistency: all tables consistent across cluster"))
+        return@verticalLayout
     }
 
-    appendLine("Schema consistency: $totalDivergent table(s) inconsistent across cluster")
-    appendLine()
+    cell(TextColors.yellow("Schema consistency: $totalDivergent table(s) inconsistent across cluster"))
     divergencesByTable.toSortedMap().forEach { (_, divergence) ->
-        appendDivergence(divergence)
+        cell(divergence.render())
     }
-}.trimEnd()
-
-private fun StringBuilder.appendDivergence(divergence: TableDivergence) {
-    val refList = divergence.referenceNodes.sorted().joinToString(", ") { it.id }
-    appendLine("  ${divergence.table} (reference: shape on [$refList]):")
-    divergence.deltasByNode.toSortedMap().forEach { (node, delta) ->
-        appendLine("    ${node.id}: ${formatDelta(delta)}")
-    }
-    appendLine()
 }
 
-private fun formatDelta(delta: NodeDelta): String = when (delta) {
-    NodeDelta.Missing -> "missing"
-    is NodeDelta.ShapeDiff -> formatShapeDiff(delta)
-}
+private fun TableDivergence.render(): Widget {
+    val reference = referenceNodes.sorted().joinToString(", ") { it.id }
 
-private fun formatShapeDiff(diff: NodeDelta.ShapeDiff): String {
-    val parts = buildList {
-        diff.changedColumns.sortedBy { it.name }.forEach {
-            add("~column ${it.name} ${describe(it.reference)} -> ${describe(it.other)}")
+    return table {
+        captionTop("$table (reference: shape on [$reference])")
+        header { row("Node", "Difference") }
+        body {
+            deltasByNode.toSortedMap().forEach { (node, delta) ->
+                row(node.id, delta.describe())
+            }
         }
-        diff.addedColumns.sortedBy { it.name }.forEach { add("+column ${it.name} ${describe(it)}") }
-        diff.removedColumns.sortedBy { it.name }.forEach { add("-column ${it.name} ${describe(it)}") }
-        diff.addedIndexes.sorted().forEach { add("+index $it") }
-        diff.removedIndexes.sorted().forEach { add("-index $it") }
-        if (diff.identityPresenceDiffers) add("identity presence differs")
     }
-    return parts.joinToString(", ")
 }
 
-private fun describe(c: ColumnShape): String = buildString {
-    append(c.type)
-    append(if (c.nullable) " NULL" else " NOT NULL")
-    c.defaultExpression?.let { append(" default=$it") }
+private fun NodeDelta.describe(): String = when (this) {
+    NodeDelta.Missing -> "missing"
+    is NodeDelta.ShapeDiff -> describe()
+}
+
+private fun NodeDelta.ShapeDiff.describe(): String {
+    val parts = buildList {
+        changedColumns.sortedBy { it.name }.forEach {
+            add("~column ${it.name} ${it.reference.describe()} -> ${it.other.describe()}")
+        }
+        addedColumns.sortedBy { it.name }.forEach { add("+column ${it.name} ${it.describe()}") }
+        removedColumns.sortedBy { it.name }.forEach { add("-column ${it.name} ${it.describe()}") }
+        addedIndexes.sorted().forEach { add("+index $it") }
+        removedIndexes.sorted().forEach { add("-index $it") }
+        if (identityPresenceDiffers) add("identity presence differs")
+    }
+
+    return parts.joinToString("\n")
+}
+
+private fun ColumnShape.describe(): String = buildString {
+    append(type)
+    append(if (nullable) " NULL" else " NOT NULL")
+    defaultExpression?.let { append(" default=$it") }
 }

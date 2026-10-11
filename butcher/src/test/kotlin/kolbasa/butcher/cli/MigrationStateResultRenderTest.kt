@@ -11,7 +11,7 @@ class MigrationStateResultRenderTest {
 
     @Test
     fun testClean() {
-        assertEquals("Migration state: no shards in migration", MigrationStateResult(emptyMap()).render())
+        assertEquals("Migration state: no shards in migration", MigrationStateResult(emptyMap()).render().renderToText())
     }
 
     @Test
@@ -26,18 +26,15 @@ class MigrationStateResultRenderTest {
             )
         )
 
-        val text = result.render()
+        val text = result.render().renderToText()
 
         assertTrue(text.contains("5 shard(s) in migration"), text)
-        assertTrue(text.contains("⟶ n2"), text)
-        assertTrue(text.contains("⟶ n3"), text)
-        // Targets sorted by id (n2 before n3) and shards sorted ascending within each group.
-        val n2Pos = text.indexOf("⟶ n2")
-        val n3Pos = text.indexOf("⟶ n3")
+        // Targets sorted by id (n2 before n3) and shards sorted ascending within each group
+        val n2Pos = text.indexOf("n2: 10,20")
+        val n3Pos = text.indexOf("n3: 30,40,50")
+        assertTrue(n2Pos >= 0, "n2 shards missing:\n$text")
+        assertTrue(n3Pos >= 0, "n3 shards missing:\n$text")
         assertTrue(n2Pos < n3Pos, "n2 group should come before n3 group:\n$text")
-        // Check shards list
-        assertTrue(text.contains("shards: 10,20"), text)
-        assertTrue(text.contains("shards: 30,40,50"), text)
     }
 
 }
