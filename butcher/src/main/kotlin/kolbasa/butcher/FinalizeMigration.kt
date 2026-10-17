@@ -6,11 +6,14 @@ import com.github.ajalt.mordant.rendering.Widget
 
 internal class FinalizeMigration : MutatingClusterCommand(name = "finalize-migration") {
 
+    override val helpSection = HelpSection.LOW_LEVEL
+
     override fun help(context: Context) =
-        "Complete a migration: hand the migrated shards over to their new node and restore consumer routing"
+        "Finish a migration. Migrated shards switch to their new node, and consumers read them there"
 
     override fun execute(): Widget? {
-        confirm("Every shard that is currently migrating will be handed over to its new node, and consumers will stop reading it from the old one. Run this only once move-data has nothing left to copy.")
+        confirm("All migrating shards will switch to their new node. Consumers will read them only from there. " +
+            "Run this only when move-data has nothing left to copy.")
 
         butcher().finalizeMigration(ConsoleProgressCallback(terminal))
         return null

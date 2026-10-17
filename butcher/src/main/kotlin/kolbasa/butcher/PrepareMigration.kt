@@ -32,11 +32,17 @@ internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migrati
             shards.all { it in ShardId.SHARDS_RANGE }
         }
 
+    override val helpSection = HelpSection.LOW_LEVEL
+
     override fun help(context: Context) =
-        "Mark shards for migration. Updates shard metadata only, run 'move-data' to start the migration"
+        "Mark shards for migration. Updates shard metadata only. Consumers stop reading these shards, " +
+            "so run 'move-data' soon"
 
     override fun execute(): Widget? {
-        confirm("Shards ${shards.joinToString(",")} will be marked for migration to node ${target.id}, and new messages for them will go there immediately.")
+        confirm("Shards ${shards.joinToString(",")} will start migrating to node ${target.id}. " +
+            "New messages for them will go there right away. " +
+            "Consumers will not read these shards until finalize-migration. " +
+            "Run move-data soon after this.")
 
         butcher().prepareMigration(target, shards.map(ShardId::of), ConsoleProgressCallback(terminal))
         return null

@@ -16,7 +16,7 @@ This guide assumes you understand the cluster model. If a term here is unfamilia
 
 1. [Install](#install)
 2. [The cluster config file](#the-cluster-config-file)
-3. [The four commands](#the-four-commands)
+3. [The commands](#the-commands)
 4. [Command reference](#command-reference)
 5. [Worked examples](#worked-examples)
 6. [Troubleshooting](#troubleshooting)
@@ -155,34 +155,66 @@ line-2  user=app password=s3cr3t-02
 butcher check-cluster topology.conf secrets.conf
 ```
 
-## The four commands
+## The commands
 
-butcher has exactly four commands. The first is read-only; the other three are the three steps of the
-migration protocol, run in order.
+butcher has six commands. One reads the cluster and reports; it changes nothing. The other five sit on two
+levels. Three are the single steps of the migration protocol, run in order. Two are **high-level**: those
+same three steps in a loop, over a plan butcher works out itself.
 
 ```
-┌────────────────┐   ┌────────────────────┐   ┌────────────┐   ┌─────────────────────┐
-│ check-cluster  │──▶│ prepare-migration  │──▶│ move-data  │──▶│ finalize-migration  │
-│  (read-only)   │   │  (flip metadata)   │   │ (move rows)│   │  (cut over routing) │
-└────────────────┘   └────────────────────┘   └────────────┘   └─────────────────────┘
-   run anytime          small write op         long-running        small write op
-                                               safe to re-run      point of no return
+                        ┌────────────────┐
+                        │ check-cluster  │   read-only, run anytime
+                        └───────┬────────┘
+                                │ both of these work out that same plan themselves
+                ┌───────────────┴───────────────┐
+                ▼                               ▼
+      ┌───────────────────┐            ┌────────────────┐
+      │ rebalance-cluster │            │  drain-nodes   │   high level: a loop of rounds
+      └─────────┬─────────┘            └────────┬───────┘
+                └───────────────┬───────────────┘
+                                │ one round is exactly these three low-level commands, in order
+                                ▼
+    ┌────────────────────┐   ┌────────────┐   ┌─────────────────────┐
+    │ prepare-migration  │──▶│ move-data  │──▶│ finalize-migration  │
+    │  (flip metadata)   │   │ (move rows)│   │  (cut over routing) │
+    └────────────────────┘   └────────────┘   └─────────────────────┘
+        small write op         long-running        small write op
+                               safe to re-run      point of no return
 ```
 
 | Command | Writes? | Safe to re-run? | Typical duration | When |
 |---|---|---|---|---|
 | `check-cluster` | no | yes | seconds | anytime — diagnostics |
-| `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration |
+| `rebalance-cluster` | yes (whole rounds) | yes — it reads the plan again and does what is left | minutes to hours | to even out a cluster |
+| `drain-nodes` | yes (whole rounds) | yes — same | minutes to hours | to take nodes out of a cluster |
+| `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration driven by hand |
 | `move-data` | yes (source + target rows) | yes — `INSERT ... ON CONFLICT DO NOTHING`, deletes only rows it just copied | minutes to hours | after prepare, before finalize |
 | `finalize-migration` | yes (only `q__shard`) | yes | seconds | once the data is fully moved |
 
-Run `butcher <command> --help` to see that command's built-in help, or `butcher --help` for the list of
-commands. `butcher` with no arguments prints the same list and exits `0` — it is a question, not a failure.
+**A high-level command can do nothing the low-level ones cannot.** It works out the same plan that
+`check-cluster --checks=shard-balance` reports. Then it takes a batch of shards off the plan and runs 
+prepare → move → finalize on them. Then it works the plan out again and takes the next batch, until there is nothing 
+left to move. That is all of it: no new operation on the data, no state of its own, nothing to clean up afterwards.
 
-> **Confirmation.** The three commands that write anything ask before they do it, describing what is about to
+Two things make it worth using anyway. The plan for a big cluster is hundreds of shards long, which is a
+long evening of copying flags by hand. And every round reads the plan afresh, so the loop never works from
+a stale picture of the cluster.
+
+Use the low-level commands for what the high-level ones deliberately do not do: choosing the shards
+yourself, restricting which tables move (`move-data --include-tables`), stopping between rounds for hours,
+or finishing a migration somebody else started.
+
+Run `butcher <command> --help` to see that command's built-in help, or `butcher --help` for the list of
+commands, grouped the same three ways. `butcher` with no arguments prints that list and exits `0`: it is a
+question, not a failure.
+
+> **Confirmation.** Every command that writes anything asks before it does, describing what is about to
 > happen. `--yes` (or `-y`) skips the question. With no terminal to read an answer from — a pipe, a CI job —
 > a command without `--yes` **fails** rather than assuming consent, so an unattended run has to say out loud
 > that it means it.
+>
+> A high-level command asks **once**, before the first round, and prints the plan above the question. So
+> answering no is also how you preview a plan: nothing has been touched yet.
 >
 > **Outcome and exit code.** Success ends with a green **"Completed successfully."** and exit `0`. Any
 > failure prints `Error: <what went wrong>` (a usage error also prints the command's usage) and exits `1`.
@@ -199,8 +231,11 @@ butcher check-cluster [--checks=<check,check,...>] <config-file>...
 
 Read-only inspection of the cluster. Safe to run at any time — it never modifies anything, and it is the one
 command that has no `--yes` to forget. If `--checks` is omitted, every check runs; name several to run just
-those. Before running any check, butcher confirms it can connect to **every** node in the config (a fast
-`select 1` to each); if any node is unreachable it stops and tells you which ones.
+those.
+
+Like every command, it starts by confirming it can connect to **every** node in the config: one `select 1`
+per node, before anything else happens. If any node is unreachable it stops and tells you which ones, and
+what the driver said about each.
 
 The available checks:
 
@@ -216,6 +251,74 @@ Omitting `--checks` runs all of them, which is the default.
 The concepts behind each check — what "balanced" means, why schemas must match, what an orphan is — are
 explained in [Cluster architecture.md](Cluster%20architecture.md#schema-consistency). This guide focuses on
 reading the output, shown under [Worked examples](#worked-examples).
+
+### `rebalance-cluster`
+
+```
+butcher rebalance-cluster [--shards-per-round=<n>] [--yes] <config-file>...
+```
+
+Carries out the `shard-balance` plan. While the plan has anything in it: prepare a batch of at most
+`--shards-per-round` shards, move their rows, finalize them, read the plan again. It ends when there is
+nothing left to move, and prints the distribution the cluster ended up with.
+
+`--shards-per-round` is the one real decision here. Between prepare and finalize the
+shards of a round are consumed by **no** node, so their messages wait for the rows to arrive. A round of
+ten leaves 1% of the queue unread at a time; a round of a thousand leaves all of it. Small rounds also fail
+smaller: if something looks wrong you have moved ten shards, not three hundred. On the other hand, every
+round costs its own prepare and finalize, so the whole rebalance takes longer. The default is 1: the
+smallest pause and the slowest rebalance.
+
+What it will not do:
+
+- **It will not start while any shard is already migrating.** `move-data` and `finalize-migration` act on
+  every migrating shard, not only on the ones the loop prepared. A rebalance would finalize somebody
+  else's migration as a side effect, so it refuses instead. Finish that migration first (`move-data`, then
+  `finalize-migration`) and run the rebalance again.
+- **It has no `--include-tables` / `--exclude-tables`.** Skipping a table leaves its rows on the old node,
+  and the finalize of the same round would hand the shard over without them. Those rows would never be read
+  again. A filtered move is safe only when you decide yourself when to finalize, which means driving the
+  low-level commands.
+
+**Interrupting it is safe.** The rounds that finished are done, and the round that was running is
+mid-migration. `check-cluster --checks=migration-state` shows which shards those are. `move-data` and then
+`finalize-migration` complete that round, after which `rebalance-cluster` starts again and carries on.
+
+The plan is the one `shard-balance` prints, so everything said about it there applies (see
+[What trouble looks like](#what-trouble-looks-like)): it counts shards and nothing else. When the shards
+carry very different amounts of data, look at the real numbers first and choose `--shards` yourself.
+
+### `drain-nodes`
+
+```
+butcher drain-nodes --nodes=<node-id,node-id,...> [--shards-per-round=<n>] [--yes] <config-file>...
+```
+
+Moves everything the listed nodes own onto the other nodes, in rounds, until they own nothing. That is the
+state a node has to be in before it can leave the cluster. `--nodes` is required. It is a comma-separated
+list, and a single node is fine. `--shards-per-round` means the same thing it means for `rebalance-cluster`,
+with the same trade-off and the same default.
+
+`--nodes` takes **internal kolbasa node ids** (`q__node` table identity), the same kind of id `--target`
+takes, and **not** config line-ids. `check-cluster --checks=shard-balance` prints the ids.
+
+**Only the shards of those nodes move.** The nodes that stay are left as they are, even if they are uneven
+between themselves. A command asked to free some nodes has no business moving shards that have nothing to do
+with them. So a drain can leave a lopsided cluster, with fewer nodes to spread over; `rebalance-cluster`
+evens it out afterwards.
+
+To remove several nodes, drain them in one run. Then every shard moves once. Draining them one after
+another can move a shard twice: off the first node onto the second, then off the second.
+
+It refuses a node that is not a member of the cluster, and refuses to drain every node (those shards would
+have nowhere to go). Like `rebalance-cluster`, it will not start on top of a migration already in
+flight, it has no table filters, and interrupting it is safe. See just above for all three.
+
+To see the plan and do nothing, run it and answer `n`: the plan is printed above the question.
+
+Draining is not removing. Afterwards the nodes are still in both config files, still reachable, still carrying
+their now-unused tables. [Cluster shrinking](#cluster-shrinking--remove-a-node) has the rest of the
+procedure, which is yours rather than butcher's.
 
 ### `prepare-migration`
 
@@ -367,8 +470,15 @@ Proposed moves (341):
 The three columns say the same thing three ways — where the shards are now, how the plan moves them, and
 (by addition) where they end up.
 
-The shard-balance proposal is **advice**, not an action — you carry it out with the three migration commands
-below. The last line is printed as the flags themselves, so the next step is a copy and a paste:
+The shard-balance proposal is **advice**, not an action: the check changes nothing. There are two ways to
+act on it. Hand it to `rebalance-cluster`, which walks the whole plan in rounds of the size you name:
+
+```sh
+butcher rebalance-cluster --shards-per-round=5 cluster.conf
+```
+
+Or carry it out yourself: the last line is printed as the flags themselves, so the first step is a copy and
+a paste:
 
 ```sh
 butcher prepare-migration --target=node-03 --shards=0,1,2,3, ... ,340 cluster.conf
@@ -377,7 +487,9 @@ butcher prepare-migration --target=node-03 --shards=0,1,2,3, ... ,340 cluster.co
 > **The plan is a target state, not a single operation.** Those 341 shards do not have to move in one go.
 > The three migration commands act on whatever shards are prepared at that moment, so you can take the whole
 > plan in one round — or walk through it one shard at a time, ten at a time, fifty at a time — repeating
-> prepare → move → finalize for each batch.
+> prepare → move → finalize for each batch. `rebalance-cluster --shards-per-round=N` is that walk, done for
+> you: every round is a prepare, a move and a finalize of at most N shards, and the next round reads the
+> plan again.
 >
 > The size of a batch is a trade-off about *pause*, not about speed. Between `prepare-migration` and
 > `finalize-migration` the shards being moved are consumed by **no** node, so the messages sitting in them
@@ -453,6 +565,56 @@ shards onto it.
    # → proposes moving shards 0..340 to node-03
    ```
 
+3. Carry the plan out. In one command, in rounds of five shards:
+
+   ```sh
+   butcher rebalance-cluster --shards-per-round=5 cluster.conf
+   ```
+
+   ```
+   Shard balance: 1024 shard(s) across 3 node(s), 341 should move
+   ┌─────────┬────────┬────────┐
+   │ Node    │ Shards │ Change │
+   ├─────────┼────────┼────────┤
+   │ node-01 │    512 │   -171 │
+   │ node-02 │    512 │   -170 │
+   │ node-03 │      0 │   +341 │
+   └─────────┴────────┴────────┘
+   Proposed moves (341):
+     node-03 receives 341 shard(s):
+       --target=node-03 --shards=0,1,2,3, ... ,340
+   341 shard(s) will move, in rounds of 5: each round prepares its shards, copies their rows and hands
+   them over before the next one starts, and the shards of a round are consumed by no node while their
+   rows are copied. Continue? [y/N]: y
+
+   Round 1: 5 to node-03 (341 shard(s) left to move)
+   Prepared 5 shard(s) for node-03
+   Move table 'q_orders' from DataSource(line-1 (db01.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 12043
+   Move table 'q_orders' from DataSource(line-2 (db02.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 11890
+   Finalized 5 shard(s)
+
+   Round 2: 5 to node-03 (336 shard(s) left to move)
+   ...
+
+   Moved 341 shard(s) in 7 round(s)
+   Completed successfully.
+   Shard balance: 1024 shard(s) evenly spread across 3 node(s)
+   ┌─────────┬────────┐
+   │ Node    │ Shards │
+   ├─────────┼────────┤
+   │ node-01 │    342 │
+   │ node-02 │    341 │
+   │ node-03 │    341 │
+   └─────────┴────────┘
+   ```
+
+   The plan goes on screen before the question, so `n` is a preview and `y` is the go-ahead. Inside a
+   rebalance the three steps report by count: the round header has already said which shards are going
+   where. Driven by hand they print a line per shard, as below.
+
+**The same expansion, step by step.** This is what those rounds did, one round's worth at a time. It is
+also how to do an expansion where you pick the shards yourself:
+
 3. Prepare those shards for `node-03`:
 
    ```sh
@@ -505,14 +667,59 @@ A `check-cluster --checks=shard-balance` now shows roughly 341 / 341 / 342.
 
 ### Cluster shrinking — remove a node
 
-Goal: drain `node-03` and decommission it. Shrinking is just a migration whose target is one of the
-**remaining** nodes, repeated until `node-03` owns nothing.
+Goal: drain `node-03` and decommission it. Shrinking is a migration whose target is one of the
+**remaining** nodes, repeated until `node-03` owns nothing. Emptying nodes is what `drain-nodes` does, so
+the migration part is one command.
 
-1. Find which shards `node-03` currently owns — `shard-balance`'s current distribution lists the exact shard
-   numbers next to each node's count. (`migration-state` separately confirms none are already in flight.)
+1. Empty the node, in rounds of fifty shards:
 
-2. Migrate all of `node-03`'s shards onto the nodes that will stay. You can move them all to one node and let
-   a later rebalance even things out, or split them — here, all to `node-01`:
+   ```sh
+   butcher drain-nodes --nodes=node-03 --shards-per-round=5 cluster.conf
+   ```
+
+   ```
+   Draining node-03: 341 shard(s) to move onto 2 node(s)
+   ┌─────────┬────────┬────────┐
+   │ Node    │ Shards │ Change │
+   ├─────────┼────────┼────────┤
+   │ node-01 │    342 │   +170 │
+   │ node-02 │    341 │   +171 │
+   │ node-03 │    341 │   -341 │
+   └─────────┴────────┴────────┘
+   341 shard(s) will move off node-03, in rounds of 5. They go to the other nodes, but no shards move
+   between those nodes. If the other nodes are uneven now, they may stay uneven. 'rebalance-cluster'
+   evens them out.
+   Continue? [y/N]: y
+
+   Round 1: 5 to node-01, 5 to node-02 (341 shard(s) left to move)
+   Prepared 5 shard(s) for node-01
+   Prepared 5 shard(s) for node-02
+   ...
+   Finalized 5 shard(s)
+
+   ...
+
+   Moved 341 shard(s) in 7 round(s)
+   Completed successfully.
+   Node node-03 owns no shards: nothing is produced to it and nothing is consumed from it
+   ┌─────────┬────────┐
+   │ Node    │ Shards │
+   ├─────────┼────────┤
+   │ node-01 │    512 │
+   │ node-02 │    512 │
+   │ node-03 │      0 │
+   └─────────┴────────┘
+   ```
+
+   The headline is about the node, not about the cluster. A drain spreads one node's shards over the rest
+   and touches nothing else, so 0 / 512 / 512 is the honest outcome. Here the two remaining nodes happen to
+   be even as well. Had they started out lopsided they would still be lopsided, and `rebalance-cluster`
+   would be the next command.
+
+   **By hand** it is the ordinary three steps, with a target among the nodes that stay.
+   `shard-balance`'s current distribution lists the exact shard numbers next to each node's count, and
+   `migration-state` confirms none are already in flight. You can send them all to one node and let a later
+   rebalance even things out, or split them yourself:
 
    ```sh
    butcher prepare-migration --target=node-01 --shards=<node-03's shards> cluster.conf
@@ -520,22 +727,22 @@ Goal: drain `node-03` and decommission it. Shrinking is just a migration whose t
    butcher finalize-migration cluster.conf
    ```
 
-3. Confirm `node-03` is empty:
+2. Confirm `node-03` is empty:
 
    ```sh
    butcher check-cluster --checks=shard-balance cluster.conf   # node-03 → 0 shards
    ```
 
-4. Remove that node's `line-3` row from butcher's config file and decommission its database.
+3. Remove that node's `line-3` row from butcher's config file and decommission its database.
 
-5. **Before shutting the database down, remove the node from your application's `Cluster` configuration too** —
+4. **Before shutting the database down, remove the node from your application's `Cluster` configuration too** —
    that is the separate node list your services pass to `Cluster` (not this butcher config file). If a service
    still has the drained node in its list when the database goes away, it will keep trying to reach a node that
    is no longer there. Drop it from the application config and redeploy first; only then power the database off.
 
 ### Single-shard migration — a minimal test
 
-The smallest possible migration — useful for rehearsing the workflow in staging. Move just shard `5` from its
+The smallest possible migration — useful for rehearsing the three steps in staging. Move just shard `5` from its
 current owner to `node-02`:
 
 ```sh
@@ -563,10 +770,10 @@ whether butcher also prints the command's usage:
 
 | Kind | What it looks like | What it means / how to fix |
 |---|---|---|
-| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards`), an unknown option, a shard number outside `0..1023`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, or a duplicate line-id in one file. The message names the specific problem; fix it and re-run. |
+| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, or a duplicate line-id in one file. The message names the specific problem; fix it and re-run. |
 | runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **this isn't an initialized cluster** — `Initialized shard table q__shard not found. Is it a Kolbasa cluster?`, meaning no node has a fully-seeded 1024-row `q__shard` (the cluster has never been started by an application, or you pointed butcher at the wrong databases). |
 
-Three migration-specific refusals are worth knowing by name, because the message states the rule rather than
+Six migration-specific refusals are worth knowing by name, because the message states the rule rather than
 the fix:
 
 | Refusal | Cause | Fix |
@@ -574,12 +781,19 @@ the fix:
 | shard already belongs to the target | `prepare-migration --target=X` for a shard node X already owns. | Pick a different target, or drop that shard from `--shards`. |
 | target is not a node of this cluster | `--target` isn't a known node id in the cluster (remember it's the internal `q__node` id, not the config line-id). | Re-run `check-cluster --checks=shard-balance` and copy the exact node id from the `--target=…` line it prints. |
 | table schemas differ between nodes | `move-data` found a table whose shape differs between nodes. | Resolve the drift first — run `check-cluster --checks=schema-consistency` to see exactly what differs, then re-run schema generation (start a `Cluster` against the lagging node) or restore the missing objects. Then re-run `move-data`. |
+| shards are already migrating | `rebalance-cluster` or `drain-nodes` on a cluster where something is mid-migration: an interrupted run of either, or a hand-driven migration in progress. The message counts the shards and names the nodes they are going to. | Finish that migration: `move-data` until it reports zero, then `finalize-migration`. Then run the command again; it picks up from the distribution it finds. `check-cluster --checks=migration-state` is the same information in advance. |
+| node is not a member of this cluster | `drain-nodes --nodes=X` where X is not a node id of the cluster. Most often a config line-id typed instead of the internal `q__node` id. The message lists the ids that do exist. | Copy the id from `check-cluster --checks=shard-balance`. |
+| draining would leave the cluster without a node | `drain-nodes` naming every node of the cluster. Their shards would have nowhere to go. | Add a node and let it join first, or drop the queues instead of draining them. |
 
 Two questions that come up often:
 
 - **"`move-data` got interrupted — did I corrupt anything?"** No. It is safe to re-run; copies are idempotent
   and it only deletes rows from the source after they're safely on the target. Just run it again until it
   reports zero rows moved.
+- **"`rebalance-cluster` / `drain-nodes` got interrupted — what now?"** The rounds that finished need
+  nothing. The round that was running is a migration in flight, and the command will refuse to start again
+  until it is closed: `move-data` until it reports zero, then `finalize-migration`. Then run it again. It
+  works from the distribution as it is now, so it continues with what is left.
 - **"I ran `prepare-migration` with the wrong shards."** Prepare only flips metadata; no data has moved yet.
   Re-run `prepare-migration` with the correct shards (you can prepare additional shards), and to undo a shard
   you flipped by mistake, prepare it back to its original owner. As long as you haven't run `move-data`, the
@@ -587,13 +801,25 @@ Two questions that come up often:
 
 ## The same thing from code
 
-Every check and every migration step is also a method on `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance
-can be driven by a program instead of by hand. The CLI is a frontend over this class and uses nothing it does
-not offer — `butcher` is the name of the tool, not of the API.
+Every check, every migration step and both high-level commands are methods on
+`kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand. The
+CLI is a frontend over this class and uses nothing it does not offer — `butcher` is the name of the tool,
+not of the API.
 
 ```kotlin
 val admin = ClusterAdmin(listOf(node01, node02, node03))   // the same DataSource list a Cluster is given
 
+// What the two high-level commands are, as one call each
+admin.rebalance(shardsPerRound = 50)
+admin.drainNodes(setOf(NodeId("node-03")), shardsPerRound = 50)
+```
+
+Each has a read-only report in front of it: `checkShardBalance()` for the first, `planNodesDrain(nodes)` for
+the second. That report is what they work from, and the CLI shows you the same thing before it asks for a
+yes. Both are a loop over the three low-level steps, which stay there to be driven directly when the loop
+is not what you want:
+
+```kotlin
 val balance = admin.checkShardBalance()
 if (!balance.isBalanced) {
     balance.proposedMoves.forEach { (target, shards) ->
@@ -612,13 +838,19 @@ it starts, which is why it is the wrong thing to diagnose a cluster with.)
 The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
 `migrationState.isClean`, `schemaConsistency.divergencesByTable` — so a program decides on the numbers
 rather than on parsed text. Progress during a long `moveData` is reported through `ProgressCallback`; pass
-`ProgressCallback.Ignore` when nobody is watching.
+`ProgressCallback.Ignore` when nobody is watching. A `rebalance` or a `drainNodes` reports every round
+through the same callback (`rebalanceRoundStart`, `rebalanceFinished`), and the three steps of each round
+report themselves as usual.
 
 ## Limitations
 
-- **butcher does not auto-rebalance.** `check-cluster --checks=shard-balance` *proposes* a minimum-movement plan, but
-  carrying it out is a deliberate, operator-driven sequence of `prepare → move → finalize`. You choose which
-  shards move where.
+- **butcher never rebalances on its own.** `rebalance-cluster` and `drain-nodes` carry a whole plan out in
+  one command, but somebody has to run them, say how big a round is and answer the question they ask first.
+  Nothing in butcher watches a cluster or reacts to one; `check-cluster` only ever proposes.
+- **The high-level commands take no table filters, and do not pick shards selectively.** They move every
+  table of the shards they move (see [`rebalance-cluster`](#rebalance-cluster) for why), and the shards
+  come from the plan. Choosing shards yourself, or moving only some tables, means driving the low-level
+  commands.
 - **butcher does not edit cluster membership.** Adding or removing a node means editing the config file (and
   standing up or tearing down the database) yourself, around the migration commands — see the expansion and
   shrinking examples above.

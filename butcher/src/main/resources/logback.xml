@@ -1,0 +1,28 @@
+<!--
+  Logging exists in butcher for its dependencies, HikariCP above all: its INFO lines announce every pool
+  on every run and would land in the middle of butcher's own output. So the default level is WARN and a
+  normal run says nothing. Raise it when a connection problem needs looking at - logback reads the name
+  below from the environment and from the system properties alike:
+
+      BUTCHER_LOG_LEVEL=debug butcher check-cluster cluster.conf
+      java -DBUTCHER_LOG_LEVEL=debug -jar butcher.jar check-cluster cluster.conf
+
+  Anything beyond a level - a file, another format, one logger at a time - is an ordinary logback config:
+
+      java -Dlogback.configurationFile=/path/to/logback.xml -jar butcher.jar ...
+-->
+<configuration>
+
+    <!-- Everything a butcher prints goes to stdout, so logs go to stderr and the two never mix -->
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%-5level %logger{0} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="${BUTCHER_LOG_LEVEL:-warn}">
+        <appender-ref ref="STDERR"/>
+    </root>
+
+</configuration>

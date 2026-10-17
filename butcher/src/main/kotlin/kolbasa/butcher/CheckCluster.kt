@@ -22,12 +22,13 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
         .default(AvailableCheck.all.toList())
         .help("Which checks to run, comma-separated. All of them by default")
 
+    override val helpSection = HelpSection.DIAGNOSTICS
+
     override fun help(context: Context) =
         "Inspect cluster state (schema consistency, shards distribution etc.). Modifies nothing, safe at any time"
 
     override fun execute(): Widget {
         val butcher = butcher()
-        butcher.checkNodesAvailable()
 
         var shardBalance: ShardBalanceResult? = null
         var schemaConsistency: SchemaConsistencyResult? = null

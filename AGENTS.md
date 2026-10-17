@@ -57,7 +57,8 @@ holding the shared build logic. The root project has no code.
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the check results, the
-  progress callback, and the internal operations behind them), `stats` (Prometheus, OpenTelemetry).
+  progress callback, and the internal operations behind them, `prepare`/`move`/`finalize` and the
+  `rebalance` loop over them), `stats` (Prometheus, OpenTelemetry).
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules; today that is
   `PostgreSQLImages`, which reads `postgresql-test-images.txt` from this module's resources. Which PostgreSQL versions the
   repository is tested against is decided here, once, for the tests and the benchmarks alike.
@@ -74,8 +75,12 @@ holding the shared build logic. The root project has no code.
   ./gradlew performance`; `Env.kt` lists every variable it reads. Like the examples, it depends on `:kolbasa` the way a
   user would, so it measures through the public API only.
 - `butcher/src/main/kotlin/kolbasa/butcher/` — `butcher`, the operator CLI, built with
-  [Clikt](https://ajalt.github.io/clikt/): the four commands, the cluster config-file parser and the
-  renderers that turn a check result into tables. Like the examples and the benchmarks it depends on
+  [Clikt](https://ajalt.github.io/clikt/): the six commands, the cluster config-file parser and the
+  renderers that turn a check result into tables. The commands sit on two levels, which is also how
+  `--help` groups them (see `HelpSection`): `check-cluster` reports, `prepare-migration`/`move-data`/
+  `finalize-migration` are one migration step each (**low-level**), and `rebalance-cluster`/`drain-nodes` are
+  **high-level** — the same three steps in a loop over a plan, with the loop itself in the library
+  (`ClusterAdmin.rebalance`, `drainNodes`) and not here. Like the examples and the benchmarks it depends on
   `:kolbasa` the way a user would, so it can only use the **public** API — which makes the CLI the proof
   that `kolbasa.cluster.admin` is complete: a missing handle fails to compile here. The name `butcher` lives
   only here — it is what the tool is called, not what the API is called. Not published to Maven; it

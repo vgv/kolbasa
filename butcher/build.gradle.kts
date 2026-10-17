@@ -18,6 +18,12 @@ dependencies {
 
     implementation(libs.postgresql)
 
+    // A pool, not because butcher does anything concurrently, but because move-data takes a connection per
+    // batch of 1000 rows. An unpooled DataSource pays a connection handshake for every batch
+    implementation(libs.hikaricp)
+
+    implementation(libs.logback.classic)
+
     // mordant (which clikt uses to talk to the terminal) ships three platform backends, and they are
     // independent choices:
     //
@@ -47,9 +53,7 @@ dependencies {
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
 
-    testImplementation(libs.logback.core)
-    testImplementation(libs.logback.classic)
-    testImplementation(libs.hikaricp)
+    // logback is a main dependency now, so the tests already have it
 }
 
 kotlin {

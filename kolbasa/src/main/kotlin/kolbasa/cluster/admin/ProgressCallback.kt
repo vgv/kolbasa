@@ -11,6 +11,10 @@ import javax.sql.DataSource
  * goes: once per table and node pair at the start and the end, and once per batch of rows in between. The
  * other two are called once, when a step has finished and the shard table has been updated.
  *
+ * A rebalance or a node drain runs those steps over and over, a batch of shards at a time. Each round
+ * starts with [rebalanceRoundStart], the whole run ends with [rebalanceFinished], and in between every
+ * round reports its three steps as usual.
+ *
  * Every method does nothing by default, so an implementation only overrides what it wants to hear about, and
  * code that wants to hear nothing passes [Ignore].
  *
@@ -18,6 +22,15 @@ import javax.sql.DataSource
  * after another, so an implementation should be quick and must not throw.
  */
 interface ProgressCallback {
+
+    /**
+     * A rebalance is about to run its [round]-th prepare, move and finalize
+     *
+     * @param round which round this is, counting from one
+     * @param moves the shards this round hands over, by the node taking them over
+     * @param shardsLeftToMove how many shards are still to move, this round's included
+     */
+    fun rebalanceRoundStart(round: Int, moves: Map<NodeId, List<ShardId>>, shardsLeftToMove: Int) {}
 
     /** The shard table now marks [shards] as migrating to [targetNode]; no data has moved yet */
     fun prepareSuccessful(shards: List<ShardId>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {}
@@ -49,6 +62,10 @@ interface ProgressCallback {
 
     /** The migrating shards now belong to their new node, and the migration is over */
     fun finalizeSuccessful(shardsDiff: List<ShardDiff>) {}
+
+
+    /** A rebalance has nothing left to move, having moved [shardsMoved] shards over [rounds] rounds */
+    fun rebalanceFinished(rounds: Int, shardsMoved: Int) {}
 
     companion object {
         /** A callback that reports nothing */

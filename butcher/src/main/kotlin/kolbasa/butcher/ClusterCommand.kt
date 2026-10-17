@@ -19,10 +19,16 @@ import kolbasa.cluster.admin.ClusterOperationException
 /**
  * A command that acts on a cluster described by one or more config files
  *
- * Everything the four commands share: where the cluster comes from, and the help text describing the file
+ * Everything every command shares: where the cluster comes from, and the help text describing the file
  * format they all read.
  */
 internal abstract class ClusterCommand(name: String) : CliktCommand(name = name) {
+
+    /** The section of `butcher --help` this command is listed under */
+    protected abstract val helpSection: HelpSection
+
+    final override val helpTags: Map<String, String>
+        get() = HelpSection.helpTags(helpSection)
 
     private val configFiles by argument(name = "config-file")
         .file(mustExist = true, canBeDir = false, mustBeReadable = true)
@@ -54,14 +60,18 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
      * `--help` never touches a file.
      */
     protected fun butcher(): ClusterAdmin {
-        val nodes = try {
-            ClusterNodes.buildClusterNodes(configFiles)
+        val endpoints = try {
+            ClusterNodes.endpoints(configFiles)
         } catch (e: InvalidConfigurationException) {
             // A bad config file is bad input, so it gets the usage treatment rather than a bare error
             throw UsageError(e.message)
         }
 
-        return ClusterAdmin(nodes.dataSources)
+        // Every node is asked whether it is there before anything else happens, and asked on a plain
+        // driver connection: a pool would wait out its timeout and then blame itself
+        ClusterAdmin(endpoints.map(ClusterNodes::driverDataSource)).checkNodesAvailable()
+
+        return ClusterAdmin(endpoints.map(ClusterNodes::pooledDataSource))
     }
 }
 

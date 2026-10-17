@@ -22,6 +22,9 @@ internal data class SourceAndTargetNodes(
 
 internal object MoveHelpers {
 
+    /** A cause chain is usually two or three deep; a longer one is noise in an error message */
+    private const val MAX_REPORTED_CAUSES = 3
+
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
         // Try to find a node with a 100% initialized shard table, if found, return it
         for ((_, dataSource) in nodes) {
@@ -91,6 +94,19 @@ internal object MoveHelpers {
         return errors
     }
 
+    /** Every distinct message down the cause chain, nearest first */
+    private fun Throwable.causeMessages(): List<String> {
+        val messages = linkedSetOf<String>()
+
+        var current = cause
+        while (current != null && messages.size < MAX_REPORTED_CAUSES) {
+            current.message?.let(messages::add)
+            current = current.cause
+        }
+
+        return messages.toList() - listOfNotNull(message)
+    }
+
     fun checkClusterNodes(dataSources: List<DataSource>) {
         val errors = checkConnection(dataSources)
         if (errors.isEmpty()) {
@@ -103,6 +119,11 @@ internal object MoveHelpers {
             errors.forEach { (dataSource, error) ->
                 appendLine("  Node: $dataSource")
                 appendLine("  Error: ${error.message}")
+                // A pooled DataSource reports a timeout of its own and keeps the real reason as the cause,
+                // so without this an operator reads "request timed out" instead of "connection refused"
+                error.causeMessages().forEach { cause ->
+                    appendLine("  Caused by: $cause")
+                }
                 appendLine()
             }
         }
