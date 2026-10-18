@@ -1,4 +1,4 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.default
@@ -7,7 +7,9 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.mordant.rendering.Widget
+import kolbasa.butcher.HelpSection
 import kolbasa.butcher.config.AvailableCheck
+import kolbasa.butcher.render
 import kolbasa.cluster.admin.CheckResult
 import kolbasa.cluster.admin.MigrationStateResult
 import kolbasa.cluster.admin.OrphanTablesResult
@@ -16,18 +18,20 @@ import kolbasa.cluster.admin.ShardBalanceResult
 
 internal class CheckCluster : ClusterCommand(name = "check-cluster") {
 
-    private val checks by option("--checks", metavar = "<check,check,...>")
+    private val checks: List<AvailableCheck> by option("--checks", metavar = "<check,check,...>")
         .enum<AvailableCheck> { it.checkName }
         .split(",")
-        .default(AvailableCheck.all.toList())
+        .default(AvailableCheck.entries)
         .help("Which checks to run, comma-separated. All of them by default")
 
+    override val helpSection = HelpSection.DIAGNOSTICS
+
     override fun help(context: Context) =
-        "Inspect cluster state (schema consistency, shards distribution etc.). Modifies nothing, safe at any time"
+        "Inspect cluster state (schema consistency, shards distribution etc.). Changes nothing but the id of a " +
+            "new node, safe at any time"
 
     override fun execute(): Widget {
         val butcher = butcher()
-        butcher.checkNodesAvailable()
 
         var shardBalance: ShardBalanceResult? = null
         var schemaConsistency: SchemaConsistencyResult? = null

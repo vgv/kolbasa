@@ -1,8 +1,9 @@
 package kolbasa.schema
 
 import kolbasa.utils.Helpers
+import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
-import kolbasa.utils.JdbcHelpers.withAutoCommit
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -32,47 +33,73 @@ internal object IdSchema {
         )
     """.trimIndent()
 
-    fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET) {
-        val ddlStatements = mutableListOf<String>()
+    private val INSERT_STATEMENT = """
+        insert into $NODE_TABLE_NAME($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+        values ('$ACTIVE_STATUS', ?, ?)
+        on conflict do nothing
+    """.trimIndent()
 
-        val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME))[NODE_TABLE_NAME]
-        if (existingTable == null) {
-            ddlStatements += CREATE_TABLE_STATEMENT
+    private val SELECT_ACTIVE_NODE_STATEMENT =
+        "select $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME from $NODE_TABLE_NAME where $STATUS_COLUMN_NAME='$ACTIVE_STATUS'"
 
-            ddlStatements += """
-                insert into $NODE_TABLE_NAME($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
-                values
-                    ('$ACTIVE_STATUS', '${Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET)}', $identifierBucket)
-                on conflict do nothing
-            """
+    fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET): Boolean {
+        val nodeId = NodeId(Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET))
+        return createAndInitIdTable(dataSource, nodeId, identifierBucket)
+    }
+
+    /**
+     * Creates `q__node` with [nodeId] and [identifierBucket], unless the table already exists
+     *
+     * Returns `true` if this call wrote the row. An existing table is left as it is, even an empty one.
+     */
+    fun createAndInitIdTable(dataSource: DataSource, nodeId: NodeId, identifierBucket: Int): Boolean {
+        if (nodeTableExists(dataSource)) {
+            return false
         }
 
-        dataSource.withAutoCommit { connection ->
-            // separate transaction for each statement
-            connection.createStatement().use { statement ->
-                ddlStatements.forEach { ddlStatement ->
-                    statement.execute(ddlStatement)
+        return dataSource.inTransaction { connection ->
+            // One transaction, so a crash can't leave the table without its row
+            connection.useStatement { statement ->
+                statement.execute(CREATE_TABLE_STATEMENT)
+            }
+
+            connection.usePreparedStatement(INSERT_STATEMENT) { preparedStatement ->
+                preparedStatement.setString(1, nodeId.id)
+                preparedStatement.setInt(2, identifierBucket)
+                preparedStatement.executeUpdate() > 0
+            }
+        }
+    }
+
+    /**
+     * Whether `q__node` exists. An existing table can still have no active row, see [findNodeInfo]
+     */
+    fun nodeTableExists(dataSource: DataSource): Boolean {
+        return SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME)).containsKey(NODE_TABLE_NAME)
+    }
+
+    /**
+     * The active row of `q__node`, or `null` if there is none. The table itself must exist
+     */
+    fun findNodeInfo(dataSource: DataSource): Node? {
+        return dataSource.useStatement { statement: Statement ->
+            statement.executeQuery(SELECT_ACTIVE_NODE_STATEMENT).use { resultSet ->
+                if (resultSet.next()) {
+                    Node(NodeId(resultSet.getString(1)), resultSet.getInt(2))
+                } else {
+                    null
                 }
             }
         }
     }
 
+    /**
+     * The active row of `q__node`. Throws if there is none, unlike [findNodeInfo]
+     */
     fun readNodeInfo(dataSource: DataSource): Node {
-        val sql =
-            "select $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME from $NODE_TABLE_NAME where $STATUS_COLUMN_NAME='$ACTIVE_STATUS'"
-
-        return dataSource.useStatement { statement: Statement ->
-            statement.executeQuery(sql).use { resultSet ->
-                check(resultSet.next()) {
-                    "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
-                        "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$sql'"
-                }
-
-                val nodeId = resultSet.getString(1)
-                val identifiersBucket: Int = resultSet.getInt(2)
-
-                Node(NodeId(nodeId), identifiersBucket)
-            }
+        return checkNotNull(findNodeInfo(dataSource)) {
+            "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
+                "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$SELECT_ACTIVE_NODE_STATEMENT'"
         }
     }
 

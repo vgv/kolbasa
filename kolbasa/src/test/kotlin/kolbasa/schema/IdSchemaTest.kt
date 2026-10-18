@@ -1,6 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -29,6 +30,52 @@ class IdSchemaTest : AbstractPostgreSQLTest() {
 
         assertNotEquals(nodeId, nodeIdFirst)
         assertNotEquals(nodeId, nodeIdSecond)
+    }
+
+    @Test
+    fun testInitNodeTable_With_Given_Id() {
+        val created = IdSchema.createAndInitIdTable(dataSource, NodeId("node-01"), identifierBucket = 7)
+
+        assertTrue(created)
+        assertEquals(Node(NodeId("node-01"), 7), IdSchema.readNodeInfo(dataSource))
+    }
+
+    @Test
+    fun testInitNodeTable_With_Given_Id_Keeps_Existing_Id() {
+        IdSchema.createAndInitIdTable(dataSource)
+        val existing = IdSchema.readNodeInfo(dataSource)
+
+        val created = IdSchema.createAndInitIdTable(dataSource, NodeId("node-01"), identifierBucket = 7)
+
+        assertFalse(created)
+        assertEquals(existing, IdSchema.readNodeInfo(dataSource))
+    }
+
+    @Test
+    fun testInitNodeTable_With_Given_Id_Is_Not_Part_Of_Sql() {
+        // A quote would break the statement if the id were pasted into the SQL
+        val created = IdSchema.createAndInitIdTable(dataSource, NodeId("it's"), identifierBucket = 7)
+
+        assertTrue(created)
+        assertEquals(NodeId("it's"), IdSchema.readNodeInfo(dataSource).id)
+    }
+
+    @Test
+    fun testNodeTableExists() {
+        assertFalse(IdSchema.nodeTableExists(dataSource))
+
+        IdSchema.createAndInitIdTable(dataSource)
+
+        assertTrue(IdSchema.nodeTableExists(dataSource))
+    }
+
+    @Test
+    fun testFindNodeInfo_No_Active_Row() {
+        IdSchema.createAndInitIdTable(dataSource)
+        dataSource.useStatement { statement -> statement.execute("delete from ${IdSchema.NODE_TABLE_NAME}") }
+
+        assertTrue(IdSchema.nodeTableExists(dataSource))
+        assertNull(IdSchema.findNodeInfo(dataSource))
     }
 
     @Test

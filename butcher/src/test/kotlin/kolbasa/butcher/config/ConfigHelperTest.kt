@@ -1,5 +1,6 @@
 package kolbasa.butcher.config
 
+import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -12,7 +13,7 @@ class ConfigHelperTest {
     fun testParseClusterFile_Empty() {
         val file = writeFile("")
 
-        assertEquals(emptyMap<String, Map<String, String>>(), ConfigHelper.parseClusterFile(file))
+        assertEquals(emptyMap<NodeId, Map<String, String>>(), ConfigHelper.parseClusterFile(file))
     }
 
     @Test
@@ -31,7 +32,7 @@ class ConfigHelperTest {
 
         val parsed = ConfigHelper.parseClusterFile(file)
         assertEquals(1, parsed.size)
-        assertEquals(mapOf("host" to "h1", "dbname" to "db1"), parsed["node-01"])
+        assertEquals(mapOf("host" to "h1", "dbname" to "db1"), parsed[NodeId("node-01")])
     }
 
     @Test
@@ -47,11 +48,11 @@ class ConfigHelperTest {
         Assertions.assertEquals(2, parsed.size)
         assertEquals(
             mapOf("host" to "h1", "port" to "5432", "dbname" to "orders"),
-            parsed["node-01"]
+            parsed[NodeId("node-01")]
         )
         assertEquals(
             mapOf("host" to "h2", "port" to "5433", "dbname" to "orders"),
-            parsed["node-02"]
+            parsed[NodeId("node-02")]
         )
     }
 
@@ -60,7 +61,7 @@ class ConfigHelperTest {
         val file = writeFile("node-01\nnode-02  \n")
         val parsed = ConfigHelper.parseClusterFile(file)
         assertEquals(
-            mapOf<String, Map<String, String>>("node-01" to emptyMap(), "node-02" to emptyMap()),
+            mapOf<NodeId, Map<String, String>>(NodeId("node-01") to emptyMap(), NodeId("node-02") to emptyMap()),
             parsed
         )
     }
@@ -107,9 +108,20 @@ class ConfigHelperTest {
 
         val parsed = ConfigHelper.parseClusterFile(file)
         assertEquals(
-            setOf("node-01", "node_02", "Node.03", "NODE04"),
+            setOf(NodeId("node-01"), NodeId("node_02"), NodeId("Node.03"), NodeId("NODE04")),
             parsed.keys
         )
+    }
+
+    @Test
+    fun testParseClusterFile_IdLengthLimit() {
+        val longest = "n".repeat(100)
+        assertEquals(setOf(NodeId(longest)), ConfigHelper.parseClusterFile(writeFile("$longest host=h1 dbname=db\n")).keys)
+
+        val ex = assertThrows<InvalidConfigurationException> {
+            ConfigHelper.parseClusterFile(writeFile("${longest}n host=h1 dbname=db\n"))
+        }
+        assertTrue(ex.message.contains("Invalid node id"), ex.message)
     }
 
     @Test
@@ -117,7 +129,7 @@ class ConfigHelperTest {
         val file = writeFile("   node-01   host=h1  dbname=db   \n")
         val parsed = ConfigHelper.parseClusterFile(file)
         assertEquals(
-            mapOf("node-01" to mapOf("host" to "h1", "dbname" to "db")),
+            mapOf(NodeId("node-01") to mapOf("host" to "h1", "dbname" to "db")),
             parsed
         )
     }
@@ -144,8 +156,8 @@ class ConfigHelperTest {
         val merged = ConfigHelper.mergeNodeFiles(listOf(file))
         assertEquals(
             mapOf(
-                "node-01" to mapOf("host" to "h1", "dbname" to "db"),
-                "node-02" to mapOf("host" to "h2", "dbname" to "db"),
+                NodeId("node-01") to mapOf("host" to "h1", "dbname" to "db"),
+                NodeId("node-02") to mapOf("host" to "h2", "dbname" to "db"),
             ),
             merged
         )
@@ -159,7 +171,7 @@ class ConfigHelperTest {
         val merged = ConfigHelper.mergeNodeFiles(listOf(topology, secrets))
         assertEquals(
             mapOf(
-                "node-01" to mapOf(
+                NodeId("node-01") to mapOf(
                     "host" to "h1",
                     "port" to "5432",
                     "dbname" to "db",
@@ -178,7 +190,7 @@ class ConfigHelperTest {
 
         val merged = ConfigHelper.mergeNodeFiles(listOf(first, second))
         assertEquals(
-            mapOf("node-01" to mapOf("host" to "h2", "dbname" to "db")),
+            mapOf(NodeId("node-01") to mapOf("host" to "h2", "dbname" to "db")),
             merged
         )
     }
@@ -190,9 +202,37 @@ class ConfigHelperTest {
 
         val merged = ConfigHelper.mergeNodeFiles(listOf(first, second))
         assertEquals(
-            setOf("node-01", "node-02"),
+            setOf(NodeId("node-01"), NodeId("node-02")),
             merged.keys
         )
+    }
+
+    @Test
+    fun testEndpoints_OneEndpointPerNode() {
+        val topology = writeFile("node-01 host=h1 dbname=db\nnode-02 host=h2 port=5433 dbname=db schema=s2\n")
+        val secrets = writeFile("node-01 user=app password=secret\n")
+
+        assertEquals(
+            listOf(
+                PgEndpoint(
+                    NodeId("node-01"), "h1", port = null, dbName = "db", user = "app", password = "secret", schema = null
+                ),
+                PgEndpoint(
+                    NodeId("node-02"), "h2", port = 5433, dbName = "db", user = null, password = null, schema = "s2"
+                ),
+            ),
+            ConfigHelper.endpoints(listOf(topology, secrets))
+        )
+    }
+
+    @Test
+    fun testEndpoints_NoNodes() {
+        val file = writeFile("# Nothing but a comment\n")
+
+        val ex = assertThrows<InvalidConfigurationException> {
+            ConfigHelper.endpoints(listOf(file))
+        }
+        assertTrue(ex.message.contains("No nodes defined"), ex.message)
     }
 
     private fun writeFile(content: String): File {

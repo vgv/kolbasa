@@ -16,6 +16,9 @@ import javax.sql.DataSource
  * [prepareMigration], [moveData] and [finalizeMigration]. The `butcher` CLI is a frontend over this class
  * and uses nothing it does not offer.
  *
+ * [rebalance] and [drainNodes] are those same three steps in a loop, a batch of shards at a time. Which
+ * shards move where comes from [checkShardBalance] and [planNodesDrain], which anyone can read first.
+ *
  * Creating a ClusterAdmin touches no database: it only remembers the nodes. That matters because an operator
  * reaches for it exactly when a cluster is in a bad state, and a tool that repaired the schema or seeded the
  * shard table on its way in would destroy the evidence it was asked to look at. Compare with
@@ -36,18 +39,31 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
         }
     }
 
-    /**
-     * Checks that every node can be reached, and fails describing the ones that cannot
-     *
-     * The other methods assume the cluster is reachable and report a connection failure as it comes; call
-     * this first to get one clear error instead.
-     */
-    fun checkNodesAvailable() {
-        MoveHelpers.checkClusterNodes(nodes)
-    }
-
     /** Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven */
     fun checkShardBalance(): ShardBalanceResult = ShardBalance.check(nodes)
+
+    /**
+     * Reports what the cluster would look like with [drainedNodes] holding nothing, and the moves that get
+     * it there
+     *
+     * Reads like [checkShardBalance] and changes nothing. [ShardBalanceResult.currentDistribution] shows
+     * [drainedNodes] with everything they hold now, [ShardBalanceResult.proposedMoves] names the nodes that
+     * would take those shards over.
+     *
+     * Only the shards of [drainedNodes] are proposed, spread over the remaining nodes as evenly as they go.
+     * The nodes that stay are left alone, so the cluster can be uneven afterwards.
+     *
+     * [drainedNodes] must not be empty.
+     *
+     * @throws ClusterOperationException.DrainUnknownNodeException if a node in [drainedNodes] is not a member
+     * of this cluster
+     * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
+     * cluster
+     */
+    fun planNodesDrain(drainedNodes: Set<NodeId>): ShardBalanceResult {
+        requireNodesToDrain(drainedNodes)
+        return ShardBalance.check(nodes, drainedNodes)
+    }
 
     /** Reports queue tables whose structure differs between nodes, or that are missing on some of them */
     fun checkSchemaConsistency(): SchemaConsistencyResult = SchemaConsistency.check(nodes)
@@ -88,6 +104,58 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
     }
 
     /**
+     * Evens the shards out across the cluster, [shardsPerRound] of them at a time
+     *
+     * [checkShardBalance]'s plan, carried out instead of printed. While the plan has anything in it, this
+     * prepares a batch of at most [shardsPerRound] shards, moves their rows, finalizes them and reads the
+     * plan again. Every round is [prepareMigration], [moveData] and [finalizeMigration] in that order, and
+     * [progress] reports each one.
+     *
+     * [shardsPerRound] is a decision about pause, not about speed. A shard between prepare and finalize is
+     * consumed by no node, so its messages wait for the rows to arrive. A round of ten leaves 1% of the
+     * queue unread at a time, a round of a thousand leaves all of it. On the other hand, every round costs
+     * its own prepare and finalize.
+     *
+     * An interrupted run leaves the finished rounds done and the running one mid-migration.
+     * [checkMigrationState] reports it, [moveData] and [finalizeMigration] complete it. This also refuses
+     * to start while any shard is migrating: it finalizes every migrating shard, not only its own, and it
+     * will not adopt a migration it did not start.
+     *
+     * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
+     */
+    @JvmOverloads
+    fun rebalance(shardsPerRound: Int, progress: ProgressCallback = ProgressCallback.Ignore) {
+        rebalance(nodes, drainedNodes = emptySet(), shardsPerRound = shardsPerRound, progressCallback = progress)
+    }
+
+    /**
+     * Moves everything [drainedNodes] own onto the other nodes, [shardsPerRound] shards at a time
+     *
+     * What [planNodesDrain] proposes, carried out the way [rebalance] carries out a balance plan. Pause,
+     * interruption and a migration already in flight all work the same way there.
+     *
+     * It ends when [drainedNodes] own nothing: nothing is produced to them and nothing is consumed from
+     * them. Only their shards are moved, so the cluster can be left uneven. [rebalance] is what evens it out.
+     *
+     * [drainedNodes] must not be empty.
+     *
+     * @throws ClusterOperationException.DrainUnknownNodeException if a node in [drainedNodes] is not a member
+     * of this cluster
+     * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
+     * cluster
+     * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
+     */
+    @JvmOverloads
+    fun drainNodes(
+        drainedNodes: Set<NodeId>,
+        shardsPerRound: Int,
+        progress: ProgressCallback = ProgressCallback.Ignore
+    ) {
+        requireNodesToDrain(drainedNodes)
+        rebalance(nodes, drainedNodes, shardsPerRound = shardsPerRound, progressCallback = progress)
+    }
+
+    /**
      * Hands the migrating shards over to their new node, the last migration step
      *
      * Only call it once [moveData] has nothing left to copy: it stops consuming the shards from their old
@@ -96,5 +164,12 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
     @JvmOverloads
     fun finalizeMigration(progress: ProgressCallback = ProgressCallback.Ignore) {
         finalize(nodes, progress)
+    }
+
+    /** With no nodes to drain the plan would be a plain rebalance, which is not what the caller asked for */
+    private fun requireNodesToDrain(drainedNodes: Set<NodeId>) {
+        require(drainedNodes.isNotEmpty()) {
+            "Nodes to drain must not be empty"
+        }
     }
 }

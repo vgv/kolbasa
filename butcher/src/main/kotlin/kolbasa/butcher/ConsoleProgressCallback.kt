@@ -10,6 +10,12 @@ import kolbasa.schema.NodeId
 import java.util.*
 import javax.sql.DataSource
 
+/**
+ * Progress of a migration step run by hand
+ *
+ * The operator chose the shards and wants to see them, so prepare and finalize print a line per shard.
+ * A rebalance prints counts instead, see [RebalanceProgressCallback].
+ */
 internal class ConsoleProgressCallback(private val terminal: Terminal) : ProgressCallback {
 
     private val progressLine = if (terminal.terminalInfo.interactive) {
@@ -78,7 +84,7 @@ internal class ConsoleProgressCallback(private val terminal: Terminal) : Progres
         is ShardOwnership.Stable -> "stable on ${ownership.node.id}"
         is ShardOwnership.Migrating -> "migrating to ${ownership.target.id}"
     }
-
-    /** Group digits */
-    private fun count(value: Long): String = String.format(Locale.ROOT, "%,d", value)
 }
+
+/** Group digits */
+internal fun count(value: Long): String = String.format(Locale.ROOT, "%,d", value)

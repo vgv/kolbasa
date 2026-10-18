@@ -18,6 +18,12 @@ dependencies {
 
     implementation(libs.postgresql)
 
+    // A pool, not because butcher does anything concurrently, but because move-data takes a connection per
+    // batch of 1000 rows. An unpooled DataSource pays a connection handshake for every batch
+    implementation(libs.hikaricp)
+
+    implementation(libs.logback.classic)
+
     // mordant (which clikt uses to talk to the terminal) ships three platform backends, and they are
     // independent choices:
     //
@@ -47,9 +53,7 @@ dependencies {
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
 
-    testImplementation(libs.logback.core)
-    testImplementation(libs.logback.classic)
-    testImplementation(libs.hikaricp)
+    // logback is a main dependency now, so the tests already have it
 }
 
 kotlin {
@@ -85,6 +89,9 @@ tasks.register<Jar>("butcherJar") {
             "Implementation-Version" to project.sanitizeVersion(),
             // postgresql 42.7.x is a Multi-Release jar: it ships JDK11-specialized classes under META-INF/versions/11/
             "Multi-Release" to true,
+            // mordant's terminal backend goes through native code (JNA now, FFM later), and since JDK 24
+            // a restricted call without permission warns - and will throw in a future release
+            "Enable-Native-Access" to "ALL-UNNAMED",
         )
     }
 

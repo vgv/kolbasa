@@ -2,6 +2,12 @@ package kolbasa.butcher
 
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
+import kolbasa.butcher.command.CheckCluster
+import kolbasa.butcher.command.DrainNodes
+import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.MoveData
+import kolbasa.butcher.command.PrepareMigration
+import kolbasa.butcher.command.RebalanceCluster
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -11,8 +17,9 @@ import java.io.File
 /**
  * The command line as an operator meets it
  *
- * Every case here is rejected before the cluster is touched, so none of them needs a database: Clikt
- * finishes parsing and validating before a command's body runs.
+ * Almost every case here is rejected before the cluster is touched, so it needs no database: Clikt
+ * finishes parsing and validating before a command's body runs. The exception is the unreachable node,
+ * which needs nothing but a closed port.
  */
 class ButcherCliTest {
 
@@ -24,8 +31,47 @@ class ButcherCliTest {
         val result = cli().test("--help")
 
         assertEquals(0, result.statusCode, result.output)
-        listOf("check-cluster", "prepare-migration", "move-data", "finalize-migration").forEach {
+        listOf(
+            "check-cluster", "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration"
+        ).forEach {
             assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}")
+        }
+    }
+
+    @Test
+    fun testHelpGroupsTheCommandsByWhatTheyAre() {
+        val result = cli().test("--help")
+
+        assertEquals(0, result.statusCode, result.output)
+        // Two levels of command, which one flat list would hide
+        val sections = listOf("Diagnostics:", "High-level commands:", "Low-level commands:")
+        sections.forEach { assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}") }
+        // In this order, which is the order they are reached for in
+        assertEquals(
+            sections,
+            sections.sortedBy { result.output.indexOf(it) },
+            result.output
+        )
+        // The section is a layout instruction, so it must not leak into the text as a tag
+        assertTrue(!result.output.contains("butcher-help-section"), result.output)
+    }
+
+    @Test
+    fun testEveryCommandIsListedUnderItsOwnSection() {
+        val output = cli().test("--help").output
+
+        mapOf(
+            "check-cluster" to "Diagnostics:",
+            "rebalance-cluster" to "High-level commands:",
+            "drain-nodes" to "High-level commands:",
+            "prepare-migration" to "Low-level commands:",
+            "move-data" to "Low-level commands:",
+            "finalize-migration" to "Low-level commands:",
+        ).forEach { (command, section) ->
+            // The section a command is listed under is the last one printed before it
+            val sectionsBefore = listOf("Diagnostics:", "High-level commands:", "Low-level commands:")
+                .filter { output.indexOf(it) in 0 until output.indexOf("  $command")  }
+            assertEquals(section, sectionsBefore.lastOrNull(), "$command:\n$output")
         }
     }
 
@@ -113,12 +159,46 @@ class ButcherCliTest {
 
     @Test
     fun testMutatingCommandsOfferYes() {
-        listOf("prepare-migration", "move-data", "finalize-migration").forEach { command ->
+        listOf("rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration").forEach { command ->
             val result = cli().test("$command --help")
 
             assertEquals(0, result.statusCode, result.output)
             assertTrue(result.output.contains("--yes"), "$command:\n${result.output}")
         }
+    }
+
+    @Test
+    fun testShardsPerRoundOutOfRangeIsReported() {
+        listOf("0", "-5", "2000").forEach { value ->
+            val result = cli().test("rebalance-cluster --shards-per-round=$value ${config().absolutePath}")
+
+            assertEquals(1, result.statusCode, result.output)
+            assertTrue(result.output.contains("shards per round"), "$value:\n${result.output}")
+        }
+    }
+
+    @Test
+    fun testMissingNodesToDrainAreReported() {
+        val result = cli().test("drain-nodes --shards-per-round=10 ${config().absolutePath}")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("--nodes"), result.output)
+    }
+
+    @Test
+    fun testUnreachableNodeIsReportedByTheDriver() {
+        // Reachability is checked on a plain driver connection, before any pool is built. A pool would
+        // wait out its connection timeout and then report that timeout instead of this
+        val deadNode = File(tempDir, "dead.conf").apply {
+            writeText("line-1  host=127.0.0.1 port=9 dbname=orders\n")
+        }
+
+        val result = cli().test("check-cluster ${deadNode.absolutePath}")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Can't connect to 1 of 1"), result.output)
+        assertTrue(result.output.contains("refused"), result.output)
+        assertTrue(!result.output.contains("request timed out"), result.output)
     }
 
     @Test
@@ -139,6 +219,8 @@ class ButcherCliTest {
 
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
+        RebalanceCluster(),
+        DrainNodes(),
         PrepareMigration(),
         MoveData(),
         FinalizeMigration(),

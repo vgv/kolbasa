@@ -4,6 +4,10 @@ import com.github.ajalt.mordant.rendering.AnsiLevel
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.TerminalRecorder
 import io.mockk.mockk
+import kolbasa.cluster.admin.ShardDiff
+import kolbasa.cluster.admin.ShardOwnership
+import kolbasa.producer.ShardId
+import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,6 +66,15 @@ class ConsoleProgressCallbackTest {
     }
 
     @Test
+    fun testAHandDrivenMigrationStillPrintsEveryShard() {
+        callback.prepareSuccessful(shards(0, 1), NodeId("node-02"), diffs(0, 1))
+
+        val output = recorder.stdout()
+        assertTrue(output.contains("Target node: node-02"), output)
+        assertEquals(2, output.lines().count { it.contains("=>") }, output)
+    }
+
+    @Test
     fun testEveryTableGetsItsOwnSummary() {
         callback.moveNextBatch("q_orders", from, to, 1_000, 1_000L, 1_000L)
         callback.moveEnd("q_orders", from, to, 10_000L)
@@ -71,6 +84,16 @@ class ConsoleProgressCallbackTest {
         val summaries = recorder.stdout().lines().filter { it.contains("finished, migrated rows") }
         assertEquals(2, summaries.size, recorder.stdout())
         summaries.forEach { assertTrue(it.contains("10,000"), it) }
+    }
+
+    private fun shards(vararg numbers: Int): List<ShardId> = numbers.map(ShardId::of)
+
+    /** One `stable on node-01 => migrating to node-02` diff per shard */
+    private fun diffs(vararg numbers: Int): List<ShardDiff> = numbers.map { shard ->
+        ShardDiff(
+            originalShard = ShardOwnership.Stable(ShardId.of(shard), NodeId("node-01")),
+            updatedShard = ShardOwnership.Migrating(ShardId.of(shard), NodeId("node-02"))
+        )
     }
 
 }

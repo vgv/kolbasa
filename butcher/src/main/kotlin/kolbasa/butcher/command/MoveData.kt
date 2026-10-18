@@ -1,4 +1,4 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.terminal
@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.rendering.Widget
+import kolbasa.butcher.ConsoleProgressCallback
+import kolbasa.butcher.HelpSection
 
 internal class MoveData : MutatingClusterCommand(name = "move-data") {
 
@@ -16,6 +18,8 @@ internal class MoveData : MutatingClusterCommand(name = "move-data") {
     private val excludeTables by option("--exclude-tables", metavar = "<t1,t2,...>")
         .split(",")
         .help("Queue tables not to migrate, comma-separated. None by default")
+
+    override val helpSection = HelpSection.LOW_LEVEL
 
     override fun help(context: Context) =
         "Transfer data to target nodes for every shard in migration state. Safe to re-run if it crashed"

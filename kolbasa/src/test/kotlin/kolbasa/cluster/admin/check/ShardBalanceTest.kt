@@ -6,8 +6,10 @@ import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ShardBalanceTest {
 
@@ -216,6 +218,120 @@ class ShardBalanceTest {
         assertEquals(-result.totalMoves, result.netChangeByNode.getValue(nodes[0]))
         nodes.drop(1).forEach { node ->
             assertEquals(result.proposedMoves.getValue(node).size, result.netChangeByNode.getValue(node), "$node")
+        }
+    }
+
+    // ---------- draining a node ----------
+
+    @Test
+    fun testDrain_EvenSurvivors() {
+        // n3 is leaving. Its 124 shards go to the two nodes that stay, 512 each
+        val nodes = listOf(NodeId("n1"), NodeId("n2"), NodeId("n3"))
+        val counts = mapOf(nodes[0] to 450, nodes[1] to 450, nodes[2] to 124)
+        val shards = buildBalancedShards(counts)
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[2])).compute()
+
+        assertEquals(124, result.totalMoves)
+        assertEquals(62, result.proposedMoves[nodes[0]]?.size)
+        assertEquals(62, result.proposedMoves[nodes[1]]?.size)
+        // Every shard proposed comes off the node being drained, and it ends up holding nothing
+        val owner = result.ownerOf()
+        result.proposedMoves.values.flatten().forEach { shard ->
+            assertEquals(nodes[2], owner[shard], "shard ${shard.id}")
+        }
+        assertEquals(-124, result.netChangeByNode.getValue(nodes[2]))
+    }
+
+    @Test
+    fun testDrain_AllShardsOnTheDrainedNode() {
+        // The node to empty holds the whole cluster: everything moves, evenly
+        val nodes = (1..3).map { NodeId("n$it") }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[2]) }
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[2])).compute()
+
+        assertEquals(ShardId.SHARD_COUNT, result.totalMoves)
+        assertEquals(512, result.proposedMoves[nodes[0]]?.size)
+        assertEquals(512, result.proposedMoves[nodes[1]]?.size)
+    }
+
+    @Test
+    fun testDrain_SurvivorsAreNotTouched() {
+        // n1 is far above its target, but a drain is not a rebalance: it gives nothing away. The cluster
+        // is left skewed on purpose
+        val nodes = (1..3).map { NodeId("n$it") }
+        val counts = mapOf(nodes[0] to 900, nodes[1] to 0, nodes[2] to 124)
+        val shards = buildBalancedShards(counts)
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[2])).compute()
+
+        assertEquals(124, result.totalMoves)
+        assertEquals(124, result.proposedMoves[nodes[1]]?.size)
+        assertEquals(0, result.netChangeByNode.getValue(nodes[0]))
+    }
+
+    @Test
+    fun testDrain_DeepestHoleFirst() {
+        // n4 is leaving with 24 shards, and both n2 and n3 are below target. Too few to fill either, so
+        // they go where the hole is deepest: n3, not the heavier n2
+        val nodes = (1..4).map { NodeId("n$it") }
+        val counts = mapOf(nodes[0] to 600, nodes[1] to 300, nodes[2] to 100, nodes[3] to 24)
+        val shards = buildBalancedShards(counts)
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[3])).compute()
+
+        assertEquals(24, result.totalMoves)
+        assertEquals(24, result.proposedMoves[nodes[2]]?.size)
+        assertNull(result.proposedMoves[nodes[1]])
+    }
+
+    @Test
+    fun testDrain_NodeAlreadyEmpty() {
+        val nodes = (1..3).map { NodeId("n$it") }
+        val counts = mapOf(nodes[0] to 512, nodes[1] to 512, nodes[2] to 0)
+        val shards = buildBalancedShards(counts)
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[2])).compute()
+
+        // Holding nothing is all a drain is after, so there is nothing to propose
+        assertTrue(result.isBalanced)
+        assertTrue(result.proposedMoves.isEmpty())
+        assertEquals(0, result.currentDistribution.getValue(nodes[2]).size)
+    }
+
+    @Test
+    fun testDrain_SeveralNodesAtOnce() {
+        // The nodes to empty are a set, so two of them is the same request
+        val nodes = (1..4).map { NodeId("n$it") }
+        val counts = nodes.associateWith { 256 }
+        val shards = buildBalancedShards(counts)
+
+        val result = ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(nodes[2], nodes[3])).compute()
+
+        assertEquals(512, result.totalMoves)
+        assertEquals(256, result.proposedMoves[nodes[0]]?.size)
+        assertEquals(256, result.proposedMoves[nodes[1]]?.size)
+    }
+
+    @Test
+    fun testDrain_UnknownNodeIsRejected() {
+        val nodes = (1..2).map { NodeId("n$it") }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+
+        assertThrows<IllegalArgumentException> {
+            ShardBalance(shards, nodes.toSet(), drainedNodes = setOf(NodeId("n-gone")))
+        }
+    }
+
+    @Test
+    fun testDrain_EveryNodeIsRejected() {
+        // Emptying the whole cluster leaves the shards nowhere to go
+        val nodes = (1..2).map { NodeId("n$it") }
+        val shards = (0 until ShardId.SHARD_COUNT).map { stableShard(it, nodes[0]) }
+
+        assertThrows<IllegalArgumentException> {
+            ShardBalance(shards, nodes.toSet(), drainedNodes = nodes.toSet())
         }
     }
 
