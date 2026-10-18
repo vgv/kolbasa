@@ -101,15 +101,15 @@ Every command takes one or more **config files** describing the cluster's nodes.
 file, one node per line:
 
 ```
-<line-id>  host=<host> port=<port> user=<user> password=<pwd> dbname=<db> [schema=<schema>]
+<node-id>  host=<host> port=<port> user=<user> password=<pwd> dbname=<db> [schema=<schema>]
 ```
 
 A complete two-node example (`cluster.conf`):
 
 ```
 # orders cluster
-line-1  host=db01.internal port=5432 user=app password=secret dbname=orders schema=public
-line-2  host=db02.internal port=5432 user=app password=secret dbname=orders schema=public
+node-01  host=db01.internal port=5432 user=app password=secret dbname=orders schema=public
+node-02  host=db02.internal port=5432 user=app password=secret dbname=orders schema=public
 ```
 
 ### Keys
@@ -125,30 +125,46 @@ line-2  host=db02.internal port=5432 user=app password=secret dbname=orders sche
 
 Other rules:
 
-- The **line-id** is the first whitespace-separated token on the line and must match `[a-zA-Z0-9_.-]+`. It is
-  only the key butcher merges config files on (see below), so it can be any string you like — `a`, `b`, `c`,
-  or `1`, `2`, `3`, or anything else.
+- The **node id** is the first whitespace-separated token on the line. It must match `[a-zA-Z0-9_.-]` and be
+  at most 100 characters long. It is the node's own id, see [Node ids](#node-ids) below.
 - Unknown keys are silently ignored (so you can keep extra annotations in the file).
 - Values may be single-quoted to include whitespace or special characters: `password='p a s s'`.
 - Lines starting with `#` and blank lines are ignored.
 
-### Multiple files merge by line-id
+### Node ids
 
-You can pass several config files; butcher **merges them by line-id** (union of keys, and on a key collision
+Every node has an id of its own. kolbasa keeps it in the node's `q__node` table, and it never changes. The id
+on a line must be that id.
+
+Every command checks this before it does anything else. If a line names a node wrongly, the command stops and
+changes nothing. The error shows the node's real id next to each wrong line.
+
+A node with no id yet gets the one from its line. That is how a new node joins: add its line, then run
+`check-cluster`. It prints `Initialized node <id>`.
+
+Do this **before** the application's `Cluster` sees the new node. `Cluster` gives a node with no id a random
+one, and then the line no longer matches.
+
+A cluster that already runs has its ids already. To find them, run `select id from q__node` on each node, or
+run `check-cluster` with any ids and read the error.
+
+### Multiple files merge by node id
+
+You can pass several config files; butcher **merges them by node id** (union of keys, and on a key collision
 the later file wins). The intended use is splitting **topology** from **secrets**:
 
 `topology.conf` (commit to your repo):
 
 ```
-line-1  host=db01.internal port=5432 dbname=orders schema=public
-line-2  host=db02.internal port=5432 dbname=orders schema=public
+node-01  host=db01.internal port=5432 dbname=orders schema=public
+node-02  host=db02.internal port=5432 dbname=orders schema=public
 ```
 
 `secrets.conf` (kept out of version control):
 
 ```
-line-1  user=app password=s3cr3t-01
-line-2  user=app password=s3cr3t-02
+node-01  user=app password=s3cr3t-01
+node-02  user=app password=s3cr3t-02
 ```
 
 ```sh
@@ -157,13 +173,13 @@ butcher check-cluster topology.conf secrets.conf
 
 ## The commands
 
-butcher has six commands. One reads the cluster and reports; it changes nothing. The other five sit on two
-levels. Three are the single steps of the migration protocol, run in order. Two are **high-level**: those
-same three steps in a loop, over a plan butcher works out itself.
+butcher has six commands. One reads the cluster and reports; it changes nothing but a new node's id. The
+other five sit on two levels. Three are the single steps of the migration protocol, run in order. Two are
+**high-level**: those same three steps in a loop, over a plan butcher works out itself.
 
 ```
                         ┌────────────────┐
-                        │ check-cluster  │   read-only, run anytime
+                        │ check-cluster  │   reports, run anytime
                         └───────┬────────┘
                                 │ both of these work out that same plan themselves
                 ┌───────────────┴───────────────┐
@@ -184,7 +200,7 @@ same three steps in a loop, over a plan butcher works out itself.
 
 | Command | Writes? | Safe to re-run? | Typical duration | When |
 |---|---|---|---|---|
-| `check-cluster` | no | yes | seconds | anytime — diagnostics |
+| `check-cluster` | only a new node's id | yes | seconds | anytime — diagnostics |
 | `rebalance-cluster` | yes (whole rounds) | yes — it reads the plan again and does what is left | minutes to hours | to even out a cluster |
 | `drain-nodes` | yes (whole rounds) | yes — same | minutes to hours | to take nodes out of a cluster |
 | `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration driven by hand |
@@ -229,13 +245,15 @@ question, not a failure.
 butcher check-cluster [--checks=<check,check,...>] <config-file>...
 ```
 
-Read-only inspection of the cluster. Safe to run at any time — it never modifies anything, and it is the one
-command that has no `--yes` to forget. If `--checks` is omitted, every check runs; name several to run just
-those.
+Inspection of the cluster. Safe to run at any time. It changes nothing, except that a node with no id yet gets
+the one from its line (see [Node ids](#node-ids)). It is the one command that has no `--yes` to forget. If
+`--checks` is omitted, every check runs; name several to run just those.
 
 Like every command, it starts by confirming it can connect to **every** node in the config: one `select 1`
 per node, before anything else happens. If any node is unreachable it stops and tells you which ones, and
 what the driver said about each.
+
+Then, again like every command, it checks that every node is the node its line names.
 
 The available checks:
 
@@ -299,8 +317,7 @@ state a node has to be in before it can leave the cluster. `--nodes` is required
 list, and a single node is fine. `--shards-per-round` means the same thing it means for `rebalance-cluster`,
 with the same trade-off and the same default.
 
-`--nodes` takes **internal kolbasa node ids** (`q__node` table identity), the same kind of id `--target`
-takes, and **not** config line-ids. `check-cluster --checks=shard-balance` prints the ids.
+`--nodes` takes node ids, the same ids as in the config file.
 
 **Only the shards of those nodes move.** The nodes that stay are left as they are, even if they are uneven
 between themselves. A command asked to free some nodes has no business moving shards that have nothing to do
@@ -329,9 +346,8 @@ butcher prepare-migration --target=<node-id> --shards=<0,1,2,...> [--yes] <confi
 Marks the listed shards for migration to `--target`. Both flags are required. `--shards` is a comma-separated
 list of shard numbers (0–1023).
 
-`--target` is the destination node's **internal kolbasa node id** (`q__node` table identity), **not**
-the config line-id. You normally don't type it by hand — `check-cluster --checks=shard-balance` proposes the moves and
-prints the exact `--target=…` to copy.
+`--target` is the destination node's id, as in the config file. You normally don't type it by hand —
+`check-cluster --checks=shard-balance` proposes the moves and prints the exact `--target=…` to copy.
 
 This updates **shard metadata only** — no data is copied. After it runs, for each listed shard:
 
@@ -551,12 +567,13 @@ Orphan tables: 1 orphan queue(s) across 1 node(s)
 
 ### Cluster expansion — add a node
 
-Goal: add a third node (it reports as `node-03` internally) to a two-node cluster and move a third of the
-shards onto it.
+Goal: add a third node, `node-03`, to a two-node cluster and move a third of the shards onto it.
 
-1. Add the new node to the config file (a new `line-3` row) and bring its database up. (A fresh node joins
-   owning no shards; its schema is created automatically when the application's `Cluster` next starts. Run
-   `check-cluster --checks=schema-consistency` to confirm it matches before migrating onto it.)
+1. Bring the new node's database up and add a `node-03` line to the config file. Run `check-cluster`: it
+   gives the node its id and prints `Initialized node node-03`. Only then add the node to the application's
+   `Cluster`, see [Node ids](#node-ids) for why the order matters. A fresh node joins owning no shards, and
+   its schema is created when the application's `Cluster` next starts. Run
+   `check-cluster --checks=schema-consistency` to confirm it matches before migrating onto it.
 
 2. Ask for a balanced plan and pick the shards to move:
 
@@ -589,8 +606,8 @@ shards onto it.
 
    Round 1: 5 to node-03 (341 shard(s) left to move)
    Prepared 5 shard(s) for node-03
-   Move table 'q_orders' from DataSource(line-1 (db01.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 12043
-   Move table 'q_orders' from DataSource(line-2 (db02.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 11890
+   Move table 'q_orders' from DataSource(node-01 (db01.internal:5432/orders)) to DataSource(node-03 (db03.internal:5432/orders)) finished, migrated rows: 12043
+   Move table 'q_orders' from DataSource(node-02 (db02.internal:5432/orders)) to DataSource(node-03 (db03.internal:5432/orders)) finished, migrated rows: 11890
    Finalized 5 shard(s)
 
    Round 2: 5 to node-03 (336 shard(s) left to move)
@@ -631,9 +648,6 @@ also how to do an expansion where you pick the shards yourself:
    Completed successfully.
    ```
 
-   `Target node:` and the node names in `stable on …` / `migrating to …` are all **internal node ids** — the
-   same ids you passed to `--target` and saw in the `shard-balance` proposal, not the config line-ids.
-
 4. Move the data (re-run until it reports zero moved):
 
    ```sh
@@ -641,13 +655,10 @@ also how to do an expansion where you pick the shards yourself:
    ```
 
    ```
-   Move table 'q_orders' from DataSource(line-1 (db01.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 84213
-   Move table 'q_orders' from DataSource(line-2 (db02.internal:5432/orders)) to DataSource(line-3 (db03.internal:5432/orders)) finished, migrated rows: 81902
+   Move table 'q_orders' from DataSource(node-01 (db01.internal:5432/orders)) to DataSource(node-03 (db03.internal:5432/orders)) finished, migrated rows: 84213
+   Move table 'q_orders' from DataSource(node-02 (db02.internal:5432/orders)) to DataSource(node-03 (db03.internal:5432/orders)) finished, migrated rows: 81902
    Completed successfully.
    ```
-
-   (`move-data` labels each source/target `DataSource` by its config **line-id** — `line-1`, `line-3` — since
-   that is the handle that maps back to a row in your config file.)
 
 5. Finalize:
 
@@ -733,7 +744,7 @@ the migration part is one command.
    butcher check-cluster --checks=shard-balance cluster.conf   # node-03 → 0 shards
    ```
 
-3. Remove that node's `line-3` row from butcher's config file and decommission its database.
+3. Remove that node's `node-03` line from butcher's config file and decommission its database.
 
 4. **Before shutting the database down, remove the node from your application's `Cluster` configuration too** —
    that is the separate node list your services pass to `Cluster` (not this butcher config file). If a service
