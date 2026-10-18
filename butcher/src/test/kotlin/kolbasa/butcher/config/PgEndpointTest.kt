@@ -1,5 +1,6 @@
 package kolbasa.butcher.config
 
+import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -11,7 +12,7 @@ class PgEndpointTest {
     @Test
     fun testParsePgEndpoint_AllFields() {
         val endpoint = PgEndpoint.parsePgEndpoint(
-            id = "node-01",
+            id = NodeId("node-01"),
             libpqValues = mapOf(
                 "host" to "db01.internal",
                 "port" to "5433",
@@ -22,7 +23,7 @@ class PgEndpointTest {
             )
         )
 
-        assertEquals("node-01", endpoint.id)
+        assertEquals(NodeId("node-01"), endpoint.id)
         assertEquals("db01.internal", endpoint.host)
         assertEquals(5433, endpoint.port)
         assertEquals("orders", endpoint.dbName)
@@ -34,11 +35,11 @@ class PgEndpointTest {
     @Test
     fun testParsePgEndpoint_OnlyRequiredFields() {
         val endpoint = PgEndpoint.parsePgEndpoint(
-            id = "node-01",
+            id = NodeId("node-01"),
             libpqValues = mapOf("host" to "h", "dbname" to "db")
         )
 
-        assertEquals("node-01", endpoint.id)
+        assertEquals(NodeId("node-01"), endpoint.id)
         assertEquals("h", endpoint.host)
         assertNull(endpoint.port)
         assertEquals("db", endpoint.dbName)
@@ -50,38 +51,38 @@ class PgEndpointTest {
     @Test
     fun testParsePgEndpoint_MissingHost_Throws() {
         val ex = assertThrows<InvalidConfigurationException> {
-            PgEndpoint.parsePgEndpoint("node-01", mapOf("dbname" to "db"))
+            PgEndpoint.parsePgEndpoint(NodeId("node-01"), mapOf("dbname" to "db"))
         }
         assertTrue(ex.message.contains("host"), ex.message)
-        assertTrue(ex.message.contains("node-01"), ex.message)
+        assertTrue(ex.message.contains("'node-01'"), ex.message)
     }
 
     @Test
     fun testParsePgEndpoint_MissingDbName_Throws() {
         val ex = assertThrows<InvalidConfigurationException> {
-            PgEndpoint.parsePgEndpoint("node-01", mapOf("host" to "db.host"))
+            PgEndpoint.parsePgEndpoint(NodeId("node-01"), mapOf("host" to "db.host"))
         }
         assertTrue(ex.message.contains("dbname"), ex.message)
-        assertTrue(ex.message.contains("node-01"), ex.message)
+        assertTrue(ex.message.contains("'node-01'"), ex.message)
     }
 
     @Test
     fun testParsePgEndpoint_InvalidPort_Throws() {
         val ex = assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint(
-                "node-01",
+                NodeId("node-01"),
                 mapOf("host" to "h", "dbname" to "db", "port" to "abc")
             )
         }
         assertTrue(ex.message.contains("abc"), ex.message)
-        assertTrue(ex.message.contains("node-01"), ex.message)
+        assertTrue(ex.message.contains("'node-01'"), ex.message)
     }
 
     @Test
     fun testParsePgEndpoint_BlankPort_Throws() {
         assertThrows<InvalidConfigurationException> {
             PgEndpoint.parsePgEndpoint(
-                "node-01",
+                NodeId("node-01"),
                 mapOf("host" to "h", "dbname" to "db", "port" to "")
             )
         }
@@ -90,7 +91,7 @@ class PgEndpointTest {
     @Test
     fun testParsePgEndpoint_UnknownKeysIgnored() {
         val endpoint = PgEndpoint.parsePgEndpoint(
-            "n",
+            NodeId("n"),
             mapOf(
                 "host" to "h",
                 "dbname" to "db",
@@ -106,7 +107,7 @@ class PgEndpointTest {
     @Test
     fun testToString_WithPort() {
         val endpoint = PgEndpoint(
-            id = "node-01",
+            id = NodeId("node-01"),
             host = "db.host",
             port = 5433,
             dbName = "orders",
@@ -121,7 +122,7 @@ class PgEndpointTest {
     @Test
     fun testToString_WithoutPort() {
         val endpoint = PgEndpoint(
-            id = "node-01",
+            id = NodeId("node-01"),
             host = "db.host",
             port = null,
             dbName = "orders",

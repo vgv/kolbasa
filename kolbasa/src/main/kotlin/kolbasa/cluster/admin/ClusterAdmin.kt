@@ -39,16 +39,6 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
         }
     }
 
-    /**
-     * Checks that every node can be reached, and fails describing the ones that cannot
-     *
-     * The other methods assume the cluster is reachable and report a connection failure as it comes; call
-     * this first to get one clear error instead.
-     */
-    fun checkNodesAvailable() {
-        MoveHelpers.checkClusterNodes(nodes)
-    }
-
     /** Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven */
     fun checkShardBalance(): ShardBalanceResult = ShardBalance.check(nodes)
 

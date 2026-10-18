@@ -27,7 +27,8 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
     override val helpSection = HelpSection.DIAGNOSTICS
 
     override fun help(context: Context) =
-        "Inspect cluster state (schema consistency, shards distribution etc.). Modifies nothing, safe at any time"
+        "Inspect cluster state (schema consistency, shards distribution etc.). Changes nothing but the id of a " +
+            "new node, safe at any time"
 
     override fun execute(): Widget {
         val butcher = butcher()

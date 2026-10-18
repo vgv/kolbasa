@@ -143,6 +143,34 @@ class HighLevelCommandsTest {
     }
 
     @Test
+    fun testCommandRefusesAConfigThatNamesNodesWrongly() {
+        // Names that are not the nodes' own ids, the way every config file had them before
+        val config = config(ids = listOf("line-1", "line-2", "line-3"))
+
+        val result = cli().test("rebalance-cluster --shards-per-round=10 --yes ${config.absolutePath}")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Node ids don't match"), result.output)
+        // The real ids are in the message, ready to copy into the file
+        dataSources.forEach { assertTrue(result.output.contains(nodeIdOf(it)), result.output) }
+    }
+
+    @Test
+    fun testCheckClusterInitializesANewNode() {
+        // A node just added to the cluster: an empty schema nothing has started against yet
+        dataSources.first().connection.use { connection ->
+            connection.createStatement().use { statement -> statement.execute("create schema node_four") }
+        }
+        val config = config().apply { appendText(configLine("node-four", "node_four")) }
+
+        val result = cli().test("check-cluster ${config.absolutePath}")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("Initialized node node-four"), result.output)
+        assertEquals("node-four", dataSourceFor("node_four").use { nodeIdOf(it) })
+    }
+
+    @Test
     fun testHighLevelCommandRefusesToRunOnTopOfAMigration() {
         // Skewed on purpose: with nothing to move, a rebalance stops before it ever looks for a
         // migration in flight, and a seeded cluster is only unbalanced by chance
@@ -271,16 +299,31 @@ class HighLevelCommandsTest {
         this.schema = schema
     }
 
-    /** The cluster as butcher reads it: one line per node, pointing at one schema each */
-    private fun config(): File = File(tempDir, "cluster.conf").apply {
-        writeText(
-            SCHEMAS.mapIndexed { index, schema ->
-                "line-${index + 1}  host=${pgContainer.host} port=${pgContainer.firstMappedPort} " +
-                    "user=${pgContainer.username} password=${pgContainer.password} " +
-                    "dbname=${pgContainer.databaseName} schema=$schema"
-            }.joinToString(separator = "\n", postfix = "\n")
-        )
+    /**
+     * The cluster as butcher reads it: one line per node, pointing at one schema each
+     *
+     * Each line is named by [ids], which are the nodes' own ids unless a test wants them wrong.
+     */
+    private fun config(ids: List<String> = dataSources.map(::nodeIdOf)): File = File(tempDir, "cluster.conf").apply {
+        writeText(SCHEMAS.zip(ids).joinToString(separator = "") { (schema, id) -> configLine(id, schema) })
     }
+
+    /** One node of the cluster, as a line of the config file */
+    private fun configLine(id: String, schema: String): String =
+        "$id  host=${pgContainer.host} port=${pgContainer.firstMappedPort} " +
+            "user=${pgContainer.username} password=${pgContainer.password} " +
+            "dbname=${pgContainer.databaseName} schema=$schema\n"
+
+    /** The id the application gave this node when it started */
+    private fun nodeIdOf(dataSource: DataSource): String =
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("select id from q__node").use { resultSet ->
+                    resultSet.next()
+                    resultSet.getString(1)
+                }
+            }
+        }
 
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
