@@ -39,6 +39,9 @@ internal object IdSchema {
         on conflict do nothing
     """.trimIndent()
 
+    private val SELECT_ACTIVE_NODE_STATEMENT =
+        "select $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME from $NODE_TABLE_NAME where $STATUS_COLUMN_NAME='$ACTIVE_STATUS'"
+
     fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET): Boolean {
         val nodeId = NodeId(Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET))
         return createAndInitIdTable(dataSource, nodeId, identifierBucket)
@@ -50,8 +53,7 @@ internal object IdSchema {
      * Returns `true` if this call wrote the row. An existing table is left as it is, even an empty one.
      */
     fun createAndInitIdTable(dataSource: DataSource, nodeId: NodeId, identifierBucket: Int): Boolean {
-        val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME))[NODE_TABLE_NAME]
-        if (existingTable != null) {
+        if (nodeTableExists(dataSource)) {
             return false
         }
 
@@ -69,22 +71,35 @@ internal object IdSchema {
         }
     }
 
-    fun readNodeInfo(dataSource: DataSource): Node {
-        val sql =
-            "select $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME from $NODE_TABLE_NAME where $STATUS_COLUMN_NAME='$ACTIVE_STATUS'"
+    /**
+     * Whether `q__node` exists. An existing table can still have no active row, see [findNodeInfo]
+     */
+    fun nodeTableExists(dataSource: DataSource): Boolean {
+        return SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME)).containsKey(NODE_TABLE_NAME)
+    }
 
+    /**
+     * The active row of `q__node`, or `null` if there is none. The table itself must exist
+     */
+    fun findNodeInfo(dataSource: DataSource): Node? {
         return dataSource.useStatement { statement: Statement ->
-            statement.executeQuery(sql).use { resultSet ->
-                check(resultSet.next()) {
-                    "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
-                        "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$sql'"
+            statement.executeQuery(SELECT_ACTIVE_NODE_STATEMENT).use { resultSet ->
+                if (resultSet.next()) {
+                    Node(NodeId(resultSet.getString(1)), resultSet.getInt(2))
+                } else {
+                    null
                 }
-
-                val nodeId = resultSet.getString(1)
-                val identifiersBucket: Int = resultSet.getInt(2)
-
-                Node(NodeId(nodeId), identifiersBucket)
             }
+        }
+    }
+
+    /**
+     * The active row of `q__node`. Throws if there is none, unlike [findNodeInfo]
+     */
+    fun readNodeInfo(dataSource: DataSource): Node {
+        return checkNotNull(findNodeInfo(dataSource)) {
+            "Table $NODE_TABLE_NAME is empty, but it must contain at least one active entry. Did you forget to call " +
+                "kolbasa.schema.SchemaHelpers.generateCreateOrUpdateStatements() method?  Query: '$SELECT_ACTIVE_NODE_STATEMENT'"
         }
     }
 

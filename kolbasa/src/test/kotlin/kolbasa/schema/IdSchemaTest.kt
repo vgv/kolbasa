@@ -1,6 +1,7 @@
 package kolbasa.schema
 
 import kolbasa.AbstractPostgreSQLTest
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -57,6 +58,24 @@ class IdSchemaTest : AbstractPostgreSQLTest() {
 
         assertTrue(created)
         assertEquals(NodeId("it's"), IdSchema.readNodeInfo(dataSource).id)
+    }
+
+    @Test
+    fun testNodeTableExists() {
+        assertFalse(IdSchema.nodeTableExists(dataSource))
+
+        IdSchema.createAndInitIdTable(dataSource)
+
+        assertTrue(IdSchema.nodeTableExists(dataSource))
+    }
+
+    @Test
+    fun testFindNodeInfo_No_Active_Row() {
+        IdSchema.createAndInitIdTable(dataSource)
+        dataSource.useStatement { statement -> statement.execute("delete from ${IdSchema.NODE_TABLE_NAME}") }
+
+        assertTrue(IdSchema.nodeTableExists(dataSource))
+        assertNull(IdSchema.findNodeInfo(dataSource))
     }
 
     @Test
