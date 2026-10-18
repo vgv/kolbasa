@@ -2,6 +2,7 @@ package kolbasa.schema
 
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Statement
 import javax.sql.DataSource
@@ -32,27 +33,38 @@ internal object IdSchema {
         )
     """.trimIndent()
 
-    fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET) {
-        val ddlStatements = mutableListOf<String>()
+    private val INSERT_STATEMENT = """
+        insert into $NODE_TABLE_NAME($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
+        values ('$ACTIVE_STATUS', ?, ?)
+        on conflict do nothing
+    """.trimIndent()
 
+    fun createAndInitIdTable(dataSource: DataSource, identifierBucket: Int = Node.MIN_BUCKET): Boolean {
+        val nodeId = NodeId(Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET))
+        return createAndInitIdTable(dataSource, nodeId, identifierBucket)
+    }
+
+    /**
+     * Creates `q__node` with [nodeId] and [identifierBucket], unless the table already exists
+     *
+     * Returns `true` if this call wrote the row. An existing table is left as it is, even an empty one.
+     */
+    fun createAndInitIdTable(dataSource: DataSource, nodeId: NodeId, identifierBucket: Int): Boolean {
         val existingTable = SchemaExtractor.extractRawSchema(dataSource, setOf(NODE_TABLE_NAME))[NODE_TABLE_NAME]
-        if (existingTable == null) {
-            ddlStatements += CREATE_TABLE_STATEMENT
-
-            ddlStatements += """
-                insert into $NODE_TABLE_NAME($STATUS_COLUMN_NAME, $ID_COLUMN_NAME, $IDENTIFIERS_BUCKET_COLUMN_NAME)
-                values
-                    ('$ACTIVE_STATUS', '${Helpers.randomString(NODE_ID_DEFAULT_LENGTH, NODE_ID_ALPHABET)}', $identifierBucket)
-                on conflict do nothing
-            """
+        if (existingTable != null) {
+            return false
         }
 
-        dataSource.inTransaction { connection ->
+        return dataSource.inTransaction { connection ->
             // One transaction, so a crash can't leave the table without its row
-            connection.createStatement().use { statement ->
-                ddlStatements.forEach { ddlStatement ->
-                    statement.execute(ddlStatement)
-                }
+            connection.useStatement { statement ->
+                statement.execute(CREATE_TABLE_STATEMENT)
+            }
+
+            connection.usePreparedStatement(INSERT_STATEMENT) { preparedStatement ->
+                preparedStatement.setString(1, nodeId.id)
+                preparedStatement.setInt(2, identifierBucket)
+                preparedStatement.executeUpdate() > 0
             }
         }
     }
