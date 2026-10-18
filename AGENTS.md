@@ -56,9 +56,10 @@ holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
-  `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the check results, the
-  progress callback, and the internal operations behind them, `prepare`/`move`/`finalize` and the
-  `rebalance` loop over them), `stats` (Prometheus, OpenTelemetry).
+  `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
+  creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
+  operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `stats`
+  (Prometheus, OpenTelemetry).
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules; today that is
   `PostgreSQLImages`, which reads `postgresql-test-images.txt` from this module's resources. Which PostgreSQL versions the
   repository is tested against is decided here, once, for the tests and the benchmarks alike.

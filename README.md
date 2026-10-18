@@ -313,8 +313,8 @@ Beyond the examples above, these documents explain how Kolbasa works under the h
 - [Butcher.md](docs/Butcher.md) — operator guide for `butcher`, the CLI for running cluster health checks and
   expanding, shrinking, or rebalancing a cluster by migrating shards between nodes. Distributed as a Docker image
   (`ghcr.io/vgv/butcher`) and a `butcher.jar` on the [releases page](https://github.com/vgv/kolbasa/releases/latest).
-  Every check and migration step it performs is also a method on `kolbasa.cluster.admin.ClusterAdmin`, so the
-  same work can be driven from your own code.
+  Every check and migration step it performs is also a method on `kolbasa.cluster.admin.ClusterAdmin` or
+  `ClusterAdminHelpers`, so the same work can be driven from your own code.
 - [Message IDs.md](docs/Message%20IDs.md) — how a message's 64-bit `id` is structured (the per-node bucket) so
   that ids stay globally unique across nodes, enabling shard migration and growing a standalone DB into a cluster.
 - [Message state transitions.md](docs/Message%20state%20transitions.md) — the message lifecycle deep-dive
