@@ -2,6 +2,12 @@ package kolbasa.butcher
 
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
+import kolbasa.butcher.command.CheckCluster
+import kolbasa.butcher.command.DrainNodes
+import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.MoveData
+import kolbasa.butcher.command.PrepareMigration
+import kolbasa.butcher.command.RebalanceCluster
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

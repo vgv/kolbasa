@@ -5,6 +5,12 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
+import kolbasa.butcher.command.CheckCluster
+import kolbasa.butcher.command.DrainNodes
+import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.MoveData
+import kolbasa.butcher.command.PrepareMigration
+import kolbasa.butcher.command.RebalanceCluster
 import java.lang.invoke.MethodHandles
 
 fun main(args: Array<String>) = ButcherCli()

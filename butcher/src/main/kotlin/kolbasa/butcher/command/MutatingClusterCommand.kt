@@ -1,4 +1,4 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.Abort
 import com.github.ajalt.clikt.core.CliktError

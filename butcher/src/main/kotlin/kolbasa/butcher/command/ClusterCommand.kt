@@ -1,4 +1,4 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.Widget
+import kolbasa.butcher.HelpSection
 import kolbasa.butcher.config.ClusterNodes
 import kolbasa.butcher.config.InvalidConfigurationException
 import kolbasa.cluster.admin.ClusterAdmin

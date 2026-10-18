@@ -3,7 +3,7 @@ package kolbasa.butcher
 /**
  * The sections butcher's commands are grouped into in `--help`
  *
- * A command names its own section (see [ClusterCommand]), so a new one does not compile until it says where
+ * A command names its own section (see [kolbasa.butcher.command.ClusterCommand]), so a new one does not compile until it says where
  * it belongs.
  */
 internal enum class HelpSection(val title: String) {

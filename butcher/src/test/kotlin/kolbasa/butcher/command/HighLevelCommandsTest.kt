@@ -1,8 +1,9 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import com.zaxxer.hikari.HikariDataSource
+import kolbasa.butcher.ButcherCli
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.admin.ClusterAdmin
 import kolbasa.producer.ShardId

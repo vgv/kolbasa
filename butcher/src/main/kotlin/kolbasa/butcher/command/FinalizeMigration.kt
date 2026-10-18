@@ -1,8 +1,10 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.mordant.rendering.Widget
+import kolbasa.butcher.ConsoleProgressCallback
+import kolbasa.butcher.HelpSection
 
 internal class FinalizeMigration : MutatingClusterCommand(name = "finalize-migration") {
 

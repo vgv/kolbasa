@@ -1,10 +1,11 @@
-package kolbasa.butcher
+package kolbasa.butcher.command
 
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
+import kolbasa.butcher.HelpSection
 import kolbasa.cluster.admin.ClusterAdmin
 import kolbasa.cluster.admin.ClusterOperationException
 import kolbasa.producer.ShardId
