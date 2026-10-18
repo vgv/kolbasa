@@ -8,10 +8,8 @@ plugins {
     // that gets a test suite. See gradle/build-logic/src/main/kotlin/kolbasa.testing.gradle.kts
     id("kolbasa.testing")
 
-    // Publishing to Maven Central: the publication, the POM and the signature.
-    // Staging and release are repository-wide and live in the root build.
-    signing
-    `maven-publish`
+    // Publishing to Maven Central: the publication, the POM, the signature and the upload
+    alias(libs.plugins.vanniktech.publish)
 }
 
 repositories {
@@ -64,11 +62,6 @@ kotlin {
 }
 
 // =====================================================================================
-java {
-    withSourcesJar()
-    withJavadocJar()
-}
-
 // All checks were already made by workflow "On pull request" => no checks here
 if (gradle.startParameter.taskNames.contains("final")) {
     tasks.named("build").get().apply {
@@ -77,61 +70,41 @@ if (gradle.startParameter.taskNames.contains("final")) {
 }
 
 tasks.withType<Sign> {
-    doFirst {
-        SettingsProvider.validateGPGSecrets()
-    }
     dependsOn(tasks.getByName("build"))
 }
 
-tasks.withType<PublishToMavenRepository> {
-    doFirst {
-        SettingsProvider.validateSonatypeCredentials()
-    }
-}
+// Credentials are Gradle properties; CI passes them as ORG_GRADLE_PROJECT_<name> environment variables:
+// - mavenCentralUsername, mavenCentralPassword: a user token from https://central.sonatype.com/usertoken
+// - signingInMemoryKey, signingInMemoryKeyPassword: an ascii-armored PGP secret key and its password
+mavenPublishing {
+    // Upload and release in one go, no manual step on the Central Portal.
+    // A -SNAPSHOT version goes to the snapshot repository instead.
+    publishToMavenCentral(automaticRelease = true)
+    signAllPublications()
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            groupId = SettingsProvider.ARTIFACT_GROUP_ID
-            artifactId = SettingsProvider.ARTIFACT_NAME
-            version = project.sanitizeVersion()
-            versionMapping {
-                usage("java-api") {
-                    fromResolutionOf("runtimeClasspath")
-                }
-                usage("java-runtime") {
-                    fromResolutionResult()
-                }
-            }
-            pom {
-                name.set("Kolbasa")
-                description.set("A reliable message & job queue for Java & Kotlin, built on PostgreSQL.")
-                url.set("https://github.com/vgv/kolbasa")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("vgv")
-                        name.set("Vasily Vasilkov")
-                        email.set("chand0s@yandex.ru")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com/vgv/kolbasa.git")
-                    developerConnection.set("scm:git:ssh://github.com:vgv/kolbasa.git")
-                    url.set("https://github.com/vgv/kolbasa")
-                }
+    coordinates(SettingsProvider.ARTIFACT_GROUP_ID, SettingsProvider.ARTIFACT_NAME, project.sanitizeVersion())
+
+    pom {
+        name.set("Kolbasa")
+        description.set("A reliable message & job queue for Java & Kotlin, built on PostgreSQL.")
+        url.set("https://github.com/vgv/kolbasa")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
+        developers {
+            developer {
+                id.set("vgv")
+                name.set("Vasily Vasilkov")
+                email.set("chand0s@yandex.ru")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://github.com/vgv/kolbasa.git")
+            developerConnection.set("scm:git:ssh://github.com:vgv/kolbasa.git")
+            url.set("https://github.com/vgv/kolbasa")
+        }
     }
-}
-
-signing {
-    useInMemoryPgpKeys(SettingsProvider.gpgSigningKey, SettingsProvider.gpgSigningPassword)
-    sign(publishing.publications["mavenJava"])
 }
