@@ -16,10 +16,10 @@ import kolbasa.cluster.admin.ShardBalanceResult
 
 internal class CheckCluster : ClusterCommand(name = "check-cluster") {
 
-    private val checks by option("--checks", metavar = "<check,check,...>")
+    private val checks: List<AvailableCheck> by option("--checks", metavar = "<check,check,...>")
         .enum<AvailableCheck> { it.checkName }
         .split(",")
-        .default(AvailableCheck.all.toList())
+        .default(AvailableCheck.entries)
         .help("Which checks to run, comma-separated. All of them by default")
 
     override val helpSection = HelpSection.DIAGNOSTICS
