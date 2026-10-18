@@ -281,9 +281,10 @@ back to those two states in [Shard migration](#shard-migration).
   1023 | node B        | node B        | (null)
 ```
 
-(The `*_node` values shown are friendly labels; the real column holds each node's internal **node id** — an opaque 16-character string
-generated when the node is first initialized, not an operator-assigned name. A row mid-migration looks different: `consumer_node`
-is null and `next_consumer_node` names the destination — see [Shard migration](#shard-migration).)
+(The `*_node` values shown are friendly labels; the real column holds each node's **node id**, kept in its `q__node` table. A
+node that butcher sets up gets the id from its config line (see [Butcher.md → Node ids](Butcher.md#node-ids)); a node that a
+`Cluster` sets up first gets a random 16-character id. A row mid-migration looks different: `consumer_node` is null and
+`next_consumer_node` names the destination — see [Shard migration](#shard-migration).)
 
 Every client process holds a **`Cluster`** object (`kolbasa.cluster.Cluster`) — it opens connections to every node and keeps a
 cached snapshot of this table, which all the routing below consults. Three things are worth knowing about how that state is

@@ -781,8 +781,8 @@ whether butcher also prints the command's usage:
 
 | Kind | What it looks like | What it means / how to fix |
 |---|---|---|
-| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, or a duplicate line-id in one file. The message names the specific problem; fix it and re-run. |
-| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **this isn't an initialized cluster** — `Initialized shard table q__shard not found. Is it a Kolbasa cluster?`, meaning no node has a fully-seeded 1024-row `q__shard` (the cluster has never been started by an application, or you pointed butcher at the wrong databases). |
+| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, an invalid node id (other characters than `[a-zA-Z0-9_.-]`, or longer than 100), or a duplicate node id in one file. The message names the specific problem; fix it and re-run. |
+| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The three you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), **node ids don't match** (see [below](#node-ids-dont-match)), or **this isn't an initialized cluster** — `Initialized shard table q__shard not found. Is it a Kolbasa cluster?`, meaning no node has a fully-seeded 1024-row `q__shard` (the cluster has never been started by an application, or you pointed butcher at the wrong databases). |
 
 Six migration-specific refusals are worth knowing by name, because the message states the rule rather than
 the fix:
@@ -790,13 +790,13 @@ the fix:
 | Refusal | Cause | Fix |
 |---|---|---|
 | shard already belongs to the target | `prepare-migration --target=X` for a shard node X already owns. | Pick a different target, or drop that shard from `--shards`. |
-| target is not a node of this cluster | `--target` isn't a known node id in the cluster (remember it's the internal `q__node` id, not the config line-id). | Re-run `check-cluster --checks=shard-balance` and copy the exact node id from the `--target=…` line it prints. |
+| target is not a node of this cluster | `--target` isn't the id of any node in the cluster. | Re-run `check-cluster --checks=shard-balance` and copy the exact node id from the `--target=…` line it prints. |
 | table schemas differ between nodes | `move-data` found a table whose shape differs between nodes. | Resolve the drift first — run `check-cluster --checks=schema-consistency` to see exactly what differs, then re-run schema generation (start a `Cluster` against the lagging node) or restore the missing objects. Then re-run `move-data`. |
 | shards are already migrating | `rebalance-cluster` or `drain-nodes` on a cluster where something is mid-migration: an interrupted run of either, or a hand-driven migration in progress. The message counts the shards and names the nodes they are going to. | Finish that migration: `move-data` until it reports zero, then `finalize-migration`. Then run the command again; it picks up from the distribution it finds. `check-cluster --checks=migration-state` is the same information in advance. |
-| node is not a member of this cluster | `drain-nodes --nodes=X` where X is not a node id of the cluster. Most often a config line-id typed instead of the internal `q__node` id. The message lists the ids that do exist. | Copy the id from `check-cluster --checks=shard-balance`. |
+| node is not a member of this cluster | `drain-nodes --nodes=X` where X is not a node id of the cluster. The message lists the ids that do exist. | Use an id from the config file. |
 | draining would leave the cluster without a node | `drain-nodes` naming every node of the cluster. Their shards would have nowhere to go. | Add a node and let it join first, or drop the queues instead of draining them. |
 
-Two questions that come up often:
+Three questions that come up often:
 
 - **"`move-data` got interrupted — did I corrupt anything?"** No. It is safe to re-run; copies are idempotent
   and it only deletes rows from the source after they're safely on the target. Just run it again until it
@@ -810,15 +810,52 @@ Two questions that come up often:
   you flipped by mistake, prepare it back to its original owner. As long as you haven't run `move-data`, the
   rows never left their node.
 
+### Node ids don't match
+
+Every command checks that each node is the node its line names (see [Node ids](#node-ids)). If one is not,
+the command stops before it changes anything:
+
+```
+Error: Node ids don't match:
+  node-01: this node's id is 3kq9x0w2m1z8c7ab
+  node-03: q__node has no active row. If the node holds no data yet, drop q__node and run again. Otherwise, restore the row by hand
+```
+
+**"this node's id is …"** means the line names the wrong node. Either the id on the line is wrong, or the
+connection keys point at another node's database. Fix the line and run again. This is also how to find the
+ids of a cluster whose file has none yet: every wrong line gets the real id.
+
+**"q__node has no active row"** means the node has a `q__node` table with no row in it. butcher never fills
+the row in by itself. The row holds the node's bucket, and the bucket decides the node's message ids. A wrong
+bucket can give two nodes the same ids.
+
+- **The node holds no data yet.** Drop `q__node` and run again. The node gets the id from its line, like any
+  new node.
+- **The node holds data.** Put the old row back by hand. The old id is in `q__shard`, on the node that holds
+  it: `select distinct producer_node from q__shard` lists every node that owns shards, and the old id is the
+  one no other node has. The old bucket is in any queue's id sequence on this node:
+
+  ```sql
+  select seqmin >> 53 from pg_sequence where seqrelid = pg_get_serial_sequence('q_orders', 'id')::regclass;
+
+  insert into q__node(status, id, identifiers_bucket) values ('active', '<old id>', <bucket>);
+  ```
+
 ## The same thing from code
 
 Every check, every migration step and both high-level commands are methods on
 `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand. The
-CLI is a frontend over this class and uses nothing it does not offer — `butcher` is the name of the tool,
-not of the API.
+CLI is a frontend over this class and `ClusterAdminHelpers`, and uses nothing they do not offer — `butcher`
+is the name of the tool, not of the API.
 
 ```kotlin
-val admin = ClusterAdmin(listOf(node01, node02, node03))   // the same DataSource list a Cluster is given
+val nodes = mapOf(NodeId("node-01") to node01, NodeId("node-02") to node02, NodeId("node-03") to node03)
+
+// What butcher does before every command
+ClusterAdminHelpers.checkNodesAvailable(nodes.values.toList())
+ClusterAdminHelpers.checkNodeIds(nodes)
+
+val admin = ClusterAdmin(nodes.values.toList())   // the same DataSource list a Cluster is given
 
 // What the two high-level commands are, as one call each
 admin.rebalance(shardsPerRound = 50)
@@ -845,6 +882,12 @@ Creating a `ClusterAdmin` touches no database: it only remembers the nodes. That
 when a cluster is already in a bad state, and a tool that repaired the schema or seeded the shard table on
 its way in would destroy the evidence it was asked to look at. (`Cluster` does initialize what it needs when
 it starts, which is why it is the wrong thing to diagnose a cluster with.)
+
+The two checks butcher runs first are not part of `ClusterAdmin`. They live in `ClusterAdminHelpers`, and you
+call them before creating it. `checkNodesAvailable` fails with one clear error if a node can't be reached.
+`checkNodeIds` is the [node id check](#node-ids). It is the one call here that writes: a node with no id gets
+the one you named it by. Without it, the first `ClusterAdmin` call that reads such a node gives it a random
+id.
 
 The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
 `migrationState.isClean`, `schemaConsistency.divergencesByTable` — so a program decides on the numbers

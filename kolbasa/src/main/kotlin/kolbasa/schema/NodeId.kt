@@ -4,8 +4,11 @@ package kolbasa.schema
  * Identifier of one node – one PostgreSQL server – of a kolbasa cluster
  *
  * A node is given its id once, when its internal `q__node` table is first created, and keeps it forever. The
- * id is a short random string rather than a host name or a position in a configuration file, so it survives
- * moving the database, changing its address and reordering the node list of a [Cluster][kolbasa.cluster.Cluster].
+ * id is not a host name or a position in a node list, so it survives moving the database, changing its address
+ * and reordering the node list of a [Cluster][kolbasa.cluster.Cluster].
+ *
+ * [ClusterAdminHelpers.checkNodeIds][kolbasa.cluster.admin.ClusterAdminHelpers.checkNodeIds] gives a new node the
+ * id an operator chose for it. A node that a [Cluster][kolbasa.cluster.Cluster] sets up first gets a short random id.
  *
  * Node ids appear whenever a cluster is described from the outside: which node stores a shard, which node a
  * shard is migrating to, which node a report is about. A standalone, non-cluster deployment has exactly one

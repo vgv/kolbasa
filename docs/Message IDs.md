@@ -55,7 +55,8 @@ internal table that holds the node's identity), and you never set it by hand. It
 
 - **Seeding (first init).** The bucket is written once, when a node's `q__node` table is first created. A standalone database
   seeds bucket `0`. In a cluster, each node is instead seeded by its position in the configured node list — `0, 1, 2, …` — so
-  freshly initialized cluster nodes normally get **distinct** buckets with no further work. Seeding only applies to a node that
+  freshly initialized cluster nodes normally get **distinct** buckets with no further work. A node that butcher sets up (see
+  [Butcher.md → Node ids](Butcher.md#node-ids)) gets the lowest bucket no other node uses. Seeding only applies to a node that
   has no `q__node` table yet; a node that already has one keeps whatever bucket it was first given.
 - **Reconciliation (every `Cluster` start).** Seeding is not enough on its own — two nodes can still end up claiming the same
   bucket, most commonly when a database that was previously run **standalone** (already sitting at bucket `0`) joins a cluster
