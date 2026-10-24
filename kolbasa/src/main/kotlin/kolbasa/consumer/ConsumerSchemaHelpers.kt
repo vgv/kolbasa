@@ -273,7 +273,7 @@ internal object ConsumerSchemaHelpers {
         }
         val dlqInsertColumnsStr = dlqInsertColumns.joinToString(",")
 
-        // SELECT expressions — direct transfers + epoch-millis conversions for timestamps
+        // SELECT expressions
         val selectExprs = buildList {
             add("statement_timestamp()")                            // scheduled_at = now
             add("${dlq.options.defaultAttempts}")                   // remaining_attempts

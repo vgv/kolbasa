@@ -73,7 +73,7 @@ sealed class MessageResult {
          */
         val id: Id,
         /**
-         * New visibility timeout
+         * New timestamp when this message becomes available to receive
          */
         val scheduledAt: Instant,
         /**
