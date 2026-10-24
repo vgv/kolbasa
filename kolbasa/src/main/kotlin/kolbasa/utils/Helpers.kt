@@ -11,7 +11,7 @@ internal object Helpers {
      * cannot be split into complete key/value pairs.
      */
     fun arrayToMap(array: Array<String>?): Map<String, String>? {
-        if (array == null) {
+        if (array.isNullOrEmpty()) {
             return null
         }
 
@@ -29,6 +29,22 @@ internal object Helpers {
         }
 
         return data
+    }
+
+    fun mapToArray(map: Map<String, String>?): Array<String>? {
+        if (map.isNullOrEmpty()) {
+            return null
+        }
+
+        val array = Array(map.size * 2) { "" }
+        var i = 0
+        for ((key, value) in map) {
+            array[i] = key
+            array[i + 1] = value
+            i += 2
+        }
+
+        return array
     }
 
     /**

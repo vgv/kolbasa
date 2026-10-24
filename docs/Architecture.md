@@ -815,7 +815,7 @@ options you construct and pass to a specific queue, role, or call.
 
 | Class | Configures | Key fields |
 |---|---|---|
-| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `shardStrategy`, `asyncExecutor`, `prometheusConfig`, `openTelemetryConfig` |
+| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `shardStrategy`, `asyncExecutor`, `prometheusConfig`, `tracing` |
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |

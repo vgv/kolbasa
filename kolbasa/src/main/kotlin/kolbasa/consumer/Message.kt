@@ -83,7 +83,7 @@ data class Message<Data>(
     val meta: MetaValues = MetaValues.EMPTY
 ) {
 
-    internal var openTelemetryData: Map<String, String>? = null
+    internal var traceContext: Map<String, String>? = null
 
     /** Returns `true` when [remainingAttempts] is 0: the queue will not hand this message out again. */
     fun isLastAttempt(): Boolean = (remainingAttempts == 0)

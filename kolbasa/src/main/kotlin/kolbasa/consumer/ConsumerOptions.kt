@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.queue.Checks
+import kolbasa.stats.tracing.Tracing
 import java.time.Duration
 
 /**
@@ -79,7 +80,13 @@ data class ConsumerOptions(
      * messages received in that call will be available after 2 minutes, overriding the default values for both the consumer
      * and the queue.
      */
-    val visibilityTimeout: Duration? = null
+    val visibilityTimeout: Duration? = null,
+
+    /**
+     * Tracing for this consumer. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.tracing][kolbasa.Kolbasa.tracing] will be used.
+     */
+    val tracing: Tracing? = null
 ) {
 
     init {
@@ -91,6 +98,7 @@ data class ConsumerOptions(
     class Builder {
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
+        private var tracing: Tracing? = null
 
         /** Sets [ConsumerOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
@@ -98,8 +106,11 @@ data class ConsumerOptions(
         /** Sets [ConsumerOptions.visibilityTimeout] – how long a received message stays invisible to other consumers. */
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
 
+        /** Sets [ConsumerOptions.tracing] – the tracing of this consumer, used instead of the global one. */
+        fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
+
         /** Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused. */
-        fun build() = ConsumerOptions(consumer, visibilityTimeout)
+        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing)
     }
 
     companion object {

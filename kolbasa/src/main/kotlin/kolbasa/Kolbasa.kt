@@ -3,9 +3,9 @@ package kolbasa
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
-import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
+import kolbasa.stats.tracing.Tracing
 import kolbasa.utils.DaemonThreadFactory
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -15,7 +15,7 @@ import java.util.concurrent.Executors
  *
  * Every property here is one value shared by all producers, consumers, mutators and queues in the JVM. All of them
  * can be changed at any time, but see each property for WHEN it is read: most are read at the point of use, while
- * [prometheusConfig] and [openTelemetryConfig] have to be set before any other use of Kolbasa.
+ * [prometheusConfig] has to be set before any other use of Kolbasa.
  *
  * ## Usage Example
  *
@@ -74,14 +74,17 @@ object Kolbasa {
     var prometheusConfig: PrometheusConfig = PrometheusConfig.None
 
     /**
-     * OpenTelemetry configuration. The default, [OpenTelemetryConfig.None], collects and propagates nothing.
+     * Tracing for every producer and consumer that doesn't set its own in
+     * [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing] or
+     * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing].
      *
-     * Set it before any other use of Kolbasa: the configuration is applied once and stays for the whole life of
-     * the JVM, so changing it later has no effect on anything already running.
+     * The default, [Tracing.NONE], traces nothing.
+     *
+     * Read on every send() and receive(), so a change takes effect on the next call.
      */
     @JvmStatic
     @Volatile
-    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
+    var tracing: Tracing = Tracing.NONE
 
     /**
      * How often a [Cluster][kolbasa.cluster.Cluster] refreshes its view of the nodes, and on which executor.
