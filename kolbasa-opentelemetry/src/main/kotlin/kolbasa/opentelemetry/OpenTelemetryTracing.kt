@@ -1,4 +1,4 @@
-package kolbasa.stats.opentelemetry
+package kolbasa.opentelemetry
 
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey

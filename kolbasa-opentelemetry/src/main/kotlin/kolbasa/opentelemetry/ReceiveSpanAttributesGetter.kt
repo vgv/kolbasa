@@ -1,4 +1,4 @@
-package kolbasa.stats.opentelemetry
+package kolbasa.opentelemetry
 
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesGetter
 

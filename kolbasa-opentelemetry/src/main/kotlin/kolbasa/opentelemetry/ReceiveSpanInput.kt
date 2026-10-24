@@ -1,4 +1,4 @@
-package kolbasa.stats.opentelemetry
+package kolbasa.opentelemetry
 
 import kolbasa.consumer.Message
 import kolbasa.schema.NodeId

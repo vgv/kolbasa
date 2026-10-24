@@ -1,4 +1,4 @@
-package kolbasa.stats.opentelemetry
+package kolbasa.opentelemetry
 
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.context.Context
