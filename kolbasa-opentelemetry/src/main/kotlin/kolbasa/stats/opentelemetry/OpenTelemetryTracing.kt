@@ -18,6 +18,7 @@ import kolbasa.stats.tracing.ReceiveCall
 import kolbasa.stats.tracing.SendCall
 import kolbasa.stats.tracing.Tracing
 import java.time.Instant
+import java.util.function.Supplier
 
 /**
  * [Tracing] with OpenTelemetry.
@@ -100,6 +101,12 @@ class OpenTelemetryTracing(
         makeConsumerSpan(call, result, null, start)
 
         return result
+    }
+
+    override fun <T> wrapAsync(task: Supplier<T>): Supplier<T> {
+        // The executor runs the task in another thread, where Context.current() is empty. Take the caller's context
+        // along, so the send span gets the caller's span as its parent
+        return Context.current().wrapSupplier(task)
     }
 
     // The span is made after the call, not before: its links come from the received messages

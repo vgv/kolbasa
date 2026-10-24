@@ -131,6 +131,25 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testSendAsync_ParentSpan() {
+        // sendAsync() sends in another thread. The send span must still get the caller's span as its parent
+        val parentSpan = tracerProvider.get("test").spanBuilder("parent").startSpan()
+        parentSpan.makeCurrent().use {
+            DatabaseProducer(dataSource, producerOptions)
+                .sendAsync(queue, "bugaga")
+                .get()
+                .throwExceptionIfAny()
+        }
+        parentSpan.end()
+
+        // Only the caller's span and the send span, nothing else
+        val spans = spanExporter.finishedSpanItems
+        assertEquals(2, spans.size, spans.joinToString { "${it.kind} '${it.name}'" })
+        val producerSpan = spans.single { it.kind == SpanKind.PRODUCER }
+        assertEquals(parentSpan.spanContext.spanId, producerSpan.parentSpanId)
+    }
+
+    @Test
     fun testReceive_Error() {
         // No queue table, so the receive query fails
         SchemaHelpers.deleteQueues(dataSource, queue)

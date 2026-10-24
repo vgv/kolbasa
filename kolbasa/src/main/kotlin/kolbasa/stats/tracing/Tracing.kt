@@ -2,6 +2,7 @@ package kolbasa.stats.tracing
 
 import kolbasa.consumer.Message
 import kolbasa.producer.SendResult
+import java.util.function.Supplier
 
 /**
  * A hook for a tracing system.
@@ -48,6 +49,15 @@ interface Tracing {
      * Called around every `receive()`. Must call [ReceiveCall.proceed] exactly once and return its result.
      */
     fun <Data> receive(call: ReceiveCall<Data>): List<Message<Data>>
+
+    /**
+     * Called by every `sendAsync()`, in the caller's thread, before the send goes to the executor. The executor
+     * runs the returned task instead of [task]. Use it to carry the caller's trace context into the executor's
+     * thread, so the send span gets the right parent.
+     *
+     * By default returns [task] as is.
+     */
+    fun <T> wrapAsync(task: Supplier<T>): Supplier<T> = task
 
     companion object {
 
