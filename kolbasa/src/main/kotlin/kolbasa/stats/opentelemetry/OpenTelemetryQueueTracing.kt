@@ -5,8 +5,8 @@ import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.AttributesBuilder
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.context.Context
-import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessageOperation
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesExtractor
+import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingOperationType
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingSpanNameExtractor
 import io.opentelemetry.instrumentation.api.instrumenter.AttributesExtractor
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
@@ -100,14 +100,14 @@ internal class OpenTelemetryQueueTracing<Data>(
         queueName: String
     ): Instrumenter<ProducerCall<Data>, SendResult<Data>> {
         val sendRequestAttributesGetter = SendRequestAttributesGetter<Data>(queueName)
+        val operationType = MessagingOperationType.SEND
+        // Name of our own method, goes to "messaging.operation.name"
+        val operationName = "send"
 
-        val spanNameExtractor = MessagingSpanNameExtractor.create(sendRequestAttributesGetter, MessageOperation.PUBLISH)
+        val spanNameExtractor = MessagingSpanNameExtractor.create(sendRequestAttributesGetter, operationType, operationName)
 
-        val messagingAttributesExtractor = MessagingAttributesExtractor.builder(
-            sendRequestAttributesGetter,
-            MessageOperation.PUBLISH
-        )
-            .build()
+        val messagingAttributesExtractor =
+            MessagingAttributesExtractor.create(sendRequestAttributesGetter, operationType, operationName)
 
         val nodeIdAttributesExtractor = object : AttributesExtractor<ProducerCall<Data>, SendResult<Data>> {
             override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ProducerCall<Data>) {
@@ -141,10 +141,11 @@ internal class OpenTelemetryQueueTracing<Data>(
         queueName: String
     ): Instrumenter<ConsumerCall<Data>, Unit> {
         val getter = ConsumerResponseAttributesGetter<Data>(queueName)
-        val operation = MessageOperation.RECEIVE
+        val operationType = MessagingOperationType.RECEIVE
+        // Name of our own method, goes to "messaging.operation.name"
+        val operationName = "receive"
 
-        val messagingAttributesExtractor = MessagingAttributesExtractor.builder(getter, operation)
-            .build()
+        val messagingAttributesExtractor = MessagingAttributesExtractor.create(getter, operationType, operationName)
 
         val nodeIdAttributesExtractor = object : AttributesExtractor<ConsumerCall<Data>, Unit> {
             override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ConsumerCall<Data>) {
@@ -166,7 +167,7 @@ internal class OpenTelemetryQueueTracing<Data>(
         return Instrumenter.builder<ConsumerCall<Data>, Unit>(
             openTelemetry,
             "kolbasa",
-            MessagingSpanNameExtractor.create(getter, operation)
+            MessagingSpanNameExtractor.create(getter, operationType, operationName)
         )
             .addSpanLinksExtractor(
                 ConsumerSpanLinksExtractor(
