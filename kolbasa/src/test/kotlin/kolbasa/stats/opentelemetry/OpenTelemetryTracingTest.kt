@@ -1,6 +1,7 @@
 package kolbasa.stats.opentelemetry
 
 import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
 import io.opentelemetry.context.propagation.ContextPropagators
 import io.opentelemetry.sdk.OpenTelemetrySdk
@@ -18,11 +19,14 @@ import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.parallel.Isolated
+import java.sql.SQLException
 
 // Kolbasa.openTelemetryConfig is global: while it is set, every queue used for the first time picks it up.
 // So the test runs alone, and no other test can touch its queues meanwhile
@@ -70,6 +74,22 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         dataSource.inTransaction { assertNotNull(ConnectionAwareDatabaseConsumer().receive(it, queue)) }
 
         assertOneLinkedSpanPerCall()
+    }
+
+    @Test
+    fun testReceive_Error() {
+        // No queue table, so the receive query fails
+        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+
+        assertThrows<SQLException> { DatabaseConsumer(dataSource).receive(queue) }
+
+        // The failed receive() still makes its span, and the span is marked as an error
+        val spans = spanExporter.finishedSpanItems
+        assertEquals(1, spans.size, spans.joinToString { "${it.kind} '${it.name}'" })
+        val consumerSpan = spans.first()
+        assertEquals(SpanKind.CONSUMER, consumerSpan.kind)
+        assertEquals("tracing receive", consumerSpan.name)
+        assertEquals(StatusCode.ERROR, consumerSpan.status.statusCode)
     }
 
     // One send() makes one producer span, one receive() makes one consumer span, and the consumer span links to

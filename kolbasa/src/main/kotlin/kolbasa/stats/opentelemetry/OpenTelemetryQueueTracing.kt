@@ -60,16 +60,27 @@ internal class OpenTelemetryQueueTracing<Data>(
 
     override fun makeConsumerCall(nodeId: NodeId, businessCall: () -> List<Message<Data>>): List<Message<Data>> {
         val start = Instant.now()
-        val result = businessCall()
-        val end = Instant.now()
-
-        val consumerCall = ConsumerCall(result, nodeId)
-        val parentContext = Context.current()
-        if (consumerInstrumenter.shouldStart(parentContext, consumerCall)) {
-            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, consumerCall, null, null, start, end)
+        val result = try {
+            businessCall()
+        } catch (e: Exception) {
+            // No messages, so the span has no links, only the error
+            makeConsumerSpan(nodeId, emptyList(), e, start)
+            throw e
         }
+        makeConsumerSpan(nodeId, result, null, start)
 
         return result
+    }
+
+    // The span is made after the call, not before: its links come from the received messages
+    private fun makeConsumerSpan(nodeId: NodeId, messages: List<Message<Data>>, error: Exception?, start: Instant) {
+        val end = Instant.now()
+
+        val consumerCall = ConsumerCall(messages, nodeId)
+        val parentContext = Context.current()
+        if (consumerInstrumenter.shouldStart(parentContext, consumerCall)) {
+            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, consumerCall, null, error, start, end)
+        }
     }
 
     private fun buildProducerInstrumenter(
