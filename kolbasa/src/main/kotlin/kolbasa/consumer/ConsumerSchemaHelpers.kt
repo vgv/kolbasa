@@ -1,7 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.cluster.Shards
-import kolbasa.consumer.order.OrderClause
+import kolbasa.consumer.order.SortOrder
 import kolbasa.producer.Id
 import kolbasa.producer.ShardId
 import kolbasa.queue.DatabaseQueueDataType
@@ -45,7 +45,7 @@ internal object ConsumerSchemaHelpers {
             }
         }
         // if we need OT data - read it
-        if (receiveOptions.readOpenTelemetryData) {
+        if (queue.queueTracing.readOpenTelemetryData()) {
             dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
         }
 
@@ -65,17 +65,17 @@ internal object ConsumerSchemaHelpers {
 
         // ----------------------------------------------------------
         // 'order by' clauses
-        val customColumnsForOrdering = mutableListOf<String>()
-        val orderByClauses = mutableListOf<String>()
-        // custom ordering clauses first, if any
-        receiveOptions.order.clauses.forEach { orderClause: OrderClause ->
-            orderByClauses += orderClause.dbOrderClause
-            if (orderClause.field.dbColumnName !in dataColumns) {
-                customColumnsForOrdering += orderClause.field.dbColumnName
-            }
+        // Sort keys: custom clauses first, if any, then the oldest messages first (scheduled_at asc)
+        // id_to_update_cte reads them before the update, and the same keys sort the result. UPDATE ... RETURNING gives
+        // the rows in no particular order, so this is what returns the messages in the order they were picked
+        val customSortKeys = receiveOptions.order.clauses.map { it.field.dbColumnName to it.order }
+        val defaultSortKeys = (Const.SCHEDULED_AT_COLUMN_NAME to SortOrder.ASC)
+        val sortKeys = (customSortKeys + defaultSortKeys).mapIndexed { index, (column, order) ->
+            SortKey(column, "sort_$index", order)
         }
-        // after custom clauses – standard
-        orderByClauses += Const.SCHEDULED_AT_COLUMN_NAME
+        val orderBy = sortKeys.joinToString(separator = ",") { sortKey ->
+            "${sortKey.alias} ${sortKey.order.sql}"
+        }
 
         // ----------------------------------------------------------
 
@@ -84,9 +84,9 @@ internal object ConsumerSchemaHelpers {
         return """
             with
             id_to_update_cte as (
-                select ${Const.ID_COLUMN_NAME} as id_value from ${queue.dbTableName}
+                select ${Const.ID_COLUMN_NAME} as id_value, ${sortKeys.joinToString(separator = ",") { "${it.column} as ${it.alias}" }} from ${queue.dbTableName}
                 where ${whereClauses.joinToString(separator = " and ")}
-                order by ${orderByClauses.joinToString(separator = ",")}
+                order by $orderBy
                 limit $limit
                 for update skip locked
             ),
@@ -98,10 +98,10 @@ internal object ConsumerSchemaHelpers {
                     ${Const.REMAINING_ATTEMPTS_COLUMN_NAME}=${Const.REMAINING_ATTEMPTS_COLUMN_NAME}-1,
                     ${Const.CONSUMER_COLUMN_NAME}=?
                 from id_to_update_cte where ${Const.ID_COLUMN_NAME} = id_to_update_cte.id_value
-                returning ${(dataColumns + customColumnsForOrdering).joinToString(separator = ",")}
+                returning ${(dataColumns + sortKeys.map { "id_to_update_cte.${it.alias}" }).joinToString(separator = ",")}
             )
             select ${dataColumns.joinToString(separator = ",")} from updated_cte
-            order by ${orderByClauses.joinToString(separator = ",")}
+            order by $orderBy
         """.trimIndent()
     }
 
@@ -134,9 +134,9 @@ internal object ConsumerSchemaHelpers {
 
         val localId = resultSet.getLong(columnIndex++)
         val shard = ShardId.of(resultSet.getInt(columnIndex++))
-        val createdAt = resultSet.getTimestamp(columnIndex++).time
-        val processingAt = resultSet.getTimestamp(columnIndex++).time
-        val scheduledAt = resultSet.getTimestamp(columnIndex++).time
+        val createdAt = resultSet.getTimestamp(columnIndex++).toInstant()
+        val processingAt = resultSet.getTimestamp(columnIndex++).toInstant()
+        val scheduledAt = resultSet.getTimestamp(columnIndex++).toInstant()
         val attempts = resultSet.getInt(columnIndex++)
 
         val data = when (queue.databaseDataType) {
@@ -184,7 +184,7 @@ internal object ConsumerSchemaHelpers {
             MetaValues.EMPTY
         }
 
-        val otData = if (receiveOptions.readOpenTelemetryData) {
+        val otData = if (queue.queueTracing.readOpenTelemetryData()) {
             // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}
             @Suppress("UNCHECKED_CAST")
             val otArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
@@ -273,7 +273,7 @@ internal object ConsumerSchemaHelpers {
         }
         val dlqInsertColumnsStr = dlqInsertColumns.joinToString(",")
 
-        // SELECT expressions — direct transfers + epoch-millis conversions for timestamps
+        // SELECT expressions
         val selectExprs = buildList {
             add("statement_timestamp()")                            // scheduled_at = now
             add("${dlq.options.defaultAttempts}")                   // remaining_attempts
@@ -385,5 +385,8 @@ internal object ConsumerSchemaHelpers {
     fun calculateConsumerName(consumerOptions: ConsumerOptions, receiveOptions: ReceiveOptions): String? {
         return receiveOptions.consumer ?: consumerOptions.consumer
     }
+
+    // One key of the receive query 'order by': the table column, its alias in id_to_update_cte and the direction
+    private data class SortKey(val column: String, val alias: String, val order: SortOrder)
 
 }

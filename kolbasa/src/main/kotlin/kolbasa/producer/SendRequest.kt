@@ -18,20 +18,6 @@ data class SendRequest<Data>(
     internal var effectiveShard: ShardId = ShardId.MIN_SHARD_ID
     // ----------------------------------------------------------------------------------------------
 
-    // OpenTelemetry
-    // ----------------------------------------------------------------------------------------------
-    internal var openTelemetryContext: MutableList<String>? = null
-
-    internal fun addOpenTelemetryContext(key: String, value: String) {
-        if (openTelemetryContext == null) {
-            openTelemetryContext = mutableListOf()
-        }
-
-        openTelemetryContext!!.add(key)
-        openTelemetryContext!!.add(value)
-    }
-    // ----------------------------------------------------------------------------------------------
-
     /**
      * Create a new [SendRequest] with the same options, but with a subset of the data
      */
@@ -41,7 +27,6 @@ data class SendRequest<Data>(
             options = options,
         )
         partialCopy.effectiveShard = effectiveShard
-        partialCopy.openTelemetryContext = openTelemetryContext
         return partialCopy
     }
 

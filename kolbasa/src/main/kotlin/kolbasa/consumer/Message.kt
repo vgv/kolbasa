@@ -2,6 +2,7 @@ package kolbasa.consumer
 
 import kolbasa.producer.Id
 import kolbasa.queue.meta.MetaValues
+import java.time.Instant
 
 /**
  * One message received from a queue, as returned by
@@ -28,17 +29,17 @@ data class Message<Data>(
     /**
      * Timestamp when this message was created
      */
-    val createdAt: Long,
+    val createdAt: Instant,
 
     /**
      * Timestamp when this message was taken for processing
      */
-    val processingAt: Long,
+    val processingAt: Instant,
 
     /**
      * Timestamp when this message will be available to receive again, e.g. visibility timeout
      */
-    val scheduledAt: Long,
+    val scheduledAt: Instant,
 
     /**
      * How many attempts we have to process this message

@@ -9,7 +9,7 @@ plugins {
 tasks.withType<Test> {
     enableAssertions = true
 
-    // enable parallel tests execution
+    // enable parallel tests execution, default strategy is "dynamic" - one thread per available core
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
     systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
 

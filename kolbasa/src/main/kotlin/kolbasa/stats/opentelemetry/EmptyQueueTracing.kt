@@ -14,10 +14,10 @@ internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
     override fun makeProducerCall(
         nodeId: NodeId,
         request: SendRequest<Data>,
-        businessCall: () -> SendResult<Data>
+        businessCall: (openTelemetryContext: List<String>?) -> SendResult<Data>
     ): SendResult<Data> {
         // default trivial implementation
-        return businessCall()
+        return businessCall(null)
     }
 
     override fun makeConsumerCall(nodeId: NodeId, businessCall: () -> List<Message<Data>>): List<Message<Data>> {

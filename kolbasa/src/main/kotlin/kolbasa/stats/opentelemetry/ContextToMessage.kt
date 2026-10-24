@@ -11,7 +11,8 @@ internal class ContextToMessageSetter<Data> : TextMapSetter<ProducerCall<Data>> 
             return
         }
 
-        carrier.request.addOpenTelemetryContext(key, value)
+        carrier.openTelemetryContext += key
+        carrier.openTelemetryContext += value
     }
 }
 

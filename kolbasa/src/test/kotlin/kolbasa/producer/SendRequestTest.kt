@@ -13,11 +13,9 @@ class SendRequestTest {
         }
 
         val sendRequest = SendRequest(messages, SendOptions())
-        sendRequest.openTelemetryContext = mutableListOf("1", "2", "3")
 
         sendRequest.chunked(10).forEachIndexed { index, chunk ->
             assertSame(sendRequest.options, chunk.options)
-            assertSame(sendRequest.openTelemetryContext, chunk.openTelemetryContext)
             val expected = messages.subList(index * 10, (index + 1) * 10)
             assertEquals(expected, chunk.data)
         }
@@ -31,7 +29,6 @@ class SendRequestTest {
         val sendOptions = SendOptions()
 
         val sendRequest = SendRequest(messages, sendOptions)
-        sendRequest.openTelemetryContext = mutableListOf("1", "2", "3")
 
         // if chunkSize is bigger or equals to messages size - just return the same SendRequest
         val requestFromSequence = sendRequest.chunked(messages.size + 1).first()

@@ -70,9 +70,8 @@ class DatabaseConsumerArchiveTest : AbstractPostgreSQLTest() {
 
         // Check original values is preserved in meta
         assertEquals(message.id.localId, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_ID))
-        // TODO: fix timezone issues to enable these checks
-        //assertEquals(message.createdAt, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_CREATED_AT))
-        //assertEquals(message.processingAt, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_PROCESSING_AT))
+        assertEquals(message.createdAt, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_CREATED_AT))
+        assertEquals(message.processingAt, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_PROCESSING_AT))
         assertEquals(message.remainingAttempts, archivedMsg.meta.get(Metadata.ARCHIVE_ORIGINAL_REMAINING_ATTEMPTS))
 
         // Check user-defined meta is preserved

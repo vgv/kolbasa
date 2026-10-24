@@ -66,7 +66,7 @@ class ClusterProducer @JvmOverloads constructor(
         val currentState = cluster.getState()
         val producer = currentState.getProducer(this, request.effectiveShard) { nodeId, dataSource ->
             val p = ConnectionAwareDatabaseProducer(nodeId, options)
-            DatabaseProducer(nodeId, dataSource, p)
+            DatabaseProducer(dataSource, p)
         }
 
         return producer.send(queue, request)

@@ -3,6 +3,7 @@ package kolbasa.consumer.datasource
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
+import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.MessageOptions
@@ -19,6 +20,7 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.assertNotNull
 import kolbasa.test.assertTrue
+import kolbasa.utils.JdbcHelpers.inTransaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
@@ -29,12 +31,12 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
-import kotlin.math.abs
 import kotlin.random.Random
 
 class DatabaseConsumerTest : AbstractPostgreSQLTest() {
@@ -74,8 +76,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
             assertNotSame(data, message.data)
             assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertTrue("message=$message") {
-                val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-                compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
+                val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+                compareTimestamps(message.processingAt + visibilityTimeout, message.scheduledAt)
             }
             assertEquals(QueueOptions.DEFAULT.defaultAttempts - 1, message.remainingAttempts)
 
@@ -119,8 +121,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data1, message1.data)
         assertTrue(message1.createdAt <= message1.processingAt, "message=$message1")
         assertTrue("message=$message1") {
-            val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-            compareTimestamps(message1.processingAt + visibilityTimeoutMillis, message1.scheduledAt)
+            val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+            compareTimestamps(message1.processingAt + visibilityTimeout, message1.scheduledAt)
         }
         assertSame(MetaValues.EMPTY, message1.meta)
 
@@ -131,8 +133,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data2, message2.data)
         assertTrue(message2.createdAt <= message2.processingAt, "message=$message2")
         assertTrue("message=$message2") {
-            val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-            compareTimestamps(message2.processingAt + visibilityTimeoutMillis, message2.scheduledAt)
+            val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+            compareTimestamps(message2.processingAt + visibilityTimeout, message2.scheduledAt)
         }
         assertSame(MetaValues.EMPTY, message2.meta)
     }
@@ -179,8 +181,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         receivedMessages.forEach { message ->
             assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertTrue("message=$message") {
-                val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-                compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
+                val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+                compareTimestamps(message.processingAt + visibilityTimeout, message.scheduledAt)
             }
             assertEquals(QueueOptions.DEFAULT.defaultAttempts - 1, message.remainingAttempts)
         }
@@ -211,7 +213,7 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
         // Check delay
         assertTrue(
-            (message.processingAt - message.createdAt) >= delay.toMillis(),
+            Duration.between(message.createdAt, message.processingAt) >= delay,
             "Message: $message, delay=$delay"
         )
 
@@ -222,8 +224,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data, message.data)
         assertTrue(message.createdAt <= message.processingAt, "message=$message")
         assertTrue("message=$message") {
-            val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-            compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
+            val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+            compareTimestamps(message.processingAt + visibilityTimeout, message.scheduledAt)
         }
 
         assertSame(MetaValues.EMPTY, message.meta)
@@ -254,8 +256,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data, firstMessage.data)
         assertTrue(firstMessage.createdAt <= firstMessage.processingAt, "message=$firstMessage")
         assertTrue("message=$firstMessage") {
-            val visibilityTimeoutMillis = delay.toMillis()
-            compareTimestamps(firstMessage.processingAt + visibilityTimeoutMillis, firstMessage.scheduledAt)
+            val visibilityTimeout = delay
+            compareTimestamps(firstMessage.processingAt + visibilityTimeout, firstMessage.scheduledAt)
         }
         assertEquals(QueueOptions.DEFAULT.defaultAttempts - 1, firstMessage.remainingAttempts)
         assertSame(MetaValues.EMPTY, firstMessage.meta)
@@ -274,8 +276,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data, secondMessage.data)
         assertTrue(secondMessage.createdAt <= secondMessage.processingAt, "message=$secondMessage")
         assertTrue("message=$secondMessage") {
-            val visibilityTimeoutMillis = delay.toMillis()
-            compareTimestamps(secondMessage.processingAt + visibilityTimeoutMillis, secondMessage.scheduledAt)
+            val visibilityTimeout = delay
+            compareTimestamps(secondMessage.processingAt + visibilityTimeout, secondMessage.scheduledAt)
         }
         assertEquals(QueueOptions.DEFAULT.defaultAttempts - 2, secondMessage.remainingAttempts)
         assertSame(MetaValues.EMPTY, secondMessage.meta)
@@ -288,7 +290,7 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
         // Check that interval between message became available is not less than visibilityTimeout delay
         assertTrue(
-            (secondMessage.processingAt - firstMessage.processingAt) >= delay.toMillis(),
+            Duration.between(firstMessage.processingAt, secondMessage.processingAt) >= delay,
             "First: ${firstMessage.processingAt}, second: ${secondMessage.processingAt}, delay=$delay"
         )
     }
@@ -321,8 +323,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
 
         assertTrue("message=$firstMessage") {
-            val visibilityTimeoutMillis = delay.toMillis()
-            compareTimestamps(firstMessage.processingAt + visibilityTimeoutMillis, firstMessage.scheduledAt)
+            val visibilityTimeout = delay
+            compareTimestamps(firstMessage.processingAt + visibilityTimeout, firstMessage.scheduledAt)
         }
 
 
@@ -357,8 +359,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data, withoutMetadata.data)
         assertTrue(withoutMetadata.createdAt <= withoutMetadata.processingAt, "message=$withoutMetadata")
         assertTrue("message=$withoutMetadata") {
-            val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-            compareTimestamps(withoutMetadata.processingAt + visibilityTimeoutMillis, withoutMetadata.scheduledAt)
+            val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+            compareTimestamps(withoutMetadata.processingAt + visibilityTimeout, withoutMetadata.scheduledAt)
         }
 
 
@@ -371,8 +373,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         assertNotSame(data, withMetadata.data)
         assertTrue(withMetadata.createdAt <= withMetadata.processingAt, "message=$withMetadata")
         assertTrue("message=$withMetadata") {
-            val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-            compareTimestamps(withMetadata.processingAt + visibilityTimeoutMillis, withMetadata.scheduledAt)
+            val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+            compareTimestamps(withMetadata.processingAt + visibilityTimeout, withMetadata.scheduledAt)
         }
     }
 
@@ -406,8 +408,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
             assertEquals("bugaga_$reverseIndex", message.data)
             assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertTrue("message=$message") {
-                val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-                compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
+                val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+                compareTimestamps(message.processingAt + visibilityTimeout, message.scheduledAt)
             }
             if (readMetadata) {
                 assertEquals(reverseIndex, message.meta.get(FIELD))
@@ -417,6 +419,33 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
             reverseIndex--
         }
+    }
+
+    @Test
+    fun testReceive_DefaultOrder() {
+        // Every next message gets a shorter delay, so the last one sent becomes visible first. The order of the rows
+        // in the table is the opposite of the order the consumer has to return them in.
+        val items = 5
+        val data = (1..items).map { index ->
+            SendMessage("bugaga_$index", MessageOptions(delay = Duration.ofMillis(50L * (items - index))))
+        }
+
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
+
+        // Wait until all messages are visible
+        TimeUnit.MILLISECONDS.sleep(50L * items + 100)
+
+        // ConnectionAware consumer, because the planner setting has to be in the same transaction as the receive().
+        // Without nested loops PostgreSQL joins the picked ids with the table by hash or merge join, and the update
+        // returns the rows in the table order, not in the order they were picked.
+        val consumer = ConnectionAwareDatabaseConsumer()
+        val messages = dataSource.inTransaction { connection ->
+            connection.createStatement().use { it.execute("set local enable_nestloop = off") }
+            consumer.receive(connection, queue, limit = items)
+        }
+
+        assertEquals((items downTo 1).map { "bugaga_$it" }, messages.map { it.data })
     }
 
     @ParameterizedTest
@@ -453,8 +482,8 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
             assertEquals("bugaga_$index", message.data)
             assertTrue(message.createdAt <= message.processingAt, "message=$message")
             assertTrue("message=$message") {
-                val visibilityTimeoutMillis = QueueOptions.DEFAULT.defaultVisibilityTimeout.toMillis()
-                compareTimestamps(message.processingAt + visibilityTimeoutMillis, message.scheduledAt)
+                val visibilityTimeout = QueueOptions.DEFAULT.defaultVisibilityTimeout
+                compareTimestamps(message.processingAt + visibilityTimeout, message.scheduledAt)
             }
             if (readMetadata) {
                 assertEquals(index, message.meta.get(FIELD))
@@ -466,9 +495,9 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
         }
     }
 
-    private fun compareTimestamps(first: Long, second: Long, delta: Duration = Duration.ofMillis(50)): Boolean {
-        val diff = abs(first - second)
-        return diff < delta.toMillis()
+    private fun compareTimestamps(first: Instant, second: Instant, delta: Duration = Duration.ofMillis(50)): Boolean {
+        val diff = Duration.between(first, second).abs()
+        return diff < delta
     }
 
 }

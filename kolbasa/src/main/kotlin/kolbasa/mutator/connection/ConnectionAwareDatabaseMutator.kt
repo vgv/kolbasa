@@ -228,7 +228,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
     private fun readAllFields(resultSet: ResultSet): MessageResult.Mutated {
         val localId = resultSet.getLong(1)
         val shard = ShardId.of(resultSet.getInt(2))
-        val scheduledAt = resultSet.getTimestamp(3).time
+        val scheduledAt = resultSet.getTimestamp(3).toInstant()
         val remainingAttempts = resultSet.getInt(4)
 
         val id = Id(localId, shard)
