@@ -35,19 +35,20 @@ internal class OpenTelemetryQueueTracing<Data>(
     override fun makeProducerCall(
         nodeId: NodeId,
         request: SendRequest<Data>,
-        businessCall: () -> SendResult<Data>
+        businessCall: (openTelemetryContext: List<String>?) -> SendResult<Data>
     ): SendResult<Data> {
         val producerCall = ProducerCall(request, nodeId)
         val parentContext = Context.current()
         if (!producerInstrumenter.shouldStart(parentContext, producerCall)) {
-            return businessCall()
+            return businessCall(null)
         }
 
-        // Start instrumenting
+        // Start instrumenting. It also writes the new span context into producerCall
         val context = producerInstrumenter.start(parentContext, producerCall)
+        val openTelemetryContext = producerCall.openTelemetryContext.takeIf { it.isNotEmpty() }
         val response = try {
             context.makeCurrent().use {
-                businessCall()
+                businessCall(openTelemetryContext)
             }
         } catch (e: Exception) {
             producerInstrumenter.end(context, producerCall, null, e)

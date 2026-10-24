@@ -11,14 +11,18 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kolbasa.Kolbasa
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.producer.SendMessage
+import kolbasa.producer.SendRequest
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
+import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.readStringList
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -74,6 +78,23 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         dataSource.inTransaction { assertNotNull(ConnectionAwareDatabaseConsumer().receive(it, queue)) }
 
         assertOneLinkedSpanPerCall()
+    }
+
+    @Test
+    fun testSend_SameRequestTwice() {
+        // Sending the same request again is legal, e.g. a retry. Each message must carry only its own trace context
+        val request = SendRequest(listOf(SendMessage("bugaga")))
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, request).throwExceptionIfAny()
+        producer.send(queue, request).throwExceptionIfAny()
+
+        val expected = spanExporter.finishedSpanItems.map { span ->
+            "traceparent 00-${span.traceId}-${span.spanId}-${span.spanContext.traceFlags.asHex()}"
+        }
+        val contexts = dataSource.readStringList(
+            "select array_to_string(${Const.OPENTELEMETRY_COLUMN_NAME}, ' ') from ${queue.dbTableName} order by ${Const.ID_COLUMN_NAME}"
+        )
+        assertEquals(expected, contexts)
     }
 
     @Test

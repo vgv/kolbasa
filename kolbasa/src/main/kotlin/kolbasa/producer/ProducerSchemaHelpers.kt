@@ -120,6 +120,7 @@ internal object ProducerSchemaHelpers {
         queue: Queue<Data>,
         producerOptions: ProducerOptions,
         request: SendRequest<Data>,
+        openTelemetryContext: List<String>?,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
     ) {
@@ -130,9 +131,9 @@ internal object ProducerSchemaHelpers {
         preparedStatement.setInt(columnIndex++, request.effectiveShard.id)
 
         // 2. Scalar: OpenTelemetry context (if present)
-        request.openTelemetryContext?.let { otContext ->
-            val otArray = connection.createArrayOf("varchar", otContext.toTypedArray())
-            preparedStatement.setArray(columnIndex++, otArray)
+        if (openTelemetryContext != null) {
+            val otelArray = connection.createArrayOf("varchar", openTelemetryContext.toTypedArray())
+            preparedStatement.setArray(columnIndex++, otelArray)
         }
 
         // 3. Array: delays in microseconds (bigint[])

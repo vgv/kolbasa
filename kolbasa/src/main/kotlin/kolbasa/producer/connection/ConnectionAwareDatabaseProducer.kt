@@ -46,11 +46,19 @@ class ConnectionAwareDatabaseProducer internal constructor(
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
         val (execution, result) = TimeHelper.measure {
-            queue.queueTracing.makeProducerCall(nodeId, request) {
+            queue.queueTracing.makeProducerCall(nodeId, request) { openTelemetryContext ->
                 when (partialInsert) {
-                    PartialInsert.PROHIBITED -> sendProhibited(connection, queue, approxStatsBytes, request)
-                    PartialInsert.UNTIL_FIRST_FAILURE -> sendUntilFirstFailure(connection, queue, approxStatsBytes, request)
-                    PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> sendAsMuchAsPossible(connection, queue, approxStatsBytes, request)
+                    PartialInsert.PROHIBITED -> {
+                        sendProhibited(connection, queue, approxStatsBytes, request, openTelemetryContext)
+                    }
+
+                    PartialInsert.UNTIL_FIRST_FAILURE -> {
+                        sendUntilFirstFailure(connection, queue, approxStatsBytes, request, openTelemetryContext)
+                    }
+
+                    PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
+                        sendAsMuchAsPossible(connection, queue, approxStatsBytes, request, openTelemetryContext)
+                    }
                 }
             }
         }
@@ -73,14 +81,15 @@ class ConnectionAwareDatabaseProducer internal constructor(
         connection: Connection,
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
-        request: SendRequest<Data>
+        request: SendRequest<Data>,
+        openTelemetryContext: List<String>?
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
 
         request.chunked(chunkSize).forEach { chunk ->
             try {
-                result += executeChunk(connection, queue, approxStatsBytes, chunk)
+                result += executeChunk(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
             } catch (e: Exception) {
                 // just stop all sequence execution and return the result
                 // all messages were failed
@@ -96,7 +105,8 @@ class ConnectionAwareDatabaseProducer internal constructor(
         connection: Connection,
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
-        request: SendRequest<Data>
+        request: SendRequest<Data>,
+        openTelemetryContext: List<String>?
     ): SendResult<Data> {
         val results = ArrayList<MessageResult<Data>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data>>()
@@ -108,7 +118,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                 // If we have at least one failed message – let's fail others
                 failResults += chunk.data
             } else {
-                executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk)
+                executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
                     .onSuccess { results += it }
                     .onFailure { ex ->
                         exception = ex
@@ -128,14 +138,15 @@ class ConnectionAwareDatabaseProducer internal constructor(
         connection: Connection,
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
-        request: SendRequest<Data>
+        request: SendRequest<Data>,
+        openTelemetryContext: List<String>?
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
         var failedMessages = 0
 
         request.chunked(chunkSize).forEach { chunk ->
-            executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk)
+            executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
                 .onSuccess { result += it }
                 .onFailure { ex ->
                     failedMessages += chunk.data.size
@@ -150,10 +161,11 @@ class ConnectionAwareDatabaseProducer internal constructor(
         connection: Connection,
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
-        request: SendRequest<Data>
+        request: SendRequest<Data>,
+        openTelemetryContext: List<String>?
     ): Result<List<MessageResult<Data>>> {
         return connection.useSavepoint { _ ->
-            executeChunk(connection, queue, approxStatsBytes, request)
+            executeChunk(connection, queue, approxStatsBytes, request, openTelemetryContext)
         }
     }
 
@@ -161,19 +173,20 @@ class ConnectionAwareDatabaseProducer internal constructor(
         connection: Connection,
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
-        request: SendRequest<Data>
+        request: SendRequest<Data>,
+        openTelemetryContext: List<String>?
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 
         val cacheKey =
-            CacheKey(queue, options, deduplicationMode, request.options, request.openTelemetryContext != null)
+            CacheKey(queue, options, deduplicationMode, request.options, openTelemetryContext != null)
         val query = sendQueryCache.getOrPut(cacheKey) {
             ProducerSchemaHelpers.generateInsertPreparedQuery(
                 queue = queue,
                 producerOptions = options,
                 deduplicationMode = deduplicationMode,
                 sendOptions = request.options,
-                hasOpenTelemetry = request.openTelemetryContext != null
+                hasOpenTelemetry = openTelemetryContext != null
             )
         }
 
@@ -183,6 +196,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                     queue = queue,
                     producerOptions = options,
                     request = request,
+                    openTelemetryContext = openTelemetryContext,
                     preparedStatement = preparedStatement,
                     approxBytesCounter = approxStatsBytes
                 )
