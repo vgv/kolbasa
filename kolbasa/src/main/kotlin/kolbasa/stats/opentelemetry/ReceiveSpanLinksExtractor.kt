@@ -7,12 +7,12 @@ import io.opentelemetry.context.propagation.TextMapPropagator
 import io.opentelemetry.instrumentation.api.instrumenter.SpanLinksBuilder
 import io.opentelemetry.instrumentation.api.instrumenter.SpanLinksExtractor
 
-internal class ConsumerSpanLinksExtractor(
+internal class ReceiveSpanLinksExtractor(
     private val propagator: TextMapPropagator,
     private val extractor: TextMapGetter<Map<String, String>>
-) : SpanLinksExtractor<ConsumerCall> {
+) : SpanLinksExtractor<ReceiveSpanInput> {
 
-    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: ConsumerCall) {
+    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: ReceiveSpanInput) {
         val root = Context.root()
 
         // Extract all context information from all messages and add them as links

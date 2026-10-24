@@ -3,9 +3,9 @@ package kolbasa.stats.opentelemetry
 import io.opentelemetry.context.propagation.TextMapGetter
 import io.opentelemetry.context.propagation.TextMapSetter
 
-internal class ContextToMessageSetter : TextMapSetter<ProducerCall> {
+internal class TraceContextSetter : TextMapSetter<SendSpanInput> {
 
-    override fun set(carrier: ProducerCall?, key: String, value: String) {
+    override fun set(carrier: SendSpanInput?, key: String, value: String) {
         if (carrier == null) {
             return
         }
@@ -14,7 +14,7 @@ internal class ContextToMessageSetter : TextMapSetter<ProducerCall> {
     }
 }
 
-internal class ContextFromMessageGetter : TextMapGetter<Map<String, String>> {
+internal class TraceContextGetter : TextMapGetter<Map<String, String>> {
 
     override fun keys(carrier: Map<String, String>): Iterable<String> {
         return carrier.keys

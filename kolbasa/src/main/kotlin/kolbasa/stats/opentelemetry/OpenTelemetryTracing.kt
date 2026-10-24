@@ -50,27 +50,27 @@ class OpenTelemetryTracing(
     openTelemetry: OpenTelemetry
 ) : Tracing {
 
-    private val producerInstrumenter: Instrumenter<ProducerCall, SendResult<*>> =
+    private val producerInstrumenter: Instrumenter<SendSpanInput, SendResult<*>> =
         buildProducerInstrumenter(openTelemetry)
 
-    private val consumerInstrumenter: Instrumenter<ConsumerCall, Unit> =
+    private val consumerInstrumenter: Instrumenter<ReceiveSpanInput, Unit> =
         buildConsumerInstrumenter(openTelemetry)
 
     override fun <Data> send(call: SendCall<Data>): SendResult<Data> {
-        val producerCall = ProducerCall(call.queue.name, call.nodeId, call.request)
+        val spanInput = SendSpanInput(call.queue.name, call.nodeId, call.request)
         val parentContext = Context.current()
-        if (!producerInstrumenter.shouldStart(parentContext, producerCall)) {
+        if (!producerInstrumenter.shouldStart(parentContext, spanInput)) {
             return call.proceed(emptyMap())
         }
 
-        // Start instrumenting. It also writes the new span context into producerCall
-        val context = producerInstrumenter.start(parentContext, producerCall)
+        // Start instrumenting. It also writes the new span context into spanInput
+        val context = producerInstrumenter.start(parentContext, spanInput)
         val response = try {
             context.makeCurrent().use {
-                call.proceed(producerCall.traceContext)
+                call.proceed(spanInput.traceContext)
             }
         } catch (e: Exception) {
-            producerInstrumenter.end(context, producerCall, null, e)
+            producerInstrumenter.end(context, spanInput, null, e)
             throw e
         }
 
@@ -83,7 +83,7 @@ class OpenTelemetryTracing(
         for (i in 1 until errors.size) {
             span.recordException(errors[i])
         }
-        producerInstrumenter.end(context, producerCall, response, errors.firstOrNull())
+        producerInstrumenter.end(context, spanInput, response, errors.firstOrNull())
 
         return response
     }
@@ -111,26 +111,26 @@ class OpenTelemetryTracing(
     ) {
         val end = Instant.now()
 
-        val consumerCall = ConsumerCall(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
+        val spanInput = ReceiveSpanInput(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
         val parentContext = Context.current()
-        if (consumerInstrumenter.shouldStart(parentContext, consumerCall)) {
-            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, consumerCall, null, error, start, end)
+        if (consumerInstrumenter.shouldStart(parentContext, spanInput)) {
+            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, spanInput, null, error, start, end)
         }
     }
 
-    private fun buildProducerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ProducerCall, SendResult<*>> {
-        val sendRequestAttributesGetter = SendRequestAttributesGetter()
+    private fun buildProducerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<SendSpanInput, SendResult<*>> {
+        val getter = SendSpanAttributesGetter()
         val operationType = MessagingOperationType.SEND
         // Name of our own method, goes to "messaging.operation.name"
         val operationName = "send"
 
-        val spanNameExtractor = MessagingSpanNameExtractor.create(sendRequestAttributesGetter, operationType, operationName)
+        val spanNameExtractor = MessagingSpanNameExtractor.create(getter, operationType, operationName)
 
         val messagingAttributesExtractor =
-            MessagingAttributesExtractor.create(sendRequestAttributesGetter, operationType, operationName)
+            MessagingAttributesExtractor.create(getter, operationType, operationName)
 
-        val nodeIdAttributesExtractor = object : AttributesExtractor<ProducerCall, SendResult<*>> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ProducerCall) {
+        val nodeIdAttributesExtractor = object : AttributesExtractor<SendSpanInput, SendResult<*>> {
+            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: SendSpanInput) {
                 if (request.nodeId.id.isNotEmpty()) {
                     attributes.put(NODE_ID_ATTRIBUTE_KEY, request.nodeId.id)
                 }
@@ -139,33 +139,33 @@ class OpenTelemetryTracing(
             override fun onEnd(
                 attributes: AttributesBuilder,
                 context: Context,
-                request: ProducerCall,
+                request: SendSpanInput,
                 response: SendResult<*>?,
                 error: Throwable?
             ) {
             }
         }
 
-        return Instrumenter.builder<ProducerCall, SendResult<*>>(
+        return Instrumenter.builder<SendSpanInput, SendResult<*>>(
             openTelemetry,
             "kolbasa",
             spanNameExtractor
         )
             .addAttributesExtractor(messagingAttributesExtractor)
             .addAttributesExtractor(nodeIdAttributesExtractor)
-            .buildProducerInstrumenter(ContextToMessageSetter())
+            .buildProducerInstrumenter(TraceContextSetter())
     }
 
-    private fun buildConsumerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ConsumerCall, Unit> {
-        val getter = ConsumerResponseAttributesGetter()
+    private fun buildConsumerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ReceiveSpanInput, Unit> {
+        val getter = ReceiveSpanAttributesGetter()
         val operationType = MessagingOperationType.RECEIVE
         // Name of our own method, goes to "messaging.operation.name"
         val operationName = "receive"
 
         val messagingAttributesExtractor = MessagingAttributesExtractor.create(getter, operationType, operationName)
 
-        val nodeIdAttributesExtractor = object : AttributesExtractor<ConsumerCall, Unit> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ConsumerCall) {
+        val nodeIdAttributesExtractor = object : AttributesExtractor<ReceiveSpanInput, Unit> {
+            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ReceiveSpanInput) {
                 if (request.nodeId.id.isNotEmpty()) {
                     attributes.put(NODE_ID_ATTRIBUTE_KEY, request.nodeId.id)
                 }
@@ -174,22 +174,22 @@ class OpenTelemetryTracing(
             override fun onEnd(
                 attributes: AttributesBuilder,
                 context: Context,
-                request: ConsumerCall,
+                request: ReceiveSpanInput,
                 response: Unit?,
                 error: Throwable?
             ) {
             }
         }
 
-        return Instrumenter.builder<ConsumerCall, Unit>(
+        return Instrumenter.builder<ReceiveSpanInput, Unit>(
             openTelemetry,
             "kolbasa",
             MessagingSpanNameExtractor.create(getter, operationType, operationName)
         )
             .addSpanLinksExtractor(
-                ConsumerSpanLinksExtractor(
+                ReceiveSpanLinksExtractor(
                     openTelemetry.propagators.textMapPropagator,
-                    ContextFromMessageGetter()
+                    TraceContextGetter()
                 )
             )
             .addAttributesExtractor(messagingAttributesExtractor)

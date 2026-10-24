@@ -3,7 +3,7 @@ package kolbasa.stats.opentelemetry
 import kolbasa.producer.SendRequest
 import kolbasa.schema.NodeId
 
-internal class ProducerCall(
+internal class SendSpanInput(
     val queueName: String,
     val nodeId: NodeId,
     val request: SendRequest<*>
