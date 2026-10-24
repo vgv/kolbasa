@@ -120,9 +120,6 @@ data class ReceiveOptions(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
-    // do we need to read, parse and propagate OT data?
-    internal var readOpenTelemetryData: Boolean = false
-
     /** Builder for flexible [ReceiveOptions] creation, when only some of the properties need to be set. */
     class Builder {
         private var consumer: String? = null

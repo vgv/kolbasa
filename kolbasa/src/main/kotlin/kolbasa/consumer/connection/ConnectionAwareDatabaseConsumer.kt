@@ -58,9 +58,6 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         limit: Int,
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
-        // Do we need to read OT data?
-        receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
-
         return queue.queueTracing.makeConsumerCall(nodeId) {
             doRealReceive(connection, queue, limit, receiveOptions)
         }

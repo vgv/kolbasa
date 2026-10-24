@@ -45,7 +45,7 @@ internal object ConsumerSchemaHelpers {
             }
         }
         // if we need OT data - read it
-        if (receiveOptions.readOpenTelemetryData) {
+        if (queue.queueTracing.readOpenTelemetryData()) {
             dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
         }
 
@@ -184,7 +184,7 @@ internal object ConsumerSchemaHelpers {
             MetaValues.EMPTY
         }
 
-        val otData = if (receiveOptions.readOpenTelemetryData) {
+        val otData = if (queue.queueTracing.readOpenTelemetryData()) {
             // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}
             @Suppress("UNCHECKED_CAST")
             val otArray = resultSet.getArray(columnIndex++)?.array as? Array<String>

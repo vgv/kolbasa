@@ -48,9 +48,6 @@ class DatabaseConsumer internal constructor(
     )
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
-        // Do we need to read OT data?
-        receiveOptions.readOpenTelemetryData = queue.queueTracing.readOpenTelemetryData()
-
         return queue.queueTracing.makeConsumerCall(nodeId) {
             dataSource.inTransaction { peer.receive(it, queue, limit, receiveOptions) }
         }
