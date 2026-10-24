@@ -270,7 +270,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     }
 
     private fun dataSourceFor(schema: String): HikariDataSource = HikariDataSource().apply {
-        jdbcUrl = pgContainer.jdbcUrl
+        jdbcUrl = databaseUrl
         username = pgContainer.username
         password = pgContainer.password
         this.schema = schema
@@ -299,7 +299,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     private fun configLine(id: String, schema: String): String =
         "$id  host=${pgContainer.host} port=${pgContainer.firstMappedPort} " +
             "user=${pgContainer.username} password=${pgContainer.password} " +
-            "dbname=${pgContainer.databaseName} schema=$schema\n"
+            "dbname=$databaseName schema=$schema\n"
 
     /** The id the application gave this node when it started */
     private fun nodeIdOf(dataSource: DataSource): String =
