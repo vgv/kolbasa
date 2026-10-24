@@ -13,13 +13,42 @@ import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
-import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
-import kolbasa.schema.NodeId
+import kolbasa.stats.tracing.ReceiveCall
+import kolbasa.stats.tracing.SendCall
+import kolbasa.stats.tracing.Tracing
 import java.time.Instant
 
-// One object serves all queues: the queue name comes with every call
-internal class OpenTelemetryQueueTracing(openTelemetry: OpenTelemetry) : QueueTracing {
+/**
+ * [Tracing] with OpenTelemetry.
+ *
+ * Every `send()` becomes a producer span, and its trace context is stored with the sent messages. Every `receive()`
+ * becomes a consumer span, linked to the spans that sent the received messages. So both sides of the queue can be
+ * seen as one flow, even though they are different applications and different moments in time.
+ *
+ * One object serves all queues, so create it once and share it.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * // for the whole application
+ * Kolbasa.tracing = OpenTelemetryTracing(openTelemetry)
+ * // or for one producer only
+ * val producer = DatabaseProducer(dataSource, ProducerOptions(tracing = OpenTelemetryTracing(openTelemetry)))
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Kolbasa.setTracing(new OpenTelemetryTracing(openTelemetry));
+ * ```
+ */
+class OpenTelemetryTracing(
+    /**
+     * Where the spans go, and how the trace context is written into messages and read back.
+     */
+    openTelemetry: OpenTelemetry
+) : Tracing {
 
     private val producerInstrumenter: Instrumenter<ProducerCall, SendResult<*>> =
         buildProducerInstrumenter(openTelemetry)
@@ -27,24 +56,18 @@ internal class OpenTelemetryQueueTracing(openTelemetry: OpenTelemetry) : QueueTr
     private val consumerInstrumenter: Instrumenter<ConsumerCall, Unit> =
         buildConsumerInstrumenter(openTelemetry)
 
-    override fun <Data> makeProducerCall(
-        queueName: String,
-        nodeId: NodeId,
-        request: SendRequest<Data>,
-        businessCall: (openTelemetryContext: List<String>?) -> SendResult<Data>
-    ): SendResult<Data> {
-        val producerCall = ProducerCall(queueName, nodeId, request)
+    override fun <Data> send(call: SendCall<Data>): SendResult<Data> {
+        val producerCall = ProducerCall(call.queue.name, call.nodeId, call.request)
         val parentContext = Context.current()
         if (!producerInstrumenter.shouldStart(parentContext, producerCall)) {
-            return businessCall(null)
+            return call.proceed(emptyMap())
         }
 
         // Start instrumenting. It also writes the new span context into producerCall
         val context = producerInstrumenter.start(parentContext, producerCall)
-        val openTelemetryContext = producerCall.openTelemetryContext.takeIf { it.isNotEmpty() }
         val response = try {
             context.makeCurrent().use {
-                businessCall(openTelemetryContext)
+                call.proceed(producerCall.traceContext)
             }
         } catch (e: Exception) {
             producerInstrumenter.end(context, producerCall, null, e)
@@ -65,35 +88,30 @@ internal class OpenTelemetryQueueTracing(openTelemetry: OpenTelemetry) : QueueTr
         return response
     }
 
-    override fun <Data> makeConsumerCall(
-        queueName: String,
-        nodeId: NodeId,
-        businessCall: () -> List<Message<Data>>
-    ): List<Message<Data>> {
+    override fun <Data> receive(call: ReceiveCall<Data>): List<Message<Data>> {
         val start = Instant.now()
         val result = try {
-            businessCall()
+            call.proceed()
         } catch (e: Exception) {
             // No messages, so the span has no links, only the error
-            makeConsumerSpan(queueName, nodeId, emptyList(), e, start)
+            makeConsumerSpan(call, emptyList(), e, start)
             throw e
         }
-        makeConsumerSpan(queueName, nodeId, result, null, start)
+        makeConsumerSpan(call, result, null, start)
 
         return result
     }
 
     // The span is made after the call, not before: its links come from the received messages
-    private fun makeConsumerSpan(
-        queueName: String,
-        nodeId: NodeId,
-        messages: List<Message<*>>,
+    private fun <Data> makeConsumerSpan(
+        call: ReceiveCall<Data>,
+        messages: List<Message<Data>>,
         error: Exception?,
         start: Instant
     ) {
         val end = Instant.now()
 
-        val consumerCall = ConsumerCall(queueName, nodeId, messages)
+        val consumerCall = ConsumerCall(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
         val parentContext = Context.current()
         if (consumerInstrumenter.shouldStart(parentContext, consumerCall)) {
             InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, consumerCall, null, error, start, end)

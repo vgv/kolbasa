@@ -12,6 +12,7 @@ import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
+import kolbasa.stats.tracing.ReceiveCall
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.LruCache
@@ -59,9 +60,15 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         limit: Int,
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
-        return Kolbasa.openTelemetryConfig.queueTracing.makeConsumerCall(queue.name, nodeId) {
+        val tracing = options.tracing ?: Kolbasa.tracing
+
+        val call = ReceiveCall(queue, nodeId) {
             doRealReceive(connection, queue, limit, receiveOptions)
         }
+
+        val result = tracing.receive(call)
+        check(call.proceeded) { "Tracing.receive() returned without calling ReceiveCall.proceed()" }
+        return result
     }
 
     private fun <Data> doRealReceive(

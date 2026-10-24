@@ -8,6 +8,6 @@ internal class ProducerCall(
     val nodeId: NodeId,
     val request: SendRequest<*>
 ) {
-    // Trace context of the producer span, as [key1, value1, key2, value2...]
-    val openTelemetryContext = mutableListOf<String>()
+    // Trace context of the producer span
+    val traceContext = mutableMapOf<String, String>()
 }

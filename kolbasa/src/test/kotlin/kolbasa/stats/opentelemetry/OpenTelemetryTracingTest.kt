@@ -8,10 +8,11 @@ import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
-import kolbasa.Kolbasa
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.PartialInsert
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
@@ -28,12 +29,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.parallel.Isolated
 import java.sql.SQLException
 
-// Kolbasa.openTelemetryConfig is global: while it is set, every send() and receive() in the JVM is traced.
-// So the test runs alone, and no other test can add its spans meanwhile
-@Isolated
 class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
 
     private val spanExporter = InMemorySpanExporter.create()
@@ -41,38 +38,43 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
         .build()
 
+    private val tracing = OpenTelemetryTracing(
+        OpenTelemetrySdk.builder()
+            .setTracerProvider(tracerProvider)
+            .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+            .build()
+    )
+
+    // Tracing is set per producer and consumer, not globally, so other tests running meanwhile are not traced
+    private val producerOptions = ProducerOptions(tracing = tracing)
+    private val consumerOptions = ConsumerOptions(tracing = tracing)
+
     private val queue = Queue.of("tracing", PredefinedDataTypes.String)
 
     @BeforeEach
     fun before() {
-        Kolbasa.openTelemetryConfig = OpenTelemetryConfig.Config(
-            OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerProvider)
-                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .build()
-        )
-
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 
     @AfterEach
     fun after() {
-        Kolbasa.openTelemetryConfig = OpenTelemetryConfig.None
         tracerProvider.close()
     }
 
     @Test
     fun testSendAndReceive_Database() {
-        DatabaseProducer(dataSource).send(queue, "bugaga").throwExceptionIfAny()
-        assertNotNull(DatabaseConsumer(dataSource).receive(queue))
+        DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").throwExceptionIfAny()
+        assertNotNull(DatabaseConsumer(dataSource, consumerOptions).receive(queue))
 
         assertOneLinkedSpanPerCall()
     }
 
     @Test
     fun testSendAndReceive_ConnectionAware() {
-        dataSource.inTransaction { ConnectionAwareDatabaseProducer().send(it, queue, "bugaga").throwExceptionIfAny() }
-        dataSource.inTransaction { assertNotNull(ConnectionAwareDatabaseConsumer().receive(it, queue)) }
+        val producer = ConnectionAwareDatabaseProducer(producerOptions)
+        val consumer = ConnectionAwareDatabaseConsumer(consumerOptions)
+        dataSource.inTransaction { producer.send(it, queue, "bugaga").throwExceptionIfAny() }
+        dataSource.inTransaction { assertNotNull(consumer.receive(it, queue)) }
 
         assertOneLinkedSpanPerCall()
     }
@@ -81,7 +83,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     fun testSend_SameRequestTwice() {
         // Sending the same request again is legal, e.g. a retry. Each message must carry only its own trace context
         val request = SendRequest(listOf(SendMessage("bugaga")))
-        val producer = DatabaseProducer(dataSource)
+        val producer = DatabaseProducer(dataSource, producerOptions)
         producer.send(queue, request).throwExceptionIfAny()
         producer.send(queue, request).throwExceptionIfAny()
 
@@ -99,7 +101,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         SchemaHelpers.deleteQueues(dataSource, queue)
 
         // send() doesn't throw, it returns the error inside SendResult
-        val result = DatabaseProducer(dataSource).send(queue, "bugaga")
+        val result = DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga")
         assertEquals(1, result.failedMessages)
 
         // The span is marked as an error anyway, and holds the exception
@@ -119,7 +121,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
 
         val options = SendOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         val request = SendRequest(listOf(SendMessage("bugaga1"), SendMessage("bugaga2")), options = options)
-        val result = DatabaseProducer(dataSource).send(queue, request)
+        val result = DatabaseProducer(dataSource, producerOptions).send(queue, request)
         assertEquals(2, result.failedMessages)
 
         // The span holds all of them
@@ -133,7 +135,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         // No queue table, so the receive query fails
         SchemaHelpers.deleteQueues(dataSource, queue)
 
-        assertThrows<SQLException> { DatabaseConsumer(dataSource).receive(queue) }
+        assertThrows<SQLException> { DatabaseConsumer(dataSource, consumerOptions).receive(queue) }
 
         // The failed receive() still makes its span, and the span is marked as an error
         val spans = spanExporter.finishedSpanItems

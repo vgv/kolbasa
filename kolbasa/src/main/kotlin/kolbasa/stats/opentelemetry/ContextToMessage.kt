@@ -2,7 +2,6 @@ package kolbasa.stats.opentelemetry
 
 import io.opentelemetry.context.propagation.TextMapGetter
 import io.opentelemetry.context.propagation.TextMapSetter
-import kolbasa.consumer.Message
 
 internal class ContextToMessageSetter : TextMapSetter<ProducerCall> {
 
@@ -11,18 +10,17 @@ internal class ContextToMessageSetter : TextMapSetter<ProducerCall> {
             return
         }
 
-        carrier.openTelemetryContext += key
-        carrier.openTelemetryContext += value
+        carrier.traceContext[key] = value
     }
 }
 
-internal class ContextFromMessageGetter : TextMapGetter<Message<*>> {
+internal class ContextFromMessageGetter : TextMapGetter<Map<String, String>> {
 
-    override fun keys(carrier: Message<*>): Iterable<String> {
-        return carrier.openTelemetryData?.keys ?: emptyList()
+    override fun keys(carrier: Map<String, String>): Iterable<String> {
+        return carrier.keys
     }
 
-    override fun get(carrier: Message<*>?, key: String): String? {
-        return carrier?.openTelemetryData?.get(key)
+    override fun get(carrier: Map<String, String>?, key: String): String? {
+        return carrier?.get(key)
     }
 }

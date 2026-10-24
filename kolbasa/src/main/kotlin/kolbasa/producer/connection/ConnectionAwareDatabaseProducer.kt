@@ -6,6 +6,7 @@ import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.stats.sql.SqlDumpHelper
 import kolbasa.stats.sql.StatementKind
+import kolbasa.stats.tracing.SendCall
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useSavepoint
@@ -43,24 +44,38 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         request: SendRequest<Data>
     ): SendResult<Data> {
+        val tracing = options.tracing ?: Kolbasa.tracing
+
+        val call = SendCall(queue, nodeId, request) { traceContext ->
+            doRealSend(connection, queue, request, traceContext)
+        }
+
+        val result = tracing.send(call)
+        check(call.proceeded) { "Tracing.send() returned without calling SendCall.proceed()" }
+        return result
+    }
+
+    private fun <Data> doRealSend(
+        connection: Connection,
+        queue: Queue<Data>,
+        request: SendRequest<Data>,
+        traceContext: Map<String, String>
+    ): SendResult<Data> {
         val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
-        val queueTracing = Kolbasa.openTelemetryConfig.queueTracing
 
         val (execution, result) = TimeHelper.measure {
-            queueTracing.makeProducerCall(queue.name, nodeId, request) { openTelemetryContext ->
-                when (partialInsert) {
-                    PartialInsert.PROHIBITED -> {
-                        sendProhibited(connection, queue, approxStatsBytes, request, openTelemetryContext)
-                    }
+            when (partialInsert) {
+                PartialInsert.PROHIBITED -> {
+                    sendProhibited(connection, queue, approxStatsBytes, request, traceContext)
+                }
 
-                    PartialInsert.UNTIL_FIRST_FAILURE -> {
-                        sendUntilFirstFailure(connection, queue, approxStatsBytes, request, openTelemetryContext)
-                    }
+                PartialInsert.UNTIL_FIRST_FAILURE -> {
+                    sendUntilFirstFailure(connection, queue, approxStatsBytes, request, traceContext)
+                }
 
-                    PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
-                        sendAsMuchAsPossible(connection, queue, approxStatsBytes, request, openTelemetryContext)
-                    }
+                PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
+                    sendAsMuchAsPossible(connection, queue, approxStatsBytes, request, traceContext)
                 }
             }
         }
@@ -84,7 +99,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?
+        openTelemetryContext: Map<String, String>?
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
@@ -108,7 +123,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?
+        openTelemetryContext: Map<String, String>?
     ): SendResult<Data> {
         val results = ArrayList<MessageResult<Data>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data>>()
@@ -141,7 +156,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?
+        openTelemetryContext: Map<String, String>?
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
@@ -164,7 +179,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?
+        openTelemetryContext: Map<String, String>?
     ): Result<List<MessageResult<Data>>> {
         return connection.useSavepoint { _ ->
             executeChunk(connection, queue, approxStatsBytes, request, openTelemetryContext)
@@ -176,7 +191,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?
+        openTelemetryContext: Map<String, String>?
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 

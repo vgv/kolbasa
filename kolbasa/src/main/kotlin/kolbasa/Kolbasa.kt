@@ -3,7 +3,6 @@ package kolbasa
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
-import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
 import kolbasa.stats.tracing.Tracing
@@ -73,15 +72,6 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var prometheusConfig: PrometheusConfig = PrometheusConfig.None
-
-    /**
-     * OpenTelemetry configuration. The default, [OpenTelemetryConfig.None], collects and propagates nothing.
-     *
-     * Read on every send() and receive(), so a change takes effect on the next call.
-     */
-    @JvmStatic
-    @Volatile
-    var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
 
     /**
      * Tracing for every producer and consumer that doesn't set its own in

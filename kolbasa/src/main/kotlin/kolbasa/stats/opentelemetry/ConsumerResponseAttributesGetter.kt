@@ -33,7 +33,7 @@ internal class ConsumerResponseAttributesGetter : MessagingAttributesGetter<Cons
             return emptyList()
         }
 
-        return request.messages.mapNotNull { it.openTelemetryData?.get(name) }
+        return request.traceContexts.mapNotNull { it[name] }
     }
 
     override fun getDestinationTemplate(request: ConsumerCall?): String? {

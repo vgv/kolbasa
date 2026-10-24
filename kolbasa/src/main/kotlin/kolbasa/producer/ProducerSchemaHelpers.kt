@@ -6,6 +6,7 @@ import kolbasa.queue.Queue
 import kolbasa.queue.QueueHelpers
 import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
+import kolbasa.utils.Helpers
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.sql.Types
@@ -118,7 +119,7 @@ internal object ProducerSchemaHelpers {
         queue: Queue<Data>,
         producerOptions: ProducerOptions,
         request: SendRequest<Data>,
-        openTelemetryContext: List<String>?,
+        openTelemetryContext: Map<String, String>?,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
     ) {
@@ -130,7 +131,7 @@ internal object ProducerSchemaHelpers {
 
         // 2. Scalar: OpenTelemetry context, null if there is no context
         if (openTelemetryContext != null) {
-            val otelArray = connection.createArrayOf("varchar", openTelemetryContext.toTypedArray())
+            val otelArray = connection.createArrayOf("varchar", Helpers.mapToArray(openTelemetryContext))
             preparedStatement.setArray(columnIndex++, otelArray)
         } else {
             preparedStatement.setNull(columnIndex++, Types.ARRAY)

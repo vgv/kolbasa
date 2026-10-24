@@ -1,20 +1,25 @@
 package kolbasa.stats.tracing
 
+import io.mockk.mockk
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.Message
+import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.producer.Id
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.producer.ShardId
+import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.sql.Connection
 import java.time.Instant
 
 class TracingTest {
@@ -59,14 +64,20 @@ class TracingTest {
     }
 
     @Test
-    fun testProceeded_NotCalled() {
-        val sendCall = SendCall(queue, NodeId.EMPTY_NODE_ID, SendRequest(emptyList())) {
-            SendResult(failedMessages = 0, messages = emptyList())
+    fun testProceed_NotCalled() {
+        // A hook that forgets to call proceed()
+        val broken = object : Tracing {
+            override fun <Data> send(call: SendCall<Data>) = SendResult<Data>(failedMessages = 0, messages = emptyList())
+            override fun <Data> receive(call: ReceiveCall<Data>) = emptyList<Message<Data>>()
         }
-        assertFalse(sendCall.proceeded)
+        // Nothing is sent or received, so the connection is never used
+        val connection = mockk<Connection>()
 
-        val receiveCall = ReceiveCall(queue, NodeId.EMPTY_NODE_ID) { emptyList() }
-        assertFalse(receiveCall.proceeded)
+        val producer = ConnectionAwareDatabaseProducer(ProducerOptions(tracing = broken))
+        assertThrows<IllegalStateException> { producer.send(connection, queue, "bugaga") }
+
+        val consumer = ConnectionAwareDatabaseConsumer(ConsumerOptions(tracing = broken))
+        assertThrows<IllegalStateException> { consumer.receive(connection, queue) }
     }
 
     @Test

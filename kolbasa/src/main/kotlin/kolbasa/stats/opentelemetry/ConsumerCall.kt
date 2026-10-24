@@ -6,5 +6,7 @@ import kolbasa.schema.NodeId
 internal class ConsumerCall(
     val queueName: String,
     val nodeId: NodeId,
-    val messages: List<Message<*>>
+    val messages: List<Message<*>>,
+    // Trace contexts of the messages, in the same order
+    val traceContexts: List<Map<String, String>>
 )
