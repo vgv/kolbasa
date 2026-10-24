@@ -19,6 +19,23 @@ import kolbasa.producer.SendResult
  * Set it for the whole application with [Kolbasa.tracing][kolbasa.Kolbasa.tracing], or for one producer or consumer
  * with [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing] and
  * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing].
+ *
+ * For OpenTelemetry, use `OpenTelemetryTracing` from the separate `io.github.vgv:kolbasa-opentelemetry` artifact.
+ *
+ * ## Usage Example
+ *
+ * ```kotlin
+ * // for the whole application
+ * Kolbasa.tracing = OpenTelemetryTracing(openTelemetry)
+ * // or for one consumer only
+ * val consumer = DatabaseConsumer(dataSource, ConsumerOptions(tracing = OpenTelemetryTracing(openTelemetry)))
+ * ```
+ *
+ * The same from Java:
+ *
+ * ```java
+ * Kolbasa.setTracing(new OpenTelemetryTracing(openTelemetry));
+ * ```
  */
 interface Tracing {
 

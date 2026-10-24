@@ -6,7 +6,8 @@ Guidance for AI coding agents working in this repository.
 
 **kolbasa** is a reliable message & job queue for Java & Kotlin, built on PostgreSQL — no Kafka, no
 RabbitMQ, just the database you already run. It is a pure Kotlin library (usable from any JVM language),
-published to Maven Central as `io.github.vgv:kolbasa`. Requires PostgreSQL 10+ and JVM 17+.
+published to Maven Central as `io.github.vgv:kolbasa`. OpenTelemetry tracing is a separate, optional artifact,
+`io.github.vgv:kolbasa-opentelemetry`. Requires PostgreSQL 10+ and JVM 17+.
 
 ## Mental model
 
@@ -21,8 +22,8 @@ published to Maven Central as `io.github.vgv:kolbasa`. Requires PostgreSQL 10+ a
 
 ## Build, test, run
 
-This is a **Gradle** project (Kotlin DSL) with five modules — `:kolbasa`, `:butcher`, `:test-support`,
-`:examples` and `:performance` (see [Layout](#layout)). Use the wrapper. A task name without a project prefix runs in every module
+This is a **Gradle** project (Kotlin DSL) with six modules — `:kolbasa`, `:kolbasa-opentelemetry`, `:butcher`,
+`:test-support`, `:examples` and `:performance` (see [Layout](#layout)). Use the wrapper. A task name without a project prefix runs in every module
 that has it — `./gradlew test` runs the library's suite, `./gradlew :kolbasa:test` is the explicit form:
 
 - Build: `./gradlew build`
@@ -51,15 +52,19 @@ Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 
 ## Layout
 
-The build has five Gradle modules — only `:kolbasa` is published — plus `gradle/build-logic`, an included build
-holding the shared build logic. The root project has no code.
+The build has six Gradle modules — `:kolbasa` and `:kolbasa-opentelemetry` are published — plus `gradle/build-logic`,
+an included build holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
   operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `stats`
-  (Prometheus, OpenTelemetry).
+  (Prometheus, and the `Tracing` hook that a tracing system plugs into).
+- `kolbasa-opentelemetry/src/main/kotlin/kolbasa/stats/opentelemetry/` — OpenTelemetry tracing, published as
+  `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`
+  hook. It depends on `:kolbasa` the way a user would, so it can only use the **public** API. That makes it the
+  proof that the hook is complete: if tracing needs something the hook doesn't give, it fails to compile here.
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules: `PostgreSQLImages`,
   which reads `postgresql-test-images.txt` from this module's resources, and `AbstractPostgreSQLTest`, the base class
   for tests that need a database. Which PostgreSQL versions the repository is tested against is decided here, once,
