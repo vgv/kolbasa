@@ -88,10 +88,9 @@ class SweepHelperDlqTest : AbstractPostgreSQLTest() {
 
         // Check original values is preserved in meta
         assertEquals(message.id.localId, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_ID))
-        // TODO: fix timezone issues to enable these assertions
-        //assertEquals(message.createdAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_CREATED_AT))
-        //assertEquals(message.processingAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_PROCESSING_AT))
-        //assertEquals(message.scheduledAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_SCHEDULED_AT))
+        assertEquals(message.createdAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_CREATED_AT))
+        assertEquals(message.processingAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_PROCESSING_AT))
+        assertEquals(message.scheduledAt, dlqMsg.meta.get(Metadata.DLQ_ORIGINAL_SCHEDULED_AT))
 
         // Check user-defined meta is preserved
         assertEquals(99, dlqMsg.meta.get(USER_ID))

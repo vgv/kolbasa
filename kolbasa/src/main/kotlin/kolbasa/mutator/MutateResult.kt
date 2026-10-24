@@ -1,6 +1,7 @@
 package kolbasa.mutator
 
 import kolbasa.producer.Id
+import java.time.Instant
 
 /**
  * Result of one [Mutator.mutate][kolbasa.mutator.datasource.Mutator.mutate] call.
@@ -74,7 +75,7 @@ sealed class MessageResult {
         /**
          * New visibility timeout
          */
-        val scheduledAt: Long,
+        val scheduledAt: Instant,
         /**
          * New remaining attempts
          */

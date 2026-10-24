@@ -134,9 +134,9 @@ internal object ConsumerSchemaHelpers {
 
         val localId = resultSet.getLong(columnIndex++)
         val shard = ShardId.of(resultSet.getInt(columnIndex++))
-        val createdAt = resultSet.getTimestamp(columnIndex++).time
-        val processingAt = resultSet.getTimestamp(columnIndex++).time
-        val scheduledAt = resultSet.getTimestamp(columnIndex++).time
+        val createdAt = resultSet.getTimestamp(columnIndex++).toInstant()
+        val processingAt = resultSet.getTimestamp(columnIndex++).toInstant()
+        val scheduledAt = resultSet.getTimestamp(columnIndex++).toInstant()
         val attempts = resultSet.getInt(columnIndex++)
 
         val data = when (queue.databaseDataType) {
