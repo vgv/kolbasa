@@ -79,7 +79,8 @@ class ClusterProducer @JvmOverloads constructor(
             producerExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
+        val tracing = options.tracing ?: Kolbasa.tracing
 
-        return CompletableFuture.supplyAsync({ send(queue, request) }, executor)
+        return CompletableFuture.supplyAsync(tracing.wrapAsync { send(queue, request) }, executor)
     }
 }

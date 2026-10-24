@@ -9,6 +9,7 @@ pluginManagement {
 }
 
 include("kolbasa")
+include("kolbasa-opentelemetry")
 include("test-support")
 include("examples")
 include("performance")

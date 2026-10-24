@@ -7,8 +7,8 @@ import kolbasa.inspector.connection.ConnectionAwareInspector
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
+import kolbasa.telemetry.sql.SqlDumpHelper
+import kolbasa.telemetry.sql.StatementKind
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.TimeHelper
 import java.sql.Connection

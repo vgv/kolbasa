@@ -3,9 +3,9 @@ package kolbasa
 import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
-import kolbasa.stats.prometheus.PrometheusConfig
-import kolbasa.stats.sql.SqlDumpConfig
-import kolbasa.stats.tracing.Tracing
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.sql.SqlDumpConfig
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.utils.DaemonThreadFactory
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -57,7 +57,7 @@ object Kolbasa {
      * Read on every statement, so a change takes effect immediately – and that is exactly what makes it dangerous.
      * With many queues and a high send/receive rate one assignment can turn on a flood of dumps at once. Either be
      * ready for that volume, or keep it narrow: register only the queues and only the
-     * [StatementKind][kolbasa.stats.sql.StatementKind]s you really need to look at.
+     * [StatementKind][kolbasa.telemetry.sql.StatementKind]s you really need to look at.
      */
     @JvmStatic
     @Volatile

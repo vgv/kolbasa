@@ -89,7 +89,7 @@ tasks.register<Jar>("butcherJar") {
     from(sourceSets.main.get().output)
 
     // Everything butcher needs at runtime, unpacked: the library, the driver and clikt. The library's own
-    // compileOnly dependencies (prometheus, opentelemetry) are not on this classpath, so they stay out
+    // compileOnly dependency (prometheus) is not on this classpath, so it stays out
     dependsOn(configurations.runtimeClasspath)
     from({
         configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }

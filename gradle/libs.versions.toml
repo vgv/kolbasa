@@ -2,7 +2,6 @@
 
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 nebula-release = { id = "com.netflix.nebula.release", version.ref = "nebula" }
-vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech" }
 
 [versions]
 
@@ -14,7 +13,6 @@ prometheus = "1.9.0"
 opentelemetry = "1.66.0"
 opentelemetry-instrumentation = "2.32.0"
 opentelemetry-instrumentation-incubator = "2.32.0-alpha"
-opentelemetry-semconv = "1.43.0"
 hikaricp = "7.1.0"
 postgresql = "42.7.13"
 
@@ -27,6 +25,9 @@ mockk = "1.14.11"
 
 [libraries]
 
+# Build logic: plugins that our convention plugins apply, see gradle/build-logic
+vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "vanniktech" }
+
 # Kotlin
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 
@@ -38,7 +39,6 @@ prometheus-metrics-exporter-httpserver = { module = "io.prometheus:prometheus-me
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
 opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
 opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "opentelemetry" }
-opentelemetry-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version.ref = "opentelemetry-semconv" }
 opentelemetry-instrumentation-api = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api", version.ref = "opentelemetry-instrumentation" }
 opentelemetry-instrumentation-api-incubator = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator", version.ref = "opentelemetry-instrumentation-incubator" }
 

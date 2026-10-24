@@ -4,10 +4,10 @@ import kolbasa.Kolbasa
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
-import kolbasa.stats.prometheus.EmptyQueueMetrics
-import kolbasa.stats.prometheus.PrometheusConfig
-import kolbasa.stats.prometheus.PrometheusQueueMetrics
-import kolbasa.stats.prometheus.QueueMetrics
+import kolbasa.telemetry.prometheus.EmptyQueueMetrics
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.prometheus.PrometheusQueueMetrics
+import kolbasa.telemetry.prometheus.QueueMetrics
 import java.time.Duration
 
 /**

@@ -9,8 +9,8 @@ import kolbasa.queue.Checks
 import kolbasa.queue.Queue
 import kolbasa.schema.IdRange
 import kolbasa.schema.NodeId
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
+import kolbasa.telemetry.sql.SqlDumpHelper
+import kolbasa.telemetry.sql.StatementKind
 import kolbasa.utils.ColumnIndex
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement

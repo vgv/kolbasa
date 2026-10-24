@@ -20,6 +20,7 @@
 * Archive queue for retaining successfully processed messages (auditing, compliance, replay)
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
 * Share load between different PostgreSQL servers
+* OpenTelemetry tracing: a span for every send and receive, and the receive span links to the send span (optional `kolbasa-opentelemetry` artifact)
 
 ## Concepts
 Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
@@ -36,15 +37,28 @@ version 10 and above.
 ## How to add Kolbasa into your project
 ### Gradle
 ```groovy
-implementation "io.github.vgv:kolbasa:0.211.0"
+implementation "io.github.vgv:kolbasa:0.222.0"
 ```
 ### Maven
 ```xml
 <dependency>
     <groupId>io.github.vgv</groupId>
     <artifactId>kolbasa</artifactId>
-    <version>0.211.0</version>
+    <version>0.222.0</version>
 </dependency>
+```
+
+### OpenTelemetry (optional)
+To trace sends and receives with OpenTelemetry, add one more artifact, with the same version as `kolbasa`:
+```groovy
+implementation "io.github.vgv:kolbasa-opentelemetry:<version>"
+```
+Then turn it on once, at startup:
+```kotlin
+Kolbasa.tracing = OpenTelemetryTracing(openTelemetry)
+```
+```java
+Kolbasa.setTracing(new OpenTelemetryTracing(openTelemetry));
 ```
 
 ## Examples
@@ -298,6 +312,15 @@ perform q_events_put(data => new.message);
 Example: [SqlPutFunctionExample](examples/src/main/kotlin/kolbasa/example/SqlPutFunctionExample.kt)
 
 `./gradlew example -Pname=SqlPutFunctionExample`
+
+### OpenTelemetry tracing
+Turn tracing on once, and every send and receive becomes a span. The receive span links to the send span,
+because the sender's trace context is stored together with the message. Needs the optional
+`kolbasa-opentelemetry` artifact, see [above](#opentelemetry-optional).
+
+Example: [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt)
+
+`./gradlew example -Pname=OpenTelemetryExample`
 
 
 ## Documentation

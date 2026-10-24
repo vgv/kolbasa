@@ -8,8 +8,9 @@ plugins {
     // that gets a test suite. See gradle/build-logic/src/main/kotlin/kolbasa.testing.gradle.kts
     id("kolbasa.testing")
 
-    // Publishing to Maven Central: the publication, the POM, the signature and the upload
-    alias(libs.plugins.vanniktech.publish)
+    // Publishing to Maven Central, shared with every published module.
+    // See gradle/build-logic/src/main/kotlin/kolbasa.publishing.gradle.kts
+    id("kolbasa.publishing")
 }
 
 repositories {
@@ -23,26 +24,10 @@ dependencies {
     // Metrics
     compileOnly(libs.prometheus.metrics.core)
 
-    // OpenTelemetry
-    compileOnly(libs.opentelemetry.api)
-    compileOnly(libs.opentelemetry.sdk)
-    compileOnly(libs.opentelemetry.semconv)
-    compileOnly(libs.opentelemetry.instrumentation.api)
-    compileOnly(libs.opentelemetry.instrumentation.api.incubator)
-
     // Test
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
     // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
-
-    // OpenTelemetry is compileOnly above, so the tracing tests bring it in themselves,
-    // plus the SDK testing kit with its in-memory span exporter
-    testImplementation(libs.opentelemetry.api)
-    testImplementation(libs.opentelemetry.sdk)
-    testImplementation(libs.opentelemetry.sdk.testing)
-    testImplementation(libs.opentelemetry.semconv)
-    testImplementation(libs.opentelemetry.instrumentation.api)
-    testImplementation(libs.opentelemetry.instrumentation.api.incubator)
 }
 
 // Kotlin settings
@@ -57,50 +42,10 @@ kotlin {
     }
 }
 
-// =====================================================================================
-// All checks were already made by workflow "On pull request" => no checks here
-if (gradle.startParameter.taskNames.contains("final")) {
-    tasks.named("build").get().apply {
-        dependsOn.removeIf { it == "check" }
-    }
-}
-
-tasks.withType<Sign> {
-    dependsOn(tasks.getByName("build"))
-}
-
-// Credentials are Gradle properties; CI passes them as ORG_GRADLE_PROJECT_<name> environment variables:
-// - mavenCentralUsername, mavenCentralPassword: a user token from https://central.sonatype.com/usertoken
-// - signingInMemoryKey, signingInMemoryKeyPassword: an ascii-armored PGP secret key and its password
+// The POM fields that belong to this module, the rest comes from kolbasa.publishing
 mavenPublishing {
-    // Upload and release in one go, no manual step on the Central Portal.
-    // A -SNAPSHOT version goes to the snapshot repository instead.
-    publishToMavenCentral(automaticRelease = true)
-    signAllPublications()
-
-    coordinates(SettingsProvider.ARTIFACT_GROUP_ID, SettingsProvider.ARTIFACT_NAME, project.sanitizeVersion())
-
     pom {
         name.set("Kolbasa")
         description.set("A reliable message & job queue for Java & Kotlin, built on PostgreSQL.")
-        url.set("https://github.com/vgv/kolbasa")
-        licenses {
-            license {
-                name.set("The Apache License, Version 2.0")
-                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-            }
-        }
-        developers {
-            developer {
-                id.set("vgv")
-                name.set("Vasily Vasilkov")
-                email.set("chand0s@yandex.ru")
-            }
-        }
-        scm {
-            connection.set("scm:git:git://github.com/vgv/kolbasa.git")
-            developerConnection.set("scm:git:ssh://github.com:vgv/kolbasa.git")
-            url.set("https://github.com/vgv/kolbasa")
-        }
     }
 }

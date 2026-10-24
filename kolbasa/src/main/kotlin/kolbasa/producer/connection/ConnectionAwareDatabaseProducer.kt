@@ -4,9 +4,9 @@ import kolbasa.Kolbasa
 import kolbasa.producer.*
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
-import kolbasa.stats.tracing.SendCall
+import kolbasa.telemetry.sql.SqlDumpHelper
+import kolbasa.telemetry.sql.StatementKind
+import kolbasa.telemetry.tracing.SendCall
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useSavepoint

@@ -10,9 +10,9 @@ import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.stats.sql.SqlDumpHelper
-import kolbasa.stats.sql.StatementKind
-import kolbasa.stats.tracing.ReceiveCall
+import kolbasa.telemetry.sql.SqlDumpHelper
+import kolbasa.telemetry.sql.StatementKind
+import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.LruCache
