@@ -1,10 +1,7 @@
 package kolbasa
 
-import kolbasa.test.PostgreSQLImages
-
 import com.zaxxer.hikari.HikariDataSource
-import kolbasa.utils.JdbcHelpers.useStatement
-import kolbasa.utils.JdbcHelpers.withAutoCommit
+import kolbasa.test.PostgreSQLImages
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
@@ -51,30 +48,12 @@ abstract class AbstractPostgreSQLTest {
         }
 
         // Create all schemas
-        dataSource.useStatement { statement ->
-            statement.execute("create schema $FIRST_SCHEMA_NAME")
-            statement.execute("create schema $SECOND_SCHEMA_NAME")
-        }
+        dataSource.execute(listOf("create schema $FIRST_SCHEMA_NAME", "create schema $SECOND_SCHEMA_NAME"))
 
         // Insert test data for all schemas, if any
-        // execute all statements in a separate transaction for each statement
-        dataSource.withAutoCommit { connection ->
-            connection.useStatement { statement ->
-                generateTestData().forEach(statement::execute)
-            }
-        }
-        // execute all statements in a separate transaction for each statement
-        dataSourceFirstSchema.withAutoCommit { connection ->
-            connection.useStatement { statement ->
-                generateTestDataFirstSchema().forEach(statement::execute)
-            }
-        }
-        // execute all statements in a separate transaction for each statement
-        dataSourceSecondSchema.withAutoCommit { connection ->
-            connection.useStatement { statement ->
-                generateTestDataSecondSchema().forEach(statement::execute)
-            }
-        }
+        dataSource.execute(generateTestData())
+        dataSourceFirstSchema.execute(generateTestDataFirstSchema())
+        dataSourceSecondSchema.execute(generateTestDataSecondSchema())
     }
 
     @AfterEach
@@ -111,4 +90,8 @@ abstract class AbstractPostgreSQLTest {
         }
     }
 
+}
+
+private fun DataSource.execute(statements: List<String>) = connection.use { connection ->
+    connection.createStatement().use { statement -> statements.forEach(statement::execute) }
 }
