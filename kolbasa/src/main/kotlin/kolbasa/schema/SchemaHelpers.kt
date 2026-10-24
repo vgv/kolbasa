@@ -264,7 +264,7 @@ object SchemaHelpers {
     }
 
     /**
-     * Rename queue tables
+     * Delete queue tables
      *
      * Every Kolbasa queue has its own real table in the database. This method drops the queue table based on the
      * existing database state and the queue's real table name, since the table name differs from the queue name.
