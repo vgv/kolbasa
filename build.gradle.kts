@@ -1,4 +1,8 @@
 plugins {
+    // Loaded here but not applied, so every module shares one copy of the Kotlin plugin. Without this line,
+    // modules with different sets of plugins each load their own copy, which the Kotlin plugin does not support
+    alias(libs.plugins.kotlin.jvm) apply false
+
     // Versioning and git tagging for the whole build: nebula tags the repository, not a single module
     alias(libs.plugins.nebula.release)
 
