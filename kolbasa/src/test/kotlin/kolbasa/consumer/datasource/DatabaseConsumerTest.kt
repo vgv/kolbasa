@@ -3,6 +3,7 @@ package kolbasa.consumer.datasource
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
+import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.filter.Filter.between
 import kolbasa.consumer.order.Order.Companion.desc
 import kolbasa.producer.MessageOptions
@@ -19,6 +20,7 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.assertNotNull
 import kolbasa.test.assertTrue
+import kolbasa.utils.JdbcHelpers.inTransaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
@@ -417,6 +419,33 @@ class DatabaseConsumerTest : AbstractPostgreSQLTest() {
 
             reverseIndex--
         }
+    }
+
+    @Test
+    fun testReceive_DefaultOrder() {
+        // Every next message gets a shorter delay, so the last one sent becomes visible first. The order of the rows
+        // in the table is the opposite of the order the consumer has to return them in.
+        val items = 5
+        val data = (1..items).map { index ->
+            SendMessage("bugaga_$index", MessageOptions(delay = Duration.ofMillis(50L * (items - index))))
+        }
+
+        val producer = DatabaseProducer(dataSource)
+        producer.send(queue, data)
+
+        // Wait until all messages are visible
+        TimeUnit.MILLISECONDS.sleep(50L * items + 100)
+
+        // ConnectionAware consumer, because the planner setting has to be in the same transaction as the receive().
+        // Without nested loops PostgreSQL joins the picked ids with the table by hash or merge join, and the update
+        // returns the rows in the table order, not in the order they were picked.
+        val consumer = ConnectionAwareDatabaseConsumer()
+        val messages = dataSource.inTransaction { connection ->
+            connection.createStatement().use { it.execute("set local enable_nestloop = off") }
+            consumer.receive(connection, queue, limit = items)
+        }
+
+        assertEquals((items downTo 1).map { "bugaga_$it" }, messages.map { it.data })
     }
 
     @ParameterizedTest
