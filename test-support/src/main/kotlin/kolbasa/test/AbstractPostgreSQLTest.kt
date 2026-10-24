@@ -39,6 +39,7 @@ abstract class AbstractPostgreSQLTest {
             jdbcUrl = databaseUrl
             username = pgContainer.username
             password = pgContainer.password
+            minimumIdle = 1
         }
 
         // Init dataSource, first schema
@@ -46,6 +47,7 @@ abstract class AbstractPostgreSQLTest {
             jdbcUrl = databaseUrl
             username = pgContainer.username
             password = pgContainer.password
+            minimumIdle = 1
             schema = FIRST_SCHEMA_NAME
         }
 
@@ -54,6 +56,7 @@ abstract class AbstractPostgreSQLTest {
             jdbcUrl = databaseUrl
             username = pgContainer.username
             password = pgContainer.password
+            minimumIdle = 1
             schema = SECOND_SCHEMA_NAME
         }
 
