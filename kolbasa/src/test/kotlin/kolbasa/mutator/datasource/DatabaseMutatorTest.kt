@@ -1,6 +1,6 @@
 package kolbasa.mutator.datasource
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.AddScheduledAt

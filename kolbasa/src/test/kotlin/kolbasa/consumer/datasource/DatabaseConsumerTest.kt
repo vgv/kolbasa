@@ -1,6 +1,6 @@
 package kolbasa.consumer.datasource
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Filter.between

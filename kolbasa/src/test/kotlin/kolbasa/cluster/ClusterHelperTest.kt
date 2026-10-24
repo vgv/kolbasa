@@ -1,6 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.schema.IdSchema
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals

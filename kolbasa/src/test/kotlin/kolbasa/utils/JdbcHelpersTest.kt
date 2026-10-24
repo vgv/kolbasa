@@ -1,6 +1,6 @@
 package kolbasa.utils
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt

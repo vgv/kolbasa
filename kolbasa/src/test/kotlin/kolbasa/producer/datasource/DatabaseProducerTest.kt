@@ -1,6 +1,6 @@
 package kolbasa.producer.datasource
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage

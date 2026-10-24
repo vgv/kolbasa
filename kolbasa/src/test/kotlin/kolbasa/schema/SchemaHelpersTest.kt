@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.queue.*
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField

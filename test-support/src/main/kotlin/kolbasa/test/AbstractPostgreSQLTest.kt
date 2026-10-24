@@ -1,18 +1,15 @@
-package kolbasa
+package kolbasa.test
 
 import com.zaxxer.hikari.HikariDataSource
-import kolbasa.test.PostgreSQLImages
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
-import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.postgresql.PostgreSQLContainer
 import javax.sql.DataSource
 
 @Tag("unit-db")
 abstract class AbstractPostgreSQLTest {
 
-    @Container
     protected val pgContainer = PostgreSQLContainer(POSTGRESQL_IMAGE)
 
     protected lateinit var dataSource: DataSource

@@ -1,7 +1,7 @@
 package kolbasa.cluster
 
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME

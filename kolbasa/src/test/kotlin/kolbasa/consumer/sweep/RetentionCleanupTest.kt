@@ -1,6 +1,6 @@
 package kolbasa.consumer.sweep
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.MessageOptions

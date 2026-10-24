@@ -2,7 +2,7 @@ package kolbasa.cluster.admin
 
 import io.mockk.mockk
 import io.mockk.verifySequence
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.Id
