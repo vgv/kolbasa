@@ -7,7 +7,13 @@ plugins {
 }
 
 repositories {
-    // Where this build's own dependencies come from: kotlin-stdlib and kotlin-reflect for kotlin-dsl.
-    // The root build's repositories do not reach here.
+    // Where this build's own dependencies come from: kotlin-stdlib and kotlin-reflect for kotlin-dsl,
+    // and the plugins below. The root build's repositories do not reach here.
     mavenCentral()
+}
+
+dependencies {
+    // kolbasa.publishing applies it with id("com.vanniktech.maven.publish"), so it has to be on this
+    // build's classpath. A precompiled script plugin can't use alias(libs.plugins...) in its plugins block
+    implementation(libs.vanniktech.publish.plugin)
 }
