@@ -34,6 +34,15 @@ dependencies {
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
     // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
+
+    // OpenTelemetry is compileOnly above, so the tracing tests bring it in themselves,
+    // plus the SDK testing kit with its in-memory span exporter
+    testImplementation(libs.opentelemetry.api)
+    testImplementation(libs.opentelemetry.sdk)
+    testImplementation(libs.opentelemetry.sdk.testing)
+    testImplementation(libs.opentelemetry.semconv)
+    testImplementation(libs.opentelemetry.instrumentation.api)
+    testImplementation(libs.opentelemetry.instrumentation.api.incubator)
 }
 
 // Kotlin settings

@@ -7,7 +7,6 @@ import kolbasa.consumer.connection.ConnectionAwareConsumer
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
-import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.inTransaction
 import javax.sql.DataSource
 
@@ -15,7 +14,6 @@ import javax.sql.DataSource
  * Default implementation of [Consumer]
  */
 class DatabaseConsumer internal constructor(
-    private val nodeId: NodeId,
     private val dataSource: DataSource,
     private val peer: ConnectionAwareConsumer
 ) : Consumer {
@@ -42,15 +40,12 @@ class DatabaseConsumer internal constructor(
         dataSource: DataSource,
         options: ConsumerOptions = ConsumerOptions.DEFAULT
     ) : this(
-        nodeId = NodeId.EMPTY_NODE_ID,
         dataSource = dataSource,
         peer = ConnectionAwareDatabaseConsumer(options)
     )
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
-        return queue.queueTracing.makeConsumerCall(nodeId) {
-            dataSource.inTransaction { peer.receive(it, queue, limit, receiveOptions) }
-        }
+        return dataSource.inTransaction { peer.receive(it, queue, limit, receiveOptions) }
     }
 
     override fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int {
