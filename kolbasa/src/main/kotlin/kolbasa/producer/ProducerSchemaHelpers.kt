@@ -30,7 +30,7 @@ internal object ProducerSchemaHelpers {
      * ```
      *
      * Per-message values (delay, attempts, meta fields, data) are passed as typed arrays via unnest.
-     * Scalar values (shard, opentelemetry) are passed as regular parameters.
+     * Scalar values (shard, trace context) are passed as regular parameters.
      * Producer name is embedded as a SQL literal.
      * WITH ORDINALITY provides row ordering (ord) used for scheduled_at uniqueness and uc derivation.
      */
@@ -76,7 +76,7 @@ internal object ProducerSchemaHelpers {
             selectExprs += "'$producerName'"
         }
 
-        // OpenTelemetry context propagation data - scalar parameter, null if there is no context
+        // Trace context - scalar parameter, null if there is no context
         insertColumns += Const.OPENTELEMETRY_COLUMN_NAME
         selectExprs += "?::varchar[]"
 
@@ -119,7 +119,7 @@ internal object ProducerSchemaHelpers {
         queue: Queue<Data>,
         producerOptions: ProducerOptions,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?,
+        traceContext: Map<String, String>,
         preparedStatement: PreparedStatement,
         approxBytesCounter: BytesCounter
     ) {
@@ -129,10 +129,10 @@ internal object ProducerSchemaHelpers {
         // 1. Scalar: shard
         preparedStatement.setInt(columnIndex++, request.effectiveShard.id)
 
-        // 2. Scalar: OpenTelemetry context, null if there is no context
-        if (openTelemetryContext != null) {
-            val otelArray = connection.createArrayOf("varchar", Helpers.mapToArray(openTelemetryContext))
-            preparedStatement.setArray(columnIndex++, otelArray)
+        // 2. Scalar: trace context as [key1, value1, key2, value2...], null if there is no context
+        val traceContextArray = Helpers.mapToArray(traceContext)
+        if (traceContextArray != null) {
+            preparedStatement.setArray(columnIndex++, connection.createArrayOf("varchar", traceContextArray))
         } else {
             preparedStatement.setNull(columnIndex++, Types.ARRAY)
         }

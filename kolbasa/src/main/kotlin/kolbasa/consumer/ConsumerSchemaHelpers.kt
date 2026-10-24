@@ -44,7 +44,7 @@ internal object ConsumerSchemaHelpers {
                 dataColumns += metaField.dbColumnName
             }
         }
-        // OpenTelemetry data, null for messages sent without a trace context
+        // Trace context, null for messages sent without one
         dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
 
         // ----------------------------------------------------------
@@ -184,8 +184,8 @@ internal object ConsumerSchemaHelpers {
 
         // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
         @Suppress("UNCHECKED_CAST")
-        val otelArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
-        val otelData = Helpers.arrayToMap(otelArray)
+        val traceContextArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
+        val traceContext = Helpers.arrayToMap(traceContextArray)
 
         val message = Message(
             id = Id(localId, shard),
@@ -196,7 +196,7 @@ internal object ConsumerSchemaHelpers {
             data = data,
             meta = meta
         )
-        message.openTelemetryData = otelData
+        message.traceContext = traceContext
 
         return message
     }

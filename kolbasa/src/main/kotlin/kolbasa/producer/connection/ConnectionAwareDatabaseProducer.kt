@@ -99,14 +99,14 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?
+        traceContext: Map<String, String>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
 
         request.chunked(chunkSize).forEach { chunk ->
             try {
-                result += executeChunk(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
+                result += executeChunk(connection, queue, approxStatsBytes, chunk, traceContext)
             } catch (e: Exception) {
                 // just stop all sequence execution and return the result
                 // all messages were failed
@@ -123,7 +123,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?
+        traceContext: Map<String, String>
     ): SendResult<Data> {
         val results = ArrayList<MessageResult<Data>>(request.data.size)
         val failResults = mutableListOf<SendMessage<Data>>()
@@ -135,7 +135,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                 // If we have at least one failed message – let's fail others
                 failResults += chunk.data
             } else {
-                executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
+                executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, traceContext)
                     .onSuccess { results += it }
                     .onFailure { ex ->
                         exception = ex
@@ -156,14 +156,14 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?
+        traceContext: Map<String, String>
     ): SendResult<Data> {
         val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
         var failedMessages = 0
 
         request.chunked(chunkSize).forEach { chunk ->
-            executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, openTelemetryContext)
+            executeChunkInSavepoint(connection, queue, approxStatsBytes, chunk, traceContext)
                 .onSuccess { result += it }
                 .onFailure { ex ->
                     failedMessages += chunk.data.size
@@ -179,10 +179,10 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?
+        traceContext: Map<String, String>
     ): Result<List<MessageResult<Data>>> {
         return connection.useSavepoint { _ ->
-            executeChunk(connection, queue, approxStatsBytes, request, openTelemetryContext)
+            executeChunk(connection, queue, approxStatsBytes, request, traceContext)
         }
     }
 
@@ -191,7 +191,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         queue: Queue<Data>,
         approxStatsBytes: BytesCounter,
         request: SendRequest<Data>,
-        openTelemetryContext: Map<String, String>?
+        traceContext: Map<String, String>
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 
@@ -211,7 +211,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                     queue = queue,
                     producerOptions = options,
                     request = request,
-                    openTelemetryContext = openTelemetryContext,
+                    traceContext = traceContext,
                     preparedStatement = preparedStatement,
                     approxBytesCounter = approxStatsBytes
                 )

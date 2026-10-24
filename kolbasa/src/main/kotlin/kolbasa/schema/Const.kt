@@ -32,9 +32,9 @@ internal object Const {
 
     const val USELESS_COUNTER_COLUMN_NAME = "uc"
 
-    // OpenTelemetry
+    // Trace context from the tracing hook. The column keeps its old name
     const val OPENTELEMETRY_COLUMN_NAME = "opentelemetry"
-    const val OPENTELEMETRY_VALUE_LENGTH = 1024 // OpenTelemetry propagation data key/value max length
+    const val OPENTELEMETRY_VALUE_LENGTH = 1024 // trace context key/value max length
 
     const val SHARD_COLUMN_NAME = "shard"
 

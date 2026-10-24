@@ -18,6 +18,7 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
+import kolbasa.stats.tracing.Tracing
 import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -164,6 +165,17 @@ class DatabaseProducerTest : AbstractPostgreSQLTest() {
         // check database
         // TODO: check created_at and scheduled_at and compare it with 1000 years duration above
         assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+    }
+
+    @Test
+    fun testSendSimpleData_NoTraceContext() {
+        // Tracing.NONE passes an empty trace context, it must be stored as NULL, not as an empty array
+        val producer = DatabaseProducer(dataSource, ProducerOptions(tracing = Tracing.NONE))
+        producer.send(queue, "bugaga").throwExceptionIfAny()
+
+        // check database
+        val sql = "select count(*) from ${queue.dbTableName} where ${Const.OPENTELEMETRY_COLUMN_NAME} is null"
+        assertEquals(1, dataSource.readInt(sql))
     }
 
 }

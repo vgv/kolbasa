@@ -88,7 +88,7 @@ class TracingTest {
         assertEquals(emptyMap<String, String>(), call.traceContext(withoutContext))
 
         val withContext = message()
-        withContext.openTelemetryData = mapOf("traceparent" to "00-trace-span-01")
+        withContext.traceContext = mapOf("traceparent" to "00-trace-span-01")
         assertEquals(mapOf("traceparent" to "00-trace-span-01"), call.traceContext(withContext))
     }
 

@@ -43,6 +43,6 @@ class ReceiveCall<Data> internal constructor(
      * The trace context the sender stored with [message], or an empty map if there is none.
      */
     fun traceContext(message: Message<Data>): Map<String, String> {
-        return message.openTelemetryData ?: emptyMap()
+        return message.traceContext ?: emptyMap()
     }
 }
