@@ -6,6 +6,7 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.stats.opentelemetry.OpenTelemetryConfig
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.sql.SqlDumpConfig
+import kolbasa.stats.tracing.Tracing
 import kolbasa.utils.DaemonThreadFactory
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -82,6 +83,19 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var openTelemetryConfig: OpenTelemetryConfig = OpenTelemetryConfig.None
+
+    /**
+     * Tracing for every producer and consumer that doesn't set its own in
+     * [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing] or
+     * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing].
+     *
+     * The default, [Tracing.NONE], traces nothing.
+     *
+     * Read on every send() and receive(), so a change takes effect on the next call.
+     */
+    @JvmStatic
+    @Volatile
+    var tracing: Tracing = Tracing.NONE
 
     /**
      * How often a [Cluster][kolbasa.cluster.Cluster] refreshes its view of the nodes, and on which executor.

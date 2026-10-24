@@ -1,6 +1,7 @@
 package kolbasa.producer
 
 import kolbasa.queue.Checks
+import kolbasa.stats.tracing.Tracing
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 
@@ -172,6 +173,12 @@ data class ProducerOptions(
      * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
      */
     val asyncExecutor: ExecutorService? = null,
+
+    /**
+     * Tracing for this producer. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.tracing][kolbasa.Kolbasa.tracing] will be used.
+     */
+    val tracing: Tracing? = null,
 ) {
 
     init {
@@ -191,6 +198,7 @@ data class ProducerOptions(
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
+        private var tracing: Tracing? = null
 
         /** Sets [ProducerOptions.delay] – how long the messages of this producer stay invisible to consumers. */
         fun delay(delay: Duration) = apply { this.delay = delay }
@@ -216,6 +224,9 @@ data class ProducerOptions(
         /** Sets [ProducerOptions.asyncExecutor] – the executor used by this producer's sendAsync() methods. */
         fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
 
+        /** Sets [ProducerOptions.tracing] – the tracing of this producer, used instead of the global one. */
+        fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
+
         /** Creates a new [ProducerOptions] instance: a fresh one on every call, nothing is cached or reused. */
         fun build() = ProducerOptions(
             delay = delay,
@@ -225,7 +236,8 @@ data class ProducerOptions(
             chunkSize = chunkSize,
             partialInsert = partialInsert,
             shard = shard,
-            asyncExecutor = asyncExecutor
+            asyncExecutor = asyncExecutor,
+            tracing = tracing
         )
     }
 
