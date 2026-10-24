@@ -19,13 +19,10 @@ import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.schema.Const
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
-import kolbasa.utils.JdbcHelpers.readStringList
-import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -93,16 +90,15 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         val expected = spanExporter.finishedSpanItems.map { span ->
             "traceparent 00-${span.traceId}-${span.spanId}-${span.spanContext.traceFlags.asHex()}"
         }
-        val contexts = dataSource.readStringList(
-            "select array_to_string(${Const.OPENTELEMETRY_COLUMN_NAME}, ' ') from ${queue.dbTableName} order by ${Const.ID_COLUMN_NAME}"
-        )
+
+        val contexts = readStrings("select array_to_string(opentelemetry, ' ') from q_tracing order by id")
         assertEquals(expected, contexts)
     }
 
     @Test
     fun testSend_Error() {
         // No queue table, so the insert fails
-        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+        SchemaHelpers.deleteQueues(dataSource, queue)
 
         // send() doesn't throw, it returns the error inside SendResult
         val result = DatabaseProducer(dataSource).send(queue, "bugaga")
@@ -121,7 +117,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     @Test
     fun testSend_SeveralErrors() {
         // No queue table, so every chunk fails, each with its own exception
-        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+        SchemaHelpers.deleteQueues(dataSource, queue)
 
         val options = SendOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         val request = SendRequest(listOf(SendMessage("bugaga1"), SendMessage("bugaga2")), options = options)
@@ -137,7 +133,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     @Test
     fun testReceive_Error() {
         // No queue table, so the receive query fails
-        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+        SchemaHelpers.deleteQueues(dataSource, queue)
 
         assertThrows<SQLException> { DatabaseConsumer(dataSource).receive(queue) }
 
@@ -169,6 +165,17 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         // Compare the ids only: the link holds a remote copy of the producer span context
         val links = consumerSpan.links.map { it.spanContext.traceId to it.spanContext.spanId }
         assertEquals(listOf(producerSpan.traceId to producerSpan.spanId), links)
+    }
+
+    private fun readStrings(query: String): List<String> = dataSource.connection.use { connection ->
+        connection.createStatement().use { statement ->
+            statement.executeQuery(query).use { resultSet ->
+                buildList {
+                    while (resultSet.next())
+                        add(resultSet.getString(1))
+                }
+            }
+        }
     }
 
 }
