@@ -1,6 +1,6 @@
 package kolbasa.cluster.admin
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId

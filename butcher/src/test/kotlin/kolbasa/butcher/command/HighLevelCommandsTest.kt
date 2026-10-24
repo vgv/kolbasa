@@ -10,15 +10,12 @@ import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.test.PostgreSQLImages
-import org.junit.jupiter.api.AfterEach
+import kolbasa.test.AbstractPostgreSQLTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.io.File
 import javax.sql.DataSource
 
@@ -30,41 +27,21 @@ import javax.sql.DataSource
  * does is parsing and rendering. A high-level command does its whole job past that point, so the path from
  * the command line to a changed shard table is worth running once end to end.
  *
- * Three nodes, as three schemas of one database: a kolbasa node is its own `q__node` identity, not its own
- * server.
+ * Three nodes, as three schemas of one database: a kolbasa node is its own `q__node` identity, not its own server
  */
-@Tag("unit-db")
-class HighLevelCommandsTest {
+class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
     @TempDir
     lateinit var tempDir: File
 
-    private val pgContainer = PostgreSQLContainer(POSTGRESQL_IMAGE)
-
-    private lateinit var dataSources: List<HikariDataSource>
+    private val dataSources: List<DataSource>
+        get() = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
     @BeforeEach
     fun before() {
-        pgContainer.start()
-
-        val publicSchema = dataSourceFor(SCHEMAS.first())
-        publicSchema.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                SCHEMAS.drop(1).forEach { schema -> statement.execute("create schema $schema") }
-            }
-        }
-
-        dataSources = listOf(publicSchema) + SCHEMAS.drop(1).map { dataSourceFor(it) }
-
         // Seeded the way a real cluster is: by an application starting against it. That creates every
         // node's identity, the shard table with all 1024 shards, and the queue on every node
         Cluster(dataSources, listOf(QUEUE)).updateStateOnce()
-    }
-
-    @AfterEach
-    fun after() {
-        dataSources.forEach(HikariDataSource::close)
-        pgContainer.stop()
     }
 
     @Test
@@ -145,7 +122,7 @@ class HighLevelCommandsTest {
     @Test
     fun testCommandRefusesAConfigThatNamesNodesWrongly() {
         // Names that are not the nodes' own ids, the way every config file had them before
-        val config = config(ids = listOf("line-1", "line-2", "line-3"))
+        val config = config(publicId = "line-1", firstId = "line-2", secondId = "line-3")
 
         val result = cli().test("rebalance-cluster --shards-per-round=10 --yes ${config.absolutePath}")
 
@@ -302,10 +279,20 @@ class HighLevelCommandsTest {
     /**
      * The cluster as butcher reads it: one line per node, pointing at one schema each
      *
-     * Each line is named by [ids], which are the nodes' own ids unless a test wants them wrong.
+     * Each line is named by the node's own id, unless a test passes a wrong one.
      */
-    private fun config(ids: List<String> = dataSources.map(::nodeIdOf)): File = File(tempDir, "cluster.conf").apply {
-        writeText(SCHEMAS.zip(ids).joinToString(separator = "") { (schema, id) -> configLine(id, schema) })
+    private fun config(
+        publicId: String = nodeIdOf(dataSource),
+        firstId: String = nodeIdOf(dataSourceFirstSchema),
+        secondId: String = nodeIdOf(dataSourceSecondSchema),
+    ): File {
+        val file = File(tempDir, "cluster.conf")
+        file.writeText(
+            configLine(publicId, "public") +
+                configLine(firstId, FIRST_SCHEMA_NAME) +
+                configLine(secondId, SECOND_SCHEMA_NAME)
+        )
+        return file
     }
 
     /** One node of the cluster, as a line of the config file */
@@ -335,10 +322,6 @@ class HighLevelCommandsTest {
     )
 
     private companion object {
-        val POSTGRESQL_IMAGE: String = PostgreSQLImages.randomImage
-
-        val SCHEMAS = listOf("public", "node_two", "node_three")
-
         val QUEUE: Queue<Int> = Queue.of("high_level_test", PredefinedDataTypes.Int)
     }
 }

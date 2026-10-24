@@ -1,10 +1,9 @@
-package kolbasa
+package kolbasa.test
 
-import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.utils.JdbcHelpers.readString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-
+import java.sql.ResultSet
+import javax.sql.DataSource
 
 // Yes, this is a test class for test class AbstractPostgreSQLTest :)
 internal class TestsForAbstractPostgreSQLTest : AbstractPostgreSQLTest() {
@@ -47,5 +46,18 @@ internal class TestsForAbstractPostgreSQLTest : AbstractPostgreSQLTest() {
             "create table test(str varchar)",
             "insert into test(str) values('second')"
         )
+    }
+}
+
+private fun DataSource.readInt(sql: String): Int = readFirst(sql) { it.getInt(1) }
+
+private fun DataSource.readString(sql: String): String = readFirst(sql) { it.getString(1) }
+
+private fun <T> DataSource.readFirst(sql: String, read: (ResultSet) -> T): T = connection.use { connection ->
+    connection.createStatement().use { statement ->
+        statement.executeQuery(sql).use { resultSet ->
+            resultSet.next()
+            read(resultSet)
+        }
     }
 }

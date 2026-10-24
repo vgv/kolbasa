@@ -60,9 +60,11 @@ holding the shared build logic. The root project has no code.
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
   operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `stats`
   (Prometheus, OpenTelemetry).
-- `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules; today that is
-  `PostgreSQLImages`, which reads `postgresql-test-images.txt` from this module's resources. Which PostgreSQL versions the
-  repository is tested against is decided here, once, for the tests and the benchmarks alike.
+- `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules: `PostgreSQLImages`,
+  which reads `postgresql-test-images.txt` from this module's resources, and `AbstractPostgreSQLTest`, the base class
+  for tests that need a database. Which PostgreSQL versions the repository is tested against is decided here, once,
+  for the tests and the benchmarks alike. A module that depends on it gets JUnit and Testcontainers along with it
+  (`api`), so it does not declare them again.
 - `examples/src/main/kotlin/kolbasa/example/` — runnable, self-contained examples; the best on-ramp to the API.
   Most come in **pairs**: `SimpleExample.kt` and `SimpleExample.java` are the same program written
   twice, because kolbasa is meant to read well from Java too. Keep the pair in sync — if you change one,

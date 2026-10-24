@@ -1,6 +1,6 @@
 package kolbasa.schema
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test

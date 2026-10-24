@@ -1,6 +1,6 @@
 package kolbasa.consumer.datasource
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendResult.Companion.onlyDuplicated

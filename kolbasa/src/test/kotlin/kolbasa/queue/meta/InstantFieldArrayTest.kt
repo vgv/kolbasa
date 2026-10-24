@@ -1,6 +1,6 @@
 package kolbasa.queue.meta
 
-import kolbasa.AbstractPostgreSQLTest
+import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.withAutoCommit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

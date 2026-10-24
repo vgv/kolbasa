@@ -32,21 +32,8 @@ dependencies {
 
     // Test
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
+    // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
-
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.launcher)
-
-    testImplementation(libs.mockk)
-
-    testImplementation(libs.testcontainers.testcontainers)
-    testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.testcontainers.postgresql)
-
-    testImplementation(libs.logback.core)
-    testImplementation(libs.logback.classic)
-    testImplementation(libs.hikaricp)
-    testImplementation(libs.prometheus.metrics.exporter.httpserver)
 }
 
 // Kotlin settings
