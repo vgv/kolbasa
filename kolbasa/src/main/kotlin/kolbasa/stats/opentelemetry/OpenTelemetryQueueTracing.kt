@@ -3,6 +3,7 @@ package kolbasa.stats.opentelemetry
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.AttributesBuilder
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.context.Context
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessageOperation
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesExtractor
@@ -20,7 +21,7 @@ import java.time.Instant
 internal class OpenTelemetryQueueTracing<Data>(
     queueName: String,
     openTelemetryConfig: OpenTelemetryConfig.Config
-): QueueTracing<Data> {
+) : QueueTracing<Data> {
 
     private val producerInstrumenter: Instrumenter<ProducerCall<Data>, SendResult<Data>> =
         buildProducerInstrumenter(openTelemetryConfig.openTelemetry, queueName)
@@ -54,7 +55,17 @@ internal class OpenTelemetryQueueTracing<Data>(
             producerInstrumenter.end(context, producerCall, null, e)
             throw e
         }
-        producerInstrumenter.end(context, producerCall, response, null)
+
+        // A failed send doesn't throw, it returns its errors inside the response. Pass them on, so the span is marked
+        // as an error too. The instrumenter.end() takes only one error, the others should go to the span directly, e.g.
+        // 1) first exception goes to the instrumenter.end() call
+        // 2) other exceptions (if any) go to the span directly by span.recordException()
+        val errors = response.gatherExceptions()
+        val span = Span.fromContext(context)
+        for (i in 1 until errors.size) {
+            span.recordException(errors[i])
+        }
+        producerInstrumenter.end(context, producerCall, response, errors.firstOrNull())
 
         return response
     }
@@ -111,7 +122,8 @@ internal class OpenTelemetryQueueTracing<Data>(
                 request: ProducerCall<Data>,
                 response: SendResult<Data>?,
                 error: Throwable?
-            ) {}
+            ) {
+            }
         }
 
         return Instrumenter.builder<ProducerCall<Data>, SendResult<Data>>(
@@ -147,7 +159,8 @@ internal class OpenTelemetryQueueTracing<Data>(
                 request: ConsumerCall<Data>,
                 response: Unit?,
                 error: Throwable?
-            ) {}
+            ) {
+            }
         }
 
         return Instrumenter.builder<ConsumerCall<Data>, Unit>(

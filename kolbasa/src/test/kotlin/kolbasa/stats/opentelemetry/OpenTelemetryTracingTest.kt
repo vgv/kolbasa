@@ -11,7 +11,9 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kolbasa.Kolbasa
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.producer.PartialInsert
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
@@ -95,6 +97,41 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
             "select array_to_string(${Const.OPENTELEMETRY_COLUMN_NAME}, ' ') from ${queue.dbTableName} order by ${Const.ID_COLUMN_NAME}"
         )
         assertEquals(expected, contexts)
+    }
+
+    @Test
+    fun testSend_Error() {
+        // No queue table, so the insert fails
+        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+
+        // send() doesn't throw, it returns the error inside SendResult
+        val result = DatabaseProducer(dataSource).send(queue, "bugaga")
+        assertEquals(1, result.failedMessages)
+
+        // The span is marked as an error anyway, and holds the exception
+        val spans = spanExporter.finishedSpanItems
+        assertEquals(1, spans.size, spans.joinToString { "${it.kind} '${it.name}'" })
+        val producerSpan = spans.first()
+        assertEquals(SpanKind.PRODUCER, producerSpan.kind)
+        assertEquals("tracing publish", producerSpan.name)
+        assertEquals(StatusCode.ERROR, producerSpan.status.statusCode)
+        assertEquals(listOf("exception"), producerSpan.events.map { it.name })
+    }
+
+    @Test
+    fun testSend_SeveralErrors() {
+        // No queue table, so every chunk fails, each with its own exception
+        dataSource.useStatement { it.execute("drop table ${queue.dbTableName}") }
+
+        val options = SendOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
+        val request = SendRequest(listOf(SendMessage("bugaga1"), SendMessage("bugaga2")), options = options)
+        val result = DatabaseProducer(dataSource).send(queue, request)
+        assertEquals(2, result.failedMessages)
+
+        // The span holds all of them
+        val producerSpan = spanExporter.finishedSpanItems.single()
+        assertEquals(StatusCode.ERROR, producerSpan.status.statusCode)
+        assertEquals(listOf("exception", "exception"), producerSpan.events.map { it.name })
     }
 
     @Test
