@@ -13,8 +13,8 @@ import io.opentelemetry.api.OpenTelemetry
  * so both sides of the queue can be seen as one flow even though they are different applications and different
  * moments in time.
  *
- * Set it through [Kolbasa.openTelemetryConfig][kolbasa.Kolbasa.openTelemetryConfig] at application startup, before
- * you create your queues and start sending. Any later changes will have no effect.
+ * Set it through [Kolbasa.openTelemetryConfig][kolbasa.Kolbasa.openTelemetryConfig]. It is read on every `send()` and
+ * `receive()`, so a change takes effect on the next call.
  *
  * ## Usage Example
  *
@@ -34,8 +34,13 @@ import io.opentelemetry.api.OpenTelemetry
  */
 sealed class OpenTelemetryConfig {
 
+    // Made once per config and shared by all queues
+    internal abstract val queueTracing: QueueTracing
+
     /** No tracing at all: nothing is measured, nothing is written into messages, nothing is read back. */
-    object None : OpenTelemetryConfig()
+    object None : OpenTelemetryConfig() {
+        override val queueTracing: QueueTracing = EmptyQueueTracing
+    }
 
     /**
      * Tracing through the [OpenTelemetry] instance you provide.
@@ -45,6 +50,8 @@ sealed class OpenTelemetryConfig {
          * OpenTelemetry instance. By default, [OpenTelemetry.noop] is used.
          */
         val openTelemetry: OpenTelemetry = OpenTelemetry.noop()
-    ) : OpenTelemetryConfig()
+    ) : OpenTelemetryConfig() {
+        override val queueTracing: QueueTracing = OpenTelemetryQueueTracing(openTelemetry)
+    }
 
 }

@@ -2,26 +2,25 @@ package kolbasa.stats.opentelemetry
 
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesGetter
 
-internal class ConsumerResponseAttributesGetter<Data>(private val queueName: String) :
-    MessagingAttributesGetter<ConsumerCall<Data>, Unit> {
+internal class ConsumerResponseAttributesGetter : MessagingAttributesGetter<ConsumerCall, Unit> {
 
-    override fun getSystem(request: ConsumerCall<Data>?): String {
+    override fun getSystem(request: ConsumerCall?): String {
         return "kolbasa"
     }
 
-    override fun getDestination(request: ConsumerCall<Data>?): String {
-        return queueName
+    override fun getDestination(request: ConsumerCall?): String? {
+        return request?.queueName
     }
 
-    override fun isTemporaryDestination(request: ConsumerCall<Data>?): Boolean {
+    override fun isTemporaryDestination(request: ConsumerCall?): Boolean {
         return false
     }
 
-    override fun getConversationId(request: ConsumerCall<Data>?): String? {
+    override fun getConversationId(request: ConsumerCall?): String? {
         return null
     }
 
-    override fun getMessageId(request: ConsumerCall<Data>, response: Unit?): String? {
+    override fun getMessageId(request: ConsumerCall, response: Unit?): String? {
         return if (request.messages.size == 1) {
             request.messages[0].id.toString()
         } else {
@@ -29,7 +28,7 @@ internal class ConsumerResponseAttributesGetter<Data>(private val queueName: Str
         }
     }
 
-    override fun getMessageHeader(request: ConsumerCall<Data>?, name: String?): List<String> {
+    override fun getMessageHeader(request: ConsumerCall?, name: String?): List<String> {
         if (request == null || name == null) {
             return emptyList()
         }
@@ -37,27 +36,27 @@ internal class ConsumerResponseAttributesGetter<Data>(private val queueName: Str
         return request.messages.mapNotNull { it.openTelemetryData?.get(name) }
     }
 
-    override fun getDestinationTemplate(request: ConsumerCall<Data>?): String? {
+    override fun getDestinationTemplate(request: ConsumerCall?): String? {
         return null
     }
 
-    override fun isAnonymousDestination(request: ConsumerCall<Data>?): Boolean {
+    override fun isAnonymousDestination(request: ConsumerCall?): Boolean {
         return false
     }
 
-    override fun getMessageBodySize(request: ConsumerCall<Data>?): Long? {
+    override fun getMessageBodySize(request: ConsumerCall?): Long? {
         return null
     }
 
-    override fun getMessageEnvelopeSize(request: ConsumerCall<Data>?): Long? {
+    override fun getMessageEnvelopeSize(request: ConsumerCall?): Long? {
         return null
     }
 
-    override fun getClientId(request: ConsumerCall<Data>?): String? {
+    override fun getClientId(request: ConsumerCall?): String? {
         return null
     }
 
-    override fun getBatchMessageCount(request: ConsumerCall<Data>, response: Unit?): Long? {
+    override fun getBatchMessageCount(request: ConsumerCall, response: Unit?): Long? {
         return if (request.messages.size > 1) {
             request.messages.size.toLong()
         } else {

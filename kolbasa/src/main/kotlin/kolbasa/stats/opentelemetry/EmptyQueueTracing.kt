@@ -5,9 +5,10 @@ import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
 import kolbasa.schema.NodeId
 
-internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
+internal object EmptyQueueTracing : QueueTracing {
 
-    override fun makeProducerCall(
+    override fun <Data> makeProducerCall(
+        queueName: String,
         nodeId: NodeId,
         request: SendRequest<Data>,
         businessCall: (openTelemetryContext: List<String>?) -> SendResult<Data>
@@ -16,7 +17,11 @@ internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
         return businessCall(null)
     }
 
-    override fun makeConsumerCall(nodeId: NodeId, businessCall: () -> List<Message<Data>>): List<Message<Data>> {
+    override fun <Data> makeConsumerCall(
+        queueName: String,
+        nodeId: NodeId,
+        businessCall: () -> List<Message<Data>>
+    ): List<Message<Data>> {
         // default trivial implementation
         return businessCall()
     }

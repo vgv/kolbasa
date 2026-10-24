@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
  *
  * Every property here is one value shared by all producers, consumers, mutators and queues in the JVM. All of them
  * can be changed at any time, but see each property for WHEN it is read: most are read at the point of use, while
- * [prometheusConfig] and [openTelemetryConfig] have to be set before any other use of Kolbasa.
+ * [prometheusConfig] has to be set before any other use of Kolbasa.
  *
  * ## Usage Example
  *
@@ -77,8 +77,7 @@ object Kolbasa {
     /**
      * OpenTelemetry configuration. The default, [OpenTelemetryConfig.None], collects and propagates nothing.
      *
-     * Set it before any other use of Kolbasa: the configuration is applied once and stays for the whole life of
-     * the JVM, so changing it later has no effect on anything already running.
+     * Read on every send() and receive(), so a change takes effect on the next call.
      */
     @JvmStatic
     @Volatile

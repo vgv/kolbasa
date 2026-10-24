@@ -31,8 +31,8 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.parallel.Isolated
 import java.sql.SQLException
 
-// Kolbasa.openTelemetryConfig is global: while it is set, every queue used for the first time picks it up.
-// So the test runs alone, and no other test can touch its queues meanwhile
+// Kolbasa.openTelemetryConfig is global: while it is set, every send() and receive() in the JVM is traced.
+// So the test runs alone, and no other test can add its spans meanwhile
 @Isolated
 class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
 
@@ -41,7 +41,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
         .build()
 
-    private lateinit var queue: Queue<String>
+    private val queue = Queue.of("tracing", PredefinedDataTypes.String)
 
     @BeforeEach
     fun before() {
@@ -52,8 +52,6 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
                 .build()
         )
 
-        // A queue reads the config once, on its first use, so it has to be created after the config is set
-        queue = Queue.of("tracing", PredefinedDataTypes.String)
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
     }
 

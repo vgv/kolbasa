@@ -4,10 +4,6 @@ import kolbasa.Kolbasa
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
-import kolbasa.stats.opentelemetry.EmptyQueueTracing
-import kolbasa.stats.opentelemetry.OpenTelemetryConfig
-import kolbasa.stats.opentelemetry.OpenTelemetryQueueTracing
-import kolbasa.stats.opentelemetry.QueueTracing
 import kolbasa.stats.prometheus.EmptyQueueMetrics
 import kolbasa.stats.prometheus.PrometheusConfig
 import kolbasa.stats.prometheus.PrometheusQueueMetrics
@@ -158,17 +154,6 @@ data class Queue<Data> internal constructor(
             // and cache it in the queue object to avoid excessive allocations.
             // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
             is PrometheusConfig.Config -> PrometheusQueueMetrics(this, config)
-        }
-    }
-
-    internal val queueTracing: QueueTracing<Data> by lazy {
-        when (val config = Kolbasa.openTelemetryConfig) {
-            // No OpenTelemetry config - no OT data collection/propagation
-            is OpenTelemetryConfig.None -> EmptyQueueTracing()
-
-            // Performance optimization: create all opentelemetry stuff for the queue (instrumenter, setters etc.)
-            // and cache it to avoid excessive allocations.
-            is OpenTelemetryConfig.Config -> OpenTelemetryQueueTracing(name, config)
         }
     }
 

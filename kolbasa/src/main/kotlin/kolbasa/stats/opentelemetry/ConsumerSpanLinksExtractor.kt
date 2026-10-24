@@ -8,15 +8,17 @@ import io.opentelemetry.instrumentation.api.instrumenter.SpanLinksBuilder
 import io.opentelemetry.instrumentation.api.instrumenter.SpanLinksExtractor
 import kolbasa.consumer.Message
 
-internal class ConsumerSpanLinksExtractor<Data>(
+internal class ConsumerSpanLinksExtractor(
     private val propagator: TextMapPropagator,
-    private val extractor: TextMapGetter<Message<Data>>
-) : SpanLinksExtractor<ConsumerCall<Data>> {
+    private val extractor: TextMapGetter<Message<*>>
+) : SpanLinksExtractor<ConsumerCall> {
 
-    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: ConsumerCall<Data>) {
+    override fun extract(spanLinks: SpanLinksBuilder, parentContext: Context, request: ConsumerCall) {
+        val root = Context.root()
+
         // Extract all context information from all messages and add them as links
         request.messages.forEach { req ->
-            val context = propagator.extract(Context.root(), req, extractor)
+            val context = propagator.extract(root, req, extractor)
             spanLinks.addLink(Span.fromContext(context).spanContext)
         }
     }

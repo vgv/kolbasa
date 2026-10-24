@@ -1,5 +1,6 @@
 package kolbasa.producer.connection
 
+import kolbasa.Kolbasa
 import kolbasa.producer.*
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
@@ -44,9 +45,10 @@ class ConnectionAwareDatabaseProducer internal constructor(
     ): SendResult<Data> {
         val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
+        val queueTracing = Kolbasa.openTelemetryConfig.queueTracing
 
         val (execution, result) = TimeHelper.measure {
-            queue.queueTracing.makeProducerCall(nodeId, request) { openTelemetryContext ->
+            queueTracing.makeProducerCall(queue.name, nodeId, request) { openTelemetryContext ->
                 when (partialInsert) {
                     PartialInsert.PROHIBITED -> {
                         sendProhibited(connection, queue, approxStatsBytes, request, openTelemetryContext)

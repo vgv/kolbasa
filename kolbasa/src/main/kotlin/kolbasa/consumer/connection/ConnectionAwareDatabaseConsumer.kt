@@ -1,5 +1,6 @@
 package kolbasa.consumer.connection
 
+import kolbasa.Kolbasa
 import kolbasa.cluster.Shards
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.ConsumerSchemaHelpers
@@ -58,7 +59,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         limit: Int,
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
-        return queue.queueTracing.makeConsumerCall(nodeId) {
+        return Kolbasa.openTelemetryConfig.queueTracing.makeConsumerCall(queue.name, nodeId) {
             doRealReceive(connection, queue, limit, receiveOptions)
         }
     }
