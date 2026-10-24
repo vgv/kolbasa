@@ -1,4 +1,4 @@
-package kolbasa.stats.sql
+package kolbasa.telemetry.sql
 
 import kolbasa.Kolbasa
 import kolbasa.queue.Queue

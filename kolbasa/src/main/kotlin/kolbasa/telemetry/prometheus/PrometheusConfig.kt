@@ -1,10 +1,10 @@
-package kolbasa.stats.prometheus
+package kolbasa.telemetry.prometheus
 
 import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-import kolbasa.stats.prometheus.metrics.Const
+import kolbasa.telemetry.prometheus.metrics.Const
 
 /**
  * Says whether Kolbasa collects Prometheus metrics, and where it registers them.

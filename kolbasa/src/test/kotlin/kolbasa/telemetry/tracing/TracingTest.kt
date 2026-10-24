@@ -1,4 +1,4 @@
-package kolbasa.stats.tracing
+package kolbasa.telemetry.tracing
 
 import io.mockk.mockk
 import kolbasa.consumer.ConsumerOptions

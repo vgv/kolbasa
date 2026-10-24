@@ -59,8 +59,8 @@ an included build holding the shared build logic. The root project has no code.
   `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
-  operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `stats`
-  (Prometheus, and the `Tracing` hook that a tracing system plugs into).
+  operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `telemetry`
+  (Prometheus metrics, SQL dumps, and the `Tracing` hook that a tracing system plugs into).
 - `kolbasa-opentelemetry/src/main/kotlin/kolbasa/opentelemetry/` — OpenTelemetry tracing, published as
   `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`
   hook. It depends on `:kolbasa` the way a user would, so it can only use the **public** API. That makes it the

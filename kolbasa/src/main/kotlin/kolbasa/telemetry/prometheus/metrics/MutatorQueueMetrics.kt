@@ -1,11 +1,11 @@
-package kolbasa.stats.prometheus.metrics
+package kolbasa.telemetry.prometheus.metrics
 
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import kolbasa.schema.NodeId
-import kolbasa.stats.prometheus.PrometheusConfig
-import kolbasa.stats.prometheus.metrics.Extensions.incInt
-import kolbasa.stats.prometheus.metrics.Extensions.observeNanos
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
+import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
 
 internal class MutatorQueueMetrics(
     queueName: String,

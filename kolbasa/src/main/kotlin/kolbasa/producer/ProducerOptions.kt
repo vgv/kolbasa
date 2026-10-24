@@ -1,7 +1,7 @@
 package kolbasa.producer
 
 import kolbasa.queue.Checks
-import kolbasa.stats.tracing.Tracing
+import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 

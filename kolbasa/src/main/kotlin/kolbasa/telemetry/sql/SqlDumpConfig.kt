@@ -1,4 +1,4 @@
-package kolbasa.stats.sql
+package kolbasa.telemetry.sql
 
 import kolbasa.queue.Queue
 import java.io.Writer

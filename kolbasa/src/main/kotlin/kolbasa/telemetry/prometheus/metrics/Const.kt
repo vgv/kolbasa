@@ -1,4 +1,4 @@
-package kolbasa.stats.prometheus.metrics
+package kolbasa.telemetry.prometheus.metrics
 
 internal object Const {
 

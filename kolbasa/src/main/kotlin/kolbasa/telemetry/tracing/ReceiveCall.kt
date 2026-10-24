@@ -1,4 +1,4 @@
-package kolbasa.stats.tracing
+package kolbasa.telemetry.tracing
 
 import kolbasa.consumer.Message
 import kolbasa.queue.Queue

@@ -18,7 +18,7 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
-import kolbasa.stats.tracing.Tracing
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach

@@ -1,4 +1,4 @@
-package kolbasa.stats.tracing
+package kolbasa.telemetry.tracing
 
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult

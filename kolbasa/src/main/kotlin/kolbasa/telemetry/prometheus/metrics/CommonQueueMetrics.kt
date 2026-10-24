@@ -1,11 +1,11 @@
-package kolbasa.stats.prometheus.metrics
+package kolbasa.telemetry.prometheus.metrics
 
 import kolbasa.inspector.MessageAge
 import kolbasa.inspector.Messages
 import kolbasa.schema.NodeId
-import kolbasa.stats.prometheus.PrometheusConfig
-import kolbasa.stats.prometheus.metrics.Extensions.asSeconds
-import kolbasa.stats.prometheus.metrics.Extensions.setLong
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.prometheus.metrics.Extensions.asSeconds
+import kolbasa.telemetry.prometheus.metrics.Extensions.setLong
 
 internal class CommonQueueMetrics(
     queueName: String,

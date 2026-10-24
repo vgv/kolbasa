@@ -14,9 +14,9 @@ import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
 import kolbasa.producer.SendResult
-import kolbasa.stats.tracing.ReceiveCall
-import kolbasa.stats.tracing.SendCall
-import kolbasa.stats.tracing.Tracing
+import kolbasa.telemetry.tracing.ReceiveCall
+import kolbasa.telemetry.tracing.SendCall
+import kolbasa.telemetry.tracing.Tracing
 import java.time.Instant
 import java.util.function.Supplier
 

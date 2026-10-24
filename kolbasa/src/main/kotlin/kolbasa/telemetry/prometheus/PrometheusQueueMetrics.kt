@@ -1,10 +1,10 @@
-package kolbasa.stats.prometheus
+package kolbasa.telemetry.prometheus
 
 import kolbasa.inspector.connection.ConnectionAwareDatabaseInspector
 import kolbasa.producer.PartialInsert
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.stats.prometheus.metrics.*
+import kolbasa.telemetry.prometheus.metrics.*
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
