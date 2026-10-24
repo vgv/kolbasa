@@ -8,6 +8,7 @@ import kolbasa.schema.Const
 import kolbasa.utils.BytesCounter
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
+import java.sql.Types
 import java.util.concurrent.ExecutorService
 
 internal object ProducerSchemaHelpers {
@@ -36,8 +37,7 @@ internal object ProducerSchemaHelpers {
         queue: Queue<*>,
         producerOptions: ProducerOptions,
         deduplicationMode: DeduplicationMode,
-        sendOptions: SendOptions,
-        hasOpenTelemetry: Boolean
+        sendOptions: SendOptions
     ): String {
         val insertColumns = mutableListOf<String>()
         val selectExprs = mutableListOf<String>()
@@ -75,11 +75,9 @@ internal object ProducerSchemaHelpers {
             selectExprs += "'$producerName'"
         }
 
-        // OpenTelemetry context propagation data - scalar parameter
-        if (hasOpenTelemetry) {
-            insertColumns += Const.OPENTELEMETRY_COLUMN_NAME
-            selectExprs += "?::varchar[]"
-        }
+        // OpenTelemetry context propagation data - scalar parameter, null if there is no context
+        insertColumns += Const.OPENTELEMETRY_COLUMN_NAME
+        selectExprs += "?::varchar[]"
 
         // deduplication - uc derived from ordinality
         if (deduplicationMode == DeduplicationMode.IGNORE_DUPLICATE) {
@@ -130,10 +128,12 @@ internal object ProducerSchemaHelpers {
         // 1. Scalar: shard
         preparedStatement.setInt(columnIndex++, request.effectiveShard.id)
 
-        // 2. Scalar: OpenTelemetry context (if present)
+        // 2. Scalar: OpenTelemetry context, null if there is no context
         if (openTelemetryContext != null) {
             val otelArray = connection.createArrayOf("varchar", openTelemetryContext.toTypedArray())
             preparedStatement.setArray(columnIndex++, otelArray)
+        } else {
+            preparedStatement.setNull(columnIndex++, Types.ARRAY)
         }
 
         // 3. Array: delays in microseconds (bigint[])

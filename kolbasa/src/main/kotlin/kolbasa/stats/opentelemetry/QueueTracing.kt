@@ -7,8 +7,6 @@ import kolbasa.schema.NodeId
 
 internal interface QueueTracing<Data> {
 
-    fun readOpenTelemetryData(): Boolean
-
     // businessCall gets the trace context to write into the sent messages, as [key1, value1, key2, value2...],
     // or null if there is nothing to write
     fun makeProducerCall(

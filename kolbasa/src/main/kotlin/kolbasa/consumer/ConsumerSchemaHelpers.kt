@@ -44,10 +44,8 @@ internal object ConsumerSchemaHelpers {
                 dataColumns += metaField.dbColumnName
             }
         }
-        // if we need OT data - read it
-        if (queue.queueTracing.readOpenTelemetryData()) {
-            dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
-        }
+        // OpenTelemetry data, null for messages sent without a trace context
+        dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
 
         // ----------------------------------------------------------
 
@@ -184,14 +182,10 @@ internal object ConsumerSchemaHelpers {
             MetaValues.EMPTY
         }
 
-        val otData = if (queue.queueTracing.readOpenTelemetryData()) {
-            // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}
-            @Suppress("UNCHECKED_CAST")
-            val otArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
-            Helpers.arrayToMap(otArray)
-        } else {
-            null
-        }
+        // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
+        @Suppress("UNCHECKED_CAST")
+        val otelArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
+        val otelData = Helpers.arrayToMap(otelArray)
 
         val message = Message(
             id = Id(localId, shard),
@@ -202,7 +196,7 @@ internal object ConsumerSchemaHelpers {
             data = data,
             meta = meta
         )
-        message.openTelemetryData = otData
+        message.openTelemetryData = otelData
 
         return message
     }

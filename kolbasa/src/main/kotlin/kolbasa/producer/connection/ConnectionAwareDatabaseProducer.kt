@@ -178,15 +178,13 @@ class ConnectionAwareDatabaseProducer internal constructor(
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 
-        val cacheKey =
-            CacheKey(queue, options, deduplicationMode, request.options, openTelemetryContext != null)
+        val cacheKey = CacheKey(queue, options, deduplicationMode, request.options)
         val query = sendQueryCache.getOrPut(cacheKey) {
             ProducerSchemaHelpers.generateInsertPreparedQuery(
                 queue = queue,
                 producerOptions = options,
                 deduplicationMode = deduplicationMode,
-                sendOptions = request.options,
-                hasOpenTelemetry = openTelemetryContext != null
+                sendOptions = request.options
             )
         }
 
@@ -246,8 +244,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             val queue: Queue<*>,
             val producerOptions: ProducerOptions,
             val deduplicationMode: DeduplicationMode,
-            val sendOptions: SendOptions,
-            val hasOpenTelemetry: Boolean
+            val sendOptions: SendOptions
         )
 
         val sendQueryCache = LruCache<CacheKey, String>(capacity = 1000)

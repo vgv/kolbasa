@@ -7,10 +7,6 @@ import kolbasa.schema.NodeId
 
 internal class EmptyQueueTracing<Data>: QueueTracing<Data> {
 
-    override fun readOpenTelemetryData(): Boolean {
-        return false
-    }
-
     override fun makeProducerCall(
         nodeId: NodeId,
         request: SendRequest<Data>,
