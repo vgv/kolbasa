@@ -14,6 +14,11 @@ dependencies {
     // `internal` declaration to compile, it is not an example anyone could copy into their own project.
     implementation(project(":kolbasa"))
 
+    // OpenTelemetryExample: the tracing module, and the SDK to build an OpenTelemetry instance.
+    // A real application usually gets that instance from its framework or the OpenTelemetry agent
+    implementation(project(":kolbasa-opentelemetry"))
+    implementation(libs.opentelemetry.sdk)
+
     // Which PostgreSQL version to start, decided once for the whole repository
     implementation(project(":test-support"))
 

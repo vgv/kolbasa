@@ -313,6 +313,15 @@ Example: [SqlPutFunctionExample](examples/src/main/kotlin/kolbasa/example/SqlPut
 
 `./gradlew example -Pname=SqlPutFunctionExample`
 
+### OpenTelemetry tracing
+Turn tracing on once, and every send and receive becomes a span. The receive span links to the send span,
+because the sender's trace context is stored together with the message. Needs the optional
+`kolbasa-opentelemetry` artifact, see [above](#opentelemetry-optional).
+
+Example: [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt)
+
+`./gradlew example -Pname=OpenTelemetryExample`
+
 
 ## Documentation
 

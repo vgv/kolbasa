@@ -75,8 +75,8 @@ an included build holding the shared build logic. The root project has no code.
   twice, because kolbasa is meant to read well from Java too. Keep the pair in sync — if you change one,
   change the other. The `.java` files sit next to their Kotlin twins deliberately:
   `examples/build.gradle.kts` adds `sourceSets.main { java.srcDir("src/main/kotlin") }` so javac
-  compiles them. The module depends on `:kolbasa` the way a user would, so an example can only use the
-  **public** API — if it needs an `internal` declaration to compile, it is not an example anyone could
+  compiles them. The module depends on `:kolbasa` and `:kolbasa-opentelemetry` the way a user would, so an example
+  can only use the **public** API — if it needs an `internal` declaration to compile, it is not an example anyone could
   copy.
 - `performance/src/main/kotlin/kolbasa/performance/` — the benchmark suite, run with `./gradlew performance`. Which scenario
   runs, and against which database, comes from environment variables, not from Gradle — `test=producer-consumer
