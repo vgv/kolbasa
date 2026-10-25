@@ -1,9 +1,15 @@
 package kolbasa.telemetry.tracing
 
+import io.mockk.every
 import io.mockk.mockk
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.Message
+import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
+import kolbasa.consumer.datasource.Consumer
+import kolbasa.consumer.worker.HandleResult
+import kolbasa.consumer.worker.QueueProcessor
+import kolbasa.consumer.worker.QueueProcessorOptions
 import kolbasa.producer.Id
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
@@ -51,6 +57,14 @@ class TracingTest {
     }
 
     @Test
+    fun testNone_Process() {
+        val call = ProcessCall(queue, message()) { HandleResult.SKIP }
+
+        assertEquals(HandleResult.SKIP, Tracing.NONE.process(call))
+        assertTrue(call.proceeded)
+    }
+
+    @Test
     fun testProceed_OnlyOnce() {
         val sendCall = SendCall(queue, NodeId.EMPTY_NODE_ID, SendRequest(emptyList())) {
             SendResult(failedMessages = 0, messages = emptyList())
@@ -61,6 +75,10 @@ class TracingTest {
         val receiveCall = ReceiveCall(queue, NodeId.EMPTY_NODE_ID) { emptyList() }
         receiveCall.proceed()
         assertThrows<IllegalStateException> { receiveCall.proceed() }
+
+        val processCall = ProcessCall(queue, message()) { HandleResult.DONE }
+        processCall.proceed()
+        assertThrows<IllegalStateException> { processCall.proceed() }
     }
 
     @Test
@@ -81,6 +99,22 @@ class TracingTest {
     }
 
     @Test
+    fun testProceed_NotCalled_Process() {
+        // A hook that says DONE without calling the handler
+        val broken = object : Tracing {
+            override fun <Data> process(call: ProcessCall<Data>) = HandleResult.DONE
+        }
+
+        // One message to process. The mock knows nothing else, so a delete() of the message would fail the test too
+        val consumer = mockk<Consumer>()
+        every { consumer.receive(queue, QueueProcessorOptions.DEFAULT_RECEIVE_LIMIT, ReceiveOptions.DEFAULT) } returns
+            listOf(message())
+
+        val processor = QueueProcessor(consumer, queue, QueueProcessorOptions(tracing = broken)) { HandleResult.DONE }
+        assertThrows<IllegalStateException> { processor.process() }
+    }
+
+    @Test
     fun testTraceContext() {
         val call = ReceiveCall(queue, NodeId.EMPTY_NODE_ID) { emptyList() }
 
@@ -90,6 +124,12 @@ class TracingTest {
         val withContext = message()
         withContext.traceContext = mapOf("traceparent" to "00-trace-span-01")
         assertEquals(mapOf("traceparent" to "00-trace-span-01"), call.traceContext(withContext))
+
+        // The same for one processed message
+        val processWithout = ProcessCall(queue, withoutContext) { HandleResult.DONE }
+        assertEquals(emptyMap<String, String>(), processWithout.traceContext())
+        val processWith = ProcessCall(queue, withContext) { HandleResult.DONE }
+        assertEquals(mapOf("traceparent" to "00-trace-span-01"), processWith.traceContext())
     }
 
     private fun message() = Message(

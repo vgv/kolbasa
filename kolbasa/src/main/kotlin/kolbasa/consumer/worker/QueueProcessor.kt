@@ -1,8 +1,10 @@
 package kolbasa.consumer.worker
 
+import kolbasa.Kolbasa
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
+import kolbasa.telemetry.tracing.ProcessCall
 
 /**
  * Processes one batch of messages at a time: receives it, passes every message to your [MessageHandler] and deletes
@@ -82,13 +84,16 @@ class QueueProcessor<Data> @JvmOverloads constructor(
             return emptyResult
         }
 
+        val tracing = options.tracing ?: Kolbasa.tracing
+
         val succeeded = ArrayList<Id>(messages.size)
         var skipped = 0
         var failed = 0
 
         for (message in messages) {
+            val call = ProcessCall(queue, message) { handler.handle(message) }
             try {
-                when (handler.handle(message)) {
+                when (tracing.process(call)) {
                     HandleResult.DONE -> succeeded += message.id
                     HandleResult.SKIP -> skipped++
                 }
@@ -96,6 +101,10 @@ class QueueProcessor<Data> @JvmOverloads constructor(
                 options.errorHandler.onProcessError(ProcessError(queue, message, e))
                 failed++
             }
+
+            // A hook that never called the handler is a bug, not a failed message. Thrown before the delete, so the
+            // message stays in the queue
+            check(call.proceeded) { "Tracing.process() returned without calling ProcessCall.proceed()" }
         }
 
         if (succeeded.isNotEmpty()) {

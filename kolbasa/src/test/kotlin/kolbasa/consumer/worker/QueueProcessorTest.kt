@@ -7,6 +7,8 @@ import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
 import kolbasa.schema.SchemaHelpers
+import kolbasa.telemetry.tracing.ProcessCall
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -106,6 +108,37 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         // The good message is deleted, the bad one stays in the queue with one attempt spent
         assertEquals(1, messagesInQueue())
         assertEquals(4, dataSource.readInt("select remaining_attempts from ${queue.dbTableName}"))
+    }
+
+    @Test
+    fun testProcess_Tracing() {
+        send("good", "bad")
+
+        // A hook that sees every handler call: the message, and then the result or the error
+        val seen = mutableListOf<String>()
+        val tracing = object : Tracing {
+            override fun <Data> process(call: ProcessCall<Data>): HandleResult {
+                try {
+                    return call.proceed().also { seen += "${call.message.data}: $it" }
+                } catch (e: Exception) {
+                    seen += "${call.message.data}: ${e.javaClass.simpleName}"
+                    throw e
+                }
+            }
+        }
+
+        val errors = mutableListOf<ProcessError>()
+        val options = QueueProcessorOptions(errorHandler = { errors += it }, tracing = tracing)
+        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { message ->
+            if (message.data == "bad") throw IllegalArgumentException("Can't handle '${message.data}'")
+            HandleResult.DONE
+        }
+
+        assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 1, requested = 10), processor.process())
+
+        // The hook saw both calls, and the error went on to the error handler
+        assertEquals(setOf("good: DONE", "bad: IllegalArgumentException"), seen.toSet())
+        assertEquals("bad", errors.single().message.data)
     }
 
     @Test
