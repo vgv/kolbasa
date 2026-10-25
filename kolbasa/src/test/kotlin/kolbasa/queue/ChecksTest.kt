@@ -155,6 +155,26 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
+    fun testCheckReceiveLimit_Positive_Works() {
+        // Check all positive values work
+        Checks.checkReceiveLimit(1)
+        Checks.checkReceiveLimit(Random.nextInt(1, Int.MAX_VALUE))
+    }
+
+    @Test
+    fun testCheckReceiveLimit_ZeroOrNegative_Fails() {
+        // Check zero and negative values fail
+        assertThrows<IllegalArgumentException> {
+            Checks.checkReceiveLimit(0)
+        }
+        assertThrows<IllegalArgumentException> {
+            Checks.checkReceiveLimit(Random.nextInt(Int.MIN_VALUE, 0))
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
     fun testCheckQueueName_IfEmpty() {
         assertThrows<IllegalArgumentException> {
             Checks.checkQueueName("", QueueRole.MAIN)

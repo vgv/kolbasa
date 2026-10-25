@@ -73,6 +73,12 @@ internal object Checks {
         }
     }
 
+    fun checkReceiveLimit(receiveLimit: Int) {
+        require(receiveLimit > 0) {
+            "Receive limit must be greater than zero (current: $receiveLimit)"
+        }
+    }
+
     fun checkQueueName(queueName: String, queueRole: QueueRole) {
         require(queueName.isNotEmpty()) {
             "Queue name is empty"
