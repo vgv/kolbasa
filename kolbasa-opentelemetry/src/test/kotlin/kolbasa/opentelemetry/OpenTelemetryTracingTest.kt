@@ -18,6 +18,7 @@ import kolbasa.consumer.worker.HandleResult
 import kolbasa.consumer.worker.MessageHandler
 import kolbasa.consumer.worker.QueueProcessor
 import kolbasa.consumer.worker.QueueProcessorOptions
+import kolbasa.producer.MessageOptions
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
@@ -62,6 +63,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
 
     private val PROCESS_RESULT = AttributeKey.stringKey("kolbasa.process.result")
     private val MESSAGE_ID = AttributeKey.stringKey("messaging.message.id")
+    private val LAST_ATTEMPT = AttributeKey.booleanKey("kolbasa.message.last_attempt")
 
     @BeforeEach
     fun before() {
@@ -244,8 +246,9 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         // process() wasn't called inside a span, so there is nothing to link to
         assertEquals(emptyList<LinkData>(), process.links)
 
-        // And the span tells how the handling ended
+        // And the span tells how the handling ended. The message has more attempts, so it wasn't its last one
         assertEquals("succeeded", process.attributes.get(PROCESS_RESULT))
+        assertEquals(false, process.attributes.get(LAST_ATTEMPT))
     }
 
     @Test
@@ -297,6 +300,21 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         assertEquals(StatusCode.ERROR, process.status.statusCode)
         assertEquals(listOf("exception"), process.events.map { it.name })
         assertEquals("failed", process.attributes.get(PROCESS_RESULT))
+    }
+
+    @Test
+    fun testProcess_LastAttempt() {
+        // Only one attempt, so the first handling is the last one
+        val message = SendMessage("bugaga", MessageOptions(attempts = 1))
+        DatabaseProducer(dataSource, producerOptions).send(queue, message).throwExceptionIfAny()
+
+        val processor = processor { throw IllegalArgumentException("Can't handle") }
+        assertEquals(1, processor.process().failed)
+
+        // The message fails on its last attempt, so it is about to leave the queue
+        val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
+        assertEquals("failed", process.attributes.get(PROCESS_RESULT))
+        assertEquals(true, process.attributes.get(LAST_ATTEMPT))
     }
 
     @Test
