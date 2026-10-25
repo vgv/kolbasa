@@ -34,7 +34,9 @@ import kolbasa.telemetry.prometheus.metrics.Const
  */
 sealed class PrometheusConfig {
 
-    /** No metrics at all: nothing is measured and nothing is registered in any registry. */
+    /**
+     * No metrics at all: nothing is measured and nothing is registered in any registry.
+     */
     object None : PrometheusConfig()
 
     /**
@@ -222,15 +224,21 @@ sealed class PrometheusConfig {
             .classicUpperBounds(*Const.callsDurationHistogramBuckets())
             .register(registry)
 
-        /** Builder for flexible [Config] creation, when only some of the properties need to be set. */
+        /**
+         * Builder for flexible [Config] creation, when only some of the properties need to be set.
+         */
         class Builder internal constructor() {
             private var preciseStringSize: Boolean = false
             private var registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
 
-            /** Sets [Config.preciseStringSize] – whether message sizes are measured in bytes instead of characters. */
+            /**
+             * Sets [Config.preciseStringSize] – whether message sizes are measured in bytes instead of characters.
+             */
             fun preciseStringSize(preciseStringSize: Boolean) = apply { this.preciseStringSize = preciseStringSize }
 
-            /** Sets [Config.registry] – the Prometheus registry all metrics are registered in. */
+            /**
+             * Sets [Config.registry] – the Prometheus registry all metrics are registered in.
+             */
             fun registry(registry: PrometheusRegistry) = apply { this.registry = registry }
 
             /**

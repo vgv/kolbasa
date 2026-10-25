@@ -99,7 +99,9 @@ private fun ShardBalanceResult.distributionTable(): Widget = table {
     }
 }
 
-/** `+14`, `-70`, or a dash when the plan leaves the node alone */
+/**
+ * `+14`, `-70`, or a dash when the plan leaves the node alone
+ */
 private fun formatChange(change: Int): String = when {
     change > 0 -> "+$change"
     change < 0 -> "$change"

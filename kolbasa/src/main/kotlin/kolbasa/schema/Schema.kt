@@ -53,10 +53,14 @@ data class Schema(
     val indexStatements: List<String>
 ) {
 
-    /** How many statements this schema holds in total – table statements plus index statements. */
+    /**
+     * How many statements this schema holds in total – table statements plus index statements.
+     */
     val size = (tableStatements.size + indexStatements.size)
 
-    /** `true` when there is nothing to do, because the database already matches the queue. */
+    /**
+     * `true` when there is nothing to do, because the database already matches the queue.
+     */
     val isEmpty = (size == 0)
 
     companion object {

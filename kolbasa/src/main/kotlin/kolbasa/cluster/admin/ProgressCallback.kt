@@ -32,10 +32,14 @@ interface ProgressCallback {
      */
     fun rebalanceRoundStart(round: Int, moves: Map<NodeId, List<ShardId>>, shardsLeftToMove: Int) {}
 
-    /** The shard table now marks [shards] as migrating to [targetNode]; no data has moved yet */
+    /**
+     * The shard table now marks [shards] as migrating to [targetNode]; no data has moved yet
+     */
     fun prepareSuccessful(shards: List<ShardId>, targetNode: NodeId, shardsDiff: List<ShardDiff>) {}
 
-    /** Copying of one table from one node to another is about to start */
+    /**
+     * Copying of one table from one node to another is about to start
+     */
     fun moveStart(tableName: String, from: DataSource, to: DataSource) {}
 
     /**
@@ -56,19 +60,27 @@ interface ProgressCallback {
     ) {
     }
 
-    /** Copying of one table from one node to another has finished, having moved [tableRowsMoved] rows in total */
+    /**
+     * Copying of one table from one node to another has finished, having moved [tableRowsMoved] rows in total
+     */
     fun moveEnd(tableName: String, from: DataSource, to: DataSource, tableRowsMoved: Long) {}
 
 
-    /** The migrating shards now belong to their new node, and the migration is over */
+    /**
+     * The migrating shards now belong to their new node, and the migration is over
+     */
     fun finalizeSuccessful(shardsDiff: List<ShardDiff>) {}
 
 
-    /** A rebalance has nothing left to move, having moved [shardsMoved] shards over [rounds] rounds */
+    /**
+     * A rebalance has nothing left to move, having moved [shardsMoved] shards over [rounds] rounds
+     */
     fun rebalanceFinished(rounds: Int, shardsMoved: Int) {}
 
     companion object {
-        /** A callback that reports nothing */
+        /**
+         * A callback that reports nothing
+         */
         @JvmField
         val Ignore: ProgressCallback = object : ProgressCallback {}
     }

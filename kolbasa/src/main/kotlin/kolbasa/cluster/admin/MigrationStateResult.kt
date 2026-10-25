@@ -14,9 +14,13 @@ data class MigrationStateResult(
     val migratingShardsByTarget: Map<NodeId, List<ShardId>>,
 ) {
 
-    /** How many shards are in flight across the whole cluster */
+    /**
+     * How many shards are in flight across the whole cluster
+     */
     val totalMigratingShards: Int = migratingShardsByTarget.values.sumOf { it.size }
 
-    /** True when no shard is in flight */
+    /**
+     * True when no shard is in flight
+     */
     val isClean: Boolean = totalMigratingShards == 0
 }

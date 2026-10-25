@@ -44,24 +44,34 @@ data class CountOptions(
         Checks.checkSamplePercent(samplePercent)
     }
 
-    /** Builder for flexible [CountOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [CountOptions] creation, when only some of the properties need to be set.
+     */
     class Builder internal constructor() {
         private var samplePercent: Float = YOU_KNOW_BETTER
         private var filter: Condition? = null
 
-        /** Sets [CountOptions.samplePercent] – the percentage of the table to sample, `(0, 100]`. */
+        /**
+         * Sets [CountOptions.samplePercent] – the percentage of the table to sample, `(0, 100]`.
+         */
         fun samplePercent(samplePercent: Float): Builder = apply { this.samplePercent = samplePercent }
 
-        /** Sets [CountOptions.filter] – the condition on meta fields that restricts which messages are counted. */
+        /**
+         * Sets [CountOptions.filter] – the condition on meta fields that restricts which messages are counted.
+         */
         fun filter(filter: Condition): Builder = apply { this.filter = filter }
 
-        /** Creates a new [CountOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [CountOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build(): CountOptions = CountOptions(samplePercent, filter)
     }
 
     companion object {
 
-        /** Default options: automatic sampling, no filter. */
+        /**
+         * Default options: automatic sampling, no filter.
+         */
         @JvmField
         val DEFAULT = CountOptions()
 

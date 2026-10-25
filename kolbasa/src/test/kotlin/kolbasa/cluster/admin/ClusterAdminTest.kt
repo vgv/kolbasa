@@ -136,11 +136,15 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         assertEquals(mapOf(stayingNode to 1024), shardsPerNode())
     }
 
-    /** Node -> how many shards it owns, as the shard table has it now */
+    /**
+     * Node -> how many shards it owns, as the shard table has it now
+     */
     private fun shardsPerNode(): Map<NodeId, Int> =
         ShardSchema.readShards(dataSource).values.groupingBy { it.producerNode }.eachCount()
 
-    /** A three-node cluster – three schemas of one database – with its shard table filled */
+    /**
+     * A three-node cluster – three schemas of one database – with its shard table filled
+     */
     private fun seededCluster(): List<DataSource> {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         seedShardTable(dataSources)

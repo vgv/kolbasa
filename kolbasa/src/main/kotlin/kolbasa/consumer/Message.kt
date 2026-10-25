@@ -85,7 +85,9 @@ data class Message<Data>(
 
     internal var traceContext: Map<String, String>? = null
 
-    /** Returns `true` when [remainingAttempts] is 0: the queue will not hand this message out again. */
+    /**
+     * Returns `true` when [remainingAttempts] is 0: the queue will not hand this message out again.
+     */
     fun isLastAttempt(): Boolean = (remainingAttempts == 0)
 
 }

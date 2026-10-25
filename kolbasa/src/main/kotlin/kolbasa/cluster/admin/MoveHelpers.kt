@@ -22,7 +22,9 @@ internal data class SourceAndTargetNodes(
 
 internal object MoveHelpers {
 
-    /** A cause chain is usually two or three deep; a longer one is noise in an error message */
+    /**
+     * A cause chain is usually two or three deep; a longer one is noise in an error message
+     */
     private const val MAX_REPORTED_CAUSES = 3
 
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
@@ -94,7 +96,9 @@ internal object MoveHelpers {
         return errors
     }
 
-    /** Every distinct message down the cause chain, nearest first */
+    /**
+     * Every distinct message down the cause chain, nearest first
+     */
     private fun Throwable.causeMessages(): List<String> {
         val messages = linkedSetOf<String>()
 
