@@ -118,6 +118,8 @@ Things that commonly trip people up:
 
 - Follow the style of the surrounding code; match its naming, structure, and KDoc density. Public APIs
   carry KDoc.
+- KDoc is always multi-line, even a single sentence: `/**` and `*/` go on their own lines. The one-line form
+  `/** Text */` is not allowed, even where the surrounding code still uses it.
 - Both a `DataSource`-backed (`Database*`) and a `Connection`-aware (`ConnectionAware*`) variant exist
   for each role — keep them in sync when changing one.
 - `JdbcHelpers` is a **public object with an almost entirely `internal` body**: only `inTransaction` and
