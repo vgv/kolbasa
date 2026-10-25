@@ -34,6 +34,12 @@ import java.util.function.Supplier
  * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
  * links to it.
  *
+ * A `receive()` that finds no messages makes no span when there is no span around it, as in a
+ * [QueueWorker][kolbasa.consumer.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
+ * and only flood the traces, a new one-span trace on every poll. Inside a span of yours, an empty `receive()` still
+ * makes its span, so a scheduled job shows that it found nothing. To see that a worker is alive, look at the metric
+ * `kolbasa_consumer_receive` instead: it counts every `receive()`, the empty ones too.
+ *
  * One object serves all queues, so create it once and share it.
  *
  * ## Usage Example
@@ -151,9 +157,17 @@ class OpenTelemetryTracing(
         start: Instant
     ) {
         val end = Instant.now()
+        val parentContext = Context.current()
+
+        // An empty poll with no span around it says nothing, see the class KDoc. A failed receive is not empty, it
+        // always makes its span
+        val isEmptyPoll = messages.isEmpty() && error == null
+        val hasParentSpan = Span.fromContext(parentContext).spanContext.isValid
+        if (isEmptyPoll && !hasParentSpan) {
+            return
+        }
 
         val spanInput = ReceiveSpanInput(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
-        val parentContext = Context.current()
         if (consumerInstrumenter.shouldStart(parentContext, spanInput)) {
             InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, spanInput, null, error, start, end)
         }

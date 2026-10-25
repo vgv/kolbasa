@@ -8,6 +8,7 @@ import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.data.LinkData
+import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
@@ -31,6 +32,7 @@ import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -168,6 +170,24 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         assertEquals(SpanKind.CONSUMER, consumerSpan.kind)
         assertEquals("tracing receive", consumerSpan.name)
         assertEquals(StatusCode.ERROR, consumerSpan.status.statusCode)
+    }
+
+    @Test
+    fun testReceive_Empty_NoSpan() {
+        // The queue is empty and there is no span around, as in a worker thread: such a poll makes no span
+        assertNull(DatabaseConsumer(dataSource, consumerOptions).receive(queue))
+        assertEquals(emptyList<SpanData>(), spanExporter.finishedSpanItems)
+    }
+
+    @Test
+    fun testReceive_Empty_InsideASpan() {
+        // Inside a span of the caller, an empty poll still makes its span: the job found nothing
+        val job = tracerProvider.get("test").spanBuilder("job").startSpan()
+        job.makeCurrent().use { assertNull(DatabaseConsumer(dataSource, consumerOptions).receive(queue)) }
+        job.end()
+
+        val receive = spanExporter.finishedSpanItems.single { it.name == "tracing receive" }
+        assertEquals(job.spanContext.spanId, receive.parentSpanId)
     }
 
     @Test
