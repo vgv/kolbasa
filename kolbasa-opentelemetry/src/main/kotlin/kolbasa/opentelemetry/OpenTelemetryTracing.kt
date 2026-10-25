@@ -32,7 +32,8 @@ import java.util.function.Supplier
  * With a [QueueProcessor][kolbasa.consumer.worker.QueueProcessor], the handling of every message becomes a span too.
  * Its parent is the span that sent the message, so all the handler does, its SQL and HTTP calls for example, lands
  * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
- * links to it.
+ * links to it. The process span tells how the handling ended in the attribute `kolbasa.process.result`:
+ * `succeeded`, `skipped` or `failed`.
  *
  * A `receive()` that finds no messages makes no span when there is no span around it, as in a
  * [QueueWorker][kolbasa.consumer.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
@@ -258,6 +259,28 @@ class OpenTelemetryTracing(
         // Name of the operation, goes to "messaging.operation.name"
         val operationName = "process"
 
+        // How the handling ended. The same words as in ProcessResult
+        val resultAttributesExtractor = object : AttributesExtractor<ProcessSpanInput, HandleResult> {
+            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ProcessSpanInput) {
+            }
+
+            override fun onEnd(
+                attributes: AttributesBuilder,
+                context: Context,
+                request: ProcessSpanInput,
+                response: HandleResult?,
+                error: Throwable?
+            ) {
+                val result = when {
+                    error != null -> "failed"
+                    response == HandleResult.DONE -> "succeeded"
+                    response == HandleResult.SKIP -> "skipped"
+                    else -> return
+                }
+                attributes.put(PROCESS_RESULT_ATTRIBUTE_KEY, result)
+            }
+        }
+
         return Instrumenter.builder<ProcessSpanInput, HandleResult>(
             openTelemetry,
             "kolbasa",
@@ -265,11 +288,14 @@ class OpenTelemetryTracing(
         )
             .addSpanLinksExtractor(ProcessSpanLinksExtractor())
             .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operationType, operationName))
+            .addAttributesExtractor(resultAttributesExtractor)
             // A consumer span whose parent comes from the message
             .buildConsumerInstrumenter(ProcessTraceContextGetter())
     }
 
     companion object {
         private val NODE_ID_ATTRIBUTE_KEY: AttributeKey<String> = AttributeKey.stringKey("kolbasa.node.id")
+        private val PROCESS_RESULT_ATTRIBUTE_KEY: AttributeKey<String> =
+            AttributeKey.stringKey("kolbasa.process.result")
     }
 }

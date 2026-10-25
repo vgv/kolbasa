@@ -1,5 +1,6 @@
 package kolbasa.opentelemetry
 
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
@@ -57,6 +58,8 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     private val consumerOptions = ConsumerOptions(tracing = tracing)
 
     private val queue = Queue.of("tracing", PredefinedDataTypes.String)
+
+    private val PROCESS_RESULT = AttributeKey.stringKey("kolbasa.process.result")
 
     @BeforeEach
     fun before() {
@@ -216,6 +219,9 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
 
         // process() wasn't called inside a span, so there is nothing to link to
         assertEquals(emptyList<LinkData>(), process.links)
+
+        // And the span tells how the handling ended
+        assertEquals("succeeded", process.attributes.get(PROCESS_RESULT))
     }
 
     @Test
@@ -266,6 +272,20 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
         assertEquals(StatusCode.ERROR, process.status.statusCode)
         assertEquals(listOf("exception"), process.events.map { it.name })
+        assertEquals("failed", process.attributes.get(PROCESS_RESULT))
+    }
+
+    @Test
+    fun testProcess_Skip() {
+        DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").throwExceptionIfAny()
+
+        val processor = processor { HandleResult.SKIP }
+        assertEquals(1, processor.process().skipped)
+
+        // A skipped message is not an error, but the span says it was skipped
+        val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
+        assertEquals(StatusCode.UNSET, process.status.statusCode)
+        assertEquals("skipped", process.attributes.get(PROCESS_RESULT))
     }
 
     // One send() makes one producer span, one receive() makes one consumer span, and the consumer span links to
