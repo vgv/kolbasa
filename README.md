@@ -21,6 +21,7 @@
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
 * Share load between different PostgreSQL servers
 * OpenTelemetry tracing: a span for every send and receive, and the receive span links to the send span (optional `kolbasa-opentelemetry` artifact)
+* Background processing: give your business code to a worker, it receives, deletes, waits and retries for you
 
 ## Concepts
 Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
@@ -321,6 +322,16 @@ because the sender's trace context is stored together with the message. Needs th
 Example: [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt)
 
 `./gradlew example -Pname=OpenTelemetryExample`
+
+### Processing a queue in the background
+Instead of writing your own receive/delete loop, give your business code to a `QueueProcessor` and let a
+`QueueWorker` call it in background threads. Return `HandleResult.DONE`, and the message is deleted; throw, and it
+comes back after the visibility timeout for another attempt. The worker waits when the queue is empty, backs off on
+database errors and stops cleanly.
+
+Example: [QueueWorkerExample](examples/src/main/kotlin/kolbasa/example/QueueWorkerExample.kt)
+
+`./gradlew example -Pname=QueueWorkerExample`
 
 
 ## Documentation
