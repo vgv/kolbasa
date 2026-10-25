@@ -11,6 +11,7 @@ import kolbasa.queue.meta.MetaValue
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
+import kolbasa.schema.NodeId
 import kolbasa.utils.BytesCounter
 import kolbasa.utils.ColumnIndex
 import kolbasa.utils.Helpers
@@ -36,6 +37,7 @@ internal object ConsumerSchemaHelpers {
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.SCHEDULED_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
+            Const.OPENTELEMETRY_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
         // if we need metadata - we need to read these fields
@@ -44,8 +46,6 @@ internal object ConsumerSchemaHelpers {
                 dataColumns += metaField.dbColumnName
             }
         }
-        // Trace context, null for messages sent without one
-        dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
 
         // ----------------------------------------------------------
 
@@ -122,50 +122,69 @@ internal object ConsumerSchemaHelpers {
         }
     }
 
+    // The system columns at the start of a received row, in the same order as read() reads them. Plain numbers
+    // and timestamps, so they can be read even if the data or the meta fields can't
+    fun readError(queue: Queue<*>, nodeId: NodeId, resultSet: ResultSet, cause: Exception): ReadError {
+        return ReadError(
+            queue = queue,
+            messageId = readId(resultSet),
+            nodeId = nodeId,
+            createdAt = readCreatedAt(resultSet),
+            processingAt = readProcessingAt(resultSet),
+            scheduledAt = readScheduledAt(resultSet),
+            remainingAttempts = readRemainingAttempts(resultSet),
+            cause = cause
+        )
+    }
+
     fun <Data> read(
         queue: Queue<Data>,
         receiveOptions: ReceiveOptions,
         resultSet: ResultSet,
         approxBytesCounter: BytesCounter
     ): Message<Data> {
-        var columnIndex = 1
+        val id = readId(resultSet)
+        val createdAt = readCreatedAt(resultSet)
+        val processingAt = readProcessingAt(resultSet)
+        val scheduledAt = readScheduledAt(resultSet)
+        val attempts = readRemainingAttempts(resultSet)
 
-        val localId = resultSet.getLong(columnIndex++)
-        val shard = ShardId.of(resultSet.getInt(columnIndex++))
-        val createdAt = resultSet.getTimestamp(columnIndex++).toInstant()
-        val processingAt = resultSet.getTimestamp(columnIndex++).toInstant()
-        val scheduledAt = resultSet.getTimestamp(columnIndex++).toInstant()
-        val attempts = resultSet.getInt(columnIndex++)
+        // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
+        @Suppress("UNCHECKED_CAST")
+        val traceContextArray = resultSet.getArray(7)?.array as? Array<String>
+        val traceContext = Helpers.arrayToMap(traceContextArray)
 
         val data = when (queue.databaseDataType) {
             is DatabaseQueueDataType.Json -> {
-                val data = resultSet.getString(columnIndex++)
+                val data = resultSet.getString(8)
                 approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Binary -> {
-                val data = resultSet.getBytes(columnIndex++)
+                val data = resultSet.getBytes(8)
                 approxBytesCounter.addByteArray(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Text -> {
-                val data = resultSet.getString(columnIndex++)
+                val data = resultSet.getString(8)
                 approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Int -> {
                 approxBytesCounter.addInt()
-                queue.databaseDataType.deserializer(resultSet.getInt(columnIndex++))
+                queue.databaseDataType.deserializer(resultSet.getInt(8))
             }
 
             is DatabaseQueueDataType.Long -> {
                 approxBytesCounter.addLong()
-                queue.databaseDataType.deserializer(resultSet.getLong(columnIndex++))
+                queue.databaseDataType.deserializer(resultSet.getLong(8))
             }
         }
+
+        var columnIndex = 9
 
         val meta = if (receiveOptions.readMetadata && queue.metadata.fields.isNotEmpty()) {
             val metaValues = mutableListOf<MetaValue<*>>()
@@ -182,13 +201,9 @@ internal object ConsumerSchemaHelpers {
             MetaValues.EMPTY
         }
 
-        // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
-        @Suppress("UNCHECKED_CAST")
-        val traceContextArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
-        val traceContext = Helpers.arrayToMap(traceContextArray)
 
         val message = Message(
-            id = Id(localId, shard),
+            id = id,
             createdAt = createdAt,
             processingAt = processingAt,
             scheduledAt = scheduledAt,
@@ -378,6 +393,28 @@ internal object ConsumerSchemaHelpers {
 
     fun calculateConsumerName(consumerOptions: ConsumerOptions, receiveOptions: ReceiveOptions): String? {
         return receiveOptions.consumer ?: consumerOptions.consumer
+    }
+
+    private fun readId(resultSet: ResultSet): Id {
+        val localId = resultSet.getLong(1)
+        val shard = ShardId.of(resultSet.getInt(2))
+        return Id(localId, shard)
+    }
+
+    private fun readCreatedAt(resultSet: ResultSet): java.time.Instant {
+        return resultSet.getTimestamp(3).toInstant()
+    }
+
+    private fun readProcessingAt(resultSet: ResultSet): java.time.Instant {
+        return resultSet.getTimestamp(4).toInstant()
+    }
+
+    private fun readScheduledAt(resultSet: ResultSet): java.time.Instant {
+        return resultSet.getTimestamp(5).toInstant()
+    }
+
+    private fun readRemainingAttempts(resultSet: ResultSet): Int {
+        return resultSet.getInt(6)
     }
 
     // One key of the receive query 'order by': the table column, its alias in id_to_update_cte and the direction

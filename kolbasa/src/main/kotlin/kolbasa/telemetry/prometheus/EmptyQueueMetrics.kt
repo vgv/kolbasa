@@ -22,6 +22,7 @@ internal object EmptyQueueMetrics : QueueMetrics {
     override fun consumerReceiveMetrics(
         nodeId: NodeId,
         receivedMessages: Int,
+        unreadableMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
         connection: Connection?

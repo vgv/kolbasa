@@ -86,7 +86,13 @@ data class ConsumerOptions(
      * Tracing for this consumer. By default, the value is unspecified (null), meaning that global
      * [Kolbasa.tracing][kolbasa.Kolbasa.tracing] will be used.
      */
-    val tracing: Tracing? = null
+    val tracing: Tracing? = null,
+
+    /**
+     * What to do with a received message that can't be read. By default, a warning goes to the log and the message
+     * is skipped, see [ReadErrorHandler.SYSTEM_LOG].
+     */
+    val readErrorHandler: ReadErrorHandler = ReadErrorHandler.SYSTEM_LOG
 ) {
 
     init {
@@ -99,6 +105,7 @@ data class ConsumerOptions(
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
         private var tracing: Tracing? = null
+        private var readErrorHandler: ReadErrorHandler = ReadErrorHandler.SYSTEM_LOG
 
         /** Sets [ConsumerOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
@@ -109,8 +116,11 @@ data class ConsumerOptions(
         /** Sets [ConsumerOptions.tracing] – the tracing of this consumer, used instead of the global one. */
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
+        /** Sets [ConsumerOptions.readErrorHandler] – what to do with a received message that can't be read. */
+        fun readErrorHandler(readErrorHandler: ReadErrorHandler) = apply { this.readErrorHandler = readErrorHandler }
+
         /** Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused. */
-        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing)
+        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, readErrorHandler)
     }
 
     companion object {

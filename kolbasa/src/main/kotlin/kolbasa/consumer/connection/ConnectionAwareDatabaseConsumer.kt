@@ -89,6 +89,8 @@ class ConnectionAwareDatabaseConsumer internal constructor(
             ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, options, shards, receiveOptions, limit)
         }
 
+        var unreadableMessages = 0
+
         val (execution, result) = TimeHelper.measure {
             connection.prepareStatement(query).use { preparedStatement ->
                 ConsumerSchemaHelpers.fillSelectPreparedQuery(options, receiveOptions, preparedStatement)
@@ -96,7 +98,12 @@ class ConnectionAwareDatabaseConsumer internal constructor(
                     val result = ArrayList<Message<Data>>(limit)
 
                     while (resultSet.next()) {
-                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        try {
+                            result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        } catch (e: Exception) {
+                            options.readErrorHandler.onReadError(ConsumerSchemaHelpers.readError(queue, nodeId, resultSet, e))
+                            unreadableMessages++
+                        }
                     }
 
                     result
@@ -111,6 +118,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         queue.queueMetrics.consumerReceiveMetrics(
             nodeId = nodeId,
             receivedMessages = result.size,
+            unreadableMessages = unreadableMessages,
             executionNanos = execution.durationNanos,
             approxBytes = approxBytesCounter.get(),
             connection = connection
