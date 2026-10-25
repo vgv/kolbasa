@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 /**
  * What to do when [QueueProcessor.process] throws inside a [QueueWorker], for example because the database is down.
@@ -27,7 +27,7 @@ fun interface WorkerErrorHandler {
         /**
          * Writes a warning to the log. The default.
          *
-         * The log is the JDK's [System.Logger] named `kolbasa.consumer.worker.WorkerErrorHandler`. By default, it
+         * The log is the JDK's [System.Logger] named `kolbasa.worker.WorkerErrorHandler`. By default, it
          * writes to `java.util.logging`. To send it to SLF4J or Log4j instead, add `slf4j-jdk-platform-logging` or
          * `log4j-jpl` to the application.
          */

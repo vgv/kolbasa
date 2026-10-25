@@ -1,15 +1,15 @@
 package kolbasa.example;
 
 import kolbasa.consumer.datasource.DatabaseConsumer;
-import kolbasa.consumer.worker.HandleResult;
-import kolbasa.consumer.worker.QueueProcessor;
-import kolbasa.consumer.worker.QueueWorker;
-import kolbasa.consumer.worker.QueueWorkerOptions;
 import kolbasa.producer.SendMessage;
 import kolbasa.producer.datasource.DatabaseProducer;
 import kolbasa.queue.PredefinedDataTypes;
 import kolbasa.queue.Queue;
 import kolbasa.schema.SchemaHelpers;
+import kolbasa.worker.HandleResult;
+import kolbasa.worker.QueueProcessor;
+import kolbasa.worker.QueueWorker;
+import kolbasa.worker.QueueWorkerOptions;
 
 import java.time.Duration;
 import java.util.ArrayList;

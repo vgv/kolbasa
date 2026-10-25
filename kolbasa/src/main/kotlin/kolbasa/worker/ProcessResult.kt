@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 /**
  * What one [QueueProcessor.process] call did.

@@ -14,10 +14,6 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.DatabaseConsumer
-import kolbasa.consumer.worker.HandleResult
-import kolbasa.consumer.worker.MessageHandler
-import kolbasa.consumer.worker.QueueProcessor
-import kolbasa.consumer.worker.QueueProcessorOptions
 import kolbasa.producer.MessageOptions
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
@@ -33,6 +29,10 @@ import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.worker.HandleResult
+import kolbasa.worker.MessageHandler
+import kolbasa.worker.QueueProcessor
+import kolbasa.worker.QueueProcessorOptions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

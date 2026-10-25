@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 /**
  * What to do when the [MessageHandler] throws.
@@ -28,7 +28,7 @@ fun interface ProcessErrorHandler {
          *
          * It is a warning, or an error on the last attempt, when the message is about to leave the queue for good.
          *
-         * The log is the JDK's [System.Logger] named `kolbasa.consumer.worker.ProcessErrorHandler`. By default, it
+         * The log is the JDK's [System.Logger] named `kolbasa.worker.ProcessErrorHandler`. By default, it
          * writes to `java.util.logging`. To send it to SLF4J or Log4j instead, add `slf4j-jdk-platform-logging` or
          * `log4j-jpl` to the application.
          */

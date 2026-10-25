@@ -13,12 +13,12 @@ import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
-import kolbasa.consumer.worker.HandleResult
 import kolbasa.producer.SendResult
 import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.telemetry.tracing.SendCall
 import kolbasa.telemetry.tracing.Tracing
+import kolbasa.worker.HandleResult
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -29,7 +29,7 @@ import java.util.function.Supplier
  * becomes a consumer span, linked to the spans that sent the received messages. So both sides of the queue can be
  * seen as one flow, even though they are different applications and different moments in time.
  *
- * With a [QueueProcessor][kolbasa.consumer.worker.QueueProcessor], the handling of every message becomes a span too.
+ * With a [QueueProcessor][kolbasa.worker.QueueProcessor], the handling of every message becomes a span too.
  * Its parent is the span that sent the message, so all the handler does, its SQL and HTTP calls for example, lands
  * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
  * links to it. The process span tells how the handling ended in the attribute `kolbasa.process.result`:
@@ -37,7 +37,7 @@ import java.util.function.Supplier
  * attempt: if that one fails or is skipped, the message goes to the DLQ, or is deleted if the queue has none.
  *
  * A `receive()` that finds no messages makes no span when there is no span around it, as in a
- * [QueueWorker][kolbasa.consumer.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
+ * [QueueWorker][kolbasa.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
  * and only flood the traces, a new one-span trace on every poll. Inside a span of yours, an empty `receive()` still
  * makes its span, so a scheduled job shows that it found nothing. To see that a worker is alive, look at the metric
  * `kolbasa_consumer_receive` instead: it counts every `receive()`, the empty ones too.

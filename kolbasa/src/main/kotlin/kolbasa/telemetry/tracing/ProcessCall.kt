@@ -1,12 +1,12 @@
 package kolbasa.telemetry.tracing
 
 import kolbasa.consumer.Message
-import kolbasa.consumer.worker.HandleResult
 import kolbasa.queue.Queue
+import kolbasa.worker.HandleResult
 
 /**
- * One call of the [MessageHandler][kolbasa.consumer.worker.MessageHandler] by a
- * [QueueProcessor][kolbasa.consumer.worker.QueueProcessor], as [Tracing.process] sees it.
+ * One call of the [MessageHandler][kolbasa.worker.MessageHandler] by a
+ * [QueueProcessor][kolbasa.worker.QueueProcessor], as [Tracing.process] sees it.
  */
 class ProcessCall<Data> internal constructor(
     /**

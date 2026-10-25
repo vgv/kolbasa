@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.SendMessage

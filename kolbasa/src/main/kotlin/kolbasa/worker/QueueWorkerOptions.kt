@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 import kolbasa.queue.Checks
 import java.time.Duration

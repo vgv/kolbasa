@@ -1,7 +1,7 @@
 package kolbasa.opentelemetry
 
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesGetter
-import kolbasa.consumer.worker.HandleResult
+import kolbasa.worker.HandleResult
 
 internal class ProcessSpanAttributesGetter : MessagingAttributesGetter<ProcessSpanInput, HandleResult> {
 

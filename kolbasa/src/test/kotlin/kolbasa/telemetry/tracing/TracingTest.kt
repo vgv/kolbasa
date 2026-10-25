@@ -7,9 +7,6 @@ import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.Consumer
-import kolbasa.consumer.worker.HandleResult
-import kolbasa.consumer.worker.QueueProcessor
-import kolbasa.consumer.worker.QueueProcessorOptions
 import kolbasa.producer.Id
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
@@ -20,6 +17,9 @@ import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
+import kolbasa.worker.HandleResult
+import kolbasa.worker.QueueProcessor
+import kolbasa.worker.QueueProcessorOptions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue

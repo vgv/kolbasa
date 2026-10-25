@@ -1,4 +1,4 @@
-package kolbasa.consumer.worker
+package kolbasa.worker
 
 /**
  * What a [MessageHandler] decided about one message.
