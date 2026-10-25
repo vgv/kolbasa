@@ -9,7 +9,7 @@ import kolbasa.queue.Queue
  * the messages it handled.
  *
  * Every [process] call does one batch and returns. Who calls it and when is up to you: a loop in your own thread, a
- * scheduler, or a `QueueWorker` with as many threads as you need. Works with any [Consumer], so with a
+ * scheduler, or a [QueueWorker] with as many threads as you need. Works with any [Consumer], so with a
  * [ClusterConsumer][kolbasa.cluster.ClusterConsumer] too.
  *
  * Delivery is at least once. A message can be handled more than once: if the batch takes longer than the visibility
@@ -50,7 +50,7 @@ class QueueProcessor<Data> @JvmOverloads constructor(
     /**
      * The queue to process.
      */
-    private val queue: Queue<Data>,
+    internal val queue: Queue<Data>,
 
     /**
      * How many messages to receive, with which options, and what to do with errors.
@@ -63,6 +63,9 @@ class QueueProcessor<Data> @JvmOverloads constructor(
     private val handler: MessageHandler<Data>
 ) {
 
+    // The result of every empty batch, made once to avoid extra allocations
+    private val emptyResult = ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = options.receiveLimit)
+
     /**
      * Receives one batch, passes every message to the [MessageHandler] and deletes the ones it handled, all of them
      * in one `delete()` call at the end. A skipped message stays in the queue. A message that the handler failed to
@@ -71,12 +74,12 @@ class QueueProcessor<Data> @JvmOverloads constructor(
      * If `receive()` or `delete()` fails, for example because the database is down, the exception is thrown from
      * here. What to do then, wait and retry or give up, is up to the caller.
      *
-     * @return how many messages were handled, skipped and failed
+     * @return how many messages were handled, skipped and failed, and whether the batch was full
      */
     fun process(): ProcessResult {
         val messages = consumer.receive(queue, options.receiveLimit, options.receiveOptions)
         if (messages.isEmpty()) {
-            return EMPTY_RESULT
+            return emptyResult
         }
 
         val succeeded = ArrayList<Id>(messages.size)
@@ -102,11 +105,8 @@ class QueueProcessor<Data> @JvmOverloads constructor(
         return ProcessResult(
             succeeded = succeeded.size,
             skipped = skipped,
-            failed = failed
+            failed = failed,
+            requested = options.receiveLimit
         )
-    }
-
-    private companion object {
-        val EMPTY_RESULT = ProcessResult(succeeded = 0, skipped = 0, failed = 0)
     }
 }

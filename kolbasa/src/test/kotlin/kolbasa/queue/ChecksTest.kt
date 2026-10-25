@@ -175,6 +175,69 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
+    fun testCheckWorkerThreads() {
+        Checks.checkWorkerThreads(1)
+        Checks.checkWorkerThreads(Random.nextInt(1, Int.MAX_VALUE))
+
+        assertThrows<IllegalArgumentException> {
+            Checks.checkWorkerThreads(0)
+        }
+        assertThrows<IllegalArgumentException> {
+            Checks.checkWorkerThreads(Random.nextInt(Int.MIN_VALUE, 0))
+        }
+    }
+
+    @Test
+    fun testCheckMaxBatchesBeforePause() {
+        Checks.checkMaxBatchesBeforePause(1)
+        Checks.checkMaxBatchesBeforePause(Int.MAX_VALUE)
+
+        assertThrows<IllegalArgumentException> {
+            Checks.checkMaxBatchesBeforePause(0)
+        }
+        assertThrows<IllegalArgumentException> {
+            Checks.checkMaxBatchesBeforePause(Random.nextInt(Int.MIN_VALUE, 0))
+        }
+    }
+
+    @Test
+    fun testCheckWorkerPause() {
+        Checks.checkWorkerPause("pause", Duration.ofMillis(1))
+        Checks.checkWorkerPause("pause", Duration.ofMillis(Random.nextLong(1, Long.MAX_VALUE)))
+
+        // A zero pause is not allowed, it would query the database in an endless loop
+        assertThrows<IllegalArgumentException> {
+            Checks.checkWorkerPause("pause", Duration.ZERO)
+        }
+        assertThrows<IllegalArgumentException> {
+            Checks.checkWorkerPause("pause", Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
+        }
+    }
+
+    @Test
+    fun testCheckMaxErrorPause() {
+        Checks.checkMaxErrorPause(Duration.ofSeconds(5), Duration.ofSeconds(5))
+        Checks.checkMaxErrorPause(Duration.ofSeconds(5), Duration.ofMinutes(1))
+
+        // The max can't be shorter than the first pause
+        assertThrows<IllegalArgumentException> {
+            Checks.checkMaxErrorPause(Duration.ofSeconds(5), Duration.ofSeconds(4))
+        }
+    }
+
+    @Test
+    fun testCheckWorkerStopTimeout() {
+        Checks.checkWorkerStopTimeout(Duration.ZERO)
+        Checks.checkWorkerStopTimeout(Duration.ofMillis(Random.nextLong(1, Long.MAX_VALUE)))
+
+        assertThrows<IllegalArgumentException> {
+            Checks.checkWorkerStopTimeout(Duration.ofMillis(Random.nextLong(Long.MIN_VALUE, 0)))
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+
+    @Test
     fun testCheckQueueName_IfEmpty() {
         assertThrows<IllegalArgumentException> {
             Checks.checkQueueName("", QueueRole.MAIN)

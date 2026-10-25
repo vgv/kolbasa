@@ -10,7 +10,9 @@ import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -36,8 +38,9 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         }
 
         val result = processor.process()
-        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 0), result)
+        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = 10), result)
         assertEquals(0, result.received)
+        assertFalse(result.isBatchFull)
     }
 
     @Test
@@ -52,8 +55,11 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
 
         // Every message goes to the handler, and the handled ones are deleted
         val result = processor.process()
-        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0), result)
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), result)
         assertEquals(3, result.received)
+
+        // Three messages of ten possible: the queue had nothing more to give
+        assertFalse(result.isBatchFull)
         assertEquals(setOf("one", "two", "three"), handled.toSet())
         assertEquals(0, messagesInQueue())
     }
@@ -68,7 +74,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
             if (message.data == "now") HandleResult.DONE else HandleResult.SKIP
         }
 
-        assertEquals(ProcessResult(succeeded = 1, skipped = 1, failed = 0), processor.process())
+        assertEquals(ProcessResult(succeeded = 1, skipped = 1, failed = 0, requested = 10), processor.process())
 
         // A skipped message is not an error
         assertEquals(emptyList<ProcessError>(), errors)
@@ -89,7 +95,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
             HandleResult.DONE
         }
 
-        assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 1), processor.process())
+        assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 1, requested = 10), processor.process())
 
         // The error handler got the failed message
         val error = errors.single()
@@ -109,8 +115,10 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         val options = QueueProcessorOptions(receiveLimit = 2)
         val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { HandleResult.DONE }
 
-        // One call takes one batch only
-        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0), processor.process())
+        // One call takes one batch only, and it is full: the queue has more
+        val result = processor.process()
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 2), result)
+        assertTrue(result.isBatchFull)
         assertEquals(3, messagesInQueue())
     }
 
