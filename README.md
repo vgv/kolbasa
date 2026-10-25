@@ -20,7 +20,7 @@
 * Archive queue for retaining successfully processed messages (auditing, compliance, replay)
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
 * Share load between different PostgreSQL servers
-* OpenTelemetry tracing: a span for every send and receive, and the receive span links to the send span (optional `kolbasa-opentelemetry` artifact)
+* OpenTelemetry integration for monitoring and visibility of how messages flow
 * Background processing: give your business code to a worker, it receives, deletes, waits and retries for you
 
 ## Concepts
@@ -315,8 +315,8 @@ Example: [SqlPutFunctionExample](examples/src/main/kotlin/kolbasa/example/SqlPut
 `./gradlew example -Pname=SqlPutFunctionExample`
 
 ### OpenTelemetry tracing
-Turn tracing on once, and every send and receive becomes a span. The receive span links to the send span,
-because the sender's trace context is stored together with the message. Needs the optional
+Turn tracing on once, and you can follow every message in your traces: how it was sent, received and handled,
+together with what your handler did, its SQL and HTTP calls for example. Needs the optional
 `kolbasa-opentelemetry` artifact, see [above](#opentelemetry-optional).
 
 Example: [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt)
