@@ -23,6 +23,7 @@ import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
+import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
@@ -60,6 +61,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     private val queue = Queue.of("tracing", PredefinedDataTypes.String)
 
     private val PROCESS_RESULT = AttributeKey.stringKey("kolbasa.process.result")
+    private val MESSAGE_ID = AttributeKey.stringKey("messaging.message.id")
 
     @BeforeEach
     fun before() {
@@ -87,6 +89,28 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         dataSource.inTransaction { assertNotNull(consumer.receive(it, queue)) }
 
         assertOneLinkedSpanPerCall()
+    }
+
+    @Test
+    fun testSend_MessageId() {
+        // One message: the publish span holds its id, the same as the process span of this message
+        val id = DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").onlySuccessful().single().id
+        processor { HandleResult.DONE }.process()
+
+        val publish = spanExporter.finishedSpanItems.single { it.name == "tracing publish" }
+        val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
+        assertEquals(id.toString(), publish.attributes.get(MESSAGE_ID))
+        assertEquals(id.toString(), process.attributes.get(MESSAGE_ID))
+    }
+
+    @Test
+    fun testSend_MessageId_Batch() {
+        // A batch has no single id, so the publish span has none
+        val request = SendRequest(listOf(SendMessage("bugaga1"), SendMessage("bugaga2")))
+        DatabaseProducer(dataSource, producerOptions).send(queue, request).throwExceptionIfAny()
+
+        val publish = spanExporter.finishedSpanItems.single { it.name == "tracing publish" }
+        assertNull(publish.attributes.get(MESSAGE_ID))
     }
 
     @Test

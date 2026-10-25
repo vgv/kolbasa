@@ -1,6 +1,7 @@
 package kolbasa.opentelemetry
 
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesGetter
+import kolbasa.producer.MessageResult
 import kolbasa.producer.SendResult
 
 internal class SendSpanAttributesGetter : MessagingAttributesGetter<SendSpanInput, SendResult<*>> {
@@ -22,7 +23,14 @@ internal class SendSpanAttributesGetter : MessagingAttributesGetter<SendSpanInpu
     }
 
     override fun getMessageId(request: SendSpanInput?, response: SendResult<*>?): String? {
-        return null
+        // Only for one message, as for receive and process: a batch has no single id.
+        // And only if it was sent - a duplicate or a failed message has no id
+        if (request?.request?.data?.size != 1) {
+            return null
+        }
+
+        val result: MessageResult.Success<*>? = response?.messages?.singleOrNull() as? MessageResult.Success<*>
+        return result?.id?.toString()
     }
 
     override fun getDestinationTemplate(request: SendSpanInput?): String? {
