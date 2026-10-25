@@ -25,10 +25,6 @@ internal class SendSpanAttributesGetter : MessagingAttributesGetter<SendSpanInpu
         return null
     }
 
-    override fun getMessageHeader(request: SendSpanInput?, name: String?): MutableList<String> {
-        return super.getMessageHeader(request, name)
-    }
-
     override fun getDestinationTemplate(request: SendSpanInput?): String? {
         return null
     }

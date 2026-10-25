@@ -28,14 +28,6 @@ internal class ReceiveSpanAttributesGetter : MessagingAttributesGetter<ReceiveSp
         }
     }
 
-    override fun getMessageHeader(request: ReceiveSpanInput?, name: String?): List<String> {
-        if (request == null || name == null) {
-            return emptyList()
-        }
-
-        return request.traceContexts.mapNotNull { it[name] }
-    }
-
     override fun getDestinationTemplate(request: ReceiveSpanInput?): String? {
         return null
     }

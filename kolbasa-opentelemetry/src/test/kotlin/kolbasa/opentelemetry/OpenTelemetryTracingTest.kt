@@ -7,10 +7,15 @@ import io.opentelemetry.context.propagation.ContextPropagators
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.data.LinkData
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.connection.ConnectionAwareDatabaseConsumer
 import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.consumer.worker.HandleResult
+import kolbasa.consumer.worker.MessageHandler
+import kolbasa.consumer.worker.QueueProcessor
+import kolbasa.consumer.worker.QueueProcessorOptions
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
@@ -165,6 +170,84 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         assertEquals(StatusCode.ERROR, consumerSpan.status.statusCode)
     }
 
+    @Test
+    fun testProcess_ParentIsTheSender() {
+        DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").throwExceptionIfAny()
+
+        // The handler makes a span of its own, as its SQL or HTTP calls would
+        val processor = processor {
+            tracerProvider.get("test").spanBuilder("handler").startSpan().end()
+            HandleResult.DONE
+        }
+        assertEquals(1, processor.process().succeeded)
+
+        val spans = spanExporter.finishedSpanItems
+        val publish = spans.single { it.name == "tracing publish" }
+        val process = spans.single { it.name == "tracing process" }
+        val handler = spans.single { it.name == "handler" }
+
+        // The process span is in the sender's trace, and its parent is the publish span
+        assertEquals(SpanKind.CONSUMER, process.kind)
+        assertEquals(publish.traceId, process.traceId)
+        assertEquals(publish.spanId, process.parentSpanId)
+
+        // The handler's span is a child of the process span
+        assertEquals(process.spanId, handler.parentSpanId)
+
+        // process() wasn't called inside a span, so there is nothing to link to
+        assertEquals(emptyList<LinkData>(), process.links)
+    }
+
+    @Test
+    fun testProcess_LinksToTheCaller() {
+        DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").throwExceptionIfAny()
+
+        // process() runs inside a span of the caller, as a scheduled job would
+        val job = tracerProvider.get("test").spanBuilder("job").startSpan()
+        job.makeCurrent().use { processor { HandleResult.DONE }.process() }
+        job.end()
+
+        val spans = spanExporter.finishedSpanItems
+        val publish = spans.single { it.name == "tracing publish" }
+        val receive = spans.single { it.name == "tracing receive" }
+        val process = spans.single { it.name == "tracing process" }
+
+        // The receive span is in the job's trace
+        assertEquals(job.spanContext.spanId, receive.parentSpanId)
+
+        // The process span stays in the sender's trace, and links to the job
+        assertEquals(publish.spanId, process.parentSpanId)
+        assertEquals(listOf(job.spanContext.spanId), process.links.map { it.spanContext.spanId })
+    }
+
+    @Test
+    fun testProcess_NoSenderContext() {
+        // Sent without tracing, so the message has no trace context
+        DatabaseProducer(dataSource).send(queue, "bugaga").throwExceptionIfAny()
+
+        val job = tracerProvider.get("test").spanBuilder("job").startSpan()
+        job.makeCurrent().use { processor { HandleResult.DONE }.process() }
+        job.end()
+
+        // Then the process span stays in the caller's trace, and the parent needs no link
+        val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
+        assertEquals(job.spanContext.spanId, process.parentSpanId)
+        assertEquals(emptyList<LinkData>(), process.links)
+    }
+
+    @Test
+    fun testProcess_Error() {
+        DatabaseProducer(dataSource, producerOptions).send(queue, "bugaga").throwExceptionIfAny()
+
+        val processor = processor { throw IllegalArgumentException("Can't handle") }
+        assertEquals(1, processor.process().failed)
+
+        // The failed handler marks the process span as an error, and the span holds the exception
+        val process = spanExporter.finishedSpanItems.single { it.name == "tracing process" }
+        assertEquals(StatusCode.ERROR, process.status.statusCode)
+        assertEquals(listOf("exception"), process.events.map { it.name })
+    }
+
     // One send() makes one producer span, one receive() makes one consumer span, and the consumer span links to
     // the producer one: the sender's trace context travels inside the message
     private fun assertOneLinkedSpanPerCall() {
@@ -184,6 +267,12 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         // Compare the ids only: the link holds a remote copy of the producer span context
         val links = consumerSpan.links.map { it.spanContext.traceId to it.spanContext.spanId }
         assertEquals(listOf(producerSpan.traceId to producerSpan.spanId), links)
+    }
+
+    // A processor traced like the producer and the consumer. Its errors go nowhere, the tests check the spans
+    private fun processor(handler: MessageHandler<String>): QueueProcessor<String> {
+        val options = QueueProcessorOptions(tracing = tracing, errorHandler = { })
+        return QueueProcessor(DatabaseConsumer(dataSource, consumerOptions), queue, options, handler)
     }
 
     private fun readStrings(query: String): List<String> = dataSource.connection.use { connection ->

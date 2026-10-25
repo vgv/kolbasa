@@ -13,7 +13,9 @@ import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
 import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
+import kolbasa.consumer.worker.HandleResult
 import kolbasa.producer.SendResult
+import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.telemetry.tracing.SendCall
 import kolbasa.telemetry.tracing.Tracing
@@ -26,6 +28,11 @@ import java.util.function.Supplier
  * Every `send()` becomes a producer span, and its trace context is stored with the sent messages. Every `receive()`
  * becomes a consumer span, linked to the spans that sent the received messages. So both sides of the queue can be
  * seen as one flow, even though they are different applications and different moments in time.
+ *
+ * With a [QueueProcessor][kolbasa.consumer.worker.QueueProcessor], the handling of every message becomes a span too.
+ * Its parent is the span that sent the message, so all the handler does, its SQL and HTTP calls for example, lands
+ * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
+ * links to it.
  *
  * One object serves all queues, so create it once and share it.
  *
@@ -56,6 +63,9 @@ class OpenTelemetryTracing(
 
     private val consumerInstrumenter: Instrumenter<ReceiveSpanInput, Unit> =
         buildConsumerInstrumenter(openTelemetry)
+
+    private val processInstrumenter: Instrumenter<ProcessSpanInput, HandleResult> =
+        buildProcessInstrumenter(openTelemetry)
 
     override fun <Data> send(call: SendCall<Data>): SendResult<Data> {
         val spanInput = SendSpanInput(call.queue.name, call.nodeId, call.request)
@@ -99,6 +109,30 @@ class OpenTelemetryTracing(
             throw e
         }
         makeConsumerSpan(call, result, null, start)
+
+        return result
+    }
+
+    override fun <Data> process(call: ProcessCall<Data>): HandleResult {
+        val parentContext = Context.current()
+        val callerSpanContext = Span.fromContext(parentContext).spanContext
+        val spanInput = ProcessSpanInput(call.queue.name, call.message, call.traceContext(), callerSpanContext)
+        if (!processInstrumenter.shouldStart(parentContext, spanInput)) {
+            return call.proceed()
+        }
+
+        // The instrumenter takes the sender's context from the message and makes it the parent. While the handler
+        // runs, the process span is the current one, so the handler's own spans become its children
+        val context = processInstrumenter.start(parentContext, spanInput)
+        val result = try {
+            context.makeCurrent().use {
+                call.proceed()
+            }
+        } catch (e: Exception) {
+            processInstrumenter.end(context, spanInput, null, e)
+            throw e
+        }
+        processInstrumenter.end(context, spanInput, result, null)
 
         return result
     }
@@ -202,6 +236,23 @@ class OpenTelemetryTracing(
             .addAttributesExtractor(messagingAttributesExtractor)
             .addAttributesExtractor(nodeIdAttributesExtractor)
             .buildInstrumenter(SpanKindExtractor.alwaysConsumer())
+    }
+
+    private fun buildProcessInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ProcessSpanInput, HandleResult> {
+        val getter = ProcessSpanAttributesGetter()
+        val operationType = MessagingOperationType.PROCESS
+        // Name of the operation, goes to "messaging.operation.name"
+        val operationName = "process"
+
+        return Instrumenter.builder<ProcessSpanInput, HandleResult>(
+            openTelemetry,
+            "kolbasa",
+            MessagingSpanNameExtractor.create(getter, operationType, operationName)
+        )
+            .addSpanLinksExtractor(ProcessSpanLinksExtractor())
+            .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operationType, operationName))
+            // A consumer span whose parent comes from the message
+            .buildConsumerInstrumenter(ProcessTraceContextGetter())
     }
 
     companion object {
