@@ -16,12 +16,14 @@ internal class ConsumerQueueMetrics(
 
     fun consumerReceiveMetrics(
         receivedMessages: Int,
+        unreadableMessages: Int,
         executionNanos: Long,
         approxBytes: Long
     ) {
         consumerReceiveCounter.inc()
         consumerReceiveBytesCounter.incLong(approxBytes)
         consumerReceiveMessagesCounter.incInt(receivedMessages)
+        consumerReceiveUnreadableMessagesCounter.incInt(unreadableMessages)
         consumerReceiveDuration.observeNanos(executionNanos)
     }
 
@@ -37,6 +39,8 @@ internal class ConsumerQueueMetrics(
         .labelValues(queueName, nodeId.id)
     private val consumerReceiveMessagesCounter: CounterDataPoint = prometheusConfig.consumerReceiveMessagesCounter
         .labelValues(queueName, nodeId.id)
+    private val consumerReceiveUnreadableMessagesCounter: CounterDataPoint =
+        prometheusConfig.consumerReceiveUnreadableMessagesCounter.labelValues(queueName, nodeId.id)
     private val consumerReceiveDuration: DistributionDataPoint = prometheusConfig.consumerReceiveDuration
         .labelValues(queueName, nodeId.id)
 

@@ -58,6 +58,7 @@ internal class PrometheusQueueMetrics(
     override fun consumerReceiveMetrics(
         nodeId: NodeId,
         receivedMessages: Int,
+        unreadableMessages: Int,
         executionNanos: Long,
         approxBytes: Long,
         connection: Connection?
@@ -68,6 +69,7 @@ internal class PrometheusQueueMetrics(
 
         consumerQueueMetrics.consumerReceiveMetrics(
             receivedMessages = receivedMessages,
+            unreadableMessages = unreadableMessages,
             executionNanos = executionNanos,
             approxBytes = approxBytes
         )

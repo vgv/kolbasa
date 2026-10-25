@@ -137,6 +137,12 @@ sealed class PrometheusConfig {
             .labelNames("queue", "node_id")
             .register(registry)
 
+        internal val consumerReceiveUnreadableMessagesCounter: Counter = Counter.builder()
+            .name("kolbasa_consumer_receive_messages_unreadable")
+            .help("Amount of received messages that can't be read and were passed to the ReadErrorHandler")
+            .labelNames("queue", "node_id")
+            .register(registry)
+
         internal val consumerReceiveDuration: Histogram = Histogram.builder()
             .name("kolbasa_consumer_receive_duration_seconds")
             .help("Consumer receive() calls duration")
