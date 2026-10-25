@@ -37,6 +37,7 @@ internal object ConsumerSchemaHelpers {
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.SCHEDULED_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
+            Const.OPENTELEMETRY_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
         // if we need metadata - we need to read these fields
@@ -45,8 +46,6 @@ internal object ConsumerSchemaHelpers {
                 dataColumns += metaField.dbColumnName
             }
         }
-        // Trace context, null for messages sent without one
-        dataColumns += Const.OPENTELEMETRY_COLUMN_NAME
 
         // ----------------------------------------------------------
 
@@ -149,37 +148,43 @@ internal object ConsumerSchemaHelpers {
         val processingAt = readProcessingAt(resultSet)
         val scheduledAt = readScheduledAt(resultSet)
         val attempts = readRemainingAttempts(resultSet)
+
+        // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
+        @Suppress("UNCHECKED_CAST")
+        val traceContextArray = resultSet.getArray(7)?.array as? Array<String>
+        val traceContext = Helpers.arrayToMap(traceContextArray)
+
         val data = when (queue.databaseDataType) {
             is DatabaseQueueDataType.Json -> {
-                val data = resultSet.getString(7)
+                val data = resultSet.getString(8)
                 approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Binary -> {
-                val data = resultSet.getBytes(7)
+                val data = resultSet.getBytes(8)
                 approxBytesCounter.addByteArray(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Text -> {
-                val data = resultSet.getString(7)
+                val data = resultSet.getString(8)
                 approxBytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Int -> {
                 approxBytesCounter.addInt()
-                queue.databaseDataType.deserializer(resultSet.getInt(7))
+                queue.databaseDataType.deserializer(resultSet.getInt(8))
             }
 
             is DatabaseQueueDataType.Long -> {
                 approxBytesCounter.addLong()
-                queue.databaseDataType.deserializer(resultSet.getLong(7))
+                queue.databaseDataType.deserializer(resultSet.getLong(8))
             }
         }
 
-        var columnIndex = 8
+        var columnIndex = 9
 
         val meta = if (receiveOptions.readMetadata && queue.metadata.fields.isNotEmpty()) {
             val metaValues = mutableListOf<MetaValue<*>>()
@@ -196,10 +201,6 @@ internal object ConsumerSchemaHelpers {
             MetaValues.EMPTY
         }
 
-        // convert array [key1, value1, key2, value2...] into map {key1=value1, key2=value2...}, null stays null
-        @Suppress("UNCHECKED_CAST")
-        val traceContextArray = resultSet.getArray(columnIndex++)?.array as? Array<String>
-        val traceContext = Helpers.arrayToMap(traceContextArray)
 
         val message = Message(
             id = id,
