@@ -96,7 +96,11 @@ class ConnectionAwareDatabaseConsumer internal constructor(
                     val result = ArrayList<Message<Data>>(limit)
 
                     while (resultSet.next()) {
-                        result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        try {
+                            result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                        } catch (e: Exception) {
+                            options.readErrorHandler.onReadError(ConsumerSchemaHelpers.readError(queue, nodeId, resultSet, e))
+                        }
                     }
 
                     result
