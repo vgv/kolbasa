@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutorService
  * )
  *
  * // Use options in send() call
- * producer.send(queue, SendRequest(data = messages, sendOptions = options))
+ * producer.send(queue, SendRequest(data = messages, options = options))
  * ```
  *
  * The same from Java:
