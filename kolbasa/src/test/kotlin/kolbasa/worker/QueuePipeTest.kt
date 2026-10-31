@@ -7,6 +7,8 @@ import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.SendOptions
+import kolbasa.producer.SendRequest
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.PredefinedDataTypes
@@ -126,19 +128,14 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testProcess_AllOrNothing() {
-        // The target queue takes every key once, and already has key 2
-        val key = MetaField.ofInt("key", FieldOption.ALL_LIVE_UNIQUE)
-        val unique = Queue("pipe_unique", PredefinedDataTypes.String, metadata = Metadata.of(key))
-        SchemaHelpers.createOrUpdateQueues(toDataSource, unique)
-        DatabaseProducer(toDataSource).send(unique, SendMessage("2", MetaValues.of(key.value(2)))).throwExceptionIfAny()
-
+        val unique = uniqueQueueWithKey2()
         send("1", "2", "3")
 
         // This producer would insert what it can, one message per INSERT. The pipe sends all or nothing anyway
         val producerOptions = ProducerOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         val producer = DatabaseProducer(toDataSource, producerOptions)
         val pipe = QueuePipe.map(from, DatabaseConsumer(fromDataSource), unique, producer) { message ->
-            SendMessage(message.data, MetaValues.of(key.value(message.data.toInt())))
+            SendMessage(message.data, MetaValues.of(KEY.value(message.data.toInt())))
         }
         assertThrows<SQLException> { pipe.process() }
 
@@ -175,6 +172,119 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
         val withShard = clusterNodes.sumOf { it.readInt("select count(*) from ${to.dbTableName} where shard = 42") }
         assertEquals(3, withShard)
+    }
+
+    @Test
+    fun testFlatMap_ManyAndNone() {
+        send("a,b,c", "drop", "d")
+
+        val pipe = flatMapPipe { message ->
+            if (message.data == "drop") emptyList() else message.data.split(",").map { SendMessage(it) }
+        }
+
+        // The filtered message is deleted too, it just sends nothing
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(0, messagesIn(fromDataSource, from))
+        assertEquals(4, messagesIn(toDataSource, to))
+        assertEquals(setOf("a", "b", "c", "d"), receiveAll(toDataSource))
+    }
+
+    @Test
+    fun testFlatMap_AllFiltered_NoSend() {
+        send("one", "two")
+
+        // No target table: any send would fail, so the pipe must not send at all
+        SchemaHelpers.deleteQueues(toDataSource, to)
+
+        val pipe = flatMapPipe { emptyList() }
+
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(0, messagesIn(fromDataSource, from))
+    }
+
+    @Test
+    fun testFlatMap_SendFails_KeepsFiltered() {
+        send("keep", "drop")
+
+        // No target table, so the send fails
+        SchemaHelpers.deleteQueues(toDataSource, to)
+
+        val pipe = flatMapPipe { message ->
+            if (message.data == "drop") emptyList() else listOf(SendMessage(message.data))
+        }
+        assertThrows<SQLException> { pipe.process() }
+
+        // The filtered message stays too: the whole batch is transformed again next time
+        assertEquals(2, messagesIn(fromDataSource, from))
+    }
+
+    @Test
+    fun testMapBatch_OneMessageWithShard() {
+        send("one", "two", "three")
+
+        // The whole batch becomes one message, and the batch chooses its shard. A shard means something only in a
+        // cluster
+        val pipe = QueuePipe.mapBatch(from, DatabaseConsumer(fromDataSource), to, clusterProducer()) { batch ->
+            val merged = batch.map { it.data }.sorted().joinToString("+")
+            SendRequest(listOf(SendMessage(merged)), SendOptions(shard = 42))
+        }
+
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(0, messagesIn(fromDataSource, from))
+        val withShard = clusterNodes.sumOf { it.readInt("select count(*) from ${to.dbTableName} where shard = 42") }
+        assertEquals(1, withShard)
+        assertEquals(setOf("one+three+two"), clusterNodes.flatMap { receiveAll(it) }.toSet())
+    }
+
+    @Test
+    fun testMapBatch_PartialInsertReplaced() {
+        val unique = uniqueQueueWithKey2()
+        send("1", "2", "3")
+
+        // The request asks to insert what it can, one message per INSERT. The pipe sends all or nothing anyway
+        val requestOptions = SendOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
+        val producer = DatabaseProducer(toDataSource)
+        val pipe = QueuePipe.mapBatch(from, DatabaseConsumer(fromDataSource), unique, producer) { batch ->
+            SendRequest(batch.map { SendMessage(it.data, MetaValues.of(KEY.value(it.data.toInt()))) }, requestOptions)
+        }
+        assertThrows<SQLException> { pipe.process() }
+
+        // Key 2 failed the whole batch: nothing was sent, nothing was deleted
+        assertEquals(1, messagesIn(toDataSource, unique))
+        assertEquals(3, messagesIn(fromDataSource, from))
+    }
+
+    @Test
+    fun testMapBatch_TransformFails() {
+        send("one", "two")
+
+        val errors = mutableListOf<ProcessError>()
+        val options = QueuePipeOptions(errorHandler = { errors += it })
+        val pipe = mapBatchPipe(options) { throw IllegalArgumentException("Can't transform the batch") }
+
+        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 2, requested = 100), pipe.process())
+
+        // Every message of the batch went to the error handler with the same cause
+        assertEquals(setOf("one", "two"), errors.map { it.message.data }.toSet())
+        assertEquals(1, errors.map { it.cause }.distinct().size)
+        assertInstanceOf(IllegalArgumentException::class.java, errors.first().cause)
+
+        // Nothing was sent, both messages stay with one attempt spent
+        assertEquals(0, messagesIn(toDataSource, to))
+        assertEquals(2, fromDataSource.readInt("select count(*) from ${from.dbTableName} where remaining_attempts = 4"))
+    }
+
+    @Test
+    fun testMapBatch_EmptyRequest_NoSend() {
+        send("one", "two")
+
+        // No target table: any send would fail, so the pipe must not send at all
+        SchemaHelpers.deleteQueues(toDataSource, to)
+
+        val pipe = mapBatchPipe { SendRequest(emptyList()) }
+
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(0, messagesIn(fromDataSource, from))
     }
 
     @Test
@@ -247,6 +357,27 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         return QueuePipe.map(from, consumer, to, DatabaseProducer(toDataSource), options, transform)
     }
 
+    private fun flatMapPipe(transform: FlatMapTransform<String, String>): QueuePipe {
+        val consumer = DatabaseConsumer(fromDataSource)
+        return QueuePipe.flatMap(from, consumer, to, DatabaseProducer(toDataSource), transform = transform)
+    }
+
+    private fun mapBatchPipe(
+        options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
+        transform: BatchTransform<String, String>
+    ): QueuePipe {
+        val consumer = DatabaseConsumer(fromDataSource)
+        return QueuePipe.mapBatch(from, consumer, to, DatabaseProducer(toDataSource), options, transform)
+    }
+
+    // A target queue that takes every key once, and already has key 2
+    private fun uniqueQueueWithKey2(): Queue<String> {
+        val unique = Queue("pipe_unique", PredefinedDataTypes.String, metadata = Metadata.of(KEY))
+        SchemaHelpers.createOrUpdateQueues(toDataSource, unique)
+        DatabaseProducer(toDataSource).send(unique, SendMessage("2", MetaValues.of(KEY.value(2)))).throwExceptionIfAny()
+        return unique
+    }
+
     // The target queue as a cluster of two nodes
     private val clusterNodes by lazy { listOf(dataSourceFirstSchema, dataSourceSecondSchema) }
 
@@ -274,5 +405,8 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     private companion object {
         // A string that goes to a jsonb column and back as it is
         val RAW_JSON = DatabaseQueueDataType.Json<String>({ it }, { it })
+
+        // The key of a queue that takes every key once
+        val KEY = MetaField.ofInt("key", FieldOption.ALL_LIVE_UNIQUE)
     }
 }

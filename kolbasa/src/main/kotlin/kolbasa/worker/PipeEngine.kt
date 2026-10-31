@@ -27,7 +27,12 @@ internal class TransformedBatch<Out>(
     /**
      * How many source messages the transform failed on. They stay in the source queue.
      */
-    val failed: Int
+    val failed: Int,
+
+    /**
+     * The options of the send. The pipe always sends all or nothing, so their partial insert is replaced.
+     */
+    val sendOptions: SendOptions = SendOptions.DEFAULT
 )
 
 /**
@@ -54,9 +59,11 @@ internal class PipeEngine<In, Out>(
 
         val batch = transform(messages)
 
-        // All or nothing: if the send fails, nothing is deleted, and the whole batch comes back to be transformed again
+        // All or nothing: if the send fails, nothing is deleted, and the whole batch comes back to be transformed
+        // again. Only the partial insert is replaced, the other options are the transform's, or else the producer's
         if (batch.toSend.isNotEmpty()) {
-            producer.send(to, SendRequest(batch.toSend, ALL_OR_NOTHING)).throwExceptionIfAny()
+            val sendOptions = batch.sendOptions.copy(partialInsert = PartialInsert.PROHIBITED)
+            producer.send(to, SendRequest(batch.toSend, sendOptions)).throwExceptionIfAny()
         }
 
         if (batch.toDelete.isNotEmpty()) {
@@ -69,10 +76,5 @@ internal class PipeEngine<In, Out>(
             failed = batch.failed,
             requested = options.receiveLimit
         )
-    }
-
-    private companion object {
-        // Only the partial insert is set, so all the other send options stay the producer's
-        val ALL_OR_NOTHING = SendOptions(partialInsert = PartialInsert.PROHIBITED)
     }
 }

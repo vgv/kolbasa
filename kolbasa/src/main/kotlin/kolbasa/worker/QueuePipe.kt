@@ -15,7 +15,11 @@ import kolbasa.queue.Queue
  *
  * Make a pipe with one of the factories:
  * - [asIs]: moves the messages as they are, without reading them into `Data`;
- * - [map]: turns every message into one message for the target queue with your [MapTransform].
+ * - [map]: turns every message into one message for the target queue with your [MapTransform];
+ * - [flatMap]: turns every message into any number of messages, or none to filter it out, with your
+ *   [FlatMapTransform];
+ * - [mapBatch]: turns a whole batch into one [SendRequest][kolbasa.producer.SendRequest] with your [BatchTransform],
+ *   so you choose the shard and the send options of every batch.
  *
  * Every [process] call does one batch and returns. Who calls it and when is up to you: a loop in your own thread, a
  * scheduler, or a [QueueWorker]. Works with any [Consumer] and [Producer], so with a
@@ -26,10 +30,11 @@ import kolbasa.queue.Queue
  *
  * **A batch is sent all or nothing.** The pipe always sends with
  * [PartialInsert.PROHIBITED][kolbasa.producer.PartialInsert.PROHIBITED], whatever
- * [ProducerOptions.partialInsert][kolbasa.producer.ProducerOptions.partialInsert] says. If the send fails, nothing is
- * deleted from the source queue. The messages come back after the visibility timeout, each with one attempt spent,
- * and the error is thrown from [process]. A [QueueWorker] then waits and tries again. So one message that the target
- * queue rejects, for example a duplicate, fails its whole batch, every time. Use
+ * [ProducerOptions.partialInsert][kolbasa.producer.ProducerOptions.partialInsert] or the request of a
+ * [BatchTransform] says. If the send fails, nothing is deleted from the source queue. The messages come back after
+ * the visibility timeout, each with one attempt spent, and the error is thrown from [process]. A [QueueWorker] then
+ * waits and tries again. So one message that the target queue rejects, for example a duplicate, fails its whole
+ * batch, every time. Use
  * [DeduplicationMode.IGNORE_DUPLICATE][kolbasa.producer.DeduplicationMode.IGNORE_DUPLICATE] for duplicates, and check
  * the rest in the transform.
  *
@@ -126,8 +131,10 @@ class QueuePipe internal constructor(
 
             // The same tables, but the data is read and written as it is stored, without the queue's serializer
             fun <Raw> rawEngine(rawType: DatabaseQueueDataType<Raw>): PipeEngine<Raw, Raw> {
-                return mapEngine(from.withDataType(rawType), consumer, to.withDataType(rawType), producer, options) {
-                    SendMessage(it.data, it.meta)
+                val rawFrom = from.withDataType(rawType)
+                val rawTo = to.withDataType(rawType)
+                return flatMapEngine(rawFrom, consumer, rawTo, producer, options) {
+                    listOf(SendMessage(it.data, it.meta))
                 }
             }
 
@@ -158,17 +165,72 @@ class QueuePipe internal constructor(
             options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
             transform: MapTransform<In, Out>
         ): QueuePipe {
-            return QueuePipe(from, mapEngine(from, consumer, to, producer, options, transform))
+            val engine = flatMapEngine(from, consumer, to, producer, options) { listOf(transform.transform(it)) }
+            return QueuePipe(from, engine)
         }
 
-        // Every message turns into one message to send. A message that the transform failed on stays in the queue
-        private fun <In, Out> mapEngine(
+        /**
+         * Makes a pipe that turns every message of [from] into any number of messages for [to] with your
+         * [FlatMapTransform].
+         *
+         * An empty list filters the message out: nothing is sent for it, and it is deleted once the batch is sent. A
+         * message that the transform fails on stays in [from], and goes to the [ProcessErrorHandler]. The other
+         * messages of the batch are sent.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <In, Out> flatMap(
+            from: Queue<In>,
+            consumer: Consumer,
+            to: Queue<Out>,
+            producer: Producer,
+            options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
+            transform: FlatMapTransform<In, Out>
+        ): QueuePipe {
+            return QueuePipe(from, flatMapEngine(from, consumer, to, producer, options, transform))
+        }
+
+        /**
+         * Makes a pipe that turns a whole batch of [from] into one [SendRequest][kolbasa.producer.SendRequest] for
+         * [to] with your [BatchTransform]. The request carries the messages and the send options of the batch, the
+         * shard for example.
+         *
+         * The batch is one unit: all its messages are deleted once the request is sent, and if the transform throws,
+         * all of them stay in [from] and go to the [ProcessErrorHandler]. See [BatchTransform].
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <In, Out> mapBatch(
+            from: Queue<In>,
+            consumer: Consumer,
+            to: Queue<Out>,
+            producer: Producer,
+            options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
+            transform: BatchTransform<In, Out>
+        ): QueuePipe {
+            val engine = PipeEngine(from, consumer, to, producer, options) { messages ->
+                try {
+                    val request = transform.transform(messages)
+                    TransformedBatch(request.data, messages.map { it.id }, failed = 0, sendOptions = request.options)
+                } catch (e: Exception) {
+                    // The whole batch failed: every message goes to the error handler with the same cause, and stays
+                    messages.forEach { options.errorHandler.onProcessError(ProcessError(from, it, e)) }
+                    TransformedBatch(emptyList(), emptyList(), failed = messages.size)
+                }
+            }
+
+            return QueuePipe(from, engine)
+        }
+
+        // Every message turns into any number of messages to send, map and asIs too. A message that the transform
+        // failed on stays in the queue
+        private fun <In, Out> flatMapEngine(
             from: Queue<In>,
             consumer: Consumer,
             to: Queue<Out>,
             producer: Producer,
             options: QueuePipeOptions,
-            transform: MapTransform<In, Out>
+            transform: FlatMapTransform<In, Out>
         ): PipeEngine<In, Out> {
             return PipeEngine(from, consumer, to, producer, options) { messages ->
                 val toSend = ArrayList<SendMessage<Out>>(messages.size)
