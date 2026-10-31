@@ -148,7 +148,7 @@ covers:
   anatomy of a queue table, the message lifecycle, deduplication, DLQ and archive, sweep, schema
   generation.
 - [docs/Patterns.md](docs/Patterns.md) — recipes built from the primitives: priority queue,
-  time-to-live (TTL), at-most-once delivery, transactions, routing with pipes.
+  time-to-live (TTL), at-most-once delivery, transactions, routing with pipes, compressing and encrypting the payload.
 - [docs/Cluster architecture.md](<docs/Cluster architecture.md>) — multi-node: shards, routing, the
   shard-ownership map, and shard migration.
 - [docs/Butcher.md](docs/Butcher.md) — operator guide for `butcher`, the cluster health-check and
