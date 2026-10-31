@@ -31,7 +31,7 @@ import java.util.concurrent.ThreadFactory
  */
 data class QueueWorkerOptions(
     /**
-     * How many threads process the queue at the same time. Every thread calls [QueueProcessor.process] in its own
+     * How many threads process the queue at the same time. Every thread calls [BatchProcessor.process] in its own
      * loop. The default is 1.
      */
     val threads: Int = 1,
@@ -57,7 +57,7 @@ data class QueueWorkerOptions(
     val successPause: Duration = DEFAULT_SUCCESS_PAUSE,
 
     /**
-     * How long a thread waits after [QueueProcessor.process] failed, for example because the database is down. The
+     * How long a thread waits after [BatchProcessor.process] failed, for example because the database is down. The
      * default is 5 seconds.
      *
      * After every failure in a row the pause is twice as long, up to [maxErrorPause]: a short failure is retried
@@ -72,7 +72,7 @@ data class QueueWorkerOptions(
     val maxErrorPause: Duration = DEFAULT_MAX_ERROR_PAUSE,
 
     /**
-     * What to do when [QueueProcessor.process] fails. By default, the error goes to the log, see
+     * What to do when [BatchProcessor.process] fails. By default, the error goes to the log, see
      * [WorkerErrorHandler.SYSTEM_LOG].
      */
     val errorHandler: WorkerErrorHandler = WorkerErrorHandler.SYSTEM_LOG,

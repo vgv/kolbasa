@@ -1,7 +1,7 @@
 package kolbasa.worker
 
 /**
- * What to do when [QueueProcessor.process] throws inside a [QueueWorker], for example because the database is down.
+ * What to do when [BatchProcessor.process] throws inside a [QueueWorker], for example because the database is down.
  *
  * The worker goes on whatever the handler does: the thread waits [QueueWorkerOptions.errorPause] and tries again. So
  * this handler only reports the error. Errors of your [MessageHandler] don't come here, they go to the
@@ -18,7 +18,7 @@ package kolbasa.worker
 fun interface WorkerErrorHandler {
 
     /**
-     * Called every time [QueueProcessor.process] throws. Must not throw, see [WorkerErrorHandler].
+     * Called every time [BatchProcessor.process] throws. Must not throw, see [WorkerErrorHandler].
      */
     fun onWorkerError(error: WorkerError)
 

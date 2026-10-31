@@ -11,7 +11,7 @@ import kolbasa.queue.Checks
  * ```kotlin
  * val options = QueueProcessorOptions(receiveLimit = 50)
  *
- * val processor = QueueProcessor(consumer, queue, options) { message ->
+ * val processor = QueueProcessor(queue, consumer, options) { message ->
  *     process(message.data)
  *     HandleResult.DONE
  * }
@@ -24,7 +24,7 @@ import kolbasa.queue.Checks
  *     .receiveLimit(50)
  *     .build();
  *
- * var processor = new QueueProcessor<>(consumer, queue, options, message -> {
+ * var processor = new QueueProcessor<>(queue, consumer, options, message -> {
  *     process(message.getData());
  *     return HandleResult.DONE;
  * });

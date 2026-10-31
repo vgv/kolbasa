@@ -67,6 +67,25 @@ class QueueWorkerTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testStart_AnyBatchProcessor() {
+        // Not a QueueProcessor: no consumer, no messages, only a counter. Its batches are never full
+        val calls = AtomicInteger()
+        val processor = object : BatchProcessor {
+            override val queue = this@QueueWorkerTest.queue
+
+            override fun process(): ProcessResult {
+                calls.incrementAndGet()
+                return ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = 10)
+            }
+        }
+        val worker = worker(processor, QueueWorkerOptions(successPause = Duration.ofMillis(100)))
+
+        worker.start()
+        awaitUntil { calls.get() >= 3 }
+        assertTrue(worker.stop(Duration.ofSeconds(10)))
+    }
+
+    @Test
     fun testStop_WakesWaitingThreads() {
         // The queue is empty and the pause is one hour, so the threads wait, and stop() must wake them up at once
         val options = QueueWorkerOptions(threads = 3, successPause = Duration.ofHours(1))
@@ -260,7 +279,7 @@ class QueueWorkerTest : AbstractPostgreSQLTest() {
         return QueueProcessor(queue, DatabaseConsumer(dataSource), options, handler)
     }
 
-    private fun worker(processor: QueueProcessor<String>, options: QueueWorkerOptions): QueueWorker {
+    private fun worker(processor: BatchProcessor, options: QueueWorkerOptions): QueueWorker {
         return QueueWorker(processor, options).also { workers += it }
     }
 
