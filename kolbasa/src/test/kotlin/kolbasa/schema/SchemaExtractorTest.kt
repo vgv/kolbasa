@@ -69,7 +69,7 @@ internal class SchemaExtractorTest : AbstractPostgreSQLTest() {
         }
 
         // check columns
-        assertEquals(20, testTable.columns.size, "Found columns: ${testTable.columns}")
+        assertEquals(19, testTable.columns.size, "Found columns: ${testTable.columns}")
 
         // id and identity
         assertNotNull(testTable.findColumn("id")).let { idColumn ->

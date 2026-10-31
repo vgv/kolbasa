@@ -33,10 +33,11 @@ internal object Const {
     const val USELESS_COUNTER_COLUMN_NAME = "uc"
 
     // Trace context from the tracing hook. The column is renamed from "opentelemetry" to "trace_context" over several
-    // releases. For now the new column is only created, nothing reads or writes it
+    // releases. The new column was created too short, so for now it is dropped, see SchemaGenerator. It comes back
+    // with the right length in a later release
     const val OPENTELEMETRY_COLUMN_NAME = "opentelemetry"
     const val TRACE_CONTEXT_COLUMN_NAME = "trace_context"
-    const val TRACE_CONTEXT_VALUE_LENGTH = 1024 // trace context key/value max length, the same for both columns
+    const val TRACE_CONTEXT_VALUE_LENGTH = 1024 // trace context key/value max length
 
     const val SHARD_COLUMN_NAME = "shard"
 
