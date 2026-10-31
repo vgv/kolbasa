@@ -173,7 +173,9 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     private fun nodeOf(dataSource: DataSource): Node =
         ClusterHelper.readNodes(clusterDataSources()).entries.first { it.value == dataSource }.key
 
-    /** Hands all 1024 shards to [nodes], which is one node when a skewed cluster is what the test needs */
+    /**
+     * Hands all 1024 shards to [nodes], which is one node when a skewed cluster is what the test needs
+     */
     private fun seedShardTable(nodes: List<Node>) {
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
@@ -195,7 +197,9 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     private fun rowsInShard(dataSource: DataSource, shard: Int): Int =
         dataSource.readInt("select count(*) from ${QUEUE.dbTableName} where shard=$shard")
 
-    /** Reports every round, so a test can see how the loop walked through the plan */
+    /**
+     * Reports every round, so a test can see how the loop walked through the plan
+     */
     private class RecordingProgress : ProgressCallback {
         val rounds = mutableListOf<Map<NodeId, List<ShardId>>>()
         val shardsLeftToMove = mutableListOf<Int>()

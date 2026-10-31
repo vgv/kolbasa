@@ -39,7 +39,9 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
         }
     }
 
-    /** Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven */
+    /**
+     * Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven
+     */
     fun checkShardBalance(): ShardBalanceResult = ShardBalance.check(nodes)
 
     /**
@@ -65,13 +67,19 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
         return ShardBalance.check(nodes, drainedNodes)
     }
 
-    /** Reports queue tables whose structure differs between nodes, or that are missing on some of them */
+    /**
+     * Reports queue tables whose structure differs between nodes, or that are missing on some of them
+     */
     fun checkSchemaConsistency(): SchemaConsistencyResult = SchemaConsistency.check(nodes)
 
-    /** Reports DLQ and archive tables left behind on a node whose main queue table is gone */
+    /**
+     * Reports DLQ and archive tables left behind on a node whose main queue table is gone
+     */
     fun findOrphanTables(): OrphanTablesResult = OrphanTables.check(nodes)
 
-    /** Reports shards that are still mid-migration, which is what an interrupted move leaves behind */
+    /**
+     * Reports shards that are still mid-migration, which is what an interrupted move leaves behind
+     */
     fun checkMigrationState(): MigrationStateResult = MigrationState.check(nodes)
 
     /**
@@ -166,7 +174,9 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
         finalize(nodes, progress)
     }
 
-    /** With no nodes to drain the plan would be a plain rebalance, which is not what the caller asked for */
+    /**
+     * With no nodes to drain the plan would be a plain rebalance, which is not what the caller asked for
+     */
     private fun requireNodesToDrain(drainedNodes: Set<NodeId>) {
         require(drainedNodes.isNotEmpty()) {
             "Nodes to drain must not be empty"

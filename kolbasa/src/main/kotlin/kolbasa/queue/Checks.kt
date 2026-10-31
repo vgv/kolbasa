@@ -73,6 +73,44 @@ internal object Checks {
         }
     }
 
+    fun checkReceiveLimit(receiveLimit: Int) {
+        require(receiveLimit > 0) {
+            "Receive limit must be greater than zero (current: $receiveLimit)"
+        }
+    }
+
+    fun checkWorkerThreads(threads: Int) {
+        require(threads > 0) {
+            "Worker threads must be greater than zero (current: $threads)"
+        }
+    }
+
+    fun checkMaxBatchesBeforePause(maxBatchesBeforePause: Int) {
+        require(maxBatchesBeforePause > 0) {
+            "Max batches before pause must be greater than zero (current: $maxBatchesBeforePause)"
+        }
+    }
+
+    fun checkWorkerPause(fieldName: String, pause: Duration) {
+        // A zero pause on an empty queue would query the database in an endless loop
+        require(!pause.isNegative && !pause.isZero) {
+            "$fieldName must be greater than zero (current: $pause)"
+        }
+    }
+
+    fun checkMaxErrorPause(errorPause: Duration, maxErrorPause: Duration) {
+        require(maxErrorPause >= errorPause) {
+            "Max error pause must be greater than or equal to error pause " +
+                "(current: $maxErrorPause, error pause: $errorPause)"
+        }
+    }
+
+    fun checkWorkerStopTimeout(stopTimeout: Duration) {
+        require(!stopTimeout.isNegative) {
+            "Stop timeout must be greater than or equal to zero (current: $stopTimeout)"
+        }
+    }
+
     fun checkQueueName(queueName: String, queueRole: QueueRole) {
         require(queueName.isNotEmpty()) {
             "Queue name is empty"

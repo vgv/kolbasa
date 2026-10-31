@@ -56,7 +56,9 @@ The build has six Gradle modules — `:kolbasa` and `:kolbasa-opentelemetry` are
 an included build holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
-  `inspector` (the four roles), `queue` (queue/options/meta-fields), `schema` (DDL generation),
+  `inspector` (the four roles), `worker` (the poll loop, a layer on top of the roles: `QueueProcessor` handles one
+  batch per `process()` call and fits any loop or scheduler, `QueueWorker` runs it in its own threads), `queue`
+  (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
   operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `telemetry`
@@ -113,11 +115,16 @@ Things that commonly trip people up:
   `import kolbasa.utils.JdbcHelpers.inTransaction`, then `dataSource.inTransaction { connection -> … }`.
   It sets `autoCommit = false`, commits, and on a throw rolls back and rethrows the original exception.
   `withAutoCommit` is its counterpart — a connection on which every statement is committed on its own.
+- **Don't hand-roll a poll loop.** To process a queue in the background, use `QueueWorker` over a `QueueProcessor`
+  (`kolbasa.worker`): it deletes the handled messages, backs off on errors and stops cleanly. For your own
+  loop or a scheduler, call `QueueProcessor.process()` — one batch per call.
 
 ## Conventions
 
 - Follow the style of the surrounding code; match its naming, structure, and KDoc density. Public APIs
   carry KDoc.
+- KDoc is always multi-line, even a single sentence: `/**` and `*/` go on their own lines. The one-line form
+  `/** Text */` is not allowed, even where the surrounding code still uses it.
 - Both a `DataSource`-backed (`Database*`) and a `Connection`-aware (`ConnectionAware*`) variant exist
   for each role — keep them in sync when changing one.
 - `JdbcHelpers` is a **public object with an almost entirely `internal` body**: only `inTransaction` and

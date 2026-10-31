@@ -44,10 +44,14 @@ internal class ShardBalance(
         }
     }
 
-    /** Known node -> shards it currently owns (producerNode). Orphan shards are excluded. */
+    /**
+     * Known node -> shards it currently owns (producerNode). Orphan shards are excluded.
+     */
     private val currentDistribution: Map<NodeId, List<Shard>> = groupShardsByNode()
 
-    /** Known node -> how many shards it should own after rebalance (floor or ceil of N/K, or 0 if drained). */
+    /**
+     * Known node -> how many shards it should own after rebalance (floor or ceil of N/K, or 0 if drained).
+     */
     private val targetShardsPerNode: Map<NodeId, Int> = computeTargetPerNode()
 
     fun compute(): ShardBalanceResult {

@@ -120,7 +120,9 @@ data class ReceiveOptions(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
-    /** Builder for flexible [ReceiveOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [ReceiveOptions] creation, when only some of the properties need to be set.
+     */
     class Builder {
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
@@ -128,22 +130,34 @@ data class ReceiveOptions(
         private var order: Order = Order.NONE
         private var filter: Condition? = null
 
-        /** Sets [ReceiveOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
+        /**
+         * Sets [ReceiveOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging.
+         */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
 
-        /** Sets [ReceiveOptions.visibilityTimeout] – how long the received messages stay invisible to other consumers. */
+        /**
+         * Sets [ReceiveOptions.visibilityTimeout] – how long the received messages stay invisible to other consumers.
+         */
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
 
-        /** Sets [ReceiveOptions.readMetadata] – whether metadata is read from the database into the received messages. */
+        /**
+         * Sets [ReceiveOptions.readMetadata] – whether metadata is read from the database into the received messages.
+         */
         fun readMetadata(readMetadata: Boolean) = apply { this.readMetadata = readMetadata }
 
-        /** Sets [ReceiveOptions.order] – the order in which the matching messages are received. */
+        /**
+         * Sets [ReceiveOptions.order] – the order in which the matching messages are received.
+         */
         fun order(order: Order) = apply { this.order = order }
 
-        /** Sets [ReceiveOptions.filter] – the condition on meta fields a message has to match to be received. */
+        /**
+         * Sets [ReceiveOptions.filter] – the condition on meta fields a message has to match to be received.
+         */
         fun filter(filter: Condition) = apply { this.filter = filter }
 
-        /** Creates a new [ReceiveOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [ReceiveOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build(): ReceiveOptions {
             return ReceiveOptions(
                 consumer = consumer,
@@ -157,7 +171,9 @@ data class ReceiveOptions(
 
     companion object {
 
-        /** Default options: they override nothing and leave the default behaviour in place. */
+        /**
+         * Default options: they override nothing and leave the default behaviour in place.
+         */
         @JvmField
         val DEFAULT = ReceiveOptions()
 

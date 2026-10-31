@@ -337,7 +337,9 @@ class ShardBalanceTest {
 
     // ---------- helpers ----------
 
-    /** Inverts [ShardBalanceResult.currentDistribution]: which node holds a given shard right now */
+    /**
+     * Inverts [ShardBalanceResult.currentDistribution]: which node holds a given shard right now
+     */
     private fun ShardBalanceResult.ownerOf(): Map<ShardId, NodeId> =
         currentDistribution.flatMap { (node, shards) -> shards.map { it to node } }.toMap()
 

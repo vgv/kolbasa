@@ -12,10 +12,14 @@ import kolbasa.schema.NodeId
  */
 sealed interface ShardOwnership {
 
-    /** The shard this describes */
+    /**
+     * The shard this describes
+     */
     val shard: ShardId
 
-    /** Messages of [shard] are produced to and consumed from [node], and nothing is in flight */
+    /**
+     * Messages of [shard] are produced to and consumed from [node], and nothing is in flight
+     */
     data class Stable(override val shard: ShardId, val node: NodeId) : ShardOwnership
 
     /**

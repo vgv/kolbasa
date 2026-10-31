@@ -7,7 +7,9 @@ import kolbasa.schema.NodeId
  */
 sealed interface NodeDelta {
 
-    /** The table is not on this node at all */
+    /**
+     * The table is not on this node at all
+     */
     object Missing : NodeDelta
 
     /**

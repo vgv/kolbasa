@@ -27,7 +27,9 @@ import kolbasa.cluster.admin.ClusterOperationException
  */
 internal abstract class ClusterCommand(name: String) : CliktCommand(name = name) {
 
-    /** The section of `butcher --help` this command is listed under */
+    /**
+     * The section of `butcher --help` this command is listed under
+     */
     protected abstract val helpSection: HelpSection
 
     final override val helpTags: Map<String, String>
@@ -53,7 +55,9 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
         output?.let { terminal.println(it) }
     }
 
-    /** Does the work, and returns what to show after it, if anything */
+    /**
+     * Does the work, and returns what to show after it, if anything
+     */
     protected abstract fun execute(): Widget?
 
     /**

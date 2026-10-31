@@ -53,22 +53,30 @@ data class MutatorOptions(
     val asyncExecutor: ExecutorService? = null,
 ) {
 
-    /** Builder for flexible [MutatorOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [MutatorOptions] creation, when only some of the properties need to be set.
+     */
     class Builder {
         private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
         private var asyncExecutor: ExecutorService? = null
 
-        /** Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry. */
+        /**
+         * Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry.
+         */
         fun maxMutatedMessagesKeepInMemory(value: Int) = apply {
             this.maxMutatedMessagesKeepInMemory = value
         }
 
-        /** Sets [MutatorOptions.asyncExecutor] – the executor used by the mutator's mutateAsync() methods. */
+        /**
+         * Sets [MutatorOptions.asyncExecutor] – the executor used by the mutator's mutateAsync() methods.
+         */
         fun asyncExecutor(value: ExecutorService?) = apply {
             this.asyncExecutor = value
         }
 
-        /** Creates a new [MutatorOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [MutatorOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build(): MutatorOptions {
             return MutatorOptions(
                 maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
@@ -78,10 +86,14 @@ data class MutatorOptions(
     }
 
     companion object {
-        /** The default [MutatorOptions.maxMutatedMessagesKeepInMemory] – 100 messages. */
+        /**
+         * The default [MutatorOptions.maxMutatedMessagesKeepInMemory] – 100 messages.
+         */
         const val DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY = 100
 
-        /** Default options: they override nothing and leave the default behaviour in place. */
+        /**
+         * Default options: they override nothing and leave the default behaviour in place.
+         */
         @JvmField
         val DEFAULT = MutatorOptions()
 

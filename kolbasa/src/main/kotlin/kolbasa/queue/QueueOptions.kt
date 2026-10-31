@@ -166,7 +166,9 @@ data class QueueOptions(
         Checks.checkVisibilityTimeout(defaultVisibilityTimeout)
     }
 
-    /** Builder for flexible [QueueOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [QueueOptions] creation, when only some of the properties need to be set.
+     */
     class Builder internal constructor() {
         private var defaultDelay: Duration = DEFAULT_DELAY
         private var defaultAttempts: Int = DEFAULT_ATTEMPTS
@@ -175,13 +177,19 @@ data class QueueOptions(
         private var archiveQueueOptions: ArchiveQueueOptions? = null
         private var sqlPutFunction: Boolean = false
 
-        /** Sets [QueueOptions.defaultDelay] – how long a message stays invisible to consumers after it is sent. */
+        /**
+         * Sets [QueueOptions.defaultDelay] – how long a message stays invisible to consumers after it is sent.
+         */
         fun defaultDelay(defaultDelay: Duration) = apply { this.defaultDelay = defaultDelay }
 
-        /** Sets [QueueOptions.defaultAttempts] – how many times a message may be consumed before it expires. */
+        /**
+         * Sets [QueueOptions.defaultAttempts] – how many times a message may be consumed before it expires.
+         */
         fun defaultAttempts(defaultAttempts: Int) = apply { this.defaultAttempts = defaultAttempts }
 
-        /** Sets [QueueOptions.defaultVisibilityTimeout] – how long a consumed message stays hidden from others. */
+        /**
+         * Sets [QueueOptions.defaultVisibilityTimeout] – how long a consumed message stays hidden from others.
+         */
         fun defaultVisibilityTimeout(defaultVisibilityTimeout: Duration) =
             apply { this.defaultVisibilityTimeout = defaultVisibilityTimeout }
 
@@ -214,7 +222,9 @@ data class QueueOptions(
          */
         fun enableSqlPutFunction() = apply { this.sqlPutFunction = true }
 
-        /** Creates a new [QueueOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [QueueOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build() = QueueOptions(
             defaultDelay, defaultAttempts, defaultVisibilityTimeout, dlqOptions, archiveQueueOptions, sqlPutFunction
         )
@@ -222,18 +232,26 @@ data class QueueOptions(
 
     companion object {
 
-        /** The [QueueOptions.defaultDelay] used when none is set – zero, messages are visible immediately. */
+        /**
+         * The [QueueOptions.defaultDelay] used when none is set – zero, messages are visible immediately.
+         */
         @JvmField
         val DEFAULT_DELAY: Duration = Duration.ZERO
 
-        /** The [QueueOptions.defaultAttempts] used when none is set – 5 attempts. */
+        /**
+         * The [QueueOptions.defaultAttempts] used when none is set – 5 attempts.
+         */
         const val DEFAULT_ATTEMPTS = 5
 
-        /** The [QueueOptions.defaultVisibilityTimeout] used when none is set – 60 seconds. */
+        /**
+         * The [QueueOptions.defaultVisibilityTimeout] used when none is set – 60 seconds.
+         */
         @JvmField
         val DEFAULT_VISIBILITY_TIMEOUT: Duration = Duration.ofSeconds(60)
 
-        /** Default options: no delay, 5 attempts, 60 second visibility timeout, no DLQ, no archive, no SQL put function. */
+        /**
+         * Default options: no delay, 5 attempts, 60 second visibility timeout, no DLQ, no archive, no SQL put function.
+         */
         @JvmField
         val DEFAULT = QueueOptions()
 

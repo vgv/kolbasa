@@ -22,10 +22,14 @@ data class ShardBalanceResult(
     val proposedMoves: Map<NodeId, List<ShardId>>,
 ) {
 
-    /** How many shards the plan would move in total */
+    /**
+     * How many shards the plan would move in total
+     */
     val totalMoves: Int = proposedMoves.values.sumOf { it.size }
 
-    /** True when nothing needs to move */
+    /**
+     * True when nothing needs to move
+     */
     val isBalanced: Boolean = totalMoves == 0
 
     /**

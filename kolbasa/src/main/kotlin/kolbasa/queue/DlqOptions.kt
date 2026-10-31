@@ -78,36 +78,52 @@ data class DlqOptions(
         Checks.checkRetentionMaxMessages(maxMessages)
     }
 
-    /** Builder for flexible [DlqOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [DlqOptions] creation, when only some of the properties need to be set.
+     */
     class Builder internal constructor() {
         private var retention: Duration = DEFAULT_RETENTION
         private var maxMessages: Long? = null
 
-        /** Sets [DlqOptions.retention] – how long a message is kept before the sweep cycle deletes it. */
+        /**
+         * Sets [DlqOptions.retention] – how long a message is kept before the sweep cycle deletes it.
+         */
         fun retention(retention: Duration): Builder = apply { this.retention = retention }
 
-        /** Sets [DlqOptions.maxMessages] – the approximate number of messages to keep, oldest removed first. */
+        /**
+         * Sets [DlqOptions.maxMessages] – the approximate number of messages to keep, oldest removed first.
+         */
         fun maxMessages(maxMessages: Long): Builder = apply { this.maxMessages = maxMessages }
 
-        /** Creates a new [DlqOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [DlqOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build(): DlqOptions = DlqOptions(retention, maxMessages)
     }
 
     companion object {
 
-        /** The smallest retention Kolbasa accepts – 1 hour. */
+        /**
+         * The smallest retention Kolbasa accepts – 1 hour.
+         */
         @JvmField
         val MIN_RETENTION: Duration = Duration.ofHours(1)
 
-        /** The retention used when none is set – 30 days. */
+        /**
+         * The retention used when none is set – 30 days.
+         */
         @JvmField
         val DEFAULT_RETENTION: Duration = Duration.ofDays(30)
 
-        /** The largest retention Kolbasa accepts – 10 years. */
+        /**
+         * The largest retention Kolbasa accepts – 10 years.
+         */
         @JvmField
         val MAX_RETENTION: Duration = Duration.ofDays(365 * 10L) // 10 years
 
-        /** Default options: 30 days retention and no message-count limit. */
+        /**
+         * Default options: 30 days retention and no message-count limit.
+         */
         @JvmField
         val DEFAULT = DlqOptions()
 

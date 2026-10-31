@@ -44,12 +44,16 @@ data class MutateResult(
     }
 
     companion object {
-        /** Keeps only the successfully mutated messages of a plain list. [MutateResult.onlyMutated] does the same for a result. */
+        /**
+         * Keeps only the successfully mutated messages of a plain list. [MutateResult.onlyMutated] does the same for a result.
+         */
         fun List<MessageResult>.onlyMutated(): List<MessageResult.Mutated> {
             return filterIsInstance<MessageResult.Mutated>()
         }
 
-        /** Keeps only the messages that were not found. [MutateResult.onlyNotFound] does the same for a result. */
+        /**
+         * Keeps only the messages that were not found. [MutateResult.onlyNotFound] does the same for a result.
+         */
         fun List<MessageResult>.onlyNotFound(): List<MessageResult.NotFound> {
             return filterIsInstance<MessageResult.NotFound>()
         }

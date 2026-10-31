@@ -7,7 +7,9 @@ package kolbasa.producer
  * identifies the record. Any part doesn't make sense without the others.
  */
 data class Id(
-    /** The value of the queue table's `id` column. */
+    /**
+     * The value of the queue table's `id` column.
+     */
     val localId: Long,
 
     /**

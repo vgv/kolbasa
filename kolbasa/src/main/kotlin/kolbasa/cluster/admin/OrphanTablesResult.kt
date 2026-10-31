@@ -23,9 +23,13 @@ data class OrphanTablesResult(
     val orphansByNode: Map<NodeId, List<OrphanTable>>,
 ) {
 
-    /** How many orphan tables were found across the whole cluster */
+    /**
+     * How many orphan tables were found across the whole cluster
+     */
     val totalOrphans: Int = orphansByNode.values.sumOf { it.size }
 
-    /** True when no orphan table was found */
+    /**
+     * True when no orphan table was found
+     */
     val isClean: Boolean = totalOrphans == 0
 }

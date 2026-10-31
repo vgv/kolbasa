@@ -15,17 +15,25 @@ internal enum class HelpSection(val title: String) {
     LOW_LEVEL("Low-level commands");
 
     companion object {
-        /** The help tags that tell the formatter which section [section] belongs in */
+        /**
+         * The help tags that tell the formatter which section [section] belongs in
+         */
         fun helpTags(section: HelpSection): Map<String, String> = mapOf(TAG to section.name)
 
-        /** The section a command's help tags name, or null for one that names none */
+        /**
+         * The section a command's help tags name, or null for one that names none
+         */
         fun fromHelpTags(tags: Map<String, String>): HelpSection? =
             tags[TAG]?.let { name -> entries.find { it.name == name } }
 
-        /** Whether [tag] is the one above: it steers the layout and is not for printing */
+        /**
+         * Whether [tag] is the one above: it steers the layout and is not for printing
+         */
         fun isSectionTag(tag: String): Boolean = tag == TAG
 
-        /** Clikt prints tags it does not recognise, so this must not collide with its own */
+        /**
+         * Clikt prints tags it does not recognise, so this must not collide with its own
+         */
         private const val TAG = "butcher-help-section"
     }
 }

@@ -208,7 +208,9 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
     // ---------- helpers ----------
 
-    /** Prepares one shard of [from] for [to], a migration these tests only need to leave in flight */
+    /**
+     * Prepares one shard of [from] for [to], a migration these tests only need to leave in flight
+     */
     private fun prepareOneShard(from: NodeId, to: NodeId) {
         val shard = ClusterAdmin(dataSources).checkShardBalance().currentDistribution.getValue(from).first()
 
@@ -295,13 +297,17 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         return file
     }
 
-    /** One node of the cluster, as a line of the config file */
+    /**
+     * One node of the cluster, as a line of the config file
+     */
     private fun configLine(id: String, schema: String): String =
         "$id  host=${pgContainer.host} port=${pgContainer.firstMappedPort} " +
             "user=${pgContainer.username} password=${pgContainer.password} " +
             "dbname=$databaseName schema=$schema\n"
 
-    /** The id the application gave this node when it started */
+    /**
+     * The id the application gave this node when it started
+     */
     private fun nodeIdOf(dataSource: DataSource): String =
         dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->

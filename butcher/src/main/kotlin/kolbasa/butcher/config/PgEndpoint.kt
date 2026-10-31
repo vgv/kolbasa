@@ -30,7 +30,9 @@ internal data class PgEndpoint(
     val password: String?,
     val schema: String?,
 ) {
-    /** Human-readable identifier: no credentials. */
+    /**
+     * Human-readable identifier: no credentials.
+     */
     override fun toString(): String = "${id.id} ($host:${port ?: 5432}/$dbName)"
 
     /**

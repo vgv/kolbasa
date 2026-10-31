@@ -86,5 +86,7 @@ internal class ConsoleProgressCallback(private val terminal: Terminal) : Progres
     }
 }
 
-/** Group digits */
+/**
+ * Group digits
+ */
 internal fun count(value: Long): String = String.format(Locale.ROOT, "%,d", value)

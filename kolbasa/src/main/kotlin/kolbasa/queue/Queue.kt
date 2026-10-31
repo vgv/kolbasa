@@ -157,7 +157,9 @@ data class Queue<Data> internal constructor(
         }
     }
 
-    /** Builder for flexible [Queue] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [Queue] creation, when only some of the properties need to be set.
+     */
     class Builder<Data> internal constructor(
         private val name: String,
         private val databaseDataType: DatabaseQueueDataType<Data>,
@@ -165,13 +167,19 @@ data class Queue<Data> internal constructor(
         private var options: QueueOptions = QueueOptions.DEFAULT
         private var metadata: Metadata = Metadata.EMPTY
 
-        /** Sets [Queue.options] – delays, attempts, visibility timeout, DLQ, archive and the SQL put function. */
+        /**
+         * Sets [Queue.options] – delays, attempts, visibility timeout, DLQ, archive and the SQL put function.
+         */
         fun options(options: QueueOptions) = apply { this.options = options }
 
-        /** Sets [Queue.metadata] – the meta fields the messages of this queue may carry. */
+        /**
+         * Sets [Queue.metadata] – the meta fields the messages of this queue may carry.
+         */
         fun metadata(metadata: Metadata) = apply { this.metadata = metadata }
 
-        /** Creates a new [Queue] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [Queue] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build(): Queue<Data> = Queue(name, databaseDataType, options, metadata)
     }
 

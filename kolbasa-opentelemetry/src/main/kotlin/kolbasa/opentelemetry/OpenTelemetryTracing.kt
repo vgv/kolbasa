@@ -14,9 +14,11 @@ import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
 import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
 import kolbasa.producer.SendResult
+import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.telemetry.tracing.SendCall
 import kolbasa.telemetry.tracing.Tracing
+import kolbasa.worker.HandleResult
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -26,6 +28,19 @@ import java.util.function.Supplier
  * Every `send()` becomes a producer span, and its trace context is stored with the sent messages. Every `receive()`
  * becomes a consumer span, linked to the spans that sent the received messages. So both sides of the queue can be
  * seen as one flow, even though they are different applications and different moments in time.
+ *
+ * With a [QueueProcessor][kolbasa.worker.QueueProcessor], the handling of every message becomes a span too.
+ * Its parent is the span that sent the message, so all the handler does, its SQL and HTTP calls for example, lands
+ * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
+ * links to it. The process span tells how the handling ended in the attribute `kolbasa.process.result`:
+ * `succeeded`, `skipped` or `failed`. The attribute `kolbasa.message.last_attempt` is `true` on the message's last
+ * attempt: if that one fails or is skipped, the message goes to the DLQ, or is deleted if the queue has none.
+ *
+ * A `receive()` that finds no messages makes no span when there is no span around it, as in a
+ * [QueueWorker][kolbasa.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
+ * and only flood the traces, a new one-span trace on every poll. Inside a span of yours, an empty `receive()` still
+ * makes its span, so a scheduled job shows that it found nothing. To see that a worker is alive, look at the metric
+ * `kolbasa_consumer_receive` instead: it counts every `receive()`, the empty ones too.
  *
  * One object serves all queues, so create it once and share it.
  *
@@ -56,6 +71,9 @@ class OpenTelemetryTracing(
 
     private val consumerInstrumenter: Instrumenter<ReceiveSpanInput, Unit> =
         buildConsumerInstrumenter(openTelemetry)
+
+    private val processInstrumenter: Instrumenter<ProcessSpanInput, HandleResult> =
+        buildProcessInstrumenter(openTelemetry)
 
     override fun <Data> send(call: SendCall<Data>): SendResult<Data> {
         val spanInput = SendSpanInput(call.queue.name, call.nodeId, call.request)
@@ -103,6 +121,30 @@ class OpenTelemetryTracing(
         return result
     }
 
+    override fun <Data> process(call: ProcessCall<Data>): HandleResult {
+        val parentContext = Context.current()
+        val callerSpanContext = Span.fromContext(parentContext).spanContext
+        val spanInput = ProcessSpanInput(call.queue.name, call.message, call.traceContext(), callerSpanContext)
+        if (!processInstrumenter.shouldStart(parentContext, spanInput)) {
+            return call.proceed()
+        }
+
+        // The instrumenter takes the sender's context from the message and makes it the parent. While the handler
+        // runs, the process span is the current one, so the handler's own spans become its children
+        val context = processInstrumenter.start(parentContext, spanInput)
+        val result = try {
+            context.makeCurrent().use {
+                call.proceed()
+            }
+        } catch (e: Exception) {
+            processInstrumenter.end(context, spanInput, null, e)
+            throw e
+        }
+        processInstrumenter.end(context, spanInput, result, null)
+
+        return result
+    }
+
     override fun <T> wrapAsync(task: Supplier<T>): Supplier<T> {
         // The executor runs the task in another thread, where Context.current() is empty. Take the caller's context
         // along, so the send span gets the caller's span as its parent
@@ -117,9 +159,17 @@ class OpenTelemetryTracing(
         start: Instant
     ) {
         val end = Instant.now()
+        val parentContext = Context.current()
+
+        // An empty poll with no span around it says nothing, see the class KDoc. A failed receive is not empty, it
+        // always makes its span
+        val isEmptyPoll = messages.isEmpty() && error == null
+        val hasParentSpan = Span.fromContext(parentContext).spanContext.isValid
+        if (isEmptyPoll && !hasParentSpan) {
+            return
+        }
 
         val spanInput = ReceiveSpanInput(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
-        val parentContext = Context.current()
         if (consumerInstrumenter.shouldStart(parentContext, spanInput)) {
             InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, spanInput, null, error, start, end)
         }
@@ -204,7 +254,51 @@ class OpenTelemetryTracing(
             .buildInstrumenter(SpanKindExtractor.alwaysConsumer())
     }
 
+    private fun buildProcessInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ProcessSpanInput, HandleResult> {
+        val getter = ProcessSpanAttributesGetter()
+        val operationType = MessagingOperationType.PROCESS
+        // Name of the operation, goes to "messaging.operation.name"
+        val operationName = "process"
+
+        // Whether this is the message's last attempt, and how the handling ended
+        val processAttributesExtractor = object : AttributesExtractor<ProcessSpanInput, HandleResult> {
+            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ProcessSpanInput) {
+                attributes.put(LAST_ATTEMPT_ATTRIBUTE_KEY, request.message.isLastAttempt())
+            }
+
+            override fun onEnd(
+                attributes: AttributesBuilder,
+                context: Context,
+                request: ProcessSpanInput,
+                response: HandleResult?,
+                error: Throwable?
+            ) {
+                // The same words as in ProcessResult
+                val result = when {
+                    error != null -> "failed"
+                    response == HandleResult.DONE -> "succeeded"
+                    response == HandleResult.SKIP -> "skipped"
+                    else -> return
+                }
+                attributes.put(PROCESS_RESULT_ATTRIBUTE_KEY, result)
+            }
+        }
+
+        return Instrumenter.builder<ProcessSpanInput, HandleResult>(
+            openTelemetry,
+            "kolbasa",
+            MessagingSpanNameExtractor.create(getter, operationType, operationName)
+        )
+            .addSpanLinksExtractor(ProcessSpanLinksExtractor())
+            .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operationType, operationName))
+            .addAttributesExtractor(processAttributesExtractor)
+            // A consumer span whose parent comes from the message
+            .buildConsumerInstrumenter(ProcessTraceContextGetter())
+    }
+
     companion object {
-        private val NODE_ID_ATTRIBUTE_KEY: AttributeKey<String> = AttributeKey.stringKey("kolbasa.node.id")
+        private val NODE_ID_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.node.id")
+        private val PROCESS_RESULT_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.process.result")
+        private val LAST_ATTEMPT_ATTRIBUTE_KEY= AttributeKey.booleanKey("kolbasa.message.last_attempt")
     }
 }

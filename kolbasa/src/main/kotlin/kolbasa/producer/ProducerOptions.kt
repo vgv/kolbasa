@@ -188,7 +188,9 @@ data class ProducerOptions(
         Checks.checkChunkSize(chunkSize)
     }
 
-    /** Builder for flexible [ProducerOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [ProducerOptions] creation, when only some of the properties need to be set.
+     */
     class Builder internal constructor() {
         private var delay: Duration? = null
         private var attempts: Int? = null
@@ -200,34 +202,54 @@ data class ProducerOptions(
         private var asyncExecutor: ExecutorService? = null
         private var tracing: Tracing? = null
 
-        /** Sets [ProducerOptions.delay] – how long the messages of this producer stay invisible to consumers. */
+        /**
+         * Sets [ProducerOptions.delay] – how long the messages of this producer stay invisible to consumers.
+         */
         fun delay(delay: Duration) = apply { this.delay = delay }
 
-        /** Sets [ProducerOptions.attempts] – how many times a message may be consumed before it expires or goes to a DLQ. */
+        /**
+         * Sets [ProducerOptions.attempts] – how many times a message may be consumed before it expires or goes to a DLQ.
+         */
         fun attempts(attempts: Int) = apply { this.attempts = attempts }
 
-        /** Sets [ProducerOptions.producer] – the producer name written into the queue's `producer` column, for debugging. */
+        /**
+         * Sets [ProducerOptions.producer] – the producer name written into the queue's `producer` column, for debugging.
+         */
         fun producer(producer: String) = apply { this.producer = producer }
 
-        /** Sets [ProducerOptions.deduplicationMode] – whether a duplicate key fails the send or is silently skipped. */
+        /**
+         * Sets [ProducerOptions.deduplicationMode] – whether a duplicate key fails the send or is silently skipped.
+         */
         fun deduplicationMode(deduplicationMode: DeduplicationMode) = apply { this.deduplicationMode = deduplicationMode }
 
-        /** Sets [ProducerOptions.chunkSize] – how many messages go into a single INSERT statement. */
+        /**
+         * Sets [ProducerOptions.chunkSize] – how many messages go into a single INSERT statement.
+         */
         fun chunkSize(chunkSize: Int) = apply { this.chunkSize = chunkSize }
 
-        /** Sets [ProducerOptions.partialInsert] – what happens to the rest of the batch when one chunk fails. */
+        /**
+         * Sets [ProducerOptions.partialInsert] – what happens to the rest of the batch when one chunk fails.
+         */
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
 
-        /** Sets [ProducerOptions.shard] – the value that keeps messages with the same shard on the same cluster server. */
+        /**
+         * Sets [ProducerOptions.shard] – the value that keeps messages with the same shard on the same cluster server.
+         */
         fun shard(shard: Int) = apply { this.shard = shard }
 
-        /** Sets [ProducerOptions.asyncExecutor] – the executor used by this producer's sendAsync() methods. */
+        /**
+         * Sets [ProducerOptions.asyncExecutor] – the executor used by this producer's sendAsync() methods.
+         */
         fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
 
-        /** Sets [ProducerOptions.tracing] – the tracing of this producer, used instead of the global one. */
+        /**
+         * Sets [ProducerOptions.tracing] – the tracing of this producer, used instead of the global one.
+         */
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
-        /** Creates a new [ProducerOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [ProducerOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build() = ProducerOptions(
             delay = delay,
             attempts = attempts,
@@ -243,10 +265,14 @@ data class ProducerOptions(
 
     companion object {
 
-        /** The default [ProducerOptions.chunkSize] – 500 messages per INSERT statement. */
+        /**
+         * The default [ProducerOptions.chunkSize] – 500 messages per INSERT statement.
+         */
         const val DEFAULT_CHUNK_SIZE = 500
 
-        /** Default options: they override nothing and leave the default behaviour in place. */
+        /**
+         * Default options: they override nothing and leave the default behaviour in place.
+         */
         @JvmField
         val DEFAULT = ProducerOptions()
 

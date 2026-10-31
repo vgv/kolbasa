@@ -100,32 +100,46 @@ data class ConsumerOptions(
         Checks.checkVisibilityTimeout(visibilityTimeout)
     }
 
-    /** Builder for flexible [ConsumerOptions] creation, when only some of the properties need to be set. */
+    /**
+     * Builder for flexible [ConsumerOptions] creation, when only some of the properties need to be set.
+     */
     class Builder {
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
         private var tracing: Tracing? = null
         private var readErrorHandler: ReadErrorHandler = ReadErrorHandler.SYSTEM_LOG
 
-        /** Sets [ConsumerOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging. */
+        /**
+         * Sets [ConsumerOptions.consumer] – the consumer name written into the queue's `consumer` column, for debugging.
+         */
         fun consumer(consumer: String) = apply { this.consumer = consumer }
 
-        /** Sets [ConsumerOptions.visibilityTimeout] – how long a received message stays invisible to other consumers. */
+        /**
+         * Sets [ConsumerOptions.visibilityTimeout] – how long a received message stays invisible to other consumers.
+         */
         fun visibilityTimeout(visibilityTimeout: Duration) = apply { this.visibilityTimeout = visibilityTimeout }
 
-        /** Sets [ConsumerOptions.tracing] – the tracing of this consumer, used instead of the global one. */
+        /**
+         * Sets [ConsumerOptions.tracing] – the tracing of this consumer, used instead of the global one.
+         */
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
-        /** Sets [ConsumerOptions.readErrorHandler] – what to do with a received message that can't be read. */
+        /**
+         * Sets [ConsumerOptions.readErrorHandler] – what to do with a received message that can't be read.
+         */
         fun readErrorHandler(readErrorHandler: ReadErrorHandler) = apply { this.readErrorHandler = readErrorHandler }
 
-        /** Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused. */
+        /**
+         * Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused.
+         */
         fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, readErrorHandler)
     }
 
     companion object {
 
-        /** Default options: they override nothing and leave the default behaviour in place. */
+        /**
+         * Default options: they override nothing and leave the default behaviour in place.
+         */
         @JvmField
         val DEFAULT = ConsumerOptions()
 

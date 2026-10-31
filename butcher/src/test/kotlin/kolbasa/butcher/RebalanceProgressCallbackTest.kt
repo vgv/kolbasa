@@ -63,7 +63,9 @@ class RebalanceProgressCallbackTest {
 
     private fun shards(vararg numbers: Int): List<ShardId> = numbers.map(ShardId::of)
 
-    /** One `stable on node-01 => migrating to node-02` diff per shard */
+    /**
+     * One `stable on node-01 => migrating to node-02` diff per shard
+     */
     private fun diffs(vararg numbers: Int): List<ShardDiff> = numbers.map { shard ->
         ShardDiff(
             originalShard = ShardOwnership.Stable(ShardId.of(shard), NodeId("node-01")),
