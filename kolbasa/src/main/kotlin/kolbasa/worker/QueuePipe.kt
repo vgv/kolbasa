@@ -120,7 +120,7 @@ class QueuePipe internal constructor(
             consumer: Consumer,
             to: Queue<Data>,
             producer: Producer,
-            options: QueuePipeOptions = QueuePipeOptions.DEFAULT
+            options: QueuePipeOptions = QueuePipeOptions.AS_IS_DEFAULT
         ): QueuePipe {
             val fromType = from.databaseDataType
             val toType = to.databaseDataType

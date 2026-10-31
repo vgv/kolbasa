@@ -57,7 +57,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val pipe = pipe { error("No messages, nothing to transform") }
 
         val result = pipe.process()
-        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = 100), result)
+        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = 10), result)
         assertEquals(0, result.received)
     }
 
@@ -68,7 +68,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val pipe = pipe { message -> SendMessage(message.data.uppercase()) }
 
         assertEquals(from, pipe.queue)
-        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
         assertEquals(setOf("ONE", "TWO", "THREE"), receiveAll(toDataSource))
     }
@@ -81,7 +81,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val same = SendMessage("same")
         val pipe = pipe { same }
 
-        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
         assertEquals(2, messagesIn(toDataSource, to))
     }
@@ -97,7 +97,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
             SendMessage(message.data)
         }
 
-        assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 1, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 1, requested = 10), pipe.process())
 
         // The error handler got the failed message
         val error = errors.single()
@@ -146,14 +146,14 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testProcess_ToCluster() {
-        val data = (1..20).map { "message_$it" }
+        val data = (1..10).map { "message_$it" }
         send(*data.toTypedArray())
 
         val pipe = QueuePipe.map(from, DatabaseConsumer(fromDataSource), to, clusterProducer()) { message ->
             SendMessage(message.data)
         }
 
-        assertEquals(ProcessResult(succeeded = 20, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 10, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
         assertEquals(data.toSet(), clusterNodes.flatMap { receiveAll(it) }.toSet())
     }
@@ -169,7 +169,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
             SendMessage(message.data)
         }
 
-        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), pipe.process())
         val withShard = clusterNodes.sumOf { it.readInt("select count(*) from ${to.dbTableName} where shard = 42") }
         assertEquals(3, withShard)
     }
@@ -183,7 +183,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         }
 
         // The filtered message is deleted too, it just sends nothing
-        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
         assertEquals(4, messagesIn(toDataSource, to))
         assertEquals(setOf("a", "b", "c", "d"), receiveAll(toDataSource))
@@ -198,7 +198,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
         val pipe = flatMapPipe { emptyList() }
 
-        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
     }
 
@@ -229,7 +229,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
             SendRequest(listOf(SendMessage(merged)), SendOptions(shard = 42))
         }
 
-        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
         val withShard = clusterNodes.sumOf { it.readInt("select count(*) from ${to.dbTableName} where shard = 42") }
         assertEquals(1, withShard)
@@ -262,7 +262,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val options = QueuePipeOptions(errorHandler = { errors += it })
         val pipe = mapBatchPipe(options) { throw IllegalArgumentException("Can't transform the batch") }
 
-        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 2, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 0, skipped = 0, failed = 2, requested = 10), pipe.process())
 
         // Every message of the batch went to the error handler with the same cause
         assertEquals(setOf("one", "two"), errors.map { it.message.data }.toSet())
@@ -283,7 +283,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
         val pipe = mapBatchPipe { SendRequest(emptyList()) }
 
-        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 100), pipe.process())
+        assertEquals(ProcessResult(succeeded = 2, skipped = 0, failed = 0, requested = 10), pipe.process())
         assertEquals(0, messagesIn(fromDataSource, from))
     }
 
@@ -342,6 +342,27 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         assertThrows<IllegalArgumentException> {
             QueuePipe.asIs(from, DatabaseConsumer(fromDataSource), json, DatabaseProducer(toDataSource))
         }
+    }
+
+    @Test
+    fun testOptions_ReceiveLimit_DependsOnTheFactory() {
+        send(*(1..15).map { "message_$it" }.toTypedArray())
+        val consumer = DatabaseConsumer(fromDataSource)
+        val producer = DatabaseProducer(toDataSource)
+
+        // Not set: careful for a transform, which may be slow
+        val mapPipe = QueuePipe.map(from, consumer, to, producer) { SendMessage(it.data) }
+        assertEquals(ProcessResult(succeeded = 10, skipped = 0, failed = 0, requested = 10), mapPipe.process())
+
+        // Not set: larger for asIs, which does almost nothing with a message
+        val asIsPipe = QueuePipe.asIs(from, consumer, to, producer)
+        assertEquals(ProcessResult(succeeded = 5, skipped = 0, failed = 0, requested = 100), asIsPipe.process())
+
+        // Set: the same for every factory
+        val options = QueuePipeOptions(receiveLimit = 50)
+        assertEquals(50, QueuePipe.asIs(from, consumer, to, producer, options).process().requested)
+        val mapWithOptions = QueuePipe.map(from, consumer, to, producer, options) { SendMessage(it.data) }
+        assertEquals(50, mapWithOptions.process().requested)
     }
 
     @Test
