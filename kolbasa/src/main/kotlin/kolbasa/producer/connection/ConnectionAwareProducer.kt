@@ -29,11 +29,17 @@ import java.sql.Connection
  * session.persist(customer)
  * // Send message to the queue in the same transaction
  * session.doWork { connection ->
- *     newRegistrationProducer.send(connection, queue, SendMessage(customer))
+ *     // Throws if the message wasn't sent, so the customer isn't saved either
+ *     newRegistrationProducer.send(connection, queue, SendMessage(customer)).throwExceptionIfAny()
  * }
  * ```
  * When Hibernate commits transaction (explicitly or, for example, when you use `@Transactional` annotation), message
  * in the queue will be committed too.
+ *
+ * `send()` doesn't throw when a message can't be sent, it returns a [SendResult]. The failed messages are rolled back
+ * to a savepoint, so your transaction stays alive and holds none of them. Check the result and decide what to do with
+ * your transaction. Usually you call [SendResult.throwExceptionIfAny], as above, so that the whole transaction is
+ * rolled back.
  *
  * The same ideas work for consumers or mutators too – you can build completely transactional pipeline just by connecting
  * a few producers/consumers/mutators into one "chain" using the same connection and work inside one active transaction.

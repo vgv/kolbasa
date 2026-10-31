@@ -56,8 +56,11 @@ class TransactionContextExample {
             // Send a message to the queue in the same transaction with the business query above.
             // If this transaction fails, the new customer won't be inserted and the message will not be sent to the queue.
             // Please note that the ConnectionAware* methods take the connection as the first argument. This is different from
-            // the regular Producer/Consumer
-            producer.send(connection, queue, "User 'John Doe' was created");
+            // the regular Producer/Consumer.
+            // send() doesn't throw if the message can't be sent, it returns a result. throwExceptionIfAny() turns a
+            // failed send into an exception, so the commit below is never reached, and the new customer is rolled
+            // back too
+            producer.send(connection, queue, "User 'John Doe' was created").throwExceptionIfAny();
 
             connection.commit();
 

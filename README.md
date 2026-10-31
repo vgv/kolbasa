@@ -209,7 +209,10 @@ import kolbasa.utils.JdbcHelpers.inTransaction
 dataSource.inTransaction { connection ->
     // Your own insert and the send are committed together - or neither of them is
     customerRepository.insert(connection, customer)
-    producer.send(connection, queue, "Customer with id=${customer.id} was registered")
+
+    // send() doesn't throw on its own: a failed message is rolled back, and the transaction stays alive.
+    // throwExceptionIfAny() turns a failed send into an exception, so your insert is rolled back too
+    producer.send(connection, queue, "Customer with id=${customer.id} was registered").throwExceptionIfAny()
 }
 ```
 
