@@ -6,10 +6,10 @@ import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
-import kolbasa.worker.HandleResult
-import kolbasa.worker.QueueProcessor
 import kolbasa.worker.QueueWorker
 import kolbasa.worker.QueueWorkerOptions
+import kolbasa.worker.processor.HandleResult
+import kolbasa.worker.processor.QueueProcessor
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
@@ -35,7 +35,7 @@ fun main() {
     // Throw, and it comes back after the visibility timeout for another attempt
     val handled = CountDownLatch(1000)
     val perThread = ConcurrentHashMap<String, AtomicInteger>()
-    val processor = QueueProcessor(DatabaseConsumer(dataSource), queue) { message ->
+    val processor = QueueProcessor(queue, DatabaseConsumer(dataSource)) { message ->
         // ... your business code for message.data ...
         perThread.computeIfAbsent(Thread.currentThread().name) { AtomicInteger() }.incrementAndGet()
         handled.countDown()

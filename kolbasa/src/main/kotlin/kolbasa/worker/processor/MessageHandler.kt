@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.consumer.Message
 

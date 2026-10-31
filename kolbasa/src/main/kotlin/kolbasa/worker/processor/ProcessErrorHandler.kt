@@ -1,13 +1,13 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 /**
- * What to do when the [MessageHandler] throws.
+ * What to do when the [MessageHandler] of a [QueueProcessor] throws.
  *
  * The message stays in the queue whatever the handler does: it comes back after the visibility timeout for another
  * attempt, or goes to the DLQ if that was the last one. So this handler only reports the error.
  *
  * **A handler must not throw.** If it does, [QueueProcessor.process] throws too, before it deletes the messages
- * that were handled well. They come back after the visibility timeout and are handled once more. If your handler
+ * that were processed well. They come back after the visibility timeout and are processed once more. If your handler
  * calls code that can fail, for example your own logging or alerting, catch everything inside the handler.
  *
  * The handler is called on the thread that calls [QueueProcessor.process], so it should be quick.
@@ -17,7 +17,7 @@ package kolbasa.worker
 fun interface ProcessErrorHandler {
 
     /**
-     * Called for every message that the [MessageHandler] failed to handle. Must not throw, see [ProcessErrorHandler].
+     * Called for every message that failed. Must not throw, see [ProcessErrorHandler].
      */
     fun onProcessError(error: ProcessError)
 
@@ -28,7 +28,7 @@ fun interface ProcessErrorHandler {
          *
          * It is a warning, or an error on the last attempt, when the message is about to leave the queue for good.
          *
-         * The log is the JDK's [System.Logger] named `kolbasa.worker.ProcessErrorHandler`. By default, it
+         * The log is the JDK's [System.Logger] named `kolbasa.worker.processor.ProcessErrorHandler`. By default, it
          * writes to `java.util.logging`. To send it to SLF4J or Log4j instead, add `slf4j-jdk-platform-logging` or
          * `log4j-jpl` to the application.
          */

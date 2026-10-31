@@ -6,10 +6,8 @@ import kolbasa.producer.datasource.DatabaseProducer;
 import kolbasa.queue.PredefinedDataTypes;
 import kolbasa.queue.Queue;
 import kolbasa.schema.SchemaHelpers;
-import kolbasa.worker.HandleResult;
-import kolbasa.worker.QueueProcessor;
-import kolbasa.worker.QueueWorker;
-import kolbasa.worker.QueueWorkerOptions;
+import kolbasa.worker.*;
+import kolbasa.worker.processor.*;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -43,7 +41,7 @@ class QueueWorkerExample {
         // Throw, and it comes back after the visibility timeout for another attempt
         var handled = new CountDownLatch(1000);
         var perThread = new ConcurrentHashMap<String, AtomicInteger>();
-        var processor = new QueueProcessor<>(new DatabaseConsumer(dataSource), queue, message -> {
+        var processor = new QueueProcessor<>(queue, new DatabaseConsumer(dataSource), QueueProcessorOptions.DEFAULT, message -> {
             // ... your business code for message.getData() ...
             perThread.computeIfAbsent(Thread.currentThread().getName(), name -> new AtomicInteger()).incrementAndGet();
             handled.countDown();

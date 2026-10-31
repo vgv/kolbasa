@@ -1,10 +1,13 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.Kolbasa
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.telemetry.tracing.ProcessCall
+import kolbasa.worker.BatchProcessor
+import kolbasa.worker.ProcessResult
+import kolbasa.worker.QueueWorker
 
 /**
  * Processes one batch of messages at a time: receives it, passes every message to your [MessageHandler] and deletes
@@ -28,7 +31,7 @@ import kolbasa.telemetry.tracing.ProcessCall
  * ## Usage Example
  *
  * ```kotlin
- * val processor = QueueProcessor(consumer, queue) { message ->
+ * val processor = QueueProcessor(queue, consumer) { message ->
  *     process(message.data)
  *     HandleResult.DONE
  * }
@@ -39,7 +42,7 @@ import kolbasa.telemetry.tracing.ProcessCall
  * The same from Java:
  *
  * ```java
- * var processor = new QueueProcessor<>(consumer, queue, message -> {
+ * var processor = new QueueProcessor<>(queue, consumer, message -> {
  *     process(message.getData());
  *     return HandleResult.DONE;
  * });
@@ -49,14 +52,14 @@ import kolbasa.telemetry.tracing.ProcessCall
  */
 class QueueProcessor<Data> @JvmOverloads constructor(
     /**
+     * The queue to process.
+     */
+    override val queue: Queue<Data>,
+
+    /**
      * The consumer that receives and deletes the messages.
      */
     private val consumer: Consumer,
-
-    /**
-     * The queue to process.
-     */
-    internal val queue: Queue<Data>,
 
     /**
      * How many messages to receive, with which options, and what to do with errors.
@@ -67,7 +70,7 @@ class QueueProcessor<Data> @JvmOverloads constructor(
      * Your business code for one message.
      */
     private val handler: MessageHandler<Data>
-) {
+) : BatchProcessor {
 
     // The result of every empty batch, made once to avoid extra allocations
     private val emptyResult = ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = options.receiveLimit)
@@ -82,7 +85,7 @@ class QueueProcessor<Data> @JvmOverloads constructor(
      *
      * @return how many messages were handled, skipped and failed, and whether the batch was full
      */
-    fun process(): ProcessResult {
+    override fun process(): ProcessResult {
         val messages = consumer.receive(queue, options.receiveLimit, options.receiveOptions)
         if (messages.isEmpty()) {
             return emptyResult

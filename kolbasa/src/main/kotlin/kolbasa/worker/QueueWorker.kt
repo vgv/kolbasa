@@ -9,10 +9,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Processes a queue in the background: starts [QueueWorkerOptions.threads] threads, and every thread calls
- * [QueueProcessor.process] in a loop.
+ * [BatchProcessor.process] in a loop. The processor is usually a
+ * [QueueProcessor][kolbasa.worker.processor.QueueProcessor].
  *
  * While the batches come full, a thread takes the next one at once. After a batch that wasn't full, the queue has
- * nothing more to give, so the thread waits [QueueWorkerOptions.successPause]. If [QueueProcessor.process] throws,
+ * nothing more to give, so the thread waits [QueueWorkerOptions.successPause]. If [BatchProcessor.process] throws,
  * for example because the database is down, the error goes to the [WorkerErrorHandler] and the thread waits
  * [QueueWorkerOptions.errorPause], twice as long after every failure in a row, up to
  * [QueueWorkerOptions.maxErrorPause]. The worker never stops by itself.
@@ -27,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * ## Usage Example
  *
  * ```kotlin
- * val processor = QueueProcessor(consumer, queue) { message ->
+ * val processor = QueueProcessor(queue, consumer) { message ->
  *     process(message.data)
  *     HandleResult.DONE
  * }
@@ -51,7 +52,7 @@ class QueueWorker @JvmOverloads constructor(
     /**
      * Processes one batch, called by every thread in a loop.
      */
-    private val processor: QueueProcessor<*>,
+    private val processor: BatchProcessor,
 
     /**
      * How many threads, how long to wait, and how to make the threads.

@@ -12,7 +12,7 @@ data class WorkerError(
     val queue: Queue<*>,
 
     /**
-     * What [QueueProcessor.process] threw.
+     * What [BatchProcessor.process] threw.
      */
     val cause: Exception
 )

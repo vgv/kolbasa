@@ -32,7 +32,7 @@ package kolbasa.producer
  * // Option 2: Set per send() call
  * producer.send(queue, SendRequest(
  *     data = messages,
- *     sendOptions = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
+ *     options = SendOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE)
  * ))
  * ```
  *

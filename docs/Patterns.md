@@ -7,8 +7,11 @@ build the patterns people reach for most often in a message broker:
 2. [Time-to-live (TTL)](#time-to-live-ttl) — make a message stop being deliverable after some wall-clock deadline.
 3. [At-most-once delivery](#at-most-once-delivery) — accept losing a message rather than ever processing it twice.
 4. [Transactions](#transactions) — send or acknowledge a message in the same transaction as your own writes.
+5. [Routing](#routing) — move every message to its own queue, on its own server, by a key in its metadata.
+6. [Compressing and encrypting the payload](#compressing-and-encrypting-the-payload) — store the payload smaller, or
+   unreadable without a key.
 
-All four are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
+All six are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
 dedicated knob for any of them — not because they're unsupported, but because they fall out so naturally from primitives
 it already has that a special-purpose feature would just be a thin wrapper over a few lines you can write yourself. Each
 pattern below is a small **composition** of building blocks that [Architecture.md](Architecture.md) already documents —
@@ -377,6 +380,173 @@ the message is an event that goes into the queue in the same transaction as your
   as the data, be careful: this is PostgreSQL behaviour, and it is not how every database works.
 
 A runnable version of both halves is [TransactionContextExample](../examples/src/main/kotlin/kolbasa/example/TransactionContextExample.kt), in Kotlin and in Java.
+
+---
+
+## Routing
+
+**Problem.** All orders come to one queue, next to your service. But they are processed in different places: European
+orders in a data center in Europe, American orders in the USA. Every order has to reach the queue of its own region.
+Why the service doesn't send them there directly is explained in the
+[README](../README.md#moving-messages-to-another-server): a send to a far server is slow, and fails when that server
+can't be reached.
+
+**Mechanism — one pipe per route.** A `QueuePipe` moves messages from one queue to another. It receives them like any
+consumer, so it can take only the messages that match a filter. Routing is then several pipes on the same source queue,
+each with its own filter and its own target queue. The key you route by has to be a meta-field, because a filter sees
+only [meta-fields](Architecture.md#querying-by-meta-field).
+
+```kotlin
+val REGION = MetaField.ofString("region", FieldOption.SEARCH)   // indexed: every pipe filters by it
+
+// The service sends every order here, to a queue on its own server, with the region in the metadata
+val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(REGION))
+producer.send(orders, SendMessage(payload, MetaValues.of(REGION.value("eu"))))
+
+// One pipe per region: it takes only the orders of its region and moves them to that region's server
+fun route(condition: Condition, target: Queue<ByteArray>, targetProducer: Producer) = QueuePipe.asIs(
+    from = orders,
+    consumer = DatabaseConsumer(localDataSource),
+    to = target,
+    producer = targetProducer,
+    options = QueuePipeOptions.AS_IS_DEFAULT.copy(receiveOptions = ReceiveOptions(filter = condition))
+)
+
+val toEurope = route(REGION eq "eu", europeOrders, DatabaseProducer(europeDataSource))
+val toUsa = route(REGION eq "us", usaOrders, DatabaseProducer(usaDataSource))
+
+// Everything else, orders without a region too, goes to a queue on the same server, for you to look at
+val unrouted = route(
+    !(REGION oneOf listOf("eu", "us")) or isNull(REGION),
+    unroutedOrders,
+    DatabaseProducer(localDataSource)
+)
+
+listOf(toEurope, toUsa, unrouted).forEach { QueueWorker(it).start() }
+```
+
+### Caveats
+
+- **A message that no pipe takes stays forever.** Nobody receives it, so it spends no attempts, never dies and never
+  goes to a DLQ. Nothing fails, and nobody notices. That is what the `unrouted` pipe is for. Its condition needs care:
+  `neq` and `!` don't match a message without the field, because in SQL a comparison with NULL is never true. So add
+  `isNull(REGION)`, as above. Then the size of the unrouted queue, from the [Inspector](Architecture.md#inspector),
+  tells you whether the producers set the key right.
+- **Route by the metadata, not by the payload.** A filter can't look into the payload, and a pipe can't skip a message
+  to leave it for another pipe: a `flatMap` that returns nothing deletes the message from the source queue. So the
+  producer has to put the key into the metadata when it sends.
+- **One message, one route.** If two filters match the same message, the pipe that gets there first takes it, and the
+  message goes to one target only. To deliver a message to several queues, send it to all of them at once, see
+  [More than one message, more than one queue](#more-than-one-message-more-than-one-queue).
+
+---
+
+## Compressing and encrypting the payload
+
+**Problem.** Two wishes that come up often. The payload is large, a JSON document of tens of kilobytes, and you want
+it smaller: in the table, and on the network. Or the payload is sensitive, personal data or payment details, and must
+not lie in the database as plain text, where anyone who can read the table, or a backup of it, can read it too.
+
+**Mechanism — wrap the serializer.** A queue turns your message into the stored value with the `serializer` of its
+[data type](Architecture.md#payload-data-types), and back with the `deserializer`. Both are your functions. So
+compression and encryption are a `Binary` type, stored in a `bytea` column, whose serializer turns the message into
+bytes and then compresses or encrypts them, and whose deserializer does the opposite. Nothing else in kolbasa knows
+about it: producers, consumers, workers and pipes work exactly as before.
+
+### Compression
+
+First of all, PostgreSQL already compresses large values. A row larger than about 2 KB goes to
+[TOAST](https://www.postgresql.org/docs/current/storage-toast.html), and its long values are compressed there without
+any work from you: with `pglz` by default, or with the faster `lz4` from PostgreSQL 14 on, see
+`default_toast_compression`. So to save disk alone, you rarely need anything.
+
+Compressing in your own code is worth it when:
+
+- **The network matters.** TOAST saves only the disk. A value travels over the network uncompressed, both ways, and the
+  PostgreSQL protocol doesn't compress anything. For a [pipe](../README.md#moving-messages-to-another-server) to a far
+  server, fewer bytes mean a faster send.
+- **The messages are small, but there are many of them.** TOAST doesn't touch rows under about 2 KB.
+- **You want a better ratio.** gzip, or zstd from a library, compresses better than `pglz`.
+
+```kotlin
+fun gzip(bytes: ByteArray): ByteArray {
+    val buffer = ByteArrayOutputStream()
+    GZIPOutputStream(buffer).use { it.write(bytes) }
+    return buffer.toByteArray()
+}
+
+fun gunzip(bytes: ByteArray): ByteArray = GZIPInputStream(bytes.inputStream()).use { it.readBytes() }
+
+// Order is your own class. Jackson, Kotlin serialization or any other JSON library turns it into JSON, and gzip makes
+// the JSON several times smaller
+val mapper = jacksonObjectMapper()
+
+val COMPRESSED_ORDERS = DatabaseQueueDataType.Binary<Order>(
+    serializer = { order -> gzip(mapper.writeValueAsBytes(order)) },
+    deserializer = { bytes -> mapper.readValue(gunzip(bytes), Order::class.java) }
+)
+
+val orders = Queue.of("orders", COMPRESSED_ORDERS)
+```
+
+### Encryption
+
+Encrypt in the serializer, decrypt in the deserializer. Then the table, its backups and its replicas hold only
+encrypted bytes, and only the code that has the key can read a message. AES-GCM is the usual choice: it hides the data
+and also detects any change to it.
+
+```kotlin
+class PayloadCipher(private val keys: Map<Byte, SecretKey>, private val currentKeyId: Byte) {
+
+    private val random = SecureRandom()
+
+    // Stored as: the key id (1 byte), a random IV (12 bytes), then the encrypted data with its tag
+    fun encrypt(plain: ByteArray): ByteArray {
+        val iv = ByteArray(12).also { random.nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")   // not thread-safe: a new one for every call
+        cipher.init(Cipher.ENCRYPT_MODE, keys.getValue(currentKeyId), GCMParameterSpec(128, iv))
+        return byteArrayOf(currentKeyId) + iv + cipher.doFinal(plain)
+    }
+
+    fun decrypt(stored: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, keys.getValue(stored[0]), GCMParameterSpec(128, stored, 1, 12))
+        return cipher.doFinal(stored, 13, stored.size - 13)
+    }
+}
+
+// Key 2 encrypts the new messages, key 1 still reads the old ones
+val cipher = PayloadCipher(keys = mapOf(1.toByte() to oldKey, 2.toByte() to newKey), currentKeyId = 2)
+
+// Compress first, then encrypt: encrypted bytes look random and don't compress
+val ENCRYPTED_ORDERS = DatabaseQueueDataType.Binary<Order>(
+    serializer = { order -> cipher.encrypt(gzip(mapper.writeValueAsBytes(order))) },
+    deserializer = { bytes -> mapper.readValue(gunzip(cipher.decrypt(bytes)), Order::class.java) }
+)
+```
+
+### Caveats
+
+- **The payload is no longer readable in SQL.** Instead of `jsonb` or text, the table holds bytes. You can't look into a
+  message with `psql` while debugging, so keep in the [meta-fields](Architecture.md#meta-fields) what you need to find
+  a message.
+- **The metadata is not encrypted.** Meta-fields are ordinary columns, because filters and sorting work on them. Never
+  put a secret there.
+- **Keep the old keys.** A message is decrypted with the key it was encrypted with, so after a key change keep the old
+  key until its messages are gone, from the DLQ and the archive too. Change keys regularly anyway: a random IV is safe
+  for about four billion messages per key. The keys themselves belong in a secret store or a KMS, not in the code.
+- **A message that can't be decrypted can't be received.** A missing key, or a damaged value, makes the deserializer
+  throw. The message goes to the `ReadErrorHandler` of the consumer, spends its attempts, and then goes to the
+  [DLQ](Architecture.md#dlq--dead-letter-queue) with its stored bytes, still encrypted and intact. Fix the key, and
+  send the message back from there.
+- **Switch on an empty queue.** A deserializer that expects compressed or encrypted bytes can't read the messages that
+  were sent before it. Start a new queue, or put a format byte in front of the data, like the key id above.
+- **A pipe needs neither the key nor your classes.** [`QueuePipe.asIs`](../README.md#moving-messages-to-another-server)
+  moves the stored bytes as they are, without the deserializer. On the server of the pipe, declare the same queues with
+  `PredefinedDataTypes.ByteArray` and the same meta-fields: the same tables, but no keys and no `Order` class there.
+  Compressed messages cross the network compressed, too. That makes `asIs` the natural tool for [routing](#routing),
+  simple or complex: the same few lines can spread messages over a hundred servers around the world, with nothing to
+  set up for the payload.
 
 ---
 

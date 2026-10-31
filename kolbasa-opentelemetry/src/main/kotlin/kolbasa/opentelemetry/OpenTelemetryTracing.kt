@@ -18,7 +18,7 @@ import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.telemetry.tracing.SendCall
 import kolbasa.telemetry.tracing.Tracing
-import kolbasa.worker.HandleResult
+import kolbasa.worker.processor.HandleResult
 import java.time.Instant
 import java.util.function.Supplier
 
@@ -29,7 +29,7 @@ import java.util.function.Supplier
  * becomes a consumer span, linked to the spans that sent the received messages. So both sides of the queue can be
  * seen as one flow, even though they are different applications and different moments in time.
  *
- * With a [QueueProcessor][kolbasa.worker.QueueProcessor], the handling of every message becomes a span too.
+ * With a [QueueProcessor][kolbasa.worker.processor.QueueProcessor], the handling of every message becomes a span too.
  * Its parent is the span that sent the message, so all the handler does, its SQL and HTTP calls for example, lands
  * in the sender's trace. If the processor runs inside a span of yours, for example a scheduled job, the process span
  * links to it. The process span tells how the handling ended in the attribute `kolbasa.process.result`:

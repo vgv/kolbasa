@@ -8,6 +8,10 @@ import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.worker.processor.HandleResult
+import kolbasa.worker.processor.MessageHandler
+import kolbasa.worker.processor.QueueProcessor
+import kolbasa.worker.processor.QueueProcessorOptions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -64,6 +68,25 @@ class QueueWorkerTest : AbstractPostgreSQLTest() {
         assertTrue(worker.stop(Duration.ofSeconds(10)))
         assertEquals(data.toSet(), handled)
         assertEquals(0, messagesInQueue())
+    }
+
+    @Test
+    fun testStart_AnyBatchProcessor() {
+        // Not a QueueProcessor: no consumer, no messages, only a counter. Its batches are never full
+        val calls = AtomicInteger()
+        val processor = object : BatchProcessor {
+            override val queue = this@QueueWorkerTest.queue
+
+            override fun process(): ProcessResult {
+                calls.incrementAndGet()
+                return ProcessResult(succeeded = 0, skipped = 0, failed = 0, requested = 10)
+            }
+        }
+        val worker = worker(processor, QueueWorkerOptions(successPause = Duration.ofMillis(100)))
+
+        worker.start()
+        awaitUntil { calls.get() >= 3 }
+        assertTrue(worker.stop(Duration.ofSeconds(10)))
     }
 
     @Test
@@ -257,10 +280,10 @@ class QueueWorkerTest : AbstractPostgreSQLTest() {
         options: QueueProcessorOptions = QueueProcessorOptions.DEFAULT,
         handler: MessageHandler<String>
     ): QueueProcessor<String> {
-        return QueueProcessor(DatabaseConsumer(dataSource), queue, options, handler)
+        return QueueProcessor(queue, DatabaseConsumer(dataSource), options, handler)
     }
 
-    private fun worker(processor: QueueProcessor<String>, options: QueueWorkerOptions): QueueWorker {
+    private fun worker(processor: BatchProcessor, options: QueueWorkerOptions): QueueWorker {
         return QueueWorker(processor, options).also { workers += it }
     }
 

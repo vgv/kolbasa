@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.queue.Checks
@@ -11,7 +11,7 @@ import kolbasa.queue.Checks
  * ```kotlin
  * val options = QueueProcessorOptions(receiveLimit = 50)
  *
- * val processor = QueueProcessor(consumer, queue, options) { message ->
+ * val processor = QueueProcessor(queue, consumer, options) { message ->
  *     process(message.data)
  *     HandleResult.DONE
  * }
@@ -24,7 +24,7 @@ import kolbasa.queue.Checks
  *     .receiveLimit(50)
  *     .build();
  *
- * var processor = new QueueProcessor<>(consumer, queue, options, message -> {
+ * var processor = new QueueProcessor<>(queue, consumer, options, message -> {
  *     process(message.getData());
  *     return HandleResult.DONE;
  * });
@@ -37,6 +37,15 @@ data class QueueProcessorOptions(
      * The messages of one batch are handled one after another and deleted together at the end. So the whole batch
      * must be handled within the visibility timeout. Otherwise, its first messages come back to the queue before
      * they are deleted, and are handled once more.
+     *
+     * To handle larger batches, raise the visibility timeout too. A rule of thumb: the visibility timeout should be
+     * at least `receiveLimit × average time to handle one message × 2`. For example, 100 messages of half a second
+     * each need at least `(100 × 0.5 s) × 2 = 100 s`.
+     *
+     * **Watch this closely.** The batch from the example above takes `100 × 0.5 s = 50 s`, dangerously close to the
+     * default visibility timeout of 60 seconds. A few slow messages, and the batch doesn't fit: its first messages
+     * come back to the queue and are handled twice. Nothing fails and nothing is logged, you just get duplicates.
+     * That is why the rule doubles the time. See [ReceiveOptions.visibilityTimeout] for where to set it.
      */
     val receiveLimit: Int = DEFAULT_RECEIVE_LIMIT,
 

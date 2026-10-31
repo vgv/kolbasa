@@ -2,14 +2,14 @@ package kolbasa.telemetry.tracing
 
 import kolbasa.consumer.Message
 import kolbasa.producer.SendResult
-import kolbasa.worker.HandleResult
+import kolbasa.worker.processor.HandleResult
 import java.util.function.Supplier
 
 /**
  * A hook for a tracing system.
  *
  * Kolbasa calls it around every `send()` and every `receive()`, and a
- * [QueueProcessor][kolbasa.worker.QueueProcessor] calls it around every message it passes to the handler.
+ * [QueueProcessor][kolbasa.worker.processor.QueueProcessor] calls it around every message it passes to the handler.
  * The hook does its own work before and after `proceed()`, and `proceed()` does the real send, receive or handler
  * call. When sending, the hook can pass a trace context, and Kolbasa stores it with the messages. When receiving and
  * processing, the hook can read that context back from every message.
@@ -25,7 +25,7 @@ import java.util.function.Supplier
  * Set it for the whole application with [Kolbasa.tracing][kolbasa.Kolbasa.tracing], or for one producer or consumer
  * with [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing] and
  * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing]. A
- * [QueueProcessor][kolbasa.worker.QueueProcessor] uses the tracing of its consumer.
+ * [QueueProcessor][kolbasa.worker.processor.QueueProcessor] uses the tracing of its consumer.
  *
  * For OpenTelemetry, use `OpenTelemetryTracing` from the separate `io.github.vgv:kolbasa-opentelemetry` artifact.
  *
@@ -61,8 +61,8 @@ interface Tracing {
     fun <Data> receive(call: ReceiveCall<Data>): List<Message<Data>> = call.proceed()
 
     /**
-     * Called by a [QueueProcessor][kolbasa.worker.QueueProcessor] around every call of its
-     * [MessageHandler][kolbasa.worker.MessageHandler]. Must call [ProcessCall.proceed] exactly once and
+     * Called by a [QueueProcessor][kolbasa.worker.processor.QueueProcessor] around every call of its
+     * [MessageHandler][kolbasa.worker.processor.MessageHandler]. Must call [ProcessCall.proceed] exactly once and
      * return its result. If `proceed()` throws, let the exception go on: the processor counts the message as failed.
      *
      * By default just calls [ProcessCall.proceed].

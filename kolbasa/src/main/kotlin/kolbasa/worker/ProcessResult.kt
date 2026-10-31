@@ -1,26 +1,31 @@
 package kolbasa.worker
 
 /**
- * What one [QueueProcessor.process] call did.
+ * What one [BatchProcessor.process] call did.
  */
 data class ProcessResult(
     /**
-     * How many messages the [MessageHandler] handled. They are deleted from the queue.
+     * How many messages were processed well. They are deleted from the queue.
      */
     val succeeded: Int,
 
     /**
-     * How many messages the [MessageHandler] skipped for now. They stay in the queue, see [MessageHandler].
+     * How many messages the [MessageHandler][kolbasa.worker.processor.MessageHandler] skipped for now. They stay in the
+     * queue, see [MessageHandler][kolbasa.worker.processor.MessageHandler]. A
+     * [QueuePipe][kolbasa.worker.pipe.QueuePipe] never skips a message, so for a pipe it is always 0.
      */
     val skipped: Int,
 
     /**
-     * How many messages the [MessageHandler] failed to handle. They stay in the queue, see [MessageHandler].
+     * How many messages failed: the [MessageHandler][kolbasa.worker.processor.MessageHandler] or the transform of a
+     * [QueuePipe][kolbasa.worker.pipe.QueuePipe] threw. They stay in the queue.
      */
     val failed: Int,
 
     /**
-     * How many messages were requested, see [QueueProcessorOptions.receiveLimit].
+     * How many messages were requested, see
+     * [QueueProcessorOptions.receiveLimit][kolbasa.worker.processor.QueueProcessorOptions.receiveLimit] and
+     * [QueuePipeOptions.receiveLimit][kolbasa.worker.pipe.QueuePipeOptions.receiveLimit].
      */
     val requested: Int
 ) {

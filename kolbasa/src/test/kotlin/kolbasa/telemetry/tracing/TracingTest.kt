@@ -17,9 +17,9 @@ import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.worker.HandleResult
-import kolbasa.worker.QueueProcessor
-import kolbasa.worker.QueueProcessorOptions
+import kolbasa.worker.processor.HandleResult
+import kolbasa.worker.processor.QueueProcessor
+import kolbasa.worker.processor.QueueProcessorOptions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -112,7 +112,7 @@ class TracingTest {
         every { consumer.receive(queue, QueueProcessorOptions.DEFAULT_RECEIVE_LIMIT, ReceiveOptions.DEFAULT) } returns
             listOf(message())
 
-        val processor = QueueProcessor(consumer, queue) { HandleResult.DONE }
+        val processor = QueueProcessor(queue, consumer) { HandleResult.DONE }
         assertThrows<IllegalStateException> { processor.process() }
     }
 
