@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.pipe
 
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.Consumer
@@ -9,6 +9,7 @@ import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
 import kolbasa.producer.datasource.Producer
 import kolbasa.queue.Queue
+import kolbasa.worker.ProcessResult
 
 /**
  * What a transform made of one batch.

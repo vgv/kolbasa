@@ -5,7 +5,8 @@ import kolbasa.queue.Queue
 /**
  * Processes one batch from a queue per [process] call. A [QueueWorker] calls it in a loop.
  *
- * The usual one is [QueueProcessor]: it passes every message to your [MessageHandler].
+ * The usual one is [QueueProcessor][kolbasa.worker.processor.QueueProcessor]: it passes every message to your
+ * [MessageHandler][kolbasa.worker.processor.MessageHandler].
  */
 interface BatchProcessor {
 

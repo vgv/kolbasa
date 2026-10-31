@@ -9,7 +9,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Processes a queue in the background: starts [QueueWorkerOptions.threads] threads, and every thread calls
- * [BatchProcessor.process] in a loop. The processor is usually a [QueueProcessor].
+ * [BatchProcessor.process] in a loop. The processor is usually a
+ * [QueueProcessor][kolbasa.worker.processor.QueueProcessor].
  *
  * While the batches come full, a thread takes the next one at once. After a batch that wasn't full, the queue has
  * nothing more to give, so the thread waits [QueueWorkerOptions.successPause]. If [BatchProcessor.process] throws,

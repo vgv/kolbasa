@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.pipe
 
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.Id
@@ -7,6 +7,11 @@ import kolbasa.producer.datasource.Producer
 import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
+import kolbasa.worker.BatchProcessor
+import kolbasa.worker.ProcessError
+import kolbasa.worker.ProcessErrorHandler
+import kolbasa.worker.ProcessResult
+import kolbasa.worker.QueueWorker
 
 /**
  * Moves messages from one queue to another, usually on another server. One batch at a time: receives it from the

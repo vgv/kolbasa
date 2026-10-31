@@ -1,7 +1,8 @@
-package kolbasa.worker
+package kolbasa.worker.pipe
 
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.queue.Checks
+import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Options of a [QueuePipe].
@@ -39,8 +40,8 @@ data class QueuePipeOptions(
      *
      * [QueuePipe.asIs] does almost nothing with a message, so its batch costs one round trip, however many messages it
      * has. That is why its default is larger. Your transform may be slow, for example if it calls another service, so
-     * for it the default is as careful as in [QueueProcessorOptions]. If your transform is fast, raise the limit: the
-     * pipe moves more messages per round trip.
+     * for it the default is as careful as in [QueueProcessorOptions][kolbasa.worker.processor.QueueProcessorOptions].
+     * If your transform is fast, raise the limit: the pipe moves more messages per round trip.
      *
      * To take larger batches, raise the visibility timeout too. A rule of thumb: the visibility timeout should be at
      * least `(receiveLimit × average time of the transform + time of the send) × 2`.

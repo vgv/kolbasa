@@ -6,10 +6,10 @@ import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
-import kolbasa.worker.HandleResult
-import kolbasa.worker.QueueProcessor
 import kolbasa.worker.QueueWorker
 import kolbasa.worker.QueueWorkerOptions
+import kolbasa.worker.processor.HandleResult
+import kolbasa.worker.processor.QueueProcessor
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch

@@ -1,7 +1,8 @@
-package kolbasa.worker
+package kolbasa.worker.pipe
 
 import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
+import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Your code that turns a whole batch of the source queue into the messages for the target queue, called by a pipe

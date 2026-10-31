@@ -7,6 +7,7 @@ import kolbasa.queue.PredefinedDataTypes;
 import kolbasa.queue.Queue;
 import kolbasa.schema.SchemaHelpers;
 import kolbasa.worker.*;
+import kolbasa.worker.processor.*;
 
 import java.time.Duration;
 import java.util.ArrayList;

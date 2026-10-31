@@ -1,7 +1,9 @@
 package kolbasa.worker
 
 /**
- * What to do when the [MessageHandler] of a [QueueProcessor] or the transform of a [QueuePipe] throws.
+ * What to do when the [MessageHandler][kolbasa.worker.processor.MessageHandler] of a
+ * [QueueProcessor][kolbasa.worker.processor.QueueProcessor] or the transform of a
+ * [QueuePipe][kolbasa.worker.pipe.QueuePipe] throws.
  *
  * The message stays in the queue whatever the handler does: it comes back after the visibility timeout for another
  * attempt, or goes to the DLQ if that was the last one. So this handler only reports the error.
@@ -12,8 +14,9 @@ package kolbasa.worker
  *
  * The handler is called on the thread that calls [BatchProcessor.process], so it should be quick.
  *
- * By default, [SYSTEM_LOG] is used. Set another one with [QueueProcessorOptions.errorHandler] or
- * [QueuePipeOptions.errorHandler].
+ * By default, [SYSTEM_LOG] is used. Set another one with
+ * [QueueProcessorOptions.errorHandler][kolbasa.worker.processor.QueueProcessorOptions.errorHandler] or
+ * [QueuePipeOptions.errorHandler][kolbasa.worker.pipe.QueuePipeOptions.errorHandler].
  */
 fun interface ProcessErrorHandler {
 

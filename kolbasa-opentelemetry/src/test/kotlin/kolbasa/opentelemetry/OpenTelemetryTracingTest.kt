@@ -28,10 +28,10 @@ import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.test.assertNotNull
 import kolbasa.utils.JdbcHelpers.inTransaction
-import kolbasa.worker.HandleResult
-import kolbasa.worker.MessageHandler
-import kolbasa.worker.QueueProcessor
-import kolbasa.worker.QueueProcessorOptions
+import kolbasa.worker.processor.HandleResult
+import kolbasa.worker.processor.MessageHandler
+import kolbasa.worker.processor.QueueProcessor
+import kolbasa.worker.processor.QueueProcessorOptions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

@@ -1,10 +1,15 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.Kolbasa
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.telemetry.tracing.ProcessCall
+import kolbasa.worker.BatchProcessor
+import kolbasa.worker.ProcessError
+import kolbasa.worker.ProcessErrorHandler
+import kolbasa.worker.ProcessResult
+import kolbasa.worker.QueueWorker
 
 /**
  * Processes one batch of messages at a time: receives it, passes every message to your [MessageHandler] and deletes

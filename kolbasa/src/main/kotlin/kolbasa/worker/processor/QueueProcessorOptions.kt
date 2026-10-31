@@ -1,7 +1,8 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.queue.Checks
+import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Options of a [QueueProcessor].

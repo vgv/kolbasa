@@ -56,8 +56,10 @@ The build has six Gradle modules — `:kolbasa` and `:kolbasa-opentelemetry` are
 an included build holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
-  `inspector` (the four roles), `worker` (the poll loop, a layer on top of the roles: `QueueProcessor` handles one
-  batch per `process()` call and fits any loop or scheduler, `QueueWorker` runs it in its own threads), `queue`
+  `inspector` (the four roles), `worker` (the poll loop, a layer on top of the roles: `QueueWorker` runs any
+  `BatchProcessor` in its own threads; `worker/processor` holds `QueueProcessor`, which handles one batch per
+  `process()` call and fits any loop or scheduler; `worker/pipe` holds `QueuePipe`, which moves messages to another
+  queue, usually on another server), `queue`
   (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
@@ -116,8 +118,8 @@ Things that commonly trip people up:
   It sets `autoCommit = false`, commits, and on a throw rolls back and rethrows the original exception.
   `withAutoCommit` is its counterpart — a connection on which every statement is committed on its own.
 - **Don't hand-roll a poll loop.** To process a queue in the background, use `QueueWorker` over a `QueueProcessor`
-  (`kolbasa.worker`): it deletes the handled messages, backs off on errors and stops cleanly. For your own
-  loop or a scheduler, call `QueueProcessor.process()` — one batch per call.
+  (`kolbasa.worker`, `kolbasa.worker.processor`): it deletes the handled messages, backs off on errors and stops
+  cleanly. For your own loop or a scheduler, call `QueueProcessor.process()` — one batch per call.
 
 ## Conventions
 

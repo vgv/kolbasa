@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
@@ -12,6 +12,8 @@ import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.Tracing
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.worker.ProcessError
+import kolbasa.worker.ProcessResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf

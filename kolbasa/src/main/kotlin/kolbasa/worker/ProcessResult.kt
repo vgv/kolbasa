@@ -10,19 +10,22 @@ data class ProcessResult(
     val succeeded: Int,
 
     /**
-     * How many messages the [MessageHandler] skipped for now. They stay in the queue, see [MessageHandler]. A
-     * [QueuePipe] never skips a message, so for a pipe it is always 0.
+     * How many messages the [MessageHandler][kolbasa.worker.processor.MessageHandler] skipped for now. They stay in the
+     * queue, see [MessageHandler][kolbasa.worker.processor.MessageHandler]. A
+     * [QueuePipe][kolbasa.worker.pipe.QueuePipe] never skips a message, so for a pipe it is always 0.
      */
     val skipped: Int,
 
     /**
-     * How many messages failed: the [MessageHandler] or the transform of a [QueuePipe] threw. They stay in the
-     * queue.
+     * How many messages failed: the [MessageHandler][kolbasa.worker.processor.MessageHandler] or the transform of a
+     * [QueuePipe][kolbasa.worker.pipe.QueuePipe] threw. They stay in the queue.
      */
     val failed: Int,
 
     /**
-     * How many messages were requested, see [QueueProcessorOptions.receiveLimit] and [QueuePipeOptions.receiveLimit].
+     * How many messages were requested, see
+     * [QueueProcessorOptions.receiveLimit][kolbasa.worker.processor.QueueProcessorOptions.receiveLimit] and
+     * [QueuePipeOptions.receiveLimit][kolbasa.worker.pipe.QueuePipeOptions.receiveLimit].
      */
     val requested: Int
 ) {

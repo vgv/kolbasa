@@ -1,4 +1,4 @@
-package kolbasa.worker
+package kolbasa.worker.pipe
 
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterProducer
@@ -21,6 +21,8 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.worker.ProcessError
+import kolbasa.worker.ProcessResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
