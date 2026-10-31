@@ -110,9 +110,9 @@ class QueuePipe internal constructor(
          * inside. The kind is checked here. The format can't be checked, so if [to] expects another format, use [map]
          * with a transform that converts it.
          *
-         * The metadata moves too, if [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] is
-         * on in [QueuePipeOptions.receiveOptions]. It is on by default. Only the fields that [to] declares the same
-         * way are written.
+         * The metadata moves too: every field that [to] declares the same way is written. The metadata is always read,
+         * whatever [QueuePipeOptions.receiveOptions] say, so your own receive options, for example for a filter, can't
+         * lose it.
          *
          * @throws IllegalArgumentException if the queues store the data in different kinds of columns
          */
@@ -132,11 +132,15 @@ class QueuePipe internal constructor(
                     "${fromType.dbColumnType} and ${toType.dbColumnType}"
             }
 
+            // The message moves whole, so the metadata is always read. Own receive options, for example for a filter,
+            // don't read it by default, and the loss would go unnoticed
+            val alwaysReadMetadataOptions = options.copy(receiveOptions = options.receiveOptions.copy(readMetadata = true))
+
             // The same tables, but the data is read and written as it is stored, without the queue's serializer
             fun <Raw> rawEngine(rawType: DatabaseQueueDataType<Raw>): PipeEngine<Raw, Raw> {
                 val rawFrom = from.withDataType(rawType)
                 val rawTo = to.withDataType(rawType)
-                return flatMapEngine(rawFrom, consumer, rawTo, producer, options) {
+                return flatMapEngine(rawFrom, consumer, rawTo, producer, alwaysReadMetadataOptions) {
                     listOf(SendMessage(it.data, it.meta))
                 }
             }
@@ -190,7 +194,8 @@ class QueuePipe internal constructor(
             options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
             transform: FlatMapTransform<In, Out>
         ): QueuePipe {
-            return QueuePipe(from, flatMapEngine(from, consumer, to, producer, options, transform))
+            val engine = flatMapEngine(from, consumer, to, producer, options, transform)
+            return QueuePipe(from, engine)
         }
 
         /**

@@ -60,8 +60,8 @@ data class QueuePipeOptions(
     /**
      * Options of every `receive()` call: filter, order, visibility timeout and so on. See [ReceiveOptions].
      *
-     * By default, the metadata is read, so that [QueuePipe.asIs] moves it and a transform can use it. If you
-     * set your own options, keep [ReceiveOptions.readMetadata] on for that.
+     * By default, the metadata is read, so that a transform can use it. If you set your own options and the transform
+     * needs the metadata, keep [ReceiveOptions.readMetadata] on. [QueuePipe.asIs] always reads it.
      */
     val receiveOptions: ReceiveOptions = DEFAULT_RECEIVE_OPTIONS,
 

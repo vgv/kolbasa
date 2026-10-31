@@ -316,6 +316,17 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testAsIs_MovesMetadata() {
+        assertAsIsMovesMetadata(QueuePipeOptions.AS_IS_DEFAULT)
+    }
+
+    @Test
+    fun testAsIs_MovesMetadata_OwnReceiveOptions() {
+        // Own receive options, for example for a filter, don't read the metadata. asIs reads it anyway
+        val options = QueuePipeOptions.AS_IS_DEFAULT.copy(receiveOptions = ReceiveOptions(readMetadata = false))
+        assertAsIsMovesMetadata(options)
+    }
+
+    private fun assertAsIsMovesMetadata(options: QueuePipeOptions) {
         val userId = MetaField.ofInt("user_id")
         val fromWithMeta = Queue("pipe_meta_from", PredefinedDataTypes.String, metadata = Metadata.of(userId))
         val toWithMeta = Queue("pipe_meta_to", PredefinedDataTypes.String, metadata = Metadata.of(userId))
@@ -327,7 +338,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
             .throwExceptionIfAny()
 
         val consumer = DatabaseConsumer(fromDataSource)
-        val pipe = QueuePipe.asIs(fromWithMeta, consumer, toWithMeta, DatabaseProducer(toDataSource))
+        val pipe = QueuePipe.asIs(fromWithMeta, consumer, toWithMeta, DatabaseProducer(toDataSource), options)
         assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 0, requested = 100), pipe.process())
 
         val moved = DatabaseConsumer(toDataSource).receive(toWithMeta, ReceiveOptions(readMetadata = true))
