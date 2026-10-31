@@ -4,7 +4,8 @@ import kolbasa.consumer.Message
 import kolbasa.queue.Queue
 
 /**
- * A message that the [MessageHandler] failed to handle, see [ProcessErrorHandler].
+ * A message that failed: the [MessageHandler] of a [QueueProcessor] or the transform of a [QueuePipe] threw.
+ * See [ProcessErrorHandler].
  */
 data class ProcessError(
     /**
@@ -13,12 +14,12 @@ data class ProcessError(
     val queue: Queue<*>,
 
     /**
-     * The message that failed. It stays in the queue, see [MessageHandler].
+     * The message that failed. It stays in the queue.
      */
     val message: Message<*>,
 
     /**
-     * What the [MessageHandler] threw.
+     * What the [MessageHandler] or the transform threw.
      */
     val cause: Exception
 )

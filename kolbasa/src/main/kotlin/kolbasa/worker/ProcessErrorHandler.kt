@@ -1,23 +1,24 @@
 package kolbasa.worker
 
 /**
- * What to do when the [MessageHandler] throws.
+ * What to do when the [MessageHandler] of a [QueueProcessor] or the transform of a [QueuePipe] throws.
  *
  * The message stays in the queue whatever the handler does: it comes back after the visibility timeout for another
  * attempt, or goes to the DLQ if that was the last one. So this handler only reports the error.
  *
- * **A handler must not throw.** If it does, [QueueProcessor.process] throws too, before it deletes the messages
- * that were handled well. They come back after the visibility timeout and are handled once more. If your handler
+ * **A handler must not throw.** If it does, [BatchProcessor.process] throws too, before it deletes the messages
+ * that were processed well. They come back after the visibility timeout and are processed once more. If your handler
  * calls code that can fail, for example your own logging or alerting, catch everything inside the handler.
  *
- * The handler is called on the thread that calls [QueueProcessor.process], so it should be quick.
+ * The handler is called on the thread that calls [BatchProcessor.process], so it should be quick.
  *
- * By default, [SYSTEM_LOG] is used. Set another one with [QueueProcessorOptions.errorHandler].
+ * By default, [SYSTEM_LOG] is used. Set another one with [QueueProcessorOptions.errorHandler] or
+ * [QueuePipeOptions.errorHandler].
  */
 fun interface ProcessErrorHandler {
 
     /**
-     * Called for every message that the [MessageHandler] failed to handle. Must not throw, see [ProcessErrorHandler].
+     * Called for every message that failed. Must not throw, see [ProcessErrorHandler].
      */
     fun onProcessError(error: ProcessError)
 
