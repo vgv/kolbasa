@@ -14,6 +14,10 @@ import kolbasa.telemetry.tracing.ProcessCall
  * scheduler, or a [QueueWorker] with as many threads as you need. Works with any [Consumer], so with a
  * [ClusterConsumer][kolbasa.cluster.ClusterConsumer] too.
  *
+ * Every handler call goes through [Tracing.process][kolbasa.telemetry.tracing.Tracing.process]. The hook is the
+ * consumer's [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing], or the global [Kolbasa.tracing] if
+ * the consumer has none.
+ *
  * Delivery is at least once. A message can be handled more than once: if the batch takes longer than the visibility
  * timeout (see [QueueProcessorOptions.receiveLimit]), or if the final delete fails. So the handler should be ready
  * to see the same message again.
@@ -84,7 +88,7 @@ class QueueProcessor<Data> @JvmOverloads constructor(
             return emptyResult
         }
 
-        val tracing = options.tracing ?: Kolbasa.tracing
+        val tracing = consumer.options.tracing ?: Kolbasa.tracing
 
         val succeeded = ArrayList<Id>(messages.size)
         var skipped = 0

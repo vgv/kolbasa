@@ -44,6 +44,9 @@ class DatabaseConsumer internal constructor(
         peer = ConnectionAwareDatabaseConsumer(options)
     )
 
+    override val options: ConsumerOptions
+        get() = peer.options
+
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
         return dataSource.inTransaction { peer.receive(it, queue, limit, receiveOptions) }
     }

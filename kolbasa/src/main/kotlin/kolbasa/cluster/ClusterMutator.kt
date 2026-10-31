@@ -57,7 +57,7 @@ import java.util.concurrent.CompletableFuture
  */
 class ClusterMutator @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val options: MutatorOptions = MutatorOptions.DEFAULT
+    override val options: MutatorOptions = MutatorOptions.DEFAULT
 ) : Mutator {
 
     override fun <Data> mutate(

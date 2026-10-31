@@ -22,10 +22,10 @@ import java.util.function.Supplier
  *
  * Every method just proceeds by default, so an implementation overrides only what it needs.
  *
- * Set it for the whole application with [Kolbasa.tracing][kolbasa.Kolbasa.tracing], or for one producer, consumer or
- * processor with [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing],
- * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing] and
- * [QueueProcessorOptions.tracing][kolbasa.worker.QueueProcessorOptions.tracing].
+ * Set it for the whole application with [Kolbasa.tracing][kolbasa.Kolbasa.tracing], or for one producer or consumer
+ * with [ProducerOptions.tracing][kolbasa.producer.ProducerOptions.tracing] and
+ * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing]. A
+ * [QueueProcessor][kolbasa.worker.QueueProcessor] uses the tracing of its consumer.
  *
  * For OpenTelemetry, use `OpenTelemetryTracing` from the separate `io.github.vgv:kolbasa-opentelemetry` artifact.
  *

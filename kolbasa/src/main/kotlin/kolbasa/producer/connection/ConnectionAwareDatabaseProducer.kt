@@ -19,7 +19,7 @@ import java.sql.Connection
  */
 class ConnectionAwareDatabaseProducer internal constructor(
     internal val nodeId: NodeId,
-    internal val options: ProducerOptions
+    override val options: ProducerOptions
 ) : ConnectionAwareProducer {
 
     /**

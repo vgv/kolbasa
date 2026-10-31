@@ -43,6 +43,9 @@ class DatabaseMutator(
         peer = ConnectionAwareDatabaseMutator(options)
     )
 
+    override val options: MutatorOptions
+        get() = peer.options
+
     override fun <Data> mutate(
         queue: Queue<Data>,
         mutations: List<Mutation>,
@@ -69,7 +72,7 @@ class DatabaseMutator(
         messages: List<Id>
     ): CompletableFuture<MutateResult> {
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
+            mutatorExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 
@@ -82,7 +85,7 @@ class DatabaseMutator(
         filter: Filter.() -> Condition
     ): CompletableFuture<MutateResult> {
         val executor = MutatorSchemaHelpers.calculateAsyncExecutor(
-            mutatorExecutor = (peer as? ConnectionAwareDatabaseMutator)?.options?.asyncExecutor,
+            mutatorExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
 

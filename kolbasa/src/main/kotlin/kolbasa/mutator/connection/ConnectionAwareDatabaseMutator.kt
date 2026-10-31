@@ -31,7 +31,7 @@ import kotlin.math.min
  */
 class ConnectionAwareDatabaseMutator internal constructor(
     internal val nodeId: NodeId,
-    internal val options: MutatorOptions
+    override val options: MutatorOptions
 ) : ConnectionAwareMutator {
 
     /**

@@ -1,5 +1,6 @@
 package kolbasa.worker
 
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
@@ -127,9 +128,12 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
             }
         }
 
+        // The processor takes the hook from its consumer
+        val consumer = DatabaseConsumer(dataSource, ConsumerOptions(tracing = tracing))
+
         val errors = mutableListOf<ProcessError>()
-        val options = QueueProcessorOptions(errorHandler = { errors += it }, tracing = tracing)
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { message ->
+        val options = QueueProcessorOptions(errorHandler = { errors += it })
+        val processor = QueueProcessor(consumer, queue, options) { message ->
             if (message.data == "bad") throw IllegalArgumentException("Can't handle '${message.data}'")
             HandleResult.DONE
         }

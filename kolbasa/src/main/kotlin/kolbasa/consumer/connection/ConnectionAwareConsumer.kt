@@ -1,5 +1,6 @@
 package kolbasa.consumer.connection
 
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.Message
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.filter.Condition
@@ -50,6 +51,14 @@ import java.sql.Connection
  * (see [ConnectionAwareDatabaseConsumer]), which uses just plain JDBC and doesn't require any additional dependencies.
  */
 interface ConnectionAwareConsumer {
+
+    /**
+     * Defaults for every call of this consumer, see [ConsumerOptions].
+     *
+     * The default is [ConsumerOptions.DEFAULT].
+     */
+    val options: ConsumerOptions
+        get() = ConsumerOptions.DEFAULT
 
     /**
      * Receives one message from the queue, if any. Returns null if the queue is empty.
