@@ -49,14 +49,14 @@ import kolbasa.telemetry.tracing.ProcessCall
  */
 class QueueProcessor<Data> @JvmOverloads constructor(
     /**
-     * The consumer that receives and deletes the messages.
-     */
-    private val consumer: Consumer,
-
-    /**
      * The queue to process.
      */
     internal val queue: Queue<Data>,
+
+    /**
+     * The consumer that receives and deletes the messages.
+     */
+    private val consumer: Consumer,
 
     /**
      * How many messages to receive, with which options, and what to do with errors.

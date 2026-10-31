@@ -36,7 +36,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testProcess_Empty() {
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue) {
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource)) {
             error("No messages, nothing to handle")
         }
 
@@ -51,7 +51,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         send("one", "two", "three")
 
         val handled = mutableListOf<String>()
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue) { message ->
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource)) { message ->
             handled += message.data
             HandleResult.DONE
         }
@@ -73,7 +73,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
 
         val errors = mutableListOf<ProcessError>()
         val options = QueueProcessorOptions(errorHandler = { errors += it })
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { message ->
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource), options) { message ->
             if (message.data == "now") HandleResult.DONE else HandleResult.SKIP
         }
 
@@ -93,7 +93,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
 
         val errors = mutableListOf<ProcessError>()
         val options = QueueProcessorOptions(errorHandler = { errors += it })
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { message ->
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource), options) { message ->
             if (message.data == "bad") throw IllegalArgumentException("Can't handle '${message.data}'")
             HandleResult.DONE
         }
@@ -133,7 +133,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
 
         val errors = mutableListOf<ProcessError>()
         val options = QueueProcessorOptions(errorHandler = { errors += it })
-        val processor = QueueProcessor(consumer, queue, options) { message ->
+        val processor = QueueProcessor(queue, consumer, options) { message ->
             if (message.data == "bad") throw IllegalArgumentException("Can't handle '${message.data}'")
             HandleResult.DONE
         }
@@ -150,7 +150,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         send("one", "two", "three", "four", "five")
 
         val options = QueueProcessorOptions(receiveLimit = 2)
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue, options) { HandleResult.DONE }
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource), options) { HandleResult.DONE }
 
         // One call takes one batch only, and it is full: the queue has more
         val result = processor.process()
@@ -164,7 +164,7 @@ class QueueProcessorTest : AbstractPostgreSQLTest() {
         // No queue table, so receive() fails, and process() passes the exception on
         SchemaHelpers.deleteQueues(dataSource, queue)
 
-        val processor = QueueProcessor(DatabaseConsumer(dataSource), queue) { HandleResult.DONE }
+        val processor = QueueProcessor(queue, DatabaseConsumer(dataSource)) { HandleResult.DONE }
         assertThrows<SQLException> { processor.process() }
     }
 

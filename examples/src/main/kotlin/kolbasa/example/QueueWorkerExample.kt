@@ -35,7 +35,7 @@ fun main() {
     // Throw, and it comes back after the visibility timeout for another attempt
     val handled = CountDownLatch(1000)
     val perThread = ConcurrentHashMap<String, AtomicInteger>()
-    val processor = QueueProcessor(DatabaseConsumer(dataSource), queue) { message ->
+    val processor = QueueProcessor(queue, DatabaseConsumer(dataSource)) { message ->
         // ... your business code for message.data ...
         perThread.computeIfAbsent(Thread.currentThread().name) { AtomicInteger() }.incrementAndGet()
         handled.countDown()

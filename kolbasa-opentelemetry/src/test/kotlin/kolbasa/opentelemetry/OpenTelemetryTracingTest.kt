@@ -20,7 +20,6 @@ import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
 import kolbasa.producer.SendRequest
-import kolbasa.producer.SendResult.Companion.onlySuccessful
 import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
@@ -354,7 +353,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
     // A processor over the traced consumer, so it is traced too. Its errors go nowhere, the tests check the spans
     private fun processor(handler: MessageHandler<String>): QueueProcessor<String> {
         val options = QueueProcessorOptions(errorHandler = { })
-        return QueueProcessor(DatabaseConsumer(dataSource, consumerOptions), queue, options, handler)
+        return QueueProcessor(queue, DatabaseConsumer(dataSource, consumerOptions), options, handler)
     }
 
     private fun readStrings(query: String): List<String> = dataSource.connection.use { connection ->

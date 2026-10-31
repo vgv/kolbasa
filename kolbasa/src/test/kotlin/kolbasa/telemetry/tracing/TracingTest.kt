@@ -112,7 +112,7 @@ class TracingTest {
         every { consumer.receive(queue, QueueProcessorOptions.DEFAULT_RECEIVE_LIMIT, ReceiveOptions.DEFAULT) } returns
             listOf(message())
 
-        val processor = QueueProcessor(consumer, queue) { HandleResult.DONE }
+        val processor = QueueProcessor(queue, consumer) { HandleResult.DONE }
         assertThrows<IllegalStateException> { processor.process() }
     }
 

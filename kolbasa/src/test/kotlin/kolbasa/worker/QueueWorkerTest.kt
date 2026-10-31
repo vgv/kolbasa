@@ -257,7 +257,7 @@ class QueueWorkerTest : AbstractPostgreSQLTest() {
         options: QueueProcessorOptions = QueueProcessorOptions.DEFAULT,
         handler: MessageHandler<String>
     ): QueueProcessor<String> {
-        return QueueProcessor(DatabaseConsumer(dataSource), queue, options, handler)
+        return QueueProcessor(queue, DatabaseConsumer(dataSource), options, handler)
     }
 
     private fun worker(processor: QueueProcessor<String>, options: QueueWorkerOptions): QueueWorker {
