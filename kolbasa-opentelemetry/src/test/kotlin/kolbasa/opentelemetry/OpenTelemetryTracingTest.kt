@@ -351,9 +351,9 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
         assertEquals(listOf(producerSpan.traceId to producerSpan.spanId), links)
     }
 
-    // A processor traced like the producer and the consumer. Its errors go nowhere, the tests check the spans
+    // A processor over the traced consumer, so it is traced too. Its errors go nowhere, the tests check the spans
     private fun processor(handler: MessageHandler<String>): QueueProcessor<String> {
-        val options = QueueProcessorOptions(tracing = tracing, errorHandler = { })
+        val options = QueueProcessorOptions(errorHandler = { })
         return QueueProcessor(DatabaseConsumer(dataSource, consumerOptions), queue, options, handler)
     }
 

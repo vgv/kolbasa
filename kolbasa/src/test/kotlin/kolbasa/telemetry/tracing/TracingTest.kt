@@ -105,12 +105,14 @@ class TracingTest {
             override fun <Data> process(call: ProcessCall<Data>) = HandleResult.DONE
         }
 
-        // One message to process. The mock knows nothing else, so a delete() of the message would fail the test too
+        // The hook in the consumer's options and one message to process. The mock knows nothing else, so a delete()
+        // of the message would fail the test too
         val consumer = mockk<Consumer>()
+        every { consumer.options } returns ConsumerOptions(tracing = broken)
         every { consumer.receive(queue, QueueProcessorOptions.DEFAULT_RECEIVE_LIMIT, ReceiveOptions.DEFAULT) } returns
             listOf(message())
 
-        val processor = QueueProcessor(consumer, queue, QueueProcessorOptions(tracing = broken)) { HandleResult.DONE }
+        val processor = QueueProcessor(consumer, queue) { HandleResult.DONE }
         assertThrows<IllegalStateException> { processor.process() }
     }
 

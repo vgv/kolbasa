@@ -2,7 +2,6 @@ package kolbasa.worker
 
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.queue.Checks
-import kolbasa.telemetry.tracing.Tracing
 
 /**
  * Options of a [QueueProcessor].
@@ -50,17 +49,7 @@ data class QueueProcessorOptions(
      * What to do when the [MessageHandler] throws. By default, the error goes to the log, see
      * [ProcessErrorHandler.SYSTEM_LOG].
      */
-    val errorHandler: ProcessErrorHandler = ProcessErrorHandler.SYSTEM_LOG,
-
-    /**
-     * Tracing of the handler calls, see [Tracing.process]. By default, the value is unspecified (null), meaning that
-     * global [Kolbasa.tracing][kolbasa.Kolbasa.tracing] will be used.
-     *
-     * The processor can't see the tracing of its consumer. So if you set
-     * [ConsumerOptions.tracing][kolbasa.consumer.ConsumerOptions.tracing] for the consumer, set the same here, or the
-     * receive and the handler calls go to different hooks.
-     */
-    val tracing: Tracing? = null
+    val errorHandler: ProcessErrorHandler = ProcessErrorHandler.SYSTEM_LOG
 ) {
 
     init {
@@ -74,7 +63,6 @@ data class QueueProcessorOptions(
         private var receiveLimit: Int = DEFAULT_RECEIVE_LIMIT
         private var receiveOptions: ReceiveOptions = ReceiveOptions.DEFAULT
         private var errorHandler: ProcessErrorHandler = ProcessErrorHandler.SYSTEM_LOG
-        private var tracing: Tracing? = null
 
         /**
          * Sets [QueueProcessorOptions.receiveLimit] – how many messages one `process()` call receives at most.
@@ -92,14 +80,9 @@ data class QueueProcessorOptions(
         fun errorHandler(errorHandler: ProcessErrorHandler) = apply { this.errorHandler = errorHandler }
 
         /**
-         * Sets [QueueProcessorOptions.tracing] – the tracing of the handler calls, used instead of the global one.
-         */
-        fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
-
-        /**
          * Creates a new [QueueProcessorOptions] instance: a fresh one on every call, nothing is cached or reused.
          */
-        fun build() = QueueProcessorOptions(receiveLimit, receiveOptions, errorHandler, tracing)
+        fun build() = QueueProcessorOptions(receiveLimit, receiveOptions, errorHandler)
     }
 
     companion object {
