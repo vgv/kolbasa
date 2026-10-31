@@ -2,7 +2,6 @@ package kolbasa.worker.pipe
 
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.queue.Checks
-import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Options of a [QueuePipe].
@@ -68,9 +67,9 @@ data class QueuePipeOptions(
 
     /**
      * What to do when the transform throws. By default, the error goes to the log, see
-     * [ProcessErrorHandler.SYSTEM_LOG].
+     * [TransformErrorHandler.SYSTEM_LOG].
      */
-    val errorHandler: ProcessErrorHandler = ProcessErrorHandler.SYSTEM_LOG
+    val errorHandler: TransformErrorHandler = TransformErrorHandler.SYSTEM_LOG
 ) {
 
     init {
@@ -83,7 +82,7 @@ data class QueuePipeOptions(
     class Builder {
         private var receiveLimit: Int = DEFAULT_RECEIVE_LIMIT
         private var receiveOptions: ReceiveOptions = DEFAULT_RECEIVE_OPTIONS
-        private var errorHandler: ProcessErrorHandler = ProcessErrorHandler.SYSTEM_LOG
+        private var errorHandler: TransformErrorHandler = TransformErrorHandler.SYSTEM_LOG
 
         /**
          * Sets [QueuePipeOptions.receiveLimit] – how many messages one `process()` call receives at most.
@@ -98,7 +97,7 @@ data class QueuePipeOptions(
         /**
          * Sets [QueuePipeOptions.errorHandler] – what to do when the transform throws.
          */
-        fun errorHandler(errorHandler: ProcessErrorHandler) = apply { this.errorHandler = errorHandler }
+        fun errorHandler(errorHandler: TransformErrorHandler) = apply { this.errorHandler = errorHandler }
 
         /**
          * Creates a new [QueuePipeOptions] instance: a fresh one on every call, nothing is cached or reused.

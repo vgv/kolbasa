@@ -2,7 +2,6 @@ package kolbasa.worker.pipe
 
 import kolbasa.consumer.Message
 import kolbasa.producer.SendMessage
-import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Your code that turns one message of the source queue into one message for the target queue, called by a pipe made
@@ -11,7 +10,7 @@ import kolbasa.worker.ProcessErrorHandler
  * What happens to the message depends on how the transform ends:
  * - returns a message: it is sent to the target queue, and the source message is deleted once its batch is sent;
  * - throws: the message failed. Nothing is sent for it, the message stays in the source queue, and the exception
- *   goes to the [ProcessErrorHandler].
+ *   goes to the [TransformErrorHandler].
  *
  * The metadata of the source message is read only if
  * [ReceiveOptions.readMetadata][kolbasa.consumer.ReceiveOptions.readMetadata] is on in

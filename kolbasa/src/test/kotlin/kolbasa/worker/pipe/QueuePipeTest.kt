@@ -21,7 +21,6 @@ import kolbasa.queue.meta.Metadata
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.worker.ProcessError
 import kolbasa.worker.ProcessResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
@@ -92,7 +91,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     fun testProcess_TransformFails() {
         send("good", "bad")
 
-        val errors = mutableListOf<ProcessError>()
+        val errors = mutableListOf<TransformError>()
         val options = QueuePipeOptions(errorHandler = { errors += it })
         val pipe = pipe(options) { message ->
             if (message.data == "bad") throw IllegalArgumentException("Can't transform '${message.data}'")
@@ -260,7 +259,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     fun testMapBatch_TransformFails() {
         send("one", "two")
 
-        val errors = mutableListOf<ProcessError>()
+        val errors = mutableListOf<TransformError>()
         val options = QueuePipeOptions(errorHandler = { errors += it })
         val pipe = mapBatchPipe(options) { throw IllegalArgumentException("Can't transform the batch") }
 

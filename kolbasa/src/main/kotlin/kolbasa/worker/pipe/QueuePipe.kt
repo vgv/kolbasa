@@ -8,8 +8,6 @@ import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.worker.BatchProcessor
-import kolbasa.worker.ProcessError
-import kolbasa.worker.ProcessErrorHandler
 import kolbasa.worker.ProcessResult
 import kolbasa.worker.QueueWorker
 
@@ -90,7 +88,7 @@ class QueuePipe internal constructor(
     /**
      * Receives one batch, transforms it, sends all of it in one `send()` call, and deletes the source messages in one
      * `delete()` call. A message that the transform failed on stays in the source queue, and goes to the
-     * [ProcessErrorHandler].
+     * [TransformErrorHandler].
      *
      * If `receive()`, `send()` or `delete()` fails, the exception is thrown from here, and no message is deleted
      * from the source queue. What to do then, wait and retry or give up, is up to the caller.
@@ -157,7 +155,7 @@ class QueuePipe internal constructor(
         /**
          * Makes a pipe that turns every message of [from] into one message for [to] with your [MapTransform].
          *
-         * A message that the transform fails on stays in [from], and goes to the [ProcessErrorHandler]. The other
+         * A message that the transform fails on stays in [from], and goes to the [TransformErrorHandler]. The other
          * messages of the batch are sent.
          */
         @JvmStatic
@@ -179,7 +177,7 @@ class QueuePipe internal constructor(
          * [FlatMapTransform].
          *
          * An empty list filters the message out: nothing is sent for it, and it is deleted once the batch is sent. A
-         * message that the transform fails on stays in [from], and goes to the [ProcessErrorHandler]. The other
+         * message that the transform fails on stays in [from], and goes to the [TransformErrorHandler]. The other
          * messages of the batch are sent.
          */
         @JvmStatic
@@ -201,7 +199,7 @@ class QueuePipe internal constructor(
          * shard for example.
          *
          * The batch is one unit: all its messages are deleted once the request is sent, and if the transform throws,
-         * all of them stay in [from] and go to the [ProcessErrorHandler]. See [BatchTransform].
+         * all of them stay in [from] and go to the [TransformErrorHandler]. See [BatchTransform].
          */
         @JvmStatic
         @JvmOverloads
@@ -219,7 +217,7 @@ class QueuePipe internal constructor(
                     TransformedBatch(request.data, messages.map { it.id }, failed = 0, sendOptions = request.options)
                 } catch (e: Exception) {
                     // The whole batch failed: every message goes to the error handler with the same cause, and stays
-                    messages.forEach { options.errorHandler.onProcessError(ProcessError(from, it, e)) }
+                    messages.forEach { options.errorHandler.onTransformError(TransformError(from, it, e)) }
                     TransformedBatch(emptyList(), emptyList(), failed = messages.size)
                 }
             }
@@ -247,7 +245,7 @@ class QueuePipe internal constructor(
                         toSend += transform.transform(message)
                         toDelete += message.id
                     } catch (e: Exception) {
-                        options.errorHandler.onProcessError(ProcessError(from, message, e))
+                        options.errorHandler.onTransformError(TransformError(from, message, e))
                         failed++
                     }
                 }

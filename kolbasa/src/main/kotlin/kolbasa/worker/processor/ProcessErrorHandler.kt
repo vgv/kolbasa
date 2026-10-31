@@ -1,22 +1,18 @@
-package kolbasa.worker
+package kolbasa.worker.processor
 
 /**
- * What to do when the [MessageHandler][kolbasa.worker.processor.MessageHandler] of a
- * [QueueProcessor][kolbasa.worker.processor.QueueProcessor] or the transform of a
- * [QueuePipe][kolbasa.worker.pipe.QueuePipe] throws.
+ * What to do when the [MessageHandler] of a [QueueProcessor] throws.
  *
  * The message stays in the queue whatever the handler does: it comes back after the visibility timeout for another
  * attempt, or goes to the DLQ if that was the last one. So this handler only reports the error.
  *
- * **A handler must not throw.** If it does, [BatchProcessor.process] throws too, before it deletes the messages
+ * **A handler must not throw.** If it does, [QueueProcessor.process] throws too, before it deletes the messages
  * that were processed well. They come back after the visibility timeout and are processed once more. If your handler
  * calls code that can fail, for example your own logging or alerting, catch everything inside the handler.
  *
- * The handler is called on the thread that calls [BatchProcessor.process], so it should be quick.
+ * The handler is called on the thread that calls [QueueProcessor.process], so it should be quick.
  *
- * By default, [SYSTEM_LOG] is used. Set another one with
- * [QueueProcessorOptions.errorHandler][kolbasa.worker.processor.QueueProcessorOptions.errorHandler] or
- * [QueuePipeOptions.errorHandler][kolbasa.worker.pipe.QueuePipeOptions.errorHandler].
+ * By default, [SYSTEM_LOG] is used. Set another one with [QueueProcessorOptions.errorHandler].
  */
 fun interface ProcessErrorHandler {
 
@@ -32,7 +28,7 @@ fun interface ProcessErrorHandler {
          *
          * It is a warning, or an error on the last attempt, when the message is about to leave the queue for good.
          *
-         * The log is the JDK's [System.Logger] named `kolbasa.worker.ProcessErrorHandler`. By default, it
+         * The log is the JDK's [System.Logger] named `kolbasa.worker.processor.ProcessErrorHandler`. By default, it
          * writes to `java.util.logging`. To send it to SLF4J or Log4j instead, add `slf4j-jdk-platform-logging` or
          * `log4j-jpl` to the application.
          */

@@ -12,7 +12,6 @@ import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.Tracing
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.readInt
-import kolbasa.worker.ProcessError
 import kolbasa.worker.ProcessResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

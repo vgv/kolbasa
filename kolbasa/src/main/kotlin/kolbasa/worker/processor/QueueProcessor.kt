@@ -6,8 +6,6 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.worker.BatchProcessor
-import kolbasa.worker.ProcessError
-import kolbasa.worker.ProcessErrorHandler
 import kolbasa.worker.ProcessResult
 import kolbasa.worker.QueueWorker
 

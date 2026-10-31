@@ -1,7 +1,6 @@
 package kolbasa.worker.processor
 
 import kolbasa.consumer.Message
-import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Your business code for one message, called by [QueueProcessor].

@@ -2,7 +2,6 @@ package kolbasa.worker.pipe
 
 import kolbasa.consumer.Message
 import kolbasa.producer.SendRequest
-import kolbasa.worker.ProcessErrorHandler
 
 /**
  * Your code that turns a whole batch of the source queue into the messages for the target queue, called by a pipe
@@ -17,7 +16,7 @@ import kolbasa.worker.ProcessErrorHandler
  *   [PartialInsert.PROHIBITED][kolbasa.producer.PartialInsert.PROHIBITED];
  * - returns a request without messages: nothing is sent, and all the source messages are deleted;
  * - throws: the whole batch failed. Nothing is sent, all the messages stay in the source queue, and every one of them
- *   goes to the [ProcessErrorHandler] with the same exception.
+ *   goes to the [TransformErrorHandler] with the same exception.
  *
  * So one message that the transform can't handle fails its whole batch, every time, and the other messages of the
  * batch spend their attempts with it. Deal with such messages inside the transform.
