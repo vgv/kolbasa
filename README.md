@@ -22,6 +22,7 @@
 * Share load between different PostgreSQL servers
 * OpenTelemetry integration for monitoring and visibility of how messages flow
 * Background processing: give your business code to a worker, it receives, deletes, waits and retries for you
+* Move messages to another queue, on another server too: in batches, as they are or changed on the way
 
 ## Concepts
 Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
@@ -323,6 +324,38 @@ database errors and stops cleanly.
 Example: [QueueWorkerExample](examples/src/main/kotlin/kolbasa/example/QueueWorkerExample.kt)
 
 `./gradlew example -Pname=QueueWorkerExample`
+
+### Moving messages to another server
+Sometimes a message has to reach a queue far away: in another data center, or even on another continent. Sending it
+there directly is slow: every send waits for the network to the far server, and fails when that server can't be
+reached. So a common pattern is to send the message to a queue nearby first, on your own server, and move it to the
+far queue later, in the background.
+
+A `QueuePipe` does that move. It takes a batch from the source queue, sends the whole batch to the target queue in one
+call, and deletes it from the source queue. Run it next to the source queue: then only one call per batch, the send,
+goes to the far server.
+
+`QueuePipe.asIs` moves messages as they are, without even reading the data. `map`, `flatMap` and `mapBatch` change
+them on the way: one message into another one, into several or none, or a whole batch into one send. Like a
+`QueueProcessor`, a pipe handles one batch per `process()` call, so give it to a `QueueWorker` to run it in the
+background. Delivery is at least once: if the pipe stops between the send and the delete, the batch is sent again.
+
+```kotlin
+val pipe = QueuePipe.map(
+    from = sourceQueue,
+    consumer = DatabaseConsumer(sourceDataSource),
+    to = targetQueue,
+    producer = DatabaseProducer(targetDataSource)
+) { message ->
+    SendMessage(message.data.uppercase())
+}
+
+QueueWorker(pipe).start()
+```
+
+Example: [PipeExample](examples/src/main/kotlin/kolbasa/example/PipeExample.kt)
+
+`./gradlew example -Pname=PipeExample`
 
 
 ## Documentation

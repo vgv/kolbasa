@@ -45,9 +45,10 @@ data class QueuePipeOptions(
      * To take larger batches, raise the visibility timeout too. A rule of thumb: the visibility timeout should be at
      * least `(receiveLimit × average time of the transform + time of the send) × 2`.
      *
-     * On a local network, the send takes milliseconds, and you can leave it out. Between continents, or on a slow
-     * link, it can take several seconds: it is one call, but it carries the whole batch. For example, 100 messages
-     * with a transform of 50 ms each and a send of 3 seconds need at least `(100 × 0.05 s + 3 s) × 2 = 16 s`.
+     * On a local network, the send takes milliseconds, and you can leave it out. To another data center or another
+     * continent, or on a slow link, it can take several seconds: it is one call, but it carries the whole batch. For
+     * example, 100 messages with a transform of 50 ms each and a send of 3 seconds need at least
+     * `(100 × 0.05 s + 3 s) × 2 = 16 s`.
      *
      * **Watch this closely.** A slow transform adds up fast. If it calls another service for half a second, the same
      * batch takes `100 × 0.5 s + 3 s = 53 s`, dangerously close to the default visibility timeout of 60 seconds. A few

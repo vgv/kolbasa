@@ -28,8 +28,10 @@ import kolbasa.worker.QueueWorker
  * scheduler, or a [QueueWorker]. Works with any [Consumer] and [Producer], so with a
  * [ClusterConsumer][kolbasa.cluster.ClusterConsumer] and a [ClusterProducer][kolbasa.cluster.ClusterProducer] too.
  *
- * If the queues are far apart, for example on different continents, run the pipe next to the source queue. Then only
- * one call per batch, the send, goes the long way.
+ * A typical use: the target queue is far away, in another data center or even on another continent. Sending to it
+ * directly would make every send of your service slow, and make it fail when the far server can't be reached. So your
+ * service sends to a queue nearby, and a pipe moves the messages to the far queue in the background. Run the pipe next
+ * to the source queue: then only one call per batch, the send, goes to the far server.
  *
  * **A batch is sent all or nothing.** The pipe always sends with
  * [PartialInsert.PROHIBITED][kolbasa.producer.PartialInsert.PROHIBITED], whatever
@@ -134,7 +136,9 @@ class QueuePipe internal constructor(
 
             // The message moves whole, so the metadata is always read. Own receive options, for example for a filter,
             // don't read it by default, and the loss would go unnoticed
-            val alwaysReadMetadataOptions = options.copy(receiveOptions = options.receiveOptions.copy(readMetadata = true))
+            val alwaysReadMetadataOptions = options.copy(
+                receiveOptions = options.receiveOptions.copy(readMetadata = true)
+            )
 
             // The same tables, but the data is read and written as it is stored, without the queue's serializer
             fun <Raw> rawEngine(rawType: DatabaseQueueDataType<Raw>): PipeEngine<Raw, Raw> {

@@ -9,7 +9,8 @@ import kolbasa.schema.SchemaHelpers
 import kolbasa.worker.pipe.QueuePipe
 
 fun main() {
-    // Imitate two PostgreSQL servers
+    // Imitate two PostgreSQL servers. The service sends orders to the source server, next to it, because that is fast.
+    // The orders are processed on the target server, far away, for example in another data center
     val sourceDataSource = ExamplesDataSourceProvider.getDataSource()
     val targetDataSource = ExamplesDataSourceProvider.getDataSource()
 
@@ -28,7 +29,7 @@ fun main() {
     // -------------------------------------------------------------------------------------------
     // The pipe takes a batch from the source queue, turns every message into one message for the target queue,
     // sends the whole batch in one call and deletes it from the source queue. Run it next to the source queue: then
-    // only the send goes the long way.
+    // only the send goes to the far server.
     // If you don't need to change the messages, use QueuePipe.asIs: it moves them without even reading the data
     val pipe = QueuePipe.map(
         from = sourceQueue,
