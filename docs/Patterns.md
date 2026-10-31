@@ -7,8 +7,9 @@ build the patterns people reach for most often in a message broker:
 2. [Time-to-live (TTL)](#time-to-live-ttl) — make a message stop being deliverable after some wall-clock deadline.
 3. [At-most-once delivery](#at-most-once-delivery) — accept losing a message rather than ever processing it twice.
 4. [Transactions](#transactions) — send or acknowledge a message in the same transaction as your own writes.
+5. [Routing](#routing) — move every message to its own queue, on its own server, by a key in its metadata.
 
-All four are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
+All five are genuinely useful and turn up as named, first-class features in plenty of other brokers. kolbasa has no
 dedicated knob for any of them — not because they're unsupported, but because they fall out so naturally from primitives
 it already has that a special-purpose feature would just be a thin wrapper over a few lines you can write yourself. Each
 pattern below is a small **composition** of building blocks that [Architecture.md](Architecture.md) already documents —
@@ -377,6 +378,64 @@ the message is an event that goes into the queue in the same transaction as your
   as the data, be careful: this is PostgreSQL behaviour, and it is not how every database works.
 
 A runnable version of both halves is [TransactionContextExample](../examples/src/main/kotlin/kolbasa/example/TransactionContextExample.kt), in Kotlin and in Java.
+
+---
+
+## Routing
+
+**Problem.** All orders come to one queue, next to your service. But they are processed in different places: European
+orders in a data center in Europe, American orders in the USA. Every order has to reach the queue of its own region.
+Why the service doesn't send them there directly is explained in the
+[README](../README.md#moving-messages-to-another-server): a send to a far server is slow, and fails when that server
+can't be reached.
+
+**Mechanism — one pipe per route.** A `QueuePipe` moves messages from one queue to another. It receives them like any
+consumer, so it can take only the messages that match a filter. Routing is then several pipes on the same source queue,
+each with its own filter and its own target queue. The key you route by has to be a meta-field, because a filter sees
+only [meta-fields](Architecture.md#querying-by-meta-field).
+
+```kotlin
+val REGION = MetaField.ofString("region", FieldOption.SEARCH)   // indexed: every pipe filters by it
+
+// The service sends every order here, to a queue on its own server, with the region in the metadata
+val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(REGION))
+producer.send(orders, SendMessage(payload, MetaValues.of(REGION.value("eu"))))
+
+// One pipe per region: it takes only the orders of its region and moves them to that region's server
+fun route(condition: Condition, target: Queue<ByteArray>, targetProducer: Producer) = QueuePipe.asIs(
+    from = orders,
+    consumer = DatabaseConsumer(localDataSource),
+    to = target,
+    producer = targetProducer,
+    options = QueuePipeOptions.AS_IS_DEFAULT.copy(receiveOptions = ReceiveOptions(filter = condition))
+)
+
+val toEurope = route(REGION eq "eu", europeOrders, DatabaseProducer(europeDataSource))
+val toUsa = route(REGION eq "us", usaOrders, DatabaseProducer(usaDataSource))
+
+// Everything else, orders without a region too, goes to a queue on the same server, for you to look at
+val unrouted = route(
+    !(REGION oneOf listOf("eu", "us")) or isNull(REGION),
+    unroutedOrders,
+    DatabaseProducer(localDataSource)
+)
+
+listOf(toEurope, toUsa, unrouted).forEach { QueueWorker(it).start() }
+```
+
+### Caveats
+
+- **A message that no pipe takes stays forever.** Nobody receives it, so it spends no attempts, never dies and never
+  goes to a DLQ. Nothing fails, and nobody notices. That is what the `unrouted` pipe is for. Its condition needs care:
+  `neq` and `!` don't match a message without the field, because in SQL a comparison with NULL is never true. So add
+  `isNull(REGION)`, as above. Then the size of the unrouted queue, from the [Inspector](Architecture.md#inspector),
+  tells you whether the producers set the key right.
+- **Route by the metadata, not by the payload.** A filter can't look into the payload, and a pipe can't skip a message
+  to leave it for another pipe: a `flatMap` that returns nothing deletes the message from the source queue. So the
+  producer has to put the key into the metadata when it sends.
+- **One message, one route.** If two filters match the same message, the pipe that gets there first takes it, and the
+  message goes to one target only. To deliver a message to several queues, send it to all of them at once, see
+  [More than one message, more than one queue](#more-than-one-message-more-than-one-queue).
 
 ---
 
