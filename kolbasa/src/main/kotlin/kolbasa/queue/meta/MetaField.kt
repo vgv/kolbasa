@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.SignStyle
 import java.time.temporal.ChronoField
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /**
@@ -352,6 +353,8 @@ sealed class MetaField<T>(
          * Precision: `timestamptz` is microsecond. [Instant.now] carries nanos; the sub-µs
          * portion is truncated on the way to the database. If you bind
          * `2026-05-25T14:30:00.123456789Z` you will read back `2026-05-25T14:30:00.123456Z`.
+         * A filter value is truncated the same way, so `EVENT_TIME eq x` finds the message sent
+         * with `x`.
          *
          * Range: `timestamptz` covers `4713 BC … 294276 AD`. Sending [Instant.MIN]/[Instant.MAX]
          * will fail at the driver/database boundary — these are not validated client-side.
@@ -731,15 +734,19 @@ data class InstantField internal constructor(
     }
 
     override fun fillPreparedStatement(ps: PreparedStatement, columnIndex: Int, value: Instant) {
-        Checks.checkTimestamp(name, value)
-
-        ps.setObject(columnIndex, OffsetDateTime.ofInstant(value, ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
+        ps.setObject(columnIndex, toTimestamptz(value), Types.TIMESTAMP_WITH_TIMEZONE)
     }
 
     override fun toJdbcArrayElement(value: Instant): Any {
-        Checks.checkTimestamp(name, value)
+        return PG_TIMESTAMPTZ.format(toTimestamptz(value))
+    }
 
-        return PG_TIMESTAMPTZ.format(OffsetDateTime.ofInstant(value, ZoneOffset.UTC))
+    // Both binds go through here, so a filter value is cut to microseconds exactly like a sent one. Without it, pgjdbc
+    // would round a single value instead, and `eq` would miss the message sent with the same Instant
+    private fun toTimestamptz(value: Instant): OffsetDateTime {
+        val micros = value.truncatedTo(ChronoUnit.MICROS)
+        Checks.checkTimestamp(name, micros)
+        return OffsetDateTime.ofInstant(micros, ZoneOffset.UTC)
     }
 
     companion object {
