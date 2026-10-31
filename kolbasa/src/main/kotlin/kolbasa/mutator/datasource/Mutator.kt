@@ -25,6 +25,14 @@ import java.util.concurrent.CompletableFuture
 interface Mutator {
 
     /**
+     * Defaults for every call of this mutator, see [MutatorOptions].
+     *
+     * The default is [MutatorOptions.DEFAULT].
+     */
+    val options: MutatorOptions
+        get() = MutatorOptions.DEFAULT
+
+    /**
      * Mutates one message in the queue
      *
      * Adds (or subtracts, if negative) `delta` to the current remaining attempts of the `message`

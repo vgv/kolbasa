@@ -41,6 +41,9 @@ class DatabaseProducer internal constructor(
         peer = ConnectionAwareDatabaseProducer(options)
     )
 
+    override val options: ProducerOptions
+        get() = peer.options
+
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         return dataSource.inTransaction { peer.send(it, queue, request) }
     }
@@ -49,15 +52,12 @@ class DatabaseProducer internal constructor(
         queue: Queue<Data>,
         request: SendRequest<Data>
     ): CompletableFuture<SendResult<Data>> {
-        // make it better somehow
-        val peerOptions = (peer as? ConnectionAwareDatabaseProducer)?.options
-
         val executor = ProducerSchemaHelpers.calculateAsyncExecutor(
             callExecutor = request.options.asyncExecutor,
-            producerExecutor = peerOptions?.asyncExecutor,
+            producerExecutor = options.asyncExecutor,
             defaultExecutor = Kolbasa.asyncExecutor
         )
-        val tracing = peerOptions?.tracing ?: Kolbasa.tracing
+        val tracing = options.tracing ?: Kolbasa.tracing
 
         return CompletableFuture.supplyAsync(tracing.wrapAsync { send(queue, request) }, executor)
     }

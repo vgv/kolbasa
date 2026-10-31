@@ -1,5 +1,6 @@
 package kolbasa.producer.datasource
 
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -23,6 +24,14 @@ import java.util.concurrent.CompletableFuture
  * see [ConnectionAwareProducer][kolbasa.producer.connection.ConnectionAwareProducer].
  */
 interface Producer {
+
+    /**
+     * Defaults for every call of this producer, see [ProducerOptions].
+     *
+     * The default is [ProducerOptions.DEFAULT].
+     */
+    val options: ProducerOptions
+        get() = ProducerOptions.DEFAULT
 
     /**
      * Sends one message without metadata and another options

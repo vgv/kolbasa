@@ -31,7 +31,7 @@ import java.sql.Connection
  */
 class ConnectionAwareDatabaseConsumer internal constructor(
     private val nodeId: NodeId,
-    private val options: ConsumerOptions,
+    override val options: ConsumerOptions,
     private val shards: Shards
 ) : ConnectionAwareConsumer {
 

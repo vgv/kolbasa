@@ -1,5 +1,6 @@
 package kolbasa.producer.connection
 
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendRequest
 import kolbasa.producer.SendResult
@@ -41,6 +42,14 @@ import java.sql.Connection
  * (see [ConnectionAwareDatabaseProducer]), which uses just plain JDBC and doesn't require any additional dependencies.
  */
 interface ConnectionAwareProducer {
+
+    /**
+     * Defaults for every call of this producer, see [ProducerOptions].
+     *
+     * The default is [ProducerOptions.DEFAULT].
+     */
+    val options: ProducerOptions
+        get() = ProducerOptions.DEFAULT
 
     /**
      * Sends one message without metadata and another options

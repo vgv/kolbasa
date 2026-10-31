@@ -53,7 +53,7 @@ import java.util.concurrent.CompletableFuture
  */
 class ClusterProducer @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val options: ProducerOptions = ProducerOptions.DEFAULT
+    override val options: ProducerOptions = ProducerOptions.DEFAULT
 ) : Producer {
 
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {

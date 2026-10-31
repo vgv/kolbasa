@@ -51,7 +51,7 @@ import javax.sql.DataSource
  */
 class ClusterConsumer @JvmOverloads constructor(
     private val cluster: Cluster,
-    private val options: ConsumerOptions = ConsumerOptions.DEFAULT
+    override val options: ConsumerOptions = ConsumerOptions.DEFAULT
 ) : Consumer {
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
