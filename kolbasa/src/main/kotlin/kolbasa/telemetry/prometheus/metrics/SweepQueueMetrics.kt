@@ -3,14 +3,13 @@ package kolbasa.telemetry.prometheus.metrics
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
 import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
 
 internal class SweepQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    prometheusConfig: PrometheusConfig.Config
+    metrics: PrometheusMetrics
 ) {
 
     fun sweepMetrics(removedMessages: Int, executionNanos: Long) {
@@ -19,10 +18,10 @@ internal class SweepQueueMetrics(
         sweepDuration.observeNanos(executionNanos)
     }
 
-    private val sweepCounter: CounterDataPoint = prometheusConfig.sweepCounter
+    private val sweepCounter: CounterDataPoint = metrics.sweepCounter
         .labelValues(queueName, nodeId.id)
-    private val sweepMessagesRemovedCounter: CounterDataPoint = prometheusConfig.sweepMessagesRemovedCounter
+    private val sweepMessagesRemovedCounter: CounterDataPoint = metrics.sweepMessagesRemovedCounter
         .labelValues(queueName, nodeId.id)
-    private val sweepDuration: DistributionDataPoint = prometheusConfig.sweepDuration
+    private val sweepDuration: DistributionDataPoint = metrics.sweepDuration
         .labelValues(queueName, nodeId.id)
 }

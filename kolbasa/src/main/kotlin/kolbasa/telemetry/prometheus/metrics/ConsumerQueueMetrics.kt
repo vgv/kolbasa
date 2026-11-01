@@ -3,7 +3,6 @@ package kolbasa.telemetry.prometheus.metrics
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
 import kolbasa.telemetry.prometheus.metrics.Extensions.incLong
 import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
@@ -11,7 +10,7 @@ import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
 internal class ConsumerQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    prometheusConfig: PrometheusConfig.Config
+    metrics: PrometheusMetrics
 ) {
 
     fun consumerReceiveMetrics(
@@ -33,21 +32,21 @@ internal class ConsumerQueueMetrics(
         consumerDeleteDuration.observeNanos(executionNanos)
     }
 
-    private val consumerReceiveCounter: CounterDataPoint = prometheusConfig.consumerReceiveCounter
+    private val consumerReceiveCounter: CounterDataPoint = metrics.consumerReceiveCounter
         .labelValues(queueName, nodeId.id)
-    private val consumerReceiveBytesCounter: CounterDataPoint = prometheusConfig.consumerReceiveBytesCounter
+    private val consumerReceiveBytesCounter: CounterDataPoint = metrics.consumerReceiveBytesCounter
         .labelValues(queueName, nodeId.id)
-    private val consumerReceiveMessagesCounter: CounterDataPoint = prometheusConfig.consumerReceiveMessagesCounter
+    private val consumerReceiveMessagesCounter: CounterDataPoint = metrics.consumerReceiveMessagesCounter
         .labelValues(queueName, nodeId.id)
     private val consumerReceiveUnreadableMessagesCounter: CounterDataPoint =
-        prometheusConfig.consumerReceiveUnreadableMessagesCounter.labelValues(queueName, nodeId.id)
-    private val consumerReceiveDuration: DistributionDataPoint = prometheusConfig.consumerReceiveDuration
+        metrics.consumerReceiveUnreadableMessagesCounter.labelValues(queueName, nodeId.id)
+    private val consumerReceiveDuration: DistributionDataPoint = metrics.consumerReceiveDuration
         .labelValues(queueName, nodeId.id)
 
-    private val consumerDeleteCounter: CounterDataPoint = prometheusConfig.consumerDeleteCounter
+    private val consumerDeleteCounter: CounterDataPoint = metrics.consumerDeleteCounter
         .labelValues(queueName, nodeId.id)
-    private val consumerDeleteMessagesCounter: CounterDataPoint = prometheusConfig.consumerDeleteMessagesCounter
+    private val consumerDeleteMessagesCounter: CounterDataPoint = metrics.consumerDeleteMessagesCounter
         .labelValues(queueName, nodeId.id)
-    private val consumerDeleteDuration: DistributionDataPoint = prometheusConfig.consumerDeleteDuration
+    private val consumerDeleteDuration: DistributionDataPoint = metrics.consumerDeleteDuration
         .labelValues(queueName, nodeId.id)
 }

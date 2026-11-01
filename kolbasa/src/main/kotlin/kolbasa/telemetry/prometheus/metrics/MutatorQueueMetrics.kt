@@ -3,14 +3,13 @@ package kolbasa.telemetry.prometheus.metrics
 import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
 import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
 
 internal class MutatorQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    prometheusConfig: PrometheusConfig.Config
+    metrics: PrometheusMetrics
 ) {
 
     fun mutatorMetrics(iterations: Int, mutatedMessages: Int, executionNanos: Long, byId: Boolean) {
@@ -27,22 +26,22 @@ internal class MutatorQueueMetrics(
         }
     }
 
-    private val mutatorMutateCounterById: CounterDataPoint = prometheusConfig.mutatorMutateCounter
+    private val mutatorMutateCounterById: CounterDataPoint = metrics.mutatorMutateCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
-    private val mutatorMutateIterationsCounterById: CounterDataPoint = prometheusConfig.mutatorMutateIterationsCounter
+    private val mutatorMutateIterationsCounterById: CounterDataPoint = metrics.mutatorMutateIterationsCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
-    private val mutatorMutateMessagesCounterById: CounterDataPoint = prometheusConfig.mutatorMutateMessagesCounter
+    private val mutatorMutateMessagesCounterById: CounterDataPoint = metrics.mutatorMutateMessagesCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
-    private val mutatorMutateDurationById: DistributionDataPoint = prometheusConfig.mutatorMutateDuration
+    private val mutatorMutateDurationById: DistributionDataPoint = metrics.mutatorMutateDuration
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_ID)
 
-    private val mutatorMutateCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateCounter
+    private val mutatorMutateCounterByFilter: CounterDataPoint = metrics.mutatorMutateCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
-    private val mutatorMutateIterationsCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateIterationsCounter
+    private val mutatorMutateIterationsCounterByFilter: CounterDataPoint = metrics.mutatorMutateIterationsCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
-    private val mutatorMutateMessagesCounterByFilter: CounterDataPoint = prometheusConfig.mutatorMutateMessagesCounter
+    private val mutatorMutateMessagesCounterByFilter: CounterDataPoint = metrics.mutatorMutateMessagesCounter
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
-    private val mutatorMutateDurationByFilter: DistributionDataPoint = prometheusConfig.mutatorMutateDuration
+    private val mutatorMutateDurationByFilter: DistributionDataPoint = metrics.mutatorMutateDuration
         .labelValues(queueName, nodeId.id, MUTATOR_TYPE_BY_FILTER)
 
     private companion object {

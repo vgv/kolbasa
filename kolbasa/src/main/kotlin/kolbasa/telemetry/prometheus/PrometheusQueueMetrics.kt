@@ -41,7 +41,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val producerQueueMetrics = producer.computeIfAbsent(nodeId) { _ ->
-            ProducerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ProducerQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         producerQueueMetrics.producerSendMetrics(
@@ -67,7 +67,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val consumerQueueMetrics = consumer.computeIfAbsent(nodeId) { _ ->
-            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         consumerQueueMetrics.consumerReceiveMetrics(
@@ -90,7 +90,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val consumerQueueMetrics = consumer.computeIfAbsent(nodeId) { _ ->
-            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         consumerQueueMetrics.consumerDeleteMetrics(
@@ -106,7 +106,7 @@ internal class PrometheusQueueMetrics(
 
     override fun sweepMetrics(nodeId: NodeId, removedMessages: Int, executionNanos: Long, connection: Connection?) {
         val sweepQueueMetrics = sweep.computeIfAbsent(nodeId) { _ ->
-            SweepQueueMetrics(queueName, nodeId, prometheusConfig)
+            SweepQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         sweepQueueMetrics.sweepMetrics(
@@ -129,7 +129,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val mutatorQueueMetrics = mutator.computeIfAbsent(nodeId) { _ ->
-            MutatorQueueMetrics(queueName, nodeId, prometheusConfig)
+            MutatorQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         mutatorQueueMetrics.mutatorMetrics(
@@ -147,7 +147,7 @@ internal class PrometheusQueueMetrics(
 
     private fun sendCommonMetrics(connection: Connection, nodeId: NodeId) {
         val commonQueueMetrics = common.computeIfAbsent(nodeId) { _ ->
-            CommonQueueMetrics(queueName, nodeId, prometheusConfig)
+            CommonQueueMetrics(queueName, nodeId, prometheusConfig.metrics)
         }
 
         val lastUpdateInfo = lastUpdate.computeIfAbsent(nodeId) { UpdateInfo() }

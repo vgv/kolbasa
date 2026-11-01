@@ -1,11 +1,8 @@
 package kolbasa.telemetry.prometheus
 
-import io.prometheus.metrics.core.metrics.Counter
-import io.prometheus.metrics.core.metrics.Gauge
-import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kolbasa.queue.Queue
-import kolbasa.telemetry.prometheus.metrics.Const
+import kolbasa.telemetry.prometheus.metrics.PrometheusMetrics
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -52,12 +49,13 @@ sealed class PrometheusConfig {
     /**
      * Metrics, registered in a Prometheus registry.
      *
-     * Every metric of the library is created and registered when this object is created, not when the first message
-     * is sent. That is a deliberate trade: the work happens once, and reporting a value later costs almost nothing.
+     * Every metric of the library is created and registered when the first [Config] over a registry is created, not
+     * when the first message is sent. That is a deliberate trade: the work happens once, and reporting a value later
+     * costs almost nothing.
      *
-     * It also means one such object per registry. A registry refuses a metric name it already holds, so building a
-     * second [Config] over the same registry fails with `duplicate metric name`. Build one per registry and share it
-     * between [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] and all the options that need it.
+     * You can build as many [Config] objects over one registry as you like: they share the same metrics. So
+     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] and the options of a producer, consumer or mutator
+     * can each have their own [Config], for example with a different [preciseStringSize].
      */
     data class Config(
         /**
@@ -72,6 +70,9 @@ sealed class PrometheusConfig {
         val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
     ) : PrometheusConfig() {
 
+        // All metrics of the library, shared by every Config over the same registry
+        internal val metrics: PrometheusMetrics = PrometheusMetrics.of(registry)
+
         // Performance: all metrics of a queue are made once, with their labels (queue name etc.), and kept here
         // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
         private val queues: ConcurrentMap<String, PrometheusQueueMetrics> = ConcurrentHashMap()
@@ -79,166 +80,6 @@ sealed class PrometheusConfig {
         override fun queueMetrics(queue: Queue<*>): QueueMetrics {
             return queues.computeIfAbsent(queue.name) { PrometheusQueueMetrics(queue, this) }
         }
-
-        // ----------------------------------------------------------------------------
-        // Queue metrics
-        internal val queueMessagesGauge: Gauge = Gauge.builder()
-            .name("kolbasa_queue_messages")
-            .help("Amount of messages in the queue in different states (scheduled, ready, in-flight, retry, dead)")
-            .labelNames("queue", "state", "node_id")
-            .register(registry)
-
-        internal val queueMessageAgesGauge: Gauge = Gauge.builder()
-            .name("kolbasa_queue_message_age_seconds")
-            .help("Queue messages ages in seconds – oldest, newest and oldest ready")
-            .labelNames("queue", "type", "node_id")
-            .register(registry)
-
-        internal val queueSizeGauge: Gauge = Gauge.builder()
-            .name("kolbasa_queue_size")
-            .help("Queue size in bytes")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        // ----------------------------------------------------------------------------
-        // Producer metrics
-        internal val producerSendCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send")
-            .help("Amount of producer send() calls")
-            .labelNames("queue", "partial_insert_type", "node_id")
-            .register(registry)
-
-        internal val producerSendMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send_messages")
-            .help("Amount of all (successful and failed) messages sent by producer send() calls")
-            .labelNames("queue", "partial_insert_type", "node_id")
-            .register(registry)
-
-        internal val producerSendFailedMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send_messages_failed")
-            .help("Amount of failed messages sent by producer send() calls")
-            .labelNames("queue", "partial_insert_type", "node_id")
-            .register(registry)
-
-        internal val producerSendDuration: Histogram = Histogram.builder()
-            .name("kolbasa_producer_send_duration_seconds")
-            .help("Producer send() calls duration")
-            .labelNames("queue", "partial_insert_type", "node_id")
-            .classicOnly()
-            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
-            .register(registry)
-
-        internal val producerSendBytesCounter: Counter = Counter.builder()
-            .name("kolbasa_producer_send_bytes")
-            .help("Amount of bytes sent by producer send() calls")
-            .labelNames("queue", "partial_insert_type", "node_id")
-            .register(registry)
-
-        // ----------------------------------------------------------------------------
-        // Consumer metrics
-        // Receive
-        internal val consumerReceiveCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_receive")
-            .help("Amount of consumer receive() calls")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerReceiveBytesCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_receive_bytes")
-            .help("Amount of bytes read by consumer receive() calls")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerReceiveMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_receive_messages")
-            .help("Amount of messages received by consumer receive() calls")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerReceiveUnreadableMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_receive_messages_unreadable")
-            .help("Amount of received messages that can't be read and were passed to the ReadErrorHandler")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerReceiveDuration: Histogram = Histogram.builder()
-            .name("kolbasa_consumer_receive_duration_seconds")
-            .help("Consumer receive() calls duration")
-            .labelNames("queue", "node_id")
-            .classicOnly()
-            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
-            .register(registry)
-
-        // Delete
-        internal val consumerDeleteCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_delete")
-            .help("Amount of consumer delete() calls")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerDeleteMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_consumer_delete_messages")
-            .help("Amount of messages removed by consumer delete() calls")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val consumerDeleteDuration: Histogram = Histogram.builder()
-            .name("kolbasa_consumer_delete_duration_seconds")
-            .help("Consumer delete() calls duration")
-            .labelNames("queue", "node_id")
-            .classicOnly()
-            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
-            .register(registry)
-
-        // ----------------------------------------------------------------------------
-        // Sweep metrics
-        internal val sweepCounter: Counter = Counter.builder()
-            .name("kolbasa_sweep")
-            .help("Number of sweeps")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val sweepMessagesRemovedCounter: Counter = Counter.builder()
-            .name("kolbasa_sweep_removed_messages")
-            .help("Number of messages removed by sweep")
-            .labelNames("queue", "node_id")
-            .register(registry)
-
-        internal val sweepDuration: Histogram = Histogram.builder()
-            .name("kolbasa_sweep_duration_seconds")
-            .help("Sweep duration")
-            .labelNames("queue", "node_id")
-            .classicOnly()
-            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
-            .register(registry)
-
-        // ----------------------------------------------------------------------------
-        // Mutator metrics
-        internal val mutatorMutateCounter: Counter = Counter.builder()
-            .name("kolbasa_mutator_mutate")
-            .help("Number of mutates")
-            .labelNames("queue", "node_id", "type")
-            .register(registry)
-
-        internal val mutatorMutateIterationsCounter: Counter = Counter.builder()
-            .name("kolbasa_mutator_mutate_iterations")
-            .help("Number of mutate iterations (every mutate can have multiple iterations)")
-            .labelNames("queue", "node_id", "type")
-            .register(registry)
-
-        internal val mutatorMutateMessagesCounter: Counter = Counter.builder()
-            .name("kolbasa_mutator_mutated_messages")
-            .help("Number of mutated messages")
-            .labelNames("queue", "node_id", "type")
-            .register(registry)
-
-        internal val mutatorMutateDuration: Histogram = Histogram.builder()
-            .name("kolbasa_mutator_mutate_duration_seconds")
-            .help("Mutate duration")
-            .labelNames("queue", "node_id", "type")
-            .classicOnly()
-            .classicUpperBounds(*Const.callsDurationHistogramBuckets())
-            .register(registry)
 
         /**
          * Builder for flexible [Config] creation, when only some of the properties need to be set.
@@ -258,10 +99,9 @@ sealed class PrometheusConfig {
             fun registry(registry: PrometheusRegistry) = apply { this.registry = registry }
 
             /**
-             * Creates a new [Config] instance: a fresh one on every call, nothing is cached or reused.
+             * Creates a new [Config] instance, a fresh one on every call.
              *
-             * Every call also registers the whole set of Kolbasa metrics in the chosen registry, so call it once –
-             * see [Config].
+             * The metrics themselves are registered once per registry and shared by all its [Config] objects – see [Config].
              */
             fun build() = Config(preciseStringSize, registry)
         }

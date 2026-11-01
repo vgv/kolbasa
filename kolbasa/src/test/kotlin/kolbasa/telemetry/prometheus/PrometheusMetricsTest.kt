@@ -144,6 +144,20 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testTwoConfigsOneRegistry() {
+        val queue = createQueue("metrics_two_configs")
+        val mode = "partial_insert_type" to "UNTIL_FIRST_FAILURE"
+
+        // A second config over the same registry as the global one: it shares the metrics, it doesn't fail
+        val config = PrometheusConfig.Config(preciseStringSize = true, registry = registry)
+        DatabaseProducer(dataSource).send(queue, "first")
+        DatabaseProducer(dataSource, ProducerOptions(prometheusConfig = config)).send(queue, "second")
+
+        // Both calls went to the same counter
+        assertEquals(2.0, value("kolbasa_producer_send", queue, mode))
+    }
+
+    @Test
     fun testNone() {
         // Metrics are switched off
         Kolbasa.prometheusConfig = PrometheusConfig.None
