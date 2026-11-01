@@ -403,23 +403,22 @@ val REGION = MetaField.ofString("region", FieldOption.SEARCH)   // indexed: ever
 val orders = Queue.of("orders", PredefinedDataTypes.ByteArray, Metadata.of(REGION))
 producer.send(orders, SendMessage(payload, MetaValues.of(REGION.value("eu"))))
 
-// One pipe per region: it takes only the orders of its region and moves them to that region's server
-fun route(condition: Condition, target: Queue<ByteArray>, targetProducer: Producer) = QueuePipe.asIs(
-    from = orders,
-    consumer = DatabaseConsumer(localDataSource),
-    to = target,
-    producer = targetProducer,
-    options = QueuePipeOptions.AS_IS_DEFAULT.copy(receiveOptions = ReceiveOptions(filter = condition))
-)
+// Every pipe takes the orders from this queue
+val source = PipeSource(orders, DatabaseConsumer(localDataSource))
 
-val toEurope = route(REGION eq "eu", europeOrders, DatabaseProducer(europeDataSource))
-val toUsa = route(REGION eq "us", usaOrders, DatabaseProducer(usaDataSource))
+// One pipe per region: it takes only the orders of its region and moves them to that region's server
+fun route(condition: Condition, target: PipeTarget<ByteArray>): QueuePipe {
+    val options = QueuePipeOptions.AS_IS_DEFAULT.copy(receiveOptions = ReceiveOptions(filter = condition))
+    return QueuePipe.asIs(source, target, options)
+}
+
+val toEurope = route(REGION eq "eu", PipeTarget(europeOrders, DatabaseProducer(europeDataSource)))
+val toUsa = route(REGION eq "us", PipeTarget(usaOrders, DatabaseProducer(usaDataSource)))
 
 // Everything else, orders without a region too, goes to a queue on the same server, for you to look at
 val unrouted = route(
     !(REGION oneOf listOf("eu", "us")) or isNull(REGION),
-    unroutedOrders,
-    DatabaseProducer(localDataSource)
+    PipeTarget(unroutedOrders, DatabaseProducer(localDataSource))
 )
 
 listOf(toEurope, toUsa, unrouted).forEach { QueueWorker(it).start() }

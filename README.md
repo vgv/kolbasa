@@ -344,12 +344,10 @@ them on the way: one message into another one, into several or none, or a whole 
 background. Delivery is at least once: if the pipe stops between the send and the delete, the batch is sent again.
 
 ```kotlin
-val pipe = QueuePipe.map(
-    from = sourceQueue,
-    consumer = DatabaseConsumer(sourceDataSource),
-    to = targetQueue,
-    producer = DatabaseProducer(targetDataSource)
-) { message ->
+val source = PipeSource(sourceQueue, DatabaseConsumer(sourceDataSource))
+val target = PipeTarget(targetQueue, DatabaseProducer(targetDataSource))
+
+val pipe = QueuePipe.map(source, target) { message ->
     SendMessage(message.data.uppercase())
 }
 

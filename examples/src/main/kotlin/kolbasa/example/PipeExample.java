@@ -40,13 +40,9 @@ class PipeExample {
         // sends the whole batch in one call and deletes it from the source queue. Run it next to the source queue:
         // then only the send goes to the far server.
         // If you don't need to change the messages, use QueuePipe.asIs: it moves them without even reading the data
-        var pipe = QueuePipe.map(
-            sourceQueue,
-            new DatabaseConsumer(sourceDataSource),
-            targetQueue,
-            new DatabaseProducer(targetDataSource),
-            message -> new SendMessage<>(message.getData().toUpperCase())
-        );
+        var source = new PipeSource<>(sourceQueue, new DatabaseConsumer(sourceDataSource));
+        var target = new PipeTarget<>(targetQueue, new DatabaseProducer(targetDataSource));
+        var pipe = QueuePipe.map(source, target, message -> new SendMessage<>(message.getData().toUpperCase()));
 
         // Every process() call moves one batch: receive, transform, one send, one delete. Here we call it until the
         // source queue is empty. A real application gives the pipe to a QueueWorker instead, like a QueueProcessor in

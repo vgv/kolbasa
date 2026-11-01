@@ -47,6 +47,10 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     private val fromDataSource by lazy { dataSource }
     private val toDataSource by lazy { dataSourceFirstSchema }
 
+    // Most pipes here move the messages from [from] to [to]
+    private val source by lazy { PipeSource(from, DatabaseConsumer(fromDataSource)) }
+    private val target by lazy { PipeTarget(to, DatabaseProducer(toDataSource)) }
+
     @BeforeEach
     fun before() {
         SchemaHelpers.createOrUpdateQueues(fromDataSource, from)
@@ -135,7 +139,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         // This producer would insert what it can, one message per INSERT. The pipe sends all or nothing anyway
         val producerOptions = ProducerOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         val producer = DatabaseProducer(toDataSource, producerOptions)
-        val pipe = QueuePipe.map(from, DatabaseConsumer(fromDataSource), unique, producer) { message ->
+        val pipe = QueuePipe.map(source, PipeTarget(unique, producer)) { message ->
             SendMessage(message.data, MetaValues.of(KEY.value(message.data.toInt())))
         }
         assertThrows<SQLException> { pipe.process() }
@@ -150,7 +154,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val data = (1..10).map { "message_$it" }
         send(*data.toTypedArray())
 
-        val pipe = QueuePipe.map(from, DatabaseConsumer(fromDataSource), to, clusterProducer()) { message ->
+        val pipe = QueuePipe.map(source, PipeTarget(to, clusterProducer())) { message ->
             SendMessage(message.data)
         }
 
@@ -166,7 +170,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         // The pipe sets only the partial insert, the rest comes from the producer. A shard means something only in a
         // cluster: a single node stores every message with shard 0
         val producer = clusterProducer(ProducerOptions(shard = 42))
-        val pipe = QueuePipe.map(from, DatabaseConsumer(fromDataSource), to, producer) { message ->
+        val pipe = QueuePipe.map(source, PipeTarget(to, producer)) { message ->
             SendMessage(message.data)
         }
 
@@ -225,7 +229,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
         // The whole batch becomes one message, and the batch chooses its shard. A shard means something only in a
         // cluster
-        val pipe = QueuePipe.mapBatch(from, DatabaseConsumer(fromDataSource), to, clusterProducer()) { batch ->
+        val pipe = QueuePipe.mapBatch(source, PipeTarget(to, clusterProducer())) { batch ->
             val merged = batch.map { it.data }.sorted().joinToString("+")
             SendRequest(listOf(SendMessage(merged)), SendOptions(shard = 42))
         }
@@ -245,7 +249,7 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         // The request asks to insert what it can, one message per INSERT. The pipe sends all or nothing anyway
         val requestOptions = SendOptions(chunkSize = 1, partialInsert = PartialInsert.INSERT_AS_MANY_AS_POSSIBLE)
         val producer = DatabaseProducer(toDataSource)
-        val pipe = QueuePipe.mapBatch(from, DatabaseConsumer(fromDataSource), unique, producer) { batch ->
+        val pipe = QueuePipe.mapBatch(source, PipeTarget(unique, producer)) { batch ->
             SendRequest(batch.map { SendMessage(it.data, MetaValues.of(KEY.value(it.data.toInt()))) }, requestOptions)
         }
         assertThrows<SQLException> { pipe.process() }
@@ -304,8 +308,10 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val json = """{"x": 1, "extra": "kept"}"""
         DatabaseProducer(fromDataSource).send(Queue("pipe_points_from", RAW_JSON), json).throwExceptionIfAny()
 
-        val consumer = DatabaseConsumer(fromDataSource)
-        val pipe = QueuePipe.asIs(fromPoints, consumer, toPoints, DatabaseProducer(toDataSource))
+        val pipe = QueuePipe.asIs(
+            PipeSource(fromPoints, DatabaseConsumer(fromDataSource)),
+            PipeTarget(toPoints, DatabaseProducer(toDataSource))
+        )
         assertEquals(fromPoints, pipe.queue)
         assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 0, requested = 100), pipe.process())
 
@@ -337,8 +343,11 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
             .send(fromWithMeta, SendMessage("bugaga", MetaValues.of(userId.value(42))))
             .throwExceptionIfAny()
 
-        val consumer = DatabaseConsumer(fromDataSource)
-        val pipe = QueuePipe.asIs(fromWithMeta, consumer, toWithMeta, DatabaseProducer(toDataSource), options)
+        val pipe = QueuePipe.asIs(
+            PipeSource(fromWithMeta, DatabaseConsumer(fromDataSource)),
+            PipeTarget(toWithMeta, DatabaseProducer(toDataSource)),
+            options
+        )
         assertEquals(ProcessResult(succeeded = 1, skipped = 0, failed = 0, requested = 100), pipe.process())
 
         val moved = DatabaseConsumer(toDataSource).receive(toWithMeta, ReceiveOptions(readMetadata = true))
@@ -352,28 +361,26 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         val json = Queue("pipe_json", RAW_JSON)
 
         assertThrows<IllegalArgumentException> {
-            QueuePipe.asIs(from, DatabaseConsumer(fromDataSource), json, DatabaseProducer(toDataSource))
+            QueuePipe.asIs(source, PipeTarget(json, DatabaseProducer(toDataSource)))
         }
     }
 
     @Test
     fun testOptions_ReceiveLimit_DependsOnTheFactory() {
         send(*(1..15).map { "message_$it" }.toTypedArray())
-        val consumer = DatabaseConsumer(fromDataSource)
-        val producer = DatabaseProducer(toDataSource)
 
         // Not set: careful for a transform, which may be slow
-        val mapPipe = QueuePipe.map(from, consumer, to, producer) { SendMessage(it.data) }
+        val mapPipe = QueuePipe.map(source, target) { SendMessage(it.data) }
         assertEquals(ProcessResult(succeeded = 10, skipped = 0, failed = 0, requested = 10), mapPipe.process())
 
         // Not set: larger for asIs, which does almost nothing with a message
-        val asIsPipe = QueuePipe.asIs(from, consumer, to, producer)
+        val asIsPipe = QueuePipe.asIs(source, target)
         assertEquals(ProcessResult(succeeded = 5, skipped = 0, failed = 0, requested = 100), asIsPipe.process())
 
         // Set: the same for every factory
         val options = QueuePipeOptions(receiveLimit = 50)
-        assertEquals(50, QueuePipe.asIs(from, consumer, to, producer, options).process().requested)
-        val mapWithOptions = QueuePipe.map(from, consumer, to, producer, options) { SendMessage(it.data) }
+        assertEquals(50, QueuePipe.asIs(source, target, options).process().requested)
+        val mapWithOptions = QueuePipe.map(source, target, options) { SendMessage(it.data) }
         assertEquals(50, mapWithOptions.process().requested)
     }
 
@@ -386,21 +393,18 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
         options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
         transform: MapTransform<String, String>
     ): QueuePipe {
-        val consumer = DatabaseConsumer(fromDataSource)
-        return QueuePipe.map(from, consumer, to, DatabaseProducer(toDataSource), options, transform)
+        return QueuePipe.map(source, target, options, transform)
     }
 
     private fun flatMapPipe(transform: FlatMapTransform<String, String>): QueuePipe {
-        val consumer = DatabaseConsumer(fromDataSource)
-        return QueuePipe.flatMap(from, consumer, to, DatabaseProducer(toDataSource), transform = transform)
+        return QueuePipe.flatMap(source, target, transform = transform)
     }
 
     private fun mapBatchPipe(
         options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
         transform: BatchTransform<String, String>
     ): QueuePipe {
-        val consumer = DatabaseConsumer(fromDataSource)
-        return QueuePipe.mapBatch(from, consumer, to, DatabaseProducer(toDataSource), options, transform)
+        return QueuePipe.mapBatch(source, target, options, transform)
     }
 
     // A target queue that takes every key once, and already has key 2

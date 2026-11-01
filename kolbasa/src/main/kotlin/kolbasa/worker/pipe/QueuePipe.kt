@@ -24,6 +24,9 @@ import kolbasa.worker.QueueWorker
  * - [mapBatch]: turns a whole batch into one [SendRequest][kolbasa.producer.SendRequest] with your [BatchTransform],
  *   so you choose the shard and the send options of every batch.
  *
+ * Every factory takes two pairs: a [PipeSource], the queue to take the messages from and the consumer that receives
+ * them, and a [PipeTarget], the queue to send them to and the producer that sends them.
+ *
  * Every [process] call does one batch and returns. Who calls it and when is up to you: a loop in your own thread, a
  * scheduler, or a [QueueWorker]. Works with any [Consumer] and [Producer], so with a
  * [ClusterConsumer][kolbasa.cluster.ClusterConsumer] and a [ClusterProducer][kolbasa.cluster.ClusterProducer] too.
@@ -58,7 +61,10 @@ import kolbasa.worker.QueueWorker
  * ## Usage Example
  *
  * ```kotlin
- * val pipe = QueuePipe.map(from, consumer, to, producer) { message ->
+ * val source = PipeSource(orders, consumer)
+ * val target = PipeTarget(remoteOrders, producer)
+ *
+ * val pipe = QueuePipe.map(source, target) { message ->
  *     SendMessage(convert(message.data))
  * }
  *
@@ -68,7 +74,10 @@ import kolbasa.worker.QueueWorker
  * The same from Java:
  *
  * ```java
- * var pipe = QueuePipe.map(from, consumer, to, producer, message -> {
+ * var source = new PipeSource<>(orders, consumer);
+ * var target = new PipeTarget<>(remoteOrders, producer);
+ *
+ * var pipe = QueuePipe.map(source, target, message -> {
  *     return new SendMessage<>(convert(message.getData()));
  * });
  *
@@ -103,35 +112,33 @@ class QueuePipe internal constructor(
     companion object {
 
         /**
-         * Makes a pipe that moves messages as they are. The stored data goes from [from] to [to] without your
-         * serializer and deserializer: it is not read into `Data` and not written back. It is faster, and nothing is
-         * lost: for example, JSON fields that your class doesn't know survive. A message that your deserializer can't
-         * read moves too.
+         * Makes a pipe that moves messages as they are. The stored data goes from the source queue to the target queue
+         * without your serializer and deserializer: it is not read into `Data` and not written back. It is faster, and
+         * nothing is lost: for example, JSON fields that your class doesn't know survive. A message that your
+         * deserializer can't read moves too.
          *
          * Both queues must store the data the same way: the same kind of [DatabaseQueueDataType], and the same format
-         * inside. The kind is checked here. The format can't be checked, so if [to] expects another format, use [map]
-         * with a transform that converts it.
+         * inside. The kind is checked here. The format can't be checked, so if the target queue expects another
+         * format, use [map] with a transform that converts it.
          *
-         * The metadata moves too: every field that [to] declares the same way is written. The metadata is always read,
-         * whatever [QueuePipeOptions.receiveOptions] say, so your own receive options, for example for a filter, can't
-         * lose it.
+         * The metadata moves too: every field that the target queue declares the same way is written. The metadata is
+         * always read, whatever [QueuePipeOptions.receiveOptions] say, so your own receive options, for example for a
+         * filter, can't lose it.
          *
          * @throws IllegalArgumentException if the queues store the data in different kinds of columns
          */
         @JvmStatic
         @JvmOverloads
         fun <Data> asIs(
-            from: Queue<Data>,
-            consumer: Consumer,
-            to: Queue<Data>,
-            producer: Producer,
+            source: PipeSource<Data>,
+            target: PipeTarget<Data>,
             options: QueuePipeOptions = QueuePipeOptions.AS_IS_DEFAULT
         ): QueuePipe {
-            val fromType = from.databaseDataType
-            val toType = to.databaseDataType
-            require(fromType.dbColumnType == toType.dbColumnType) {
-                "Queues '${from.name}' and '${to.name}' store data differently: " +
-                    "${fromType.dbColumnType} and ${toType.dbColumnType}"
+            val sourceType = source.queue.databaseDataType
+            val targetType = target.queue.databaseDataType
+            require(sourceType.dbColumnType == targetType.dbColumnType) {
+                "Queues '${source.queue.name}' and '${target.queue.name}' store data differently: " +
+                    "${sourceType.dbColumnType} and ${targetType.dbColumnType}"
             }
 
             // The message moves whole, so the metadata is always read. Own receive options, for example for a filter,
@@ -142,14 +149,14 @@ class QueuePipe internal constructor(
 
             // The same tables, but the data is read and written as it is stored, without the queue's serializer
             fun <Raw> rawEngine(rawType: DatabaseQueueDataType<Raw>): PipeEngine<Raw, Raw> {
-                val rawFrom = from.withDataType(rawType)
-                val rawTo = to.withDataType(rawType)
-                return flatMapEngine(rawFrom, consumer, rawTo, producer, alwaysReadMetadataOptions) {
+                val rawSource = PipeSource(source.queue.withDataType(rawType), source.consumer)
+                val rawTarget = PipeTarget(target.queue.withDataType(rawType), target.producer)
+                return flatMapEngine(rawSource, rawTarget, alwaysReadMetadataOptions) {
                     listOf(SendMessage(it.data, it.meta))
                 }
             }
 
-            val engine: PipeEngine<*, *> = when (fromType) {
+            val engine: PipeEngine<*, *> = when (sourceType) {
                 is DatabaseQueueDataType.Json -> rawEngine(RAW_JSON)
                 is DatabaseQueueDataType.Binary -> rawEngine(PredefinedDataTypes.ByteArray)
                 is DatabaseQueueDataType.Text -> rawEngine(PredefinedDataTypes.String)
@@ -157,94 +164,87 @@ class QueuePipe internal constructor(
                 is DatabaseQueueDataType.Long -> rawEngine(PredefinedDataTypes.Long)
             }
 
-            return QueuePipe(from, engine)
+            return QueuePipe(source.queue, engine)
         }
 
         /**
-         * Makes a pipe that turns every message of [from] into one message for [to] with your [MapTransform].
+         * Makes a pipe that turns every message of the source queue into one message for the target queue with your
+         * [MapTransform].
          *
-         * A message that the transform fails on stays in [from], and goes to the [TransformErrorHandler]. The other
-         * messages of the batch are sent.
+         * A message that the transform fails on stays in the source queue, and goes to the [TransformErrorHandler].
+         * The other messages of the batch are sent.
          */
         @JvmStatic
         @JvmOverloads
         fun <In, Out> map(
-            from: Queue<In>,
-            consumer: Consumer,
-            to: Queue<Out>,
-            producer: Producer,
+            source: PipeSource<In>,
+            target: PipeTarget<Out>,
             options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
             transform: MapTransform<In, Out>
         ): QueuePipe {
-            val engine = flatMapEngine(from, consumer, to, producer, options) { listOf(transform.transform(it)) }
-            return QueuePipe(from, engine)
+            val engine = flatMapEngine(source, target, options) { listOf(transform.transform(it)) }
+            return QueuePipe(source.queue, engine)
         }
 
         /**
-         * Makes a pipe that turns every message of [from] into any number of messages for [to] with your
-         * [FlatMapTransform].
+         * Makes a pipe that turns every message of the source queue into any number of messages for the target queue
+         * with your [FlatMapTransform].
          *
          * An empty list filters the message out: nothing is sent for it, and it is deleted once the batch is sent. A
-         * message that the transform fails on stays in [from], and goes to the [TransformErrorHandler]. The other
-         * messages of the batch are sent.
+         * message that the transform fails on stays in the source queue, and goes to the [TransformErrorHandler]. The
+         * other messages of the batch are sent.
          */
         @JvmStatic
         @JvmOverloads
         fun <In, Out> flatMap(
-            from: Queue<In>,
-            consumer: Consumer,
-            to: Queue<Out>,
-            producer: Producer,
+            source: PipeSource<In>,
+            target: PipeTarget<Out>,
             options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
             transform: FlatMapTransform<In, Out>
         ): QueuePipe {
-            val engine = flatMapEngine(from, consumer, to, producer, options, transform)
-            return QueuePipe(from, engine)
+            val engine = flatMapEngine(source, target, options, transform)
+            return QueuePipe(source.queue, engine)
         }
 
         /**
-         * Makes a pipe that turns a whole batch of [from] into one [SendRequest][kolbasa.producer.SendRequest] for
-         * [to] with your [BatchTransform]. The request carries the messages and the send options of the batch, the
-         * shard for example.
+         * Makes a pipe that turns a whole batch of the source queue into one
+         * [SendRequest][kolbasa.producer.SendRequest] for the target queue with your [BatchTransform]. The request
+         * carries the messages and the send options of the batch, the shard for example.
          *
          * The batch is one unit: all its messages are deleted once the request is sent, and if the transform throws,
-         * all of them stay in [from] and go to the [TransformErrorHandler]. See [BatchTransform].
+         * all of them stay in the source queue and go to the [TransformErrorHandler]. See [BatchTransform].
          */
         @JvmStatic
         @JvmOverloads
         fun <In, Out> mapBatch(
-            from: Queue<In>,
-            consumer: Consumer,
-            to: Queue<Out>,
-            producer: Producer,
+            source: PipeSource<In>,
+            target: PipeTarget<Out>,
             options: QueuePipeOptions = QueuePipeOptions.DEFAULT,
             transform: BatchTransform<In, Out>
         ): QueuePipe {
-            val engine = PipeEngine(from, consumer, to, producer, options) { messages ->
+            val engine = PipeEngine(source.queue, source.consumer, target.queue, target.producer, options) { messages ->
                 try {
                     val request = transform.transform(messages)
                     TransformedBatch(request.data, messages.map { it.id }, failed = 0, sendOptions = request.options)
                 } catch (e: Exception) {
                     // The whole batch failed: every message goes to the error handler with the same cause, and stays
-                    messages.forEach { options.errorHandler.onTransformError(TransformError(from, it, e)) }
+                    messages.forEach { options.errorHandler.onTransformError(TransformError(source.queue, it, e)) }
                     TransformedBatch(emptyList(), emptyList(), failed = messages.size)
                 }
             }
 
-            return QueuePipe(from, engine)
+            return QueuePipe(source.queue, engine)
         }
 
         // Every message turns into any number of messages to send, map and asIs too. A message that the transform
         // failed on stays in the queue
         private fun <In, Out> flatMapEngine(
-            from: Queue<In>,
-            consumer: Consumer,
-            to: Queue<Out>,
-            producer: Producer,
+            source: PipeSource<In>,
+            target: PipeTarget<Out>,
             options: QueuePipeOptions,
             transform: FlatMapTransform<In, Out>
         ): PipeEngine<In, Out> {
-            return PipeEngine(from, consumer, to, producer, options) { messages ->
+            return PipeEngine(source.queue, source.consumer, target.queue, target.producer, options) { messages ->
                 val toSend = ArrayList<SendMessage<Out>>(messages.size)
                 val toDelete = ArrayList<Id>(messages.size)
                 var failed = 0
@@ -254,7 +254,7 @@ class QueuePipe internal constructor(
                         toSend += transform.transform(message)
                         toDelete += message.id
                     } catch (e: Exception) {
-                        options.errorHandler.onTransformError(TransformError(from, message, e))
+                        options.errorHandler.onTransformError(TransformError(source.queue, message, e))
                         failed++
                     }
                 }
