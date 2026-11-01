@@ -816,8 +816,9 @@ false`).
 ## Configuration reference
 
 `Kolbasa` is a **global singleton** — the settings on it are process-wide, shared by every queue, producer, and consumer in the
-JVM. You normally set them once at startup; changing one affects everything. The remaining classes are ordinary per-instance
-options you construct and pass to a specific queue, role, or call.
+JVM. You normally set them once at startup; changing one affects everything. Three of them are only defaults: `asyncExecutor`,
+`tracing` and `prometheusConfig` can also be set in the options of one role, and that role uses its own value. The remaining
+classes are ordinary per-instance options you construct and pass to a specific queue, role, or call.
 
 | Class | Configures | Key fields |
 |---|---|---|
@@ -825,12 +826,12 @@ options you construct and pass to a specific queue, role, or call.
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |
-| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `shard`, `asyncExecutor` |
+| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `shard`, `asyncExecutor`, `tracing`, `prometheusConfig` |
 | `SendOptions` | One `send()` call | per-call overrides of the producer options |
 | `MessageOptions` | One message | per-message `delay`, `attempts` |
-| `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout` |
+| `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout`, `tracing`, `prometheusConfig` |
 | `ReceiveOptions` | One `receive()` call | `consumer`, `filter`, `order`, `visibilityTimeout`, `readMetadata` |
-| `MutatorOptions` | A mutator | `maxMutatedMessagesKeepInMemory` (100), `asyncExecutor` |
+| `MutatorOptions` | A mutator | `maxMutatedMessagesKeepInMemory` (100), `asyncExecutor`, `tracing`, `prometheusConfig` |
 | `SweepConfig` | Sweep behavior | `probability` (0.0001), `maxMessages` (10,000) |
 
 ### The override hierarchy
