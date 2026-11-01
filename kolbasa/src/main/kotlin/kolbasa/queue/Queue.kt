@@ -4,9 +4,6 @@ import kolbasa.Kolbasa
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
-import kolbasa.telemetry.prometheus.EmptyQueueMetrics
-import kolbasa.telemetry.prometheus.PrometheusConfig
-import kolbasa.telemetry.prometheus.PrometheusQueueMetrics
 import kolbasa.telemetry.prometheus.QueueMetrics
 import java.time.Duration
 
@@ -145,17 +142,9 @@ data class Queue<Data> internal constructor(
     else
         null
 
-    internal val queueMetrics: QueueMetrics by lazy {
-        when (val config = Kolbasa.prometheusConfig) {
-            // No Prometheus config - no metrics collection
-            is PrometheusConfig.None -> EmptyQueueMetrics
-
-            // Performance optimization: create all prometheus metrics with correct labels (queue name etc.)
-            // and cache it in the queue object to avoid excessive allocations.
-            // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
-            is PrometheusConfig.Config -> PrometheusQueueMetrics(this, config)
-        }
-    }
+    // Read on every call, so a new Kolbasa.prometheusConfig takes effect at once. The config keeps the metrics
+    internal val queueMetrics: QueueMetrics
+        get() = Kolbasa.prometheusConfig.queueMetrics(this)
 
     /**
      * Builder for flexible [Queue] creation, when only some of the properties need to be set.

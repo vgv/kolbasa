@@ -105,8 +105,25 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testChangeConfig() {
+        val queue = createQueue("metrics_change_config")
+        val producer = DatabaseProducer(dataSource)
+        val mode = "partial_insert_type" to "UNTIL_FIRST_FAILURE"
+
+        producer.send(queue, "first")
+
+        // A new config over a new registry: the next call reports there, the old registry gets nothing more
+        val newRegistry = PrometheusRegistry()
+        Kolbasa.prometheusConfig = PrometheusConfig.Config(registry = newRegistry)
+        producer.send(queue, "second")
+
+        assertEquals(1.0, value("kolbasa_producer_send", queue, mode))
+        assertEquals(1.0, value("kolbasa_producer_send", queue, mode, registry = newRegistry))
+    }
+
+    @Test
     fun testNone() {
-        // Metrics are switched off before the queue is used
+        // Metrics are switched off
         Kolbasa.prometheusConfig = PrometheusConfig.None
         val queue = createQueue("metrics_none")
 
@@ -126,8 +143,13 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     /**
      * Value of a counter or a gauge for [queue], or `null` if the registry has no such value.
      */
-    private fun value(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): Double? {
-        return when (val point = dataPoint(name, queue, *labels)) {
+    private fun value(
+        name: String,
+        queue: Queue<*>,
+        vararg labels: Pair<String, String>,
+        registry: PrometheusRegistry = this.registry
+    ): Double? {
+        return when (val point = dataPoint(registry, name, queue, *labels)) {
             null -> null
             is CounterDataPointSnapshot -> point.value
             is GaugeDataPointSnapshot -> point.value
@@ -138,15 +160,25 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     /**
      * How many values a histogram got for [queue], or `null` if the registry has no such histogram.
      */
-    private fun observations(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): Long? {
-        return when (val point = dataPoint(name, queue, *labels)) {
+    private fun observations(
+        name: String,
+        queue: Queue<*>,
+        vararg labels: Pair<String, String>,
+        registry: PrometheusRegistry = this.registry
+    ): Long? {
+        return when (val point = dataPoint(registry, name, queue, *labels)) {
             null -> null
             is DistributionDataPointSnapshot -> point.count
             else -> error("$name is not a histogram")
         }
     }
 
-    private fun dataPoint(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): DataPointSnapshot? {
+    private fun dataPoint(
+        registry: PrometheusRegistry,
+        name: String,
+        queue: Queue<*>,
+        vararg labels: Pair<String, String>
+    ): DataPointSnapshot? {
         val metric = registry.scrape().find { it.metadata.name == name } ?: return null
         return metric.dataPoints.find { point ->
             point.labels.get("queue") == queue.name && labels.all { (label, value) -> point.labels.get(label) == value }

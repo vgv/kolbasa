@@ -4,7 +4,10 @@ import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
+import kolbasa.queue.Queue
 import kolbasa.telemetry.prometheus.metrics.Const
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * Says whether Kolbasa collects Prometheus metrics, and where it registers them.
@@ -13,8 +16,7 @@ import kolbasa.telemetry.prometheus.metrics.Const
  * counters, queue sizes, message ages, call durations. [None] is the default, so metrics cost you nothing until you
  * ask for them.
  *
- * Set it through [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] at application startup, before you
- * create your queues and start sending. Any later changes will have no effect.
+ * Set it through [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig]. A change takes effect on the next call.
  *
  * ## Usage Example
  *
@@ -34,10 +36,15 @@ import kolbasa.telemetry.prometheus.metrics.Const
  */
 sealed class PrometheusConfig {
 
+    // Metrics of one queue: what every call reports to
+    internal abstract fun queueMetrics(queue: Queue<*>): QueueMetrics
+
     /**
      * No metrics at all: nothing is measured and nothing is registered in any registry.
      */
-    object None : PrometheusConfig()
+    object None : PrometheusConfig() {
+        override fun queueMetrics(queue: Queue<*>): QueueMetrics = EmptyQueueMetrics
+    }
 
     /**
      * Metrics, registered in a Prometheus registry.
@@ -58,11 +65,17 @@ sealed class PrometheusConfig {
 
         /**
          * Prometheus registry. By default, [PrometheusRegistry.defaultRegistry] is used.
-         * You can use your custom registry, but you need to change the registry before any
-         * other queue operations (at application startup, for example).
          */
         val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
     ) : PrometheusConfig() {
+
+        // Performance: all metrics of a queue are made once, with their labels (queue name etc.), and kept here
+        // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
+        private val queues: ConcurrentMap<String, PrometheusQueueMetrics> = ConcurrentHashMap()
+
+        override fun queueMetrics(queue: Queue<*>): QueueMetrics {
+            return queues.computeIfAbsent(queue.name) { PrometheusQueueMetrics(queue, this) }
+        }
 
         // ----------------------------------------------------------------------------
         // Queue metrics
