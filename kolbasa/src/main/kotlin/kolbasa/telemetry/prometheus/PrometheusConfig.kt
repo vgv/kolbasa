@@ -16,7 +16,10 @@ import java.util.concurrent.ConcurrentMap
  * counters, queue sizes, message ages, call durations. [None] is the default, so metrics cost you nothing until you
  * ask for them.
  *
- * Set it through [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig]. A change takes effect on the next call.
+ * Set it for the whole application with [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig], or for one
+ * producer, consumer or mutator in its options, for example
+ * [ProducerOptions.prometheusConfig][kolbasa.producer.ProducerOptions.prometheusConfig]. A change takes effect on
+ * the next call.
  *
  * ## Usage Example
  *
@@ -53,8 +56,8 @@ sealed class PrometheusConfig {
      * is sent. That is a deliberate trade: the work happens once, and reporting a value later costs almost nothing.
      *
      * It also means one such object per registry. A registry refuses a metric name it already holds, so building a
-     * second [Config] over the same registry fails with `duplicate metric name`. Build one, give it to
-     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig], and keep it.
+     * second [Config] over the same registry fails with `duplicate metric name`. Build one per registry and share it
+     * between [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] and all the options that need it.
      */
     data class Config(
         /**

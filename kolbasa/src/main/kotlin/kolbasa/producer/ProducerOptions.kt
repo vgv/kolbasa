@@ -1,6 +1,7 @@
 package kolbasa.producer
 
 import kolbasa.queue.Checks
+import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -179,6 +180,14 @@ data class ProducerOptions(
      * [Kolbasa.tracing][kolbasa.Kolbasa.tracing] will be used.
      */
     val tracing: Tracing? = null,
+
+    /**
+     * Prometheus metrics for this producer. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     *
+     * [PrometheusConfig.None] switches the metrics off for this producer only.
+     */
+    val prometheusConfig: PrometheusConfig? = null,
 ) {
 
     init {
@@ -201,6 +210,7 @@ data class ProducerOptions(
         private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
         private var tracing: Tracing? = null
+        private var prometheusConfig: PrometheusConfig? = null
 
         /**
          * Sets [ProducerOptions.delay] – how long the messages of this producer stay invisible to consumers.
@@ -248,6 +258,11 @@ data class ProducerOptions(
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
         /**
+         * Sets [ProducerOptions.prometheusConfig] – the metrics of this producer, used instead of the global ones.
+         */
+        fun prometheusConfig(prometheusConfig: PrometheusConfig) = apply { this.prometheusConfig = prometheusConfig }
+
+        /**
          * Creates a new [ProducerOptions] instance: a fresh one on every call, nothing is cached or reused.
          */
         fun build() = ProducerOptions(
@@ -259,7 +274,8 @@ data class ProducerOptions(
             partialInsert = partialInsert,
             shard = shard,
             asyncExecutor = asyncExecutor,
-            tracing = tracing
+            tracing = tracing,
+            prometheusConfig = prometheusConfig
         )
     }
 

@@ -61,7 +61,8 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>,
         traceContext: Map<String, String>
     ): SendResult<Data> {
-        val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val approxStatsBytes = BytesCounter(queueMetrics.usePreciseStringSize())
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
         val (execution, result) = TimeHelper.measure {
@@ -81,7 +82,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         }
 
         // Prometheus
-        queue.queueMetrics.producerSendMetrics(
+        queueMetrics.producerSendMetrics(
             nodeId,
             partialInsert,
             allMessages = request.data.size,

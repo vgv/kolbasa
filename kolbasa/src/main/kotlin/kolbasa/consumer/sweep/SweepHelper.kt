@@ -7,6 +7,8 @@ import kolbasa.inspector.connection.ConnectionAwareInspector
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.prometheus.QueueMetrics
 import kolbasa.telemetry.sql.SqlDumpHelper
 import kolbasa.telemetry.sql.StatementKind
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -69,20 +71,39 @@ object SweepHelper {
      *
      * Sweep tries to remove the maximum value from [SweepConfig.maxMessages] or `limit`, whichever is greater.
      *
+     * Its metrics go to the global [Kolbasa.prometheusConfig].
+     *
      * @return how many expired messages were removed
      */
     @JvmStatic
     fun sweep(connection: Connection, queue: Queue<*>, limit: Int): Int {
-        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
+        return sweep(connection, queue, limit, Kolbasa.prometheusConfig)
     }
 
-    internal fun sweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, limit: Int): Int {
+    /**
+     * Runs a sweep for a particular queue, like `sweep(connection, queue, limit)`, but its metrics go to
+     * [prometheusConfig] instead of the global [Kolbasa.prometheusConfig]. [PrometheusConfig.None] switches them off.
+     *
+     * @return how many expired messages were removed
+     */
+    @JvmStatic
+    fun sweep(connection: Connection, queue: Queue<*>, limit: Int, prometheusConfig: PrometheusConfig): Int {
+        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit, prometheusConfig.queueMetrics(queue))
+    }
+
+    internal fun sweep(
+        connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
+        limit: Int,
+        queueMetrics: QueueMetrics
+    ): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Calculate how much messages to sweep
         val messagesToSweep = max(limit, sweepConfig.maxMessages)
 
-        return rawSweep(connection, queue, nodeId, messagesToSweep)
+        return rawSweep(connection, queue, nodeId, messagesToSweep, queueMetrics)
     }
 
     internal fun needSweep(): Boolean {
@@ -98,7 +119,13 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, maxMessages: Int): Int {
+    private fun rawSweep(
+        connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
+        maxMessages: Int,
+        queueMetrics: QueueMetrics
+    ): Int {
         val deadLetterQueue = queue.deadLetterQueue
 
         val sweepQuery = if (deadLetterQueue != null) {
@@ -125,7 +152,7 @@ object SweepHelper {
         SqlDumpHelper.dumpQuery(queue, statementKind, sweepQuery, execution, removedMessages)
 
         // Prometheus
-        queue.queueMetrics.sweepMetrics(
+        queueMetrics.sweepMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,
             executionNanos = execution.durationNanos,

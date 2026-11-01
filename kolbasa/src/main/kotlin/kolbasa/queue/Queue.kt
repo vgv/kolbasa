@@ -1,10 +1,8 @@
 package kolbasa.queue
 
-import kolbasa.Kolbasa
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.Const
-import kolbasa.telemetry.prometheus.QueueMetrics
 import java.time.Duration
 
 /**
@@ -141,10 +139,6 @@ data class Queue<Data> internal constructor(
         createCompanionQueue(this, QueueRole.ARCHIVE, Const.ARCHIVE_TABLE_NAME_SUFFIX)
     else
         null
-
-    // Read on every call, so a new Kolbasa.prometheusConfig takes effect at once. The config keeps the metrics
-    internal val queueMetrics: QueueMetrics
-        get() = Kolbasa.prometheusConfig.queueMetrics(this)
 
     /**
      * Builder for flexible [Queue] creation, when only some of the properties need to be set.

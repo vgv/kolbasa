@@ -1,6 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.queue.Checks
+import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
 
@@ -89,6 +90,14 @@ data class ConsumerOptions(
     val tracing: Tracing? = null,
 
     /**
+     * Prometheus metrics for this consumer, and for the sweeps it runs. By default, the value is unspecified (null),
+     * meaning that global [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     *
+     * [PrometheusConfig.None] switches the metrics off for this consumer only.
+     */
+    val prometheusConfig: PrometheusConfig? = null,
+
+    /**
      * What to do with a received message that can't be read. By default, a warning goes to the log and the message
      * is skipped, see [ReadErrorHandler.SYSTEM_LOG].
      */
@@ -107,6 +116,7 @@ data class ConsumerOptions(
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
         private var tracing: Tracing? = null
+        private var prometheusConfig: PrometheusConfig? = null
         private var readErrorHandler: ReadErrorHandler = ReadErrorHandler.SYSTEM_LOG
 
         /**
@@ -125,6 +135,11 @@ data class ConsumerOptions(
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
         /**
+         * Sets [ConsumerOptions.prometheusConfig] – the metrics of this consumer, used instead of the global ones.
+         */
+        fun prometheusConfig(prometheusConfig: PrometheusConfig) = apply { this.prometheusConfig = prometheusConfig }
+
+        /**
          * Sets [ConsumerOptions.readErrorHandler] – what to do with a received message that can't be read.
          */
         fun readErrorHandler(readErrorHandler: ReadErrorHandler) = apply { this.readErrorHandler = readErrorHandler }
@@ -132,7 +147,7 @@ data class ConsumerOptions(
         /**
          * Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused.
          */
-        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, readErrorHandler)
+        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, prometheusConfig, readErrorHandler)
     }
 
     companion object {

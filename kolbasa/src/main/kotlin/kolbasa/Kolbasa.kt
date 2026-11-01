@@ -63,7 +63,12 @@ object Kolbasa {
     var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
 
     /**
-     * Prometheus metrics configuration. The default, [PrometheusConfig.None], collects nothing.
+     * Prometheus metrics for every producer, consumer and mutator that doesn't set its own in
+     * [ProducerOptions.prometheusConfig][kolbasa.producer.ProducerOptions.prometheusConfig],
+     * [ConsumerOptions.prometheusConfig][kolbasa.consumer.ConsumerOptions.prometheusConfig] or
+     * [MutatorOptions.prometheusConfig][kolbasa.mutator.MutatorOptions.prometheusConfig].
+     *
+     * The default, [PrometheusConfig.None], collects nothing.
      *
      * Read on every call of a producer, consumer or mutator, and on every sweep, so a change takes effect on the
      * next call.

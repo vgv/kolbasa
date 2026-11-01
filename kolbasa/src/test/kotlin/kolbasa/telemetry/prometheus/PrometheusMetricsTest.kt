@@ -6,9 +6,13 @@ import io.prometheus.metrics.model.snapshots.DataPointSnapshot
 import io.prometheus.metrics.model.snapshots.DistributionDataPointSnapshot
 import io.prometheus.metrics.model.snapshots.GaugeSnapshot.GaugeDataPointSnapshot
 import kolbasa.Kolbasa
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.consumer.sweep.SweepHelper
+import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.datasource.DatabaseMutator
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
@@ -105,6 +109,20 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testSweep_OwnConfig() {
+        val queue = createQueue("metrics_sweep_own_config")
+
+        // A sweep by hand, with its own config over its own registry
+        val ownRegistry = PrometheusRegistry()
+        val config = PrometheusConfig.Config(registry = ownRegistry)
+        dataSource.inTransaction { connection -> SweepHelper.sweep(connection, queue, 100, config) }
+
+        // Its own registry gets the sweep, the global one gets nothing
+        assertEquals(1.0, value("kolbasa_sweep", queue, registry = ownRegistry))
+        assertNull(value("kolbasa_sweep", queue))
+    }
+
+    @Test
     fun testChangeConfig() {
         val queue = createQueue("metrics_change_config")
         val producer = DatabaseProducer(dataSource)
@@ -135,6 +153,76 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
 
         // The registry has the metric, but nothing for this queue
         assertNull(value("kolbasa_producer_send", queue, "partial_insert_type" to "UNTIL_FIRST_FAILURE"))
+    }
+
+    @Test
+    fun testProducerOptions() {
+        val queue = createQueue("metrics_producer_options")
+        val mode = "partial_insert_type" to "UNTIL_FIRST_FAILURE"
+
+        // The producer has its own config over its own registry
+        val ownRegistry = PrometheusRegistry()
+        val options = ProducerOptions(prometheusConfig = PrometheusConfig.Config(registry = ownRegistry))
+        DatabaseProducer(dataSource, options).send(queue, "first")
+
+        // Its own registry gets the call, the global one gets nothing
+        assertEquals(1.0, value("kolbasa_producer_send", queue, mode, registry = ownRegistry))
+        assertNull(value("kolbasa_producer_send", queue, mode))
+    }
+
+    @Test
+    fun testProducerOptions_None() {
+        val queue = createQueue("metrics_producer_none")
+
+        // The global config is on, but this producer switches the metrics off
+        val options = ProducerOptions(prometheusConfig = PrometheusConfig.None)
+        DatabaseProducer(dataSource, options).send(queue, "first")
+
+        assertNull(value("kolbasa_producer_send", queue, "partial_insert_type" to "UNTIL_FIRST_FAILURE"))
+    }
+
+    @Test
+    fun testConsumerOptions() {
+        val queue = createQueue("metrics_consumer_options")
+        DatabaseProducer(dataSource).send(queue, "first")
+
+        // The consumer has its own config over its own registry
+        val ownRegistry = PrometheusRegistry()
+        val options = ConsumerOptions(prometheusConfig = PrometheusConfig.Config(registry = ownRegistry))
+        val consumer = DatabaseConsumer(dataSource, options)
+
+        // A sweep on every receive: it reports to the consumer's config too
+        val sweepConfig = Kolbasa.sweepConfig
+        Kolbasa.sweepConfig = SweepConfig(probability = SweepConfig.SWEEP_IS_ALWAYS_ON)
+        try {
+            consumer.delete(queue, consumer.receive(queue, limit = 1))
+        } finally {
+            Kolbasa.sweepConfig = sweepConfig
+        }
+
+        // Its own registry gets the calls, the global one gets nothing
+        assertEquals(1.0, value("kolbasa_consumer_receive", queue, registry = ownRegistry))
+        assertEquals(1.0, value("kolbasa_consumer_delete", queue, registry = ownRegistry))
+        assertEquals(1.0, value("kolbasa_sweep", queue, registry = ownRegistry))
+        assertNull(value("kolbasa_consumer_receive", queue))
+        assertNull(value("kolbasa_consumer_delete", queue))
+        assertNull(value("kolbasa_sweep", queue))
+    }
+
+    @Test
+    fun testMutatorOptions() {
+        val queue = createQueue("metrics_mutator_options")
+        val id = DatabaseProducer(dataSource).send(queue, "first").onlySuccessful().single().id
+
+        // The mutator has its own config over its own registry
+        val ownRegistry = PrometheusRegistry()
+        val options = MutatorOptions(prometheusConfig = PrometheusConfig.Config(registry = ownRegistry))
+        DatabaseMutator(dataSource, options).addRemainingAttempts(queue, 1, id)
+
+        // Its own registry gets the call, the global one gets nothing
+        val byId = "type" to "by_id"
+        assertEquals(1.0, value("kolbasa_mutator_mutate", queue, byId, registry = ownRegistry))
+        assertNull(value("kolbasa_mutator_mutate", queue, byId))
     }
 
     private fun createQueue(name: String): Queue<String> {

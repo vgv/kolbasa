@@ -1,5 +1,6 @@
 package kolbasa.mutator
 
+import kolbasa.telemetry.prometheus.PrometheusConfig
 import java.util.concurrent.ExecutorService
 
 /**
@@ -51,6 +52,14 @@ data class MutatorOptions(
      * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
      */
     val asyncExecutor: ExecutorService? = null,
+
+    /**
+     * Prometheus metrics for this mutator. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     *
+     * [PrometheusConfig.None] switches the metrics off for this mutator only.
+     */
+    val prometheusConfig: PrometheusConfig? = null,
 ) {
 
     /**
@@ -59,6 +68,7 @@ data class MutatorOptions(
     class Builder {
         private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
         private var asyncExecutor: ExecutorService? = null
+        private var prometheusConfig: PrometheusConfig? = null
 
         /**
          * Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry.
@@ -75,12 +85,20 @@ data class MutatorOptions(
         }
 
         /**
+         * Sets [MutatorOptions.prometheusConfig] – the metrics of this mutator, used instead of the global ones.
+         */
+        fun prometheusConfig(value: PrometheusConfig) = apply {
+            this.prometheusConfig = value
+        }
+
+        /**
          * Creates a new [MutatorOptions] instance: a fresh one on every call, nothing is cached or reused.
          */
         fun build(): MutatorOptions {
             return MutatorOptions(
                 maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
-                asyncExecutor = asyncExecutor
+                asyncExecutor = asyncExecutor,
+                prometheusConfig = prometheusConfig
             )
         }
     }
