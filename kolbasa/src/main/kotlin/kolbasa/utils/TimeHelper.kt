@@ -19,19 +19,21 @@ internal object TimeHelper {
 
     fun generatePostgreSQLInterval(duration: Duration): String {
         // PostgreSQL versions 10, 11, 12, 13 and 14 support only int values in 'interval' expressions
-        // interval 'N millisecond' ==> N must be less than or equal to Int.MAX_VALUE
+        // interval 'N millisecond' ==> N must be between Int.MIN_VALUE and Int.MAX_VALUE
         // PostgreSQL 15+ works well with long values, so when the least supported PG version
         // will be 15 or higher this function can be removed completely
+        // The unit is chosen by the length, so that a negative duration (the mutator allows them) fits too
+        val length = duration.abs()
         return when {
-            duration <= MAX_MILLIS -> {
+            length <= MAX_MILLIS -> {
                 "interval '${duration.toMillis()} millisecond'"
             }
 
-            duration <= MAX_SECONDS -> {
+            length <= MAX_SECONDS -> {
                 "interval '${duration.toSeconds()} second'"
             }
 
-            duration <= MAX_MINUTES -> {
+            length <= MAX_MINUTES -> {
                 "interval '${duration.toMinutes()} minute'"
             }
 

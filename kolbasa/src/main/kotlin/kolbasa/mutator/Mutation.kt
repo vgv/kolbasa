@@ -24,6 +24,8 @@ data class SetRemainingAttempts(val newValue: Int) : Mutation, MutationField.Rem
 /**
  * Adds `delta` to the current visibility timeout of the messages
  *
+ * `delta` can be negative: the messages become visible earlier.
+ *
  * SQL: `scheduled_at = scheduled_at + delta`
  */
 data class AddScheduledAt(val delta: Duration) : Mutation, MutationField.ScheduledAtField
