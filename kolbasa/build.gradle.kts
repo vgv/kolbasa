@@ -28,6 +28,8 @@ dependencies {
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
     // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
+    // Prometheus is compileOnly above, so the metrics tests need it on their own classpath
+    testImplementation(libs.prometheus.metrics.core)
 }
 
 // Kotlin settings
