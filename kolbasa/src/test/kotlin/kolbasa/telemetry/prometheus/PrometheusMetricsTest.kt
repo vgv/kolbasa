@@ -2,6 +2,7 @@ package kolbasa.telemetry.prometheus
 
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.model.snapshots.CounterSnapshot.CounterDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.DataPointSnapshot
 import io.prometheus.metrics.model.snapshots.DistributionDataPointSnapshot
 import io.prometheus.metrics.model.snapshots.GaugeSnapshot.GaugeDataPointSnapshot
 import kolbasa.Kolbasa
@@ -51,7 +52,7 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
         assertEquals(1.0, value("kolbasa_producer_send", queue, mode))
         assertEquals(2.0, value("kolbasa_producer_send_messages", queue, mode))
         assertEquals(0.0, value("kolbasa_producer_send_messages_failed", queue, mode))
-        assertEquals(1.0, value("kolbasa_producer_send_duration_seconds", queue, mode))
+        assertEquals(1L, observations("kolbasa_producer_send_duration_seconds", queue, mode))
         assertPositive(value("kolbasa_producer_send_bytes", queue, mode))
 
         // Queue gauges are read from the database: on the first call, then once a minute
@@ -70,12 +71,12 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
         assertEquals(1.0, value("kolbasa_consumer_receive", queue))
         assertEquals(2.0, value("kolbasa_consumer_receive_messages", queue))
         assertEquals(0.0, value("kolbasa_consumer_receive_messages_unreadable", queue))
-        assertEquals(1.0, value("kolbasa_consumer_receive_duration_seconds", queue))
+        assertEquals(1L, observations("kolbasa_consumer_receive_duration_seconds", queue))
         assertPositive(value("kolbasa_consumer_receive_bytes", queue))
 
         assertEquals(1.0, value("kolbasa_consumer_delete", queue))
         assertEquals(2.0, value("kolbasa_consumer_delete_messages", queue))
-        assertEquals(1.0, value("kolbasa_consumer_delete_duration_seconds", queue))
+        assertEquals(1L, observations("kolbasa_consumer_delete_duration_seconds", queue))
     }
 
     @Test
@@ -88,7 +89,7 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
         val byId = "type" to "by_id"
         assertEquals(1.0, value("kolbasa_mutator_mutate", queue, byId))
         assertEquals(1.0, value("kolbasa_mutator_mutated_messages", queue, byId))
-        assertEquals(1.0, value("kolbasa_mutator_mutate_duration_seconds", queue, byId))
+        assertEquals(1L, observations("kolbasa_mutator_mutate_duration_seconds", queue, byId))
     }
 
     @Test
@@ -100,7 +101,7 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
 
         assertEquals(1.0, value("kolbasa_sweep", queue))
         assertEquals(0.0, value("kolbasa_sweep_removed_messages", queue))
-        assertEquals(1.0, value("kolbasa_sweep_duration_seconds", queue))
+        assertEquals(1L, observations("kolbasa_sweep_duration_seconds", queue))
     }
 
     @Test
@@ -123,21 +124,32 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     }
 
     /**
-     * Value of one metric for [queue], or `null` if the registry has no such value.
-     *
-     * For a counter or a gauge it is the value itself, for a histogram it is the number of observations.
+     * Value of a counter or a gauge for [queue], or `null` if the registry has no such value.
      */
     private fun value(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): Double? {
-        val metric = registry.scrape().find { it.metadata.name == name } ?: return null
-        val point = metric.dataPoints.find { point ->
-            point.labels.get("queue") == queue.name && labels.all { (label, value) -> point.labels.get(label) == value }
-        } ?: return null
-
-        return when (point) {
+        return when (val point = dataPoint(name, queue, *labels)) {
+            null -> null
             is CounterDataPointSnapshot -> point.value
             is GaugeDataPointSnapshot -> point.value
-            is DistributionDataPointSnapshot -> point.count.toDouble()
-            else -> error("Unexpected data point type: ${point::class}")
+            else -> error("$name is not a counter or a gauge")
+        }
+    }
+
+    /**
+     * How many values a histogram got for [queue], or `null` if the registry has no such histogram.
+     */
+    private fun observations(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): Long? {
+        return when (val point = dataPoint(name, queue, *labels)) {
+            null -> null
+            is DistributionDataPointSnapshot -> point.count
+            else -> error("$name is not a histogram")
+        }
+    }
+
+    private fun dataPoint(name: String, queue: Queue<*>, vararg labels: Pair<String, String>): DataPointSnapshot? {
+        val metric = registry.scrape().find { it.metadata.name == name } ?: return null
+        return metric.dataPoints.find { point ->
+            point.labels.get("queue") == queue.name && labels.all { (label, value) -> point.labels.get(label) == value }
         }
     }
 
