@@ -13,8 +13,6 @@ internal class CommonQueueMetrics(
     prometheusConfig: PrometheusConfig.Config
 ) {
 
-    val cacheKey = "$queueName-$nodeId"
-
     fun queueMetrics(
         messages: Messages,
         queueSizeBytes: Long,

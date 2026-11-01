@@ -24,6 +24,9 @@ internal class PrometheusQueueMetrics(
     private val sweep: ConcurrentMap<NodeId, SweepQueueMetrics> = ConcurrentHashMap()
     private val mutator: ConcurrentMap<NodeId, MutatorQueueMetrics> = ConcurrentHashMap()
 
+    // When the queue gauges were last read from the database, for every node
+    private val lastUpdate: ConcurrentMap<NodeId, UpdateInfo> = ConcurrentHashMap()
+
     override fun usePreciseStringSize(): Boolean {
         return prometheusConfig.preciseStringSize
     }
@@ -147,7 +150,7 @@ internal class PrometheusQueueMetrics(
             CommonQueueMetrics(queueName, nodeId, prometheusConfig)
         }
 
-        val lastUpdateInfo = lastUpdateCache.computeIfAbsent(commonQueueMetrics.cacheKey) { UpdateInfo() }
+        val lastUpdateInfo = lastUpdate.computeIfAbsent(nodeId) { UpdateInfo() }
         if (lastUpdateInfo.isOutdated()) {
             // time to update the common metrics, only one thread should do it
             if (lastUpdateInfo.tryLock()) {
@@ -187,7 +190,6 @@ internal class PrometheusQueueMetrics(
         }
 
         val inspector = ConnectionAwareDatabaseInspector()
-        val lastUpdateCache: ConcurrentMap<String, UpdateInfo> = ConcurrentHashMap()
     }
 }
 

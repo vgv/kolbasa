@@ -119,6 +119,10 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
 
         assertEquals(1.0, value("kolbasa_producer_send", queue, mode))
         assertEquals(1.0, value("kolbasa_producer_send", queue, mode, registry = newRegistry))
+
+        // Each config reads the queue gauges on its own first call, so both registries have them
+        assertPositive(value("kolbasa_queue_size", queue))
+        assertPositive(value("kolbasa_queue_size", queue, registry = newRegistry))
     }
 
     @Test
@@ -133,7 +137,6 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
         assertNull(value("kolbasa_producer_send", queue, "partial_insert_type" to "UNTIL_FIRST_FAILURE"))
     }
 
-    // Every test uses its own queue name: the once-a-minute gauge refresh is remembered per queue name for the whole JVM
     private fun createQueue(name: String): Queue<String> {
         val queue = Queue.of(name, PredefinedDataTypes.String)
         SchemaHelpers.createOrUpdateQueues(dataSource, queue)
