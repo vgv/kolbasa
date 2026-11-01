@@ -6,6 +6,8 @@ import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.SchemaHelpers
+import kolbasa.worker.pipe.PipeSource
+import kolbasa.worker.pipe.PipeTarget
 import kolbasa.worker.pipe.QueuePipe
 
 fun main() {
@@ -31,12 +33,9 @@ fun main() {
     // sends the whole batch in one call and deletes it from the source queue. Run it next to the source queue: then
     // only the send goes to the far server.
     // If you don't need to change the messages, use QueuePipe.asIs: it moves them without even reading the data
-    val pipe = QueuePipe.map(
-        from = sourceQueue,
-        consumer = DatabaseConsumer(sourceDataSource),
-        to = targetQueue,
-        producer = DatabaseProducer(targetDataSource)
-    ) { message ->
+    val source = PipeSource(sourceQueue, DatabaseConsumer(sourceDataSource))
+    val target = PipeTarget(targetQueue, DatabaseProducer(targetDataSource))
+    val pipe = QueuePipe.map(source, target) { message ->
         SendMessage(message.data.uppercase())
     }
 

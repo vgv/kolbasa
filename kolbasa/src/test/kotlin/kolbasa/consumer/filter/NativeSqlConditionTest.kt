@@ -7,6 +7,7 @@ import kolbasa.queue.meta.MetaField
 import kolbasa.utils.ColumnIndex
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.sql.PreparedStatement
 
 class NativeSqlConditionTest {
@@ -17,7 +18,7 @@ class NativeSqlConditionTest {
     @Test
     fun testToSql() {
         val nativeExpression = NativeSqlCondition(
-            sqlPattern = "({0} like ''a%'') or ({0} like ''b%'') and {1} is null and {2} is null",
+            sqlPattern = "({0} like 'a%') or ({0} like 'b%') and {1} is null and {2} is null",
             fields = listOf(stringField, intField, stringField)
         )
 
@@ -26,6 +27,35 @@ class NativeSqlConditionTest {
             "(meta_string_value like 'a%') or (meta_string_value like 'b%') and meta_int_value is null and meta_string_value is null",
             sql
         )
+    }
+
+    /**
+     * Only `{N}` placeholders are replaced. A quote doubled inside a literal and braces that aren't a placeholder go
+     * into SQL as written.
+     */
+    @Test
+    fun testToSql_KeepsTheRestAsWritten() {
+        val nativeExpression = NativeSqlCondition(
+            sqlPattern = "{0} = 'it''s' and {1} = any('{1,2}'::int[]) and {0} <> '{x}'",
+            fields = listOf(stringField, intField)
+        )
+
+        val sql = nativeExpression.toSqlClause()
+        assertEquals(
+            "meta_string_value = 'it''s' and meta_int_value = any('{1,2}'::int[]) and meta_string_value <> '{x}'",
+            sql
+        )
+    }
+
+    /**
+     * A placeholder without a field fails at once, when the condition is created, not later in PostgreSQL.
+     */
+    @Test
+    fun testToSql_PlaceholderWithoutField() {
+        val exception = assertThrows<IllegalArgumentException> {
+            NativeSqlCondition(sqlPattern = "{0} = {2}", fields = listOf(stringField, intField))
+        }
+        assertEquals("Pattern '{0} = {2}' has {2}, but there are only 2 fields", exception.message)
     }
 
     @Test

@@ -288,7 +288,7 @@ object Filter {
      *
      * This expression will be converted into this SQL expression:
      * ```sql
-     * sin(meta_field_1) > 0.7 and meta_field_2 * meta_field_2>1000
+     * sin(meta_field_1) > 0.7 and meta_field_2*meta_field_2>1000
      * ```
      *
      * FIELD_1 and FIELD_2 are just a meta-fields, declared something like this
@@ -297,7 +297,10 @@ object Filter {
      * val FIELD_2 = MetaField.ofLong("field_2")
      * ```
      *
-     * Pattern format rules are the same as in [java.text.MessageFormat].
+     * `{0}`, `{1}` and so on are replaced with the columns of the fields, by their position in [fields]. Nothing else
+     * in the pattern is changed: quotes, braces and the rest go into SQL as written. So a string literal is written as
+     * usual, for example `nativeSql("{0}::text like '1%'", FIELD_2)`. A placeholder without a field, for example `{2}`
+     * with two fields, throws [IllegalArgumentException].
      *
      * Use it with caution, because it's not type-safe.
      * You can easily make a mistake in the SQL pattern or even introduce a SQL injection vulnerability.

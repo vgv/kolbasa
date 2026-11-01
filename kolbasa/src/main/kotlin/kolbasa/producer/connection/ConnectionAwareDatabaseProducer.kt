@@ -101,21 +101,28 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>,
         traceContext: Map<String, String>
     ): SendResult<Data> {
-        val result = ArrayList<MessageResult<Data>>(request.data.size)
         val chunkSize = ProducerSchemaHelpers.calculateChunkSize(options, request.options)
 
-        request.chunked(chunkSize).forEach { chunk ->
-            try {
+        // All chunks or none. On any error, in PostgreSQL or outside it, for example in the serializer, the savepoint
+        // takes back everything inserted. The transaction stays alive and holds none of these messages, so the caller
+        // decides whether to commit or roll back
+        val sent = connection.useSavepoint { _ ->
+            val result = ArrayList<MessageResult<Data>>(request.data.size)
+            request.chunked(chunkSize).forEach { chunk ->
                 result += executeChunk(connection, queue, approxStatsBytes, chunk, traceContext)
-            } catch (e: Exception) {
-                // just stop all sequence execution and return the result
-                // all messages were failed
-                return SendResult(failedMessages = request.data.size, listOf(MessageResult.Error(e, request.data)))
             }
+            result
         }
 
-        // everything is ok, all chunks were inserted without any issues
-        return SendResult(failedMessages = 0, result)
+        return sent.fold(
+            onSuccess = { result ->
+                SendResult(failedMessages = 0, result)
+            },
+            onFailure = { e ->
+                // Nothing is saved, all messages failed
+                SendResult(failedMessages = request.data.size, listOf(MessageResult.Error(e, request.data)))
+            }
+        )
     }
 
     private fun <Data> sendUntilFirstFailure(

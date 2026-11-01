@@ -11,7 +11,7 @@ import kolbasa.queue.Checks
  * ```kotlin
  * val options = QueuePipeOptions(receiveLimit = 500)
  *
- * val pipe = QueuePipe.map(from, consumer, to, producer, options) { message ->
+ * val pipe = QueuePipe.map(source, target, options) { message ->
  *     SendMessage(message.data)
  * }
  * ```
@@ -23,7 +23,7 @@ import kolbasa.queue.Checks
  *     .receiveLimit(500)
  *     .build();
  *
- * var pipe = QueuePipe.map(from, consumer, to, producer, options, message -> {
+ * var pipe = QueuePipe.map(source, target, options, message -> {
  *     return new SendMessage<>(message.getData());
  * });
  * ```

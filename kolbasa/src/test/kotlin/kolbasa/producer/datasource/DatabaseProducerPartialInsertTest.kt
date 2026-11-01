@@ -5,6 +5,8 @@ import kolbasa.producer.MessageResult
 import kolbasa.producer.PartialInsert
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
+import kolbasa.queue.DatabaseQueueDataType
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.meta.FieldOption
@@ -13,6 +15,7 @@ import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
 import kolbasa.schema.IdRange
 import kolbasa.schema.SchemaHelpers
+import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readInt
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -53,11 +56,29 @@ class DatabaseProducerPartialInsertTest : AbstractPostgreSQLTest() {
     )
     private val items = first + second + third
 
+    // The serializer fails on "boom", outside PostgreSQL
+    private val failingQueue = Queue(
+        name = "failing_serializer",
+        databaseDataType = DatabaseQueueDataType.Text(
+            serializer = { data: String -> if (data == "boom") error("Can't write '$data'") else data },
+            deserializer = { data: String -> data }
+        )
+    )
+
     @BeforeEach
     fun before() {
-        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue, failingQueue)
     }
 
+    /**
+     * PROHIBITED: one bad chunk fails the whole send, and nothing is saved.
+     *
+     * 15 messages go in 3 chunks of 5. The second chunk repeats the unique field value 2 from the first chunk. A
+     * duplicate is an error by default, so PostgreSQL rejects the second chunk. By then the first chunk is already
+     * inserted, and the savepoint takes it back. The third chunk is never sent.
+     *
+     * Expected: all 15 messages failed, in one error with its cause, and the table is empty.
+     */
     @Test
     fun testSend_PartialInsert_Prohibited() {
         val producer = DatabaseProducer(
@@ -80,6 +101,112 @@ class DatabaseProducerPartialInsertTest : AbstractPostgreSQLTest() {
         assertEquals(0, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
+    /**
+     * PROHIBITED, an error outside PostgreSQL: nothing is saved either.
+     *
+     * 3 messages, one per chunk. The first chunk is inserted. Then the serializer of the queue throws on "boom", before
+     * the second chunk reaches PostgreSQL. PostgreSQL sees no error, so the transaction stays alive, and
+     * [DatabaseProducer] commits it. Only the savepoint takes the first chunk back.
+     *
+     * Expected: all 3 messages failed, and the table is empty.
+     */
+    @Test
+    fun testSend_PartialInsert_Prohibited_SerializerFails() {
+        assertSerializerFailureSavesNothing(chunkSize = 1)
+    }
+
+    /**
+     * The same as [testSend_PartialInsert_Prohibited_SerializerFails], but all 3 messages go in one chunk.
+     *
+     * The serializer throws while the INSERT is being prepared, so nothing reaches PostgreSQL at all.
+     *
+     * Expected: all 3 messages failed, and the table is empty.
+     */
+    @Test
+    fun testSend_PartialInsert_Prohibited_SerializerFails_OneChunk() {
+        assertSerializerFailureSavesNothing(chunkSize = 5)
+    }
+
+    private fun assertSerializerFailureSavesNothing(chunkSize: Int) {
+        val producer = DatabaseProducer(
+            dataSource,
+            ProducerOptions(chunkSize = chunkSize, partialInsert = PartialInsert.PROHIBITED)
+        )
+        val messages = listOf(SendMessage("first"), SendMessage("boom"), SendMessage("third"))
+
+        val result = producer.send(failingQueue, messages)
+
+        assertEquals(messages.size, result.failedMessages) // all messages failed
+        assertEquals(messages, result.gatherFailedMessages())
+
+        // check database: the first message isn't saved either
+        assertEquals(0, dataSource.readInt("select count(*) from ${failingQueue.dbTableName}"))
+    }
+
+    /**
+     * PROHIBITED in your own transaction, an error outside PostgreSQL: the transaction stays alive and clean.
+     *
+     * [ConnectionAwareDatabaseProducer], one message per chunk. "first" is inserted, then the serializer throws on
+     * "boom", and the savepoint takes "first" back. After that, a good message is sent in the same transaction, and the
+     * transaction is committed.
+     *
+     * Expected: the send failed, and the table holds only the good message. So the transaction was alive, and "first"
+     * wasn't in it.
+     */
+    @Test
+    fun testSend_PartialInsert_Prohibited_OwnTransaction_SerializerFails() {
+        val failing = listOf(SendMessage("first"), SendMessage("boom"))
+        assertOwnTransactionStaysClean(failingQueue, failing, SendMessage("good"), chunkSize = 1)
+    }
+
+    /**
+     * PROHIBITED in your own transaction, an error in PostgreSQL: the transaction stays alive too.
+     *
+     * [ConnectionAwareDatabaseProducer], 6 messages in one chunk. The last one repeats the unique field value 1, so
+     * PostgreSQL rejects the INSERT. Without the savepoint, PostgreSQL would abort the whole transaction: every later
+     * statement would fail, and the commit would turn into a rollback. With it, a good message is sent in the same
+     * transaction, and the transaction is committed.
+     *
+     * Expected: the send failed, and the table holds only the good message.
+     */
+    @Test
+    fun testSend_PartialInsert_Prohibited_OwnTransaction_SqlFails() {
+        val failing = first + SendMessage("bugaga", MetaValues.of(FIELD.value(1)))
+        val good = SendMessage("good", MetaValues.of(FIELD.value(100)))
+        assertOwnTransactionStaysClean(queue, failing, good, chunkSize = 500)
+    }
+
+    private fun <Data> assertOwnTransactionStaysClean(
+        queue: Queue<Data>,
+        failing: List<SendMessage<Data>>,
+        good: SendMessage<Data>,
+        chunkSize: Int
+    ) {
+        val producer = ConnectionAwareDatabaseProducer(
+            ProducerOptions(chunkSize = chunkSize, partialInsert = PartialInsert.PROHIBITED)
+        )
+
+        dataSource.inTransaction { connection ->
+            val result = producer.send(connection, queue, failing)
+            assertEquals(failing.size, result.failedMessages) // all messages failed
+
+            // The transaction is alive and holds none of the failed messages, so it can go on and commit
+            assertEquals(0, producer.send(connection, queue, good).failedMessages)
+        }
+
+        // check database: only the message sent after the failure
+        assertEquals(1, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
+    }
+
+    /**
+     * UNTIL_FIRST_FAILURE: the chunks before the bad one are saved, the bad one and all after it fail.
+     *
+     * The same 15 messages as in [testSend_PartialInsert_Prohibited], in 3 chunks of 5. The first chunk is saved.
+     * PostgreSQL rejects the second one, and its savepoint takes it back. The third chunk is fine, but it isn't sent.
+     *
+     * Expected: the first 5 messages are sent, with ids in send order. The other 10 failed, in one error. The table has
+     * 5 rows.
+     */
     @Test
     fun testSend_PartialInsert_UntilFirstFailure() {
         val producer = DatabaseProducer(
@@ -110,6 +237,16 @@ class DatabaseProducerPartialInsertTest : AbstractPostgreSQLTest() {
         assertEquals(5, dataSource.readInt("select count(*) from ${queue.dbTableName}"))
     }
 
+    /**
+     * INSERT_AS_MANY_AS_POSSIBLE: only the bad chunk fails, the chunks before and after it are saved.
+     *
+     * The same 15 messages as in [testSend_PartialInsert_Prohibited], in 3 chunks of 5. The first chunk is saved.
+     * PostgreSQL rejects the second one, and its savepoint takes it back. The third chunk is saved too.
+     *
+     * Expected: 10 messages are sent, the 5 of the second chunk failed, in one error. The table has 10 rows. The ids
+     * of the third chunk start at 8, not at 5: a rollback doesn't give sequence values back, and the rejected chunk
+     * used up 3 of them before PostgreSQL hit the duplicate.
+     */
     @Test
     fun testSend_PartialInsert_AsManyAsPossible() {
         val producer = DatabaseProducer(

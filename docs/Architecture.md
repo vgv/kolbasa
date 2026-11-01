@@ -564,8 +564,9 @@ try {
         stmt.executeUpdate()
     }
 
-    // enqueue the post-payment work for this order on the SAME connection
-    producer.send(connection, ordersQueue, orderId)
+    // enqueue the post-payment work for this order on the SAME connection;
+    // throwExceptionIfAny() turns a failed send into an exception, so the payment is rolled back too
+    producer.send(connection, ordersQueue, orderId).throwExceptionIfAny()
 
     connection.commit() // the status change and the queued job commit together
 } catch (e: Exception) {
@@ -575,6 +576,11 @@ try {
     connection.close()
 }
 ```
+
+**Check the result of `send()`.** It doesn't throw when a message can't be sent: it returns a `SendResult`. The failed
+messages are rolled back to a savepoint, so your transaction stays alive and holds none of them. What to do next is your
+call. In the example above, `throwExceptionIfAny()` rolls back the payment too. Without it, the payment would be
+committed without its job.
 
 The same idea works with an ORM that exposes its connection — e.g. Hibernate's `session.doWork { connection -> … }` or a Spring
 `@Transactional` method — so the message rides along with whatever transaction your framework is already managing.
