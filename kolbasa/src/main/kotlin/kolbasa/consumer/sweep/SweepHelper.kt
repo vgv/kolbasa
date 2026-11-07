@@ -149,7 +149,7 @@ object SweepHelper {
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, statementKind, sweepQuery, execution, removedMessages)
+        SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, sweepQuery, execution, removedMessages)
 
         // Prometheus
         queueMetrics.sweepMetrics(
@@ -164,10 +164,10 @@ object SweepHelper {
             val dlqOpts = queue.options.dlqOptions
                 ?: error("DLQ queue exists but dlqOptions is null, queue: $queue")
 
-            retentionCleanupByDate(connection, deadLetterQueue, dlqOpts.retention)
+            retentionCleanupByDate(connection, queue, nodeId, deadLetterQueue, dlqOpts.retention)
 
             if (dlqOpts.maxMessages != null) {
-                retentionCleanupByMaxMessages(connection, deadLetterQueue, dlqOpts.maxMessages)
+                retentionCleanupByMaxMessages(connection, queue, nodeId, deadLetterQueue, dlqOpts.maxMessages)
             }
         }
 
@@ -177,10 +177,10 @@ object SweepHelper {
             val arcOpts = queue.options.archiveQueueOptions
                 ?: error("Archive queue exists but archiveQueueOptions is null, queue: $queue")
 
-            retentionCleanupByDate(connection, archiveQueue, arcOpts.retention)
+            retentionCleanupByDate(connection, queue, nodeId, archiveQueue, arcOpts.retention)
 
             if (arcOpts.maxMessages != null) {
-                retentionCleanupByMaxMessages(connection, archiveQueue, arcOpts.maxMessages)
+                retentionCleanupByMaxMessages(connection, queue, nodeId, archiveQueue, arcOpts.maxMessages)
             }
         }
 
@@ -189,6 +189,8 @@ object SweepHelper {
 
     private fun retentionCleanupByDate(
         connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
         companionQueue: Queue<*>,
         retention: Duration
     ) {
@@ -217,11 +219,14 @@ object SweepHelper {
             connection.useStatement { it.executeUpdate(deleteByAgeQuery) }
         }
 
-        SqlDumpHelper.dumpQuery(companionQueue, StatementKind.RETENTION_CLEANUP, deleteByAgeQuery, execution, removedMsg)
+        // Printed for the main queue: the cleanup is a step of its sweep, and the SQL names the companion table
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.RETENTION_CLEANUP, deleteByAgeQuery, execution, removedMsg)
     }
 
     private fun retentionCleanupByMaxMessages(
         connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
         companionQueue: Queue<*>,
         maxMessages: Long
     ) {
@@ -249,7 +254,8 @@ object SweepHelper {
                 connection.useStatement { it.executeUpdate(deleteByCountQuery) }
             }
 
-            SqlDumpHelper.dumpQuery(companionQueue, StatementKind.RETENTION_CLEANUP, deleteByCountQuery, execution, removedMsg)
+            // Printed for the main queue, see retentionCleanupByDate
+            SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.RETENTION_CLEANUP, deleteByCountQuery, execution, removedMsg)
         }
     }
 

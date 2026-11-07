@@ -259,7 +259,9 @@ class ConnectionAwareDatabaseProducer internal constructor(
         }
 
         // SQL dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution, result.size)
+        // The result also has the duplicates, but only the inserted messages are rows in the table
+        val insertedRows = result.count { it is MessageResult.Success }
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.PRODUCER_INSERT, query, execution, insertedRows)
 
         return result
     }

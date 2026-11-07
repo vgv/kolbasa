@@ -111,7 +111,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
         queueMetrics.consumerReceiveMetrics(
@@ -154,7 +154,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, statementKind, deleteQuery, execution, removedMessages)
+        SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, deleteQuery, execution, removedMessages)
 
         // Prometheus
         val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)

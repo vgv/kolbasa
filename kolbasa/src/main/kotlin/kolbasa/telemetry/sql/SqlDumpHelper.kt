@@ -2,17 +2,19 @@ package kolbasa.telemetry.sql
 
 import kolbasa.Kolbasa
 import kolbasa.queue.Queue
+import kolbasa.schema.NodeId
 import kolbasa.utils.Execution
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
+import java.util.Locale
 
 internal object SqlDumpHelper {
 
     fun dumpQuery(
         queue: Queue<*>,
+        nodeId: NodeId,
         kind: StatementKind,
         query: String,
         execution: Execution,
@@ -34,9 +36,14 @@ internal object SqlDumpHelper {
         val text = buildString {
             appendLine("---------------------------------------------")
             append("Date: ").append(formatStartTime(execution)).appendLine()
-            append("Duration: ").append(durationMillis(execution)).append("ms").appendLine()
-            append("Rows: ").append(affectedRows).appendLine()
+            append("Queue: ").append(queue.name).appendLine()
+            // Only a cluster has nodes to name
+            if (nodeId != NodeId.EMPTY_NODE_ID) {
+                append("Node: ").append(nodeId.id).appendLine()
+            }
             append("Kind: ").append(kind).appendLine()
+            append("Duration: ").append(formatDuration(execution)).appendLine()
+            append("Rows: ").append(affectedRows).appendLine()
             appendLine(query)
         }
 
@@ -46,7 +53,11 @@ internal object SqlDumpHelper {
         }
     }
 
-    private fun durationMillis(execution: Execution): Long = TimeUnit.NANOSECONDS.toMillis(execution.durationNanos)
+    // Milliseconds with microseconds, "0.412ms": many statements take less than a millisecond.
+    // Locale.ROOT keeps the decimal point a point
+    private fun formatDuration(execution: Execution): String {
+        return String.format(Locale.ROOT, "%.3fms", execution.durationNanos / 1_000_000.0)
+    }
 
     private fun formatStartTime(execution: Execution): String {
         val instant = Instant.ofEpochMilli(execution.startTimeEpochMillis)

@@ -164,7 +164,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_ID, query, execution, mutateResult.size)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.MUTATE_BY_ID, query, execution, mutateResult.size)
 
         // Prometheus
         val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
@@ -219,7 +219,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_FILTER, query, execution, processedMessagesCount)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.MUTATE_BY_FILTER, query, execution, processedMessagesCount)
 
         return Res(maxSeenId, processedMessagesCount, processedMessages)
     }

@@ -6,19 +6,23 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.consumer.sweep.SweepHelper
 import kolbasa.mutator.AddRemainingAttempts
 import kolbasa.mutator.datasource.DatabaseMutator
+import kolbasa.producer.DeduplicationMode
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.SendMessage
+import kolbasa.producer.connection.ConnectionAwareDatabaseProducer
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.queue.*
 import kolbasa.queue.meta.FieldOption
 import kolbasa.queue.meta.MetaField
 import kolbasa.queue.meta.MetaValues
 import kolbasa.queue.meta.Metadata
+import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.inTransaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -61,6 +65,8 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
         // records() checks the layout of every record, this test checks the values
         val record = records().single()
         assertTrue(record.date in before..after) { "${record.date} is not between $before and $after" }
+        assertEquals("sql_dump_format", record.queue)
+        assertNull(record.node)
         assertEquals(1, record.rows)
         assertEquals(StatementKind.PRODUCER_INSERT, record.kind)
         assertTrue(record.sql.startsWith("insert into q_sql_dump_format("), record.sql)
@@ -122,9 +128,19 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
         producer.send(second, "second")
 
         // Only the statement for the first queue is printed
-        val records = records()
-        assertEquals(1, records.size)
-        assertTrue("q_sql_dump_first_queue" in records.single().sql)
+        assertEquals(listOf("sql_dump_first_queue"), records().map { it.queue })
+    }
+
+    @Test
+    fun testNode() {
+        val queue = createQueue("sql_dump_node")
+        dump(queue, StatementKind.PRODUCER_INSERT)
+
+        // A producer of a cluster works with one node, and the record names it
+        val producer = ConnectionAwareDatabaseProducer(NodeId("node_1"), ProducerOptions())
+        dataSource.inTransaction { connection -> producer.send(connection, queue, "first") }
+
+        assertEquals("node_1", records().single().node)
     }
 
     @Test
@@ -137,6 +153,22 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
         producer.send(queue, (1..5).map { SendMessage("message $it") })
 
         assertEquals(listOf(2, 2, 1), records().map { it.rows })
+    }
+
+    @Test
+    fun testInsertRowsWithoutDuplicates() {
+        val field = MetaField.ofInt("field", FieldOption.ALL_LIVE_UNIQUE)
+        val queue = Queue.of("sql_dump_duplicates", PredefinedDataTypes.String, Metadata.of(field))
+        SchemaHelpers.createOrUpdateQueues(dataSource, queue)
+        dump(queue, StatementKind.PRODUCER_INSERT)
+
+        // The second message is a duplicate of the first: it is not inserted, so it is not a row
+        val producer = DatabaseProducer(dataSource, ProducerOptions(deduplicationMode = DeduplicationMode.IGNORE_DUPLICATE))
+        val message = SendMessage("first", MetaValues.of(field.value(1)))
+        producer.send(queue, message)
+        producer.send(queue, message)
+
+        assertEquals(listOf(1, 0), records().map { it.rows })
     }
 
     @Test
@@ -175,22 +207,42 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
 
         dataSource.inTransaction { connection -> SweepHelper.sweep(connection, queue, 100) }
 
-        // The retention cleanup of the DLQ runs too, but it is not printed for the main queue
-        assertEquals(listOf(StatementKind.SWEEP_TO_DLQ to 0), records().map { it.kind to it.rows })
+        // The retention cleanup of the DLQ is a step of the same sweep
+        val expected = listOf(
+            StatementKind.SWEEP_TO_DLQ to 0,
+            StatementKind.RETENTION_CLEANUP to 0
+        )
+        assertEquals(expected, records().map { it.kind to it.rows })
     }
 
     @Test
     fun testRetentionCleanup() {
-        val queue = createQueue("sql_dump_retention", QueueOptions(dlqOptions = DlqOptions()))
+        val options = QueueOptions(dlqOptions = DlqOptions(), archiveQueueOptions = ArchiveQueueOptions())
+        val queue = createQueue("sql_dump_retention", options)
 
-        // The retention cleanup is printed for the DLQ itself
-        dump(requireNotNull(queue.deadLetterQueue), *StatementKind.entries.toTypedArray())
+        // The retention cleanup is printed for the main queue, as a step of its sweep
+        dump(queue, StatementKind.RETENTION_CLEANUP)
 
         dataSource.inTransaction { connection -> SweepHelper.sweep(connection, queue, 100) }
 
+        // One statement for the DLQ, one for the archive. The SQL names their tables
         val records = records()
-        assertEquals(listOf(StatementKind.RETENTION_CLEANUP to 0), records.map { it.kind to it.rows })
-        assertTrue("q_sql_dump_retention_dlq" in records.single().sql)
+        assertEquals(listOf("sql_dump_retention", "sql_dump_retention"), records.map { it.queue })
+        assertTrue("q_sql_dump_retention_dlq" in records[0].sql, records[0].sql)
+        assertTrue("q_sql_dump_retention_arc" in records[1].sql, records[1].sql)
+    }
+
+    @Test
+    fun testDlqIsItsOwnQueue() {
+        val queue = createQueue("sql_dump_dlq_reader", QueueOptions(dlqOptions = DlqOptions()))
+        val dlq = requireNotNull(queue.deadLetterQueue)
+        dump(dlq, *StatementKind.entries.toTypedArray())
+
+        // The main queue is not registered, the DLQ is
+        DatabaseProducer(dataSource).send(queue, "first")
+        DatabaseConsumer(dataSource).receive(dlq)
+
+        assertEquals(listOf(StatementKind.CONSUMER_SELECT to "sql_dump_dlq_reader_dlq"), records().map { it.kind to it.queue })
     }
 
     @Test
@@ -241,9 +293,11 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
 
     private data class Record(
         val date: LocalDateTime,
-        val durationMillis: Long,
-        val rows: Int,
+        val queue: String,
+        val node: String?,
         val kind: StatementKind,
+        val durationMillis: Double,
+        val rows: Int,
         val sql: String
     )
 
@@ -258,12 +312,14 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
             .drop(1)
             .map { record ->
                 val match = requireNotNull(RECORD.matchEntire(record)) { "Not a record: $record" }
-                val (date, duration, rows, kind, sql) = match.destructured
+                val (date, queue, node, kind, duration, rows, sql) = match.destructured
                 Record(
                     date = LocalDateTime.parse(date, DATE_FORMAT),
-                    durationMillis = duration.toLong(),
-                    rows = rows.toInt(),
+                    queue = queue,
+                    node = node.ifEmpty { null },
                     kind = StatementKind.valueOf(kind),
+                    durationMillis = duration.toDouble(),
+                    rows = rows.toInt(),
                     sql = sql
                 )
             }
@@ -272,8 +328,12 @@ class SqlDumpTest : AbstractPostgreSQLTest() {
     private companion object {
         val SEPARATOR = "-".repeat(45)
 
-        // One record after the separator: four lines of fields, then the SQL
-        val RECORD = Regex("Date: (.+)\nDuration: (\\d+)ms\nRows: (\\d+)\nKind: (\\w+)\n(.*)\n", RegexOption.DOT_MATCHES_ALL)
+        // One record after the separator: the fields, one per line, then the SQL. Node is only there in a cluster
+        val RECORD = Regex(
+            "Date: ([^\n]+)\nQueue: ([^\n]+)\n(?:Node: ([^\n]+)\n)?" +
+                "Kind: (\\w+)\nDuration: (\\d+\\.\\d{3})ms\nRows: (\\d+)\n(.*)\n",
+            RegexOption.DOT_MATCHES_ALL
+        )
 
         val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
     }
