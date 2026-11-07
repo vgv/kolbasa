@@ -21,6 +21,7 @@
 * Enqueue messages straight from SQL — database triggers, stored functions, batch jobs (opt-in per-queue `q_<name>_put(...)` function)
 * Share load between different PostgreSQL servers
 * OpenTelemetry integration for monitoring and visibility of how messages flow
+* Prometheus metrics and SQL dump for monitoring and debugging
 * Background processing: give your business code to a worker, it receives, deletes, waits and retries for you
 * Move messages to another queue, on another server too: in batches, as they are or changed on the way
 
@@ -309,14 +310,16 @@ Example: [SqlPutFunctionExample](examples/src/main/kotlin/kolbasa/example/SqlPut
 
 `./gradlew example -Pname=SqlPutFunctionExample`
 
-### OpenTelemetry tracing
-Turn tracing on once, and you can follow every message in your traces: how it was sent, received and handled,
-together with what your handler did, its SQL and HTTP calls for example. Needs the optional
-`kolbasa-opentelemetry` artifact, see [above](#opentelemetry-optional).
+### Telemetry
+kolbasa can show what it does in three ways:
 
-Example: [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt)
-
-`./gradlew example -Pname=OpenTelemetryExample`
+* **Prometheus metrics**: how many messages are sent, received and deleted, how long each call takes, how big and how
+  old each queue is. See [Prometheus metrics](docs/Prometheus%20metrics.md).
+* **OpenTelemetry tracing**: follow every message in your traces, from `send()` to the handler that processed it.
+  Needs the optional `kolbasa-opentelemetry` artifact, see [above](#opentelemetry-optional). Example:
+  [OpenTelemetryExample](examples/src/main/kotlin/kolbasa/example/OpenTelemetryExample.kt), run it with
+  `./gradlew example -Pname=OpenTelemetryExample`.
+* **SQL dump**: print the SQL that kolbasa runs for chosen queues, with timings. See [SQL dump](docs/SQL%20dump.md).
 
 ### Processing a queue in the background
 Instead of writing your own receive/delete loop, give your business code to a `QueueProcessor` and let a
@@ -379,3 +382,7 @@ Beyond the examples above, these documents explain how Kolbasa works under the h
   that ids stay globally unique across nodes, enabling shard migration and growing a standalone DB into a cluster.
 - [Message state transitions.md](docs/Message%20state%20transitions.md) — the message lifecycle deep-dive
   (states, transitions, and how uniqueness scopes map onto them).
+- [Prometheus metrics.md](docs/Prometheus%20metrics.md) — how to turn the metrics on, for the whole application or for
+  one producer, consumer or mutator, every metric with its labels, and how the queue state metrics are updated.
+- [SQL dump.md](docs/SQL%20dump.md) — how to print the SQL that kolbasa runs for chosen queues, what each record
+  means, and what to watch out for.

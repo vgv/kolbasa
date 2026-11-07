@@ -157,5 +157,8 @@ covers:
   ids stay globally unique across nodes.
 - [docs/Message state transitions.md](<docs/Message state transitions.md>) — the message lifecycle
   deep-dive (states, transitions, uniqueness scopes).
+- [docs/Prometheus metrics.md](<docs/Prometheus metrics.md>) — Prometheus metrics: setup, per-role
+  config, every metric and label, how the queue state metrics are refreshed.
+- [docs/SQL dump.md](<docs/SQL dump.md>) — SQL dump: setup, the record format, statement kinds.
 
 The [README](README.md) has a feature overview and walkthroughs of the examples.
