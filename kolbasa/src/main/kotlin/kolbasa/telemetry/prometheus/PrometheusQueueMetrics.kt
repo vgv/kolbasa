@@ -5,6 +5,7 @@ import kolbasa.producer.PartialInsert
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.telemetry.prometheus.metrics.*
+import kolbasa.utils.BytesCounter
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 internal class PrometheusQueueMetrics(
     private val queue: Queue<*>,
-    private val prometheusConfig: PrometheusConfig.Config
+    private val metrics: PrometheusMetrics
 ) : QueueMetrics {
 
     private val queueName = queue.name
@@ -24,9 +25,10 @@ internal class PrometheusQueueMetrics(
     private val sweep: ConcurrentMap<NodeId, SweepQueueMetrics> = ConcurrentHashMap()
     private val mutator: ConcurrentMap<NodeId, MutatorQueueMetrics> = ConcurrentHashMap()
 
-    override fun usePreciseStringSize(): Boolean {
-        return prometheusConfig.preciseStringSize
-    }
+    // When the queue gauges were last read from the database, for every node
+    private val lastUpdate: ConcurrentMap<NodeId, UpdateInfo> = ConcurrentHashMap()
+
+    override fun bytesCounter(): BytesCounter = BytesCounter.Counting()
 
     override fun producerSendMetrics(
         nodeId: NodeId,
@@ -34,11 +36,11 @@ internal class PrometheusQueueMetrics(
         allMessages: Int,
         failedMessages: Int,
         executionNanos: Long,
-        approxBytes: Long,
+        bytesSent: Long,
         connection: Connection?
     ) {
         val producerQueueMetrics = producer.computeIfAbsent(nodeId) { _ ->
-            ProducerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ProducerQueueMetrics(queueName, nodeId, metrics)
         }
 
         producerQueueMetrics.producerSendMetrics(
@@ -46,7 +48,7 @@ internal class PrometheusQueueMetrics(
             allMessages = allMessages,
             failedMessages = failedMessages,
             executionNanos = executionNanos,
-            approxBytes = approxBytes
+            bytesSent = bytesSent
         )
 
         // Update common metrics
@@ -60,18 +62,18 @@ internal class PrometheusQueueMetrics(
         receivedMessages: Int,
         unreadableMessages: Int,
         executionNanos: Long,
-        approxBytes: Long,
+        bytesReceived: Long,
         connection: Connection?
     ) {
         val consumerQueueMetrics = consumer.computeIfAbsent(nodeId) { _ ->
-            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ConsumerQueueMetrics(queueName, nodeId, metrics)
         }
 
         consumerQueueMetrics.consumerReceiveMetrics(
             receivedMessages = receivedMessages,
             unreadableMessages = unreadableMessages,
             executionNanos = executionNanos,
-            approxBytes = approxBytes
+            bytesReceived = bytesReceived
         )
 
         // Update common metrics
@@ -87,7 +89,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val consumerQueueMetrics = consumer.computeIfAbsent(nodeId) { _ ->
-            ConsumerQueueMetrics(queueName, nodeId, prometheusConfig)
+            ConsumerQueueMetrics(queueName, nodeId, metrics)
         }
 
         consumerQueueMetrics.consumerDeleteMetrics(
@@ -103,7 +105,7 @@ internal class PrometheusQueueMetrics(
 
     override fun sweepMetrics(nodeId: NodeId, removedMessages: Int, executionNanos: Long, connection: Connection?) {
         val sweepQueueMetrics = sweep.computeIfAbsent(nodeId) { _ ->
-            SweepQueueMetrics(queueName, nodeId, prometheusConfig)
+            SweepQueueMetrics(queueName, nodeId, metrics)
         }
 
         sweepQueueMetrics.sweepMetrics(
@@ -126,7 +128,7 @@ internal class PrometheusQueueMetrics(
         connection: Connection?
     ) {
         val mutatorQueueMetrics = mutator.computeIfAbsent(nodeId) { _ ->
-            MutatorQueueMetrics(queueName, nodeId, prometheusConfig)
+            MutatorQueueMetrics(queueName, nodeId, metrics)
         }
 
         mutatorQueueMetrics.mutatorMetrics(
@@ -144,10 +146,10 @@ internal class PrometheusQueueMetrics(
 
     private fun sendCommonMetrics(connection: Connection, nodeId: NodeId) {
         val commonQueueMetrics = common.computeIfAbsent(nodeId) { _ ->
-            CommonQueueMetrics(queueName, nodeId, prometheusConfig)
+            CommonQueueMetrics(queueName, nodeId, metrics)
         }
 
-        val lastUpdateInfo = lastUpdateCache.computeIfAbsent(commonQueueMetrics.cacheKey) { UpdateInfo() }
+        val lastUpdateInfo = lastUpdate.computeIfAbsent(nodeId) { UpdateInfo() }
         if (lastUpdateInfo.isOutdated()) {
             // time to update the common metrics, only one thread should do it
             if (lastUpdateInfo.tryLock()) {
@@ -187,7 +189,6 @@ internal class PrometheusQueueMetrics(
         }
 
         val inspector = ConnectionAwareDatabaseInspector()
-        val lastUpdateCache: ConcurrentMap<String, UpdateInfo> = ConcurrentHashMap()
     }
 }
 

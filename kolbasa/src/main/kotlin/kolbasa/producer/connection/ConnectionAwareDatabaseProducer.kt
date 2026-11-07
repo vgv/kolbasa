@@ -61,33 +61,34 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>,
         traceContext: Map<String, String>
     ): SendResult<Data> {
-        val approxStatsBytes = BytesCounter(queue.queueMetrics.usePreciseStringSize())
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val bytesCounter = queueMetrics.bytesCounter()
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
         val (execution, result) = TimeHelper.measure {
             when (partialInsert) {
                 PartialInsert.PROHIBITED -> {
-                    sendProhibited(connection, queue, approxStatsBytes, request, traceContext)
+                    sendProhibited(connection, queue, bytesCounter, request, traceContext)
                 }
 
                 PartialInsert.UNTIL_FIRST_FAILURE -> {
-                    sendUntilFirstFailure(connection, queue, approxStatsBytes, request, traceContext)
+                    sendUntilFirstFailure(connection, queue, bytesCounter, request, traceContext)
                 }
 
                 PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
-                    sendAsMuchAsPossible(connection, queue, approxStatsBytes, request, traceContext)
+                    sendAsMuchAsPossible(connection, queue, bytesCounter, request, traceContext)
                 }
             }
         }
 
         // Prometheus
-        queue.queueMetrics.producerSendMetrics(
+        queueMetrics.producerSendMetrics(
             nodeId,
             partialInsert,
             allMessages = request.data.size,
             failedMessages = result.failedMessages,
             executionNanos = execution.durationNanos,
-            approxBytes = approxStatsBytes.get(),
+            bytesSent = bytesCounter.get(),
             connection = connection
         )
 
@@ -220,7 +221,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                     request = request,
                     traceContext = traceContext,
                     preparedStatement = preparedStatement,
-                    approxBytesCounter = approxStatsBytes
+                    bytesCounter = approxStatsBytes
                 )
 
                 val result = ArrayList<MessageResult<Data>>(request.data.size)
@@ -258,7 +259,9 @@ class ConnectionAwareDatabaseProducer internal constructor(
         }
 
         // SQL dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.PRODUCER_INSERT, query, execution, result.size)
+        // The result also has the duplicates, but only the inserted messages are rows in the table
+        val insertedRows = result.count { it is MessageResult.Success }
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.PRODUCER_INSERT, query, execution, insertedRows)
 
         return result
     }

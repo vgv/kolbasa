@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test
 class BytesCounterTest {
 
     @Test
-    fun testPreciseCalculation() {
-        val box = BytesCounter(true)
+    fun testCounting() {
+        val box = BytesCounter.Counting()
 
         assertEquals(0, box.get())
         box.addInt()
@@ -16,23 +16,20 @@ class BytesCounterTest {
         assertEquals(0 + 4 + 8, box.get())
         box.addByteArray(byteArrayOf(1, 2, 3))
         assertEquals(0 + 4 + 8 + 3, box.get())
-        box.addString("Привет")
+        box.addString("Привет") // 12 bytes in UTF-8
         assertEquals(0 + 4 + 8 + 3 + 12, box.get())
     }
 
     @Test
-    fun testNotPreciseCalculation() {
-        val box = BytesCounter(false)
+    fun testNone() {
+        val box = BytesCounter.None
 
-        assertEquals(0, box.get())
+        // Nothing is counted
         box.addInt()
-        assertEquals(0 + 4, box.get())
         box.addLong()
-        assertEquals(0 + 4 + 8, box.get())
         box.addByteArray(byteArrayOf(1, 2, 3))
-        assertEquals(0 + 4 + 8 + 3, box.get())
-        box.addString("Привет")
-        assertEquals(0 + 4 + 8 + 3 + 6, box.get())
+        box.addString("Привет") // 12 bytes in UTF-8
+        assertEquals(0, box.get())
     }
 
 }

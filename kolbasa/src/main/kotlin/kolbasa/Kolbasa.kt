@@ -14,8 +14,7 @@ import java.util.concurrent.Executors
  * Global, process-wide Kolbasa settings.
  *
  * Every property here is one value shared by all producers, consumers, mutators and queues in the JVM. All of them
- * can be changed at any time, but see each property for WHEN it is read: most are read at the point of use, while
- * [prometheusConfig] has to be set before any other use of Kolbasa.
+ * can be changed at any time. See each property for WHEN it is read.
  *
  * ## Usage Example
  *
@@ -64,10 +63,15 @@ object Kolbasa {
     var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
 
     /**
-     * Prometheus metrics configuration. The default, [PrometheusConfig.None], collects nothing.
+     * Prometheus metrics for every producer, consumer and mutator that doesn't set its own in
+     * [ProducerOptions.prometheusConfig][kolbasa.producer.ProducerOptions.prometheusConfig],
+     * [ConsumerOptions.prometheusConfig][kolbasa.consumer.ConsumerOptions.prometheusConfig] or
+     * [MutatorOptions.prometheusConfig][kolbasa.mutator.MutatorOptions.prometheusConfig].
      *
-     * Set it before any other use of Kolbasa: the configuration is applied once and stays for the whole life of
-     * the JVM, so changing it later has no effect on anything already running.
+     * The default, [PrometheusConfig.None], collects nothing.
+     *
+     * Read on every call of a producer, consumer or mutator, and on every sweep, so a change takes effect on the
+     * next call.
      */
     @JvmStatic
     @Volatile

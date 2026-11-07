@@ -1,5 +1,6 @@
 package kolbasa.mutator.connection
 
+import kolbasa.Kolbasa
 import kolbasa.consumer.filter.Condition
 import kolbasa.consumer.filter.Filter
 import kolbasa.mutator.*
@@ -126,7 +127,8 @@ class ConnectionAwareDatabaseMutator internal constructor(
         }
 
         // Prometheus
-        queue.queueMetrics.mutatorMetrics(
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        queueMetrics.mutatorMetrics(
             nodeId,
             iterations = iterations,
             mutatedMessages = mutatedMessagesCount,
@@ -162,10 +164,11 @@ class ConnectionAwareDatabaseMutator internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_ID, query, execution, mutateResult.size)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.MUTATE_BY_ID, query, execution, mutateResult.size)
 
         // Prometheus
-        queue.queueMetrics.mutatorMetrics(
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        queueMetrics.mutatorMetrics(
             nodeId,
             iterations = 1,
             mutatedMessages = mutateResult.size,
@@ -216,7 +219,7 @@ class ConnectionAwareDatabaseMutator internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.MUTATE_BY_FILTER, query, execution, processedMessagesCount)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.MUTATE_BY_FILTER, query, execution, processedMessagesCount)
 
         return Res(maxSeenId, processedMessagesCount, processedMessages)
     }

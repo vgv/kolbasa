@@ -13,7 +13,6 @@ import kolbasa.schema.NodeId
 import kolbasa.telemetry.sql.SqlDumpHelper
 import kolbasa.telemetry.sql.StatementKind
 import kolbasa.telemetry.tracing.ReceiveCall
-import kolbasa.utils.BytesCounter
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.LruCache
 import kolbasa.utils.TimeHelper
@@ -77,13 +76,13 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         limit: Int,
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val bytesCounter = queueMetrics.bytesCounter()
+
         // delete expired messages before next read
         if (SweepHelper.needSweep()) {
-            SweepHelper.sweep(connection, queue, nodeId, limit)
+            SweepHelper.sweep(connection, queue, nodeId, limit, queueMetrics)
         }
-
-        // read
-        val approxBytesCounter = BytesCounter(queue.queueMetrics.usePreciseStringSize())
 
         val query = receiveQueryCache.getOrPut(CacheKey(queue, options, shards, receiveOptions, limit)) {
             ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, options, shards, receiveOptions, limit)
@@ -99,7 +98,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
 
                     while (resultSet.next()) {
                         try {
-                            result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, approxBytesCounter)
+                            result += ConsumerSchemaHelpers.read(queue, receiveOptions, resultSet, bytesCounter)
                         } catch (e: Exception) {
                             options.readErrorHandler.onReadError(ConsumerSchemaHelpers.readError(queue, nodeId, resultSet, e))
                             unreadableMessages++
@@ -112,15 +111,15 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, StatementKind.CONSUMER_SELECT, query, execution, result.size)
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
         // Prometheus
-        queue.queueMetrics.consumerReceiveMetrics(
+        queueMetrics.consumerReceiveMetrics(
             nodeId = nodeId,
             receivedMessages = result.size,
             unreadableMessages = unreadableMessages,
             executionNanos = execution.durationNanos,
-            approxBytes = approxBytesCounter.get(),
+            bytesReceived = bytesCounter.get(),
             connection = connection
         )
 
@@ -155,10 +154,11 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, statementKind, deleteQuery, execution, removedMessages)
+        SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, deleteQuery, execution, removedMessages)
 
         // Prometheus
-        queue.queueMetrics.consumerDeleteMetrics(
+        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        queueMetrics.consumerDeleteMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,
             executionNanos = execution.durationNanos,

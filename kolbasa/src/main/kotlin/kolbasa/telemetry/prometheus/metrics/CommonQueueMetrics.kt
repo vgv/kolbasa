@@ -3,17 +3,14 @@ package kolbasa.telemetry.prometheus.metrics
 import kolbasa.inspector.MessageAge
 import kolbasa.inspector.Messages
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.prometheus.metrics.Extensions.asSeconds
 import kolbasa.telemetry.prometheus.metrics.Extensions.setLong
 
 internal class CommonQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    prometheusConfig: PrometheusConfig.Config
+    metrics: PrometheusMetrics
 ) {
-
-    val cacheKey = "$queueName-$nodeId"
 
     fun queueMetrics(
         messages: Messages,
@@ -36,24 +33,24 @@ internal class CommonQueueMetrics(
         queueMessageAgesGaugeOldestReady.set(messageAge.oldestReady?.asSeconds() ?: 0.0)
     }
 
-    private val queueMessagesGaugeScheduled = prometheusConfig.queueMessagesGauge
+    private val queueMessagesGaugeScheduled = metrics.queueMessagesGauge
         .labelValues(queueName, "SCHEDULED", nodeId.id)
-    private val queueMessagesGaugeReady = prometheusConfig.queueMessagesGauge
+    private val queueMessagesGaugeReady = metrics.queueMessagesGauge
         .labelValues(queueName, "READY", nodeId.id)
-    private val queueMessagesGaugeInFlight = prometheusConfig.queueMessagesGauge
+    private val queueMessagesGaugeInFlight = metrics.queueMessagesGauge
         .labelValues(queueName, "IN_FLIGHT", nodeId.id)
-    private val queueMessagesGaugeRetry = prometheusConfig.queueMessagesGauge
+    private val queueMessagesGaugeRetry = metrics.queueMessagesGauge
         .labelValues(queueName, "RETRY", nodeId.id)
-    private val queueMessagesGaugeDead = prometheusConfig.queueMessagesGauge
+    private val queueMessagesGaugeDead = metrics.queueMessagesGauge
         .labelValues(queueName, "DEAD", nodeId.id)
 
-    private val queueMessageAgesGaugeOldest = prometheusConfig.queueMessageAgesGauge
+    private val queueMessageAgesGaugeOldest = metrics.queueMessageAgesGauge
         .labelValues(queueName, "OLDEST", nodeId.id)
-    private val queueMessageAgesGaugeNewest = prometheusConfig.queueMessageAgesGauge
+    private val queueMessageAgesGaugeNewest = metrics.queueMessageAgesGauge
         .labelValues(queueName, "NEWEST", nodeId.id)
-    private val queueMessageAgesGaugeOldestReady = prometheusConfig.queueMessageAgesGauge
+    private val queueMessageAgesGaugeOldestReady = metrics.queueMessageAgesGauge
         .labelValues(queueName, "OLDEST_READY", nodeId.id)
 
-    private val queueSizeGauge = prometheusConfig.queueSizeGauge
+    private val queueSizeGauge = metrics.queueSizeGauge
         .labelValues(queueName, nodeId.id)
 }

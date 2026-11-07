@@ -141,7 +141,7 @@ internal object ConsumerSchemaHelpers {
         queue: Queue<Data>,
         receiveOptions: ReceiveOptions,
         resultSet: ResultSet,
-        approxBytesCounter: BytesCounter
+        bytesCounter: BytesCounter
     ): Message<Data> {
         val id = readId(resultSet)
         val createdAt = readCreatedAt(resultSet)
@@ -157,29 +157,29 @@ internal object ConsumerSchemaHelpers {
         val data = when (queue.databaseDataType) {
             is DatabaseQueueDataType.Json -> {
                 val data = resultSet.getString(8)
-                approxBytesCounter.addString(data)
+                bytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Binary -> {
                 val data = resultSet.getBytes(8)
-                approxBytesCounter.addByteArray(data)
+                bytesCounter.addByteArray(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Text -> {
                 val data = resultSet.getString(8)
-                approxBytesCounter.addString(data)
+                bytesCounter.addString(data)
                 queue.databaseDataType.deserializer(data)
             }
 
             is DatabaseQueueDataType.Int -> {
-                approxBytesCounter.addInt()
+                bytesCounter.addInt()
                 queue.databaseDataType.deserializer(resultSet.getInt(8))
             }
 
             is DatabaseQueueDataType.Long -> {
-                approxBytesCounter.addLong()
+                bytesCounter.addLong()
                 queue.databaseDataType.deserializer(resultSet.getLong(8))
             }
         }

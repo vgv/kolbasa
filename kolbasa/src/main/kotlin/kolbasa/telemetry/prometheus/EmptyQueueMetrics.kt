@@ -2,11 +2,12 @@ package kolbasa.telemetry.prometheus
 
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
+import kolbasa.utils.BytesCounter
 import java.sql.Connection
 
 internal object EmptyQueueMetrics : QueueMetrics {
 
-    override fun usePreciseStringSize(): Boolean = false
+    override fun bytesCounter(): BytesCounter = BytesCounter.None
 
     override fun producerSendMetrics(
         nodeId: NodeId,
@@ -14,7 +15,7 @@ internal object EmptyQueueMetrics : QueueMetrics {
         allMessages: Int,
         failedMessages: Int,
         executionNanos: Long,
-        approxBytes: Long,
+        bytesSent: Long,
         connection: Connection?
     ) {
     }
@@ -24,7 +25,7 @@ internal object EmptyQueueMetrics : QueueMetrics {
         receivedMessages: Int,
         unreadableMessages: Int,
         executionNanos: Long,
-        approxBytes: Long,
+        bytesReceived: Long,
         connection: Connection?
     ) {
     }

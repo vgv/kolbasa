@@ -7,6 +7,8 @@ import kolbasa.inspector.connection.ConnectionAwareInspector
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId
+import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.prometheus.QueueMetrics
 import kolbasa.telemetry.sql.SqlDumpHelper
 import kolbasa.telemetry.sql.StatementKind
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -69,20 +71,39 @@ object SweepHelper {
      *
      * Sweep tries to remove the maximum value from [SweepConfig.maxMessages] or `limit`, whichever is greater.
      *
+     * Its metrics go to the global [Kolbasa.prometheusConfig].
+     *
      * @return how many expired messages were removed
      */
     @JvmStatic
     fun sweep(connection: Connection, queue: Queue<*>, limit: Int): Int {
-        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit)
+        return sweep(connection, queue, limit, Kolbasa.prometheusConfig)
     }
 
-    internal fun sweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, limit: Int): Int {
+    /**
+     * Runs a sweep for a particular queue, like `sweep(connection, queue, limit)`, but its metrics go to
+     * [prometheusConfig] instead of the global [Kolbasa.prometheusConfig]. [PrometheusConfig.None] switches them off.
+     *
+     * @return how many expired messages were removed
+     */
+    @JvmStatic
+    fun sweep(connection: Connection, queue: Queue<*>, limit: Int, prometheusConfig: PrometheusConfig): Int {
+        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit, prometheusConfig.queueMetrics(queue))
+    }
+
+    internal fun sweep(
+        connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
+        limit: Int,
+        queueMetrics: QueueMetrics
+    ): Int {
         val sweepConfig = Kolbasa.sweepConfig
 
         // Calculate how much messages to sweep
         val messagesToSweep = max(limit, sweepConfig.maxMessages)
 
-        return rawSweep(connection, queue, nodeId, messagesToSweep)
+        return rawSweep(connection, queue, nodeId, messagesToSweep, queueMetrics)
     }
 
     internal fun needSweep(): Boolean {
@@ -98,7 +119,13 @@ object SweepHelper {
     /**
      * Just run sweep without any checks and locks
      */
-    private fun rawSweep(connection: Connection, queue: Queue<*>, nodeId: NodeId, maxMessages: Int): Int {
+    private fun rawSweep(
+        connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
+        maxMessages: Int,
+        queueMetrics: QueueMetrics
+    ): Int {
         val deadLetterQueue = queue.deadLetterQueue
 
         val sweepQuery = if (deadLetterQueue != null) {
@@ -122,10 +149,10 @@ object SweepHelper {
         }
 
         // SQL Dump
-        SqlDumpHelper.dumpQuery(queue, statementKind, sweepQuery, execution, removedMessages)
+        SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, sweepQuery, execution, removedMessages)
 
         // Prometheus
-        queue.queueMetrics.sweepMetrics(
+        queueMetrics.sweepMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,
             executionNanos = execution.durationNanos,
@@ -137,10 +164,10 @@ object SweepHelper {
             val dlqOpts = queue.options.dlqOptions
                 ?: error("DLQ queue exists but dlqOptions is null, queue: $queue")
 
-            retentionCleanupByDate(connection, deadLetterQueue, dlqOpts.retention)
+            retentionCleanupByDate(connection, queue, nodeId, deadLetterQueue, dlqOpts.retention)
 
             if (dlqOpts.maxMessages != null) {
-                retentionCleanupByMaxMessages(connection, deadLetterQueue, dlqOpts.maxMessages)
+                retentionCleanupByMaxMessages(connection, queue, nodeId, deadLetterQueue, dlqOpts.maxMessages)
             }
         }
 
@@ -150,10 +177,10 @@ object SweepHelper {
             val arcOpts = queue.options.archiveQueueOptions
                 ?: error("Archive queue exists but archiveQueueOptions is null, queue: $queue")
 
-            retentionCleanupByDate(connection, archiveQueue, arcOpts.retention)
+            retentionCleanupByDate(connection, queue, nodeId, archiveQueue, arcOpts.retention)
 
             if (arcOpts.maxMessages != null) {
-                retentionCleanupByMaxMessages(connection, archiveQueue, arcOpts.maxMessages)
+                retentionCleanupByMaxMessages(connection, queue, nodeId, archiveQueue, arcOpts.maxMessages)
             }
         }
 
@@ -162,6 +189,8 @@ object SweepHelper {
 
     private fun retentionCleanupByDate(
         connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
         companionQueue: Queue<*>,
         retention: Duration
     ) {
@@ -190,11 +219,14 @@ object SweepHelper {
             connection.useStatement { it.executeUpdate(deleteByAgeQuery) }
         }
 
-        SqlDumpHelper.dumpQuery(companionQueue, StatementKind.RETENTION_CLEANUP, deleteByAgeQuery, execution, removedMsg)
+        // Printed for the main queue: the cleanup is a step of its sweep, and the SQL names the companion table
+        SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.RETENTION_CLEANUP, deleteByAgeQuery, execution, removedMsg)
     }
 
     private fun retentionCleanupByMaxMessages(
         connection: Connection,
+        queue: Queue<*>,
+        nodeId: NodeId,
         companionQueue: Queue<*>,
         maxMessages: Long
     ) {
@@ -222,7 +254,8 @@ object SweepHelper {
                 connection.useStatement { it.executeUpdate(deleteByCountQuery) }
             }
 
-            SqlDumpHelper.dumpQuery(companionQueue, StatementKind.RETENTION_CLEANUP, deleteByCountQuery, execution, removedMsg)
+            // Printed for the main queue, see retentionCleanupByDate
+            SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.RETENTION_CLEANUP, deleteByCountQuery, execution, removedMsg)
         }
     }
 

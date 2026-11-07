@@ -4,7 +4,6 @@ import io.prometheus.metrics.core.datapoints.CounterDataPoint
 import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
 import kolbasa.telemetry.prometheus.metrics.Extensions.incLong
 import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
@@ -12,7 +11,7 @@ import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
 internal class ProducerQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    prometheusConfig: PrometheusConfig.Config
+    metrics: PrometheusMetrics
 ) {
 
     fun producerSendMetrics(
@@ -20,7 +19,7 @@ internal class ProducerQueueMetrics(
         allMessages: Int,
         failedMessages: Int,
         executionNanos: Long,
-        approxBytes: Long
+        bytesSent: Long
     ) {
         when (partialInsert) {
             PartialInsert.PROHIBITED -> {
@@ -28,7 +27,7 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterProhibited.incInt(allMessages)
                 producerSendFailedMessagesCounterProhibited.incInt(failedMessages)
                 producerSendDurationProhibited.observeNanos(executionNanos)
-                producerSendBytesCounterProhibited.incLong(approxBytes)
+                producerSendBytesCounterProhibited.incLong(bytesSent)
             }
 
             PartialInsert.UNTIL_FIRST_FAILURE -> {
@@ -36,7 +35,7 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterUntilFirstFailure.incInt(allMessages)
                 producerSendFailedMessagesCounterUntilFirstFailure.incInt(failedMessages)
                 producerSendDurationUntilFirstFailure.observeNanos(executionNanos)
-                producerSendBytesCounterUntilFirstFailure.incLong(approxBytes)
+                producerSendBytesCounterUntilFirstFailure.incLong(bytesSent)
             }
 
             PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
@@ -44,46 +43,46 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterInsertAsManyAsPossible.incInt(allMessages)
                 producerSendFailedMessagesCounterInsertAsManyAsPossible.incInt(failedMessages)
                 producerSendDurationInsertAsManyAsPossible.observeNanos(executionNanos)
-                producerSendBytesCounterInsertAsManyAsPossible.incLong(approxBytes)
+                producerSendBytesCounterInsertAsManyAsPossible.incLong(bytesSent)
             }
         }
     }
 
-    private val producerSendCounterProhibited: CounterDataPoint = prometheusConfig.producerSendCounter
+    private val producerSendCounterProhibited: CounterDataPoint = metrics.producerSendCounter
         .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendCounterUntilFirstFailure: CounterDataPoint = prometheusConfig.producerSendCounter
+    private val producerSendCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendCounter
         .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendCounterInsertAsManyAsPossible: CounterDataPoint = prometheusConfig.producerSendCounter
+    private val producerSendCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendCounter
         .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendMessagesCounterProhibited: CounterDataPoint = prometheusConfig.producerSendMessagesCounter
+    private val producerSendMessagesCounterProhibited: CounterDataPoint = metrics.producerSendMessagesCounter
         .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendMessagesCounterUntilFirstFailure: CounterDataPoint = prometheusConfig.producerSendMessagesCounter
+    private val producerSendMessagesCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendMessagesCounter
         .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendMessagesCounterInsertAsManyAsPossible: CounterDataPoint = prometheusConfig.producerSendMessagesCounter
+    private val producerSendMessagesCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendMessagesCounter
         .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
     private val producerSendFailedMessagesCounterProhibited: CounterDataPoint =
-        prometheusConfig.producerSendFailedMessagesCounter
+        metrics.producerSendFailedMessagesCounter
             .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
     private val producerSendFailedMessagesCounterUntilFirstFailure: CounterDataPoint =
-        prometheusConfig.producerSendFailedMessagesCounter
+        metrics.producerSendFailedMessagesCounter
             .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
     private val producerSendFailedMessagesCounterInsertAsManyAsPossible: CounterDataPoint =
-        prometheusConfig.producerSendFailedMessagesCounter
+        metrics.producerSendFailedMessagesCounter
             .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendDurationProhibited: DistributionDataPoint = prometheusConfig.producerSendDuration
+    private val producerSendDurationProhibited: DistributionDataPoint = metrics.producerSendDuration
         .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendDurationUntilFirstFailure: DistributionDataPoint = prometheusConfig.producerSendDuration
+    private val producerSendDurationUntilFirstFailure: DistributionDataPoint = metrics.producerSendDuration
         .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendDurationInsertAsManyAsPossible: DistributionDataPoint = prometheusConfig.producerSendDuration
+    private val producerSendDurationInsertAsManyAsPossible: DistributionDataPoint = metrics.producerSendDuration
         .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendBytesCounterProhibited: CounterDataPoint = prometheusConfig.producerSendBytesCounter
+    private val producerSendBytesCounterProhibited: CounterDataPoint = metrics.producerSendBytesCounter
         .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendBytesCounterUntilFirstFailure: CounterDataPoint = prometheusConfig.producerSendBytesCounter
+    private val producerSendBytesCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendBytesCounter
         .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint = prometheusConfig.producerSendBytesCounter
+    private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendBytesCounter
         .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 }
