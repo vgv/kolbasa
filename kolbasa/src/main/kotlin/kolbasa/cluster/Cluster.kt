@@ -111,8 +111,13 @@ class Cluster @JvmOverloads constructor(
      * Call this once, at application startup, right after the [Cluster] is created and before any role built on it
      * is used. It does two things: it runs [updateStateOnce] immediately, so the cluster is usable when the method
      * returns, and it asks the executor of
-     * [Kolbasa.clusterStateUpdateConfig][kolbasa.Kolbasa.clusterStateUpdateConfig] to call it again later. Every run
-     * schedules the next one, so the refresh continues for the life of the application. There is no way to stop it.
+     * [Kolbasa.clusterStateUpdateConfig][kolbasa.Kolbasa.clusterStateUpdateConfig] to update the state again later.
+     * Every update schedules the next one, so the refresh continues for the life of the application. There is no way
+     * to stop it.
+     *
+     * If this first update fails, the method throws and schedules nothing: without a state the cluster can't work.
+     * A later update that fails, for example because a node is down, keeps the old state. Its error goes to
+     * [StateUpdateErrorHandler.SYSTEM_LOG], and the next update is scheduled as usual.
      *
      * The interval and the executor are read again before every reschedule, so a change to
      * [Kolbasa.clusterStateUpdateConfig][kolbasa.Kolbasa.clusterStateUpdateConfig] takes effect on the next cycle.
@@ -122,14 +127,29 @@ class Cluster @JvmOverloads constructor(
      */
     fun initAndScheduleStateUpdate() {
         updateStateOnce()
+        scheduleStateUpdate()
+    }
 
+    private fun scheduleStateUpdate() {
         val (interval, executor) = Kolbasa.clusterStateUpdateConfig
 
         executor.schedule(
-            { initAndScheduleStateUpdate() },
+            { scheduledStateUpdate() },
             interval.seconds,
             TimeUnit.SECONDS
         )
+    }
+
+    private fun scheduledStateUpdate() {
+        try {
+            updateStateOnce()
+        } catch (e: Exception) {
+            // The old state stays until the next update
+            StateUpdateErrorHandler.SYSTEM_LOG.onStateUpdateError(StateUpdateError(e))
+        } finally {
+            // Always, even after a failure: one failed update must not stop all the next ones
+            scheduleStateUpdate()
+        }
     }
 
     /**

@@ -11,10 +11,13 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Isolated
+import java.sql.Connection
+import java.sql.SQLException
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.sql.DataSource
 
 /**
@@ -64,6 +67,23 @@ class ClusterStateUpdateTest : AbstractPostgreSQLTest() {
         waitUntil { cluster.getState().shards[shard]?.producerNode == newNode }
     }
 
+    @Test
+    fun testInitAndSchedule_SurvivesFailedUpdate() {
+        val failingNode = FailingDataSource(dataSourceSecondSchema)
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, failingNode)
+        val cluster = Cluster(dataSources)
+        cluster.initAndScheduleStateUpdate()
+
+        // The node goes away for a while: the scheduled updates in between fail
+        failingNode.failing = true
+        waitUntil { failingNode.failedCalls.get() > 0 }
+        failingNode.failing = false
+
+        // The node is back, and the updates go on
+        val (shard, newNode) = moveRandomShard(cluster, dataSources)
+        waitUntil { cluster.getState().shards[shard]?.producerNode == newNode }
+    }
+
     private fun dataSources() = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
     // Gives a random shard to another node behind the cluster's back, straight in the shard table
@@ -97,6 +117,24 @@ class ClusterStateUpdateTest : AbstractPostgreSQLTest() {
         while (!condition()) {
             check(System.nanoTime() < deadline) { "The condition wasn't met in $WAIT_TIMEOUT" }
             Thread.sleep(50)
+        }
+    }
+
+    // A node that can be switched off: while failing is set, getConnection() throws
+    private class FailingDataSource(private val delegate: DataSource) : DataSource by delegate {
+
+        @Volatile
+        var failing = false
+
+        val failedCalls = AtomicInteger()
+
+        override fun getConnection(): Connection {
+            if (failing) {
+                failedCalls.incrementAndGet()
+                throw SQLException("The node is down")
+            }
+
+            return delegate.connection
         }
     }
 
