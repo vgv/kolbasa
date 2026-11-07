@@ -10,9 +10,9 @@ package kolbasa.cluster
  * **A handler must not throw.** If it does, the next update is still scheduled, but the exception is lost. If your
  * handler calls code that can fail, for example your own logging or alerting, catch everything inside the handler.
  *
- * The handler is called on the thread that runs the scheduled updates.
+ * The handler is called on [ClusterOptions.stateUpdateExecutor].
  *
- * By default, [SYSTEM_LOG] is used.
+ * By default, [SYSTEM_LOG] is used. Set another one with [ClusterOptions.stateUpdateErrorHandler].
  */
 fun interface StateUpdateErrorHandler {
 

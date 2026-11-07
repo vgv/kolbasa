@@ -294,7 +294,7 @@ managed:
   nodes for a fully-initialized `q__shard` (all 1024 rows); if none exists yet, it creates one on the node with the lowest node id and
   seeds all 1024 shards, each assigned to a **random** node in a stable state.
 - **Clients discover state by polling.** That cached snapshot is refreshed on a timer — every
-  `Kolbasa.clusterStateUpdateConfig.interval` (default **1 minute**). There is no push or live subscription. The practical
+  `ClusterOptions.stateUpdateInterval` (default **1 minute**). There is no push or live subscription. The practical
   consequence: after an operator changes ownership (a migration step), it takes up to one refresh interval for every client to
   notice. This lag is *designed for* — the migration protocol stays correct across it (see [Shard migration](#shard-migration)).
 - **Startup also reconciles identity and schema.** Bringing up a `Cluster` remaps any colliding

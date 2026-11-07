@@ -1,6 +1,6 @@
 package kolbasa.queue
 
-import kolbasa.cluster.ClusterStateUpdateConfig
+import kolbasa.cluster.ClusterOptions
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.mutator.Mutation
@@ -257,8 +257,10 @@ internal object Checks {
     }
 
     fun checkClusterStateUpdateInterval(interval: Duration) {
-        require(interval >= ClusterStateUpdateConfig.MIN_INTERVAL) {
-            "Cluster state update interval must be greater than or equal to ${ClusterStateUpdateConfig.MIN_INTERVAL} (current: $interval)"
+        val min = ClusterOptions.MIN_STATE_UPDATE_INTERVAL
+        val max = ClusterOptions.MAX_STATE_UPDATE_INTERVAL
+        require(interval in min..max) {
+            "Cluster state update interval must be in the [$min..$max] range (current: $interval)"
         }
     }
 

@@ -1,6 +1,5 @@
 package kolbasa.cluster
 
-import kolbasa.Kolbasa
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
@@ -77,10 +76,12 @@ import javax.sql.DataSource
  * refresh interval, or at once if you call [updateStateOnce]. An empty list means "manage routing only, the schema
  * is mine": nothing here touches your tables, and creating them stays your job, with
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
+ * @param options the options of this cluster, see [ClusterOptions]
  */
 class Cluster @JvmOverloads constructor(
     private val dataSourcesProvider: Supplier<List<DataSource>>,
     private val queues: List<Queue<*>> = emptyList(),
+    private val options: ClusterOptions = ClusterOptions.DEFAULT
 ) {
 
     /**
@@ -92,9 +93,14 @@ class Cluster @JvmOverloads constructor(
      * @param dataSources the [DataSource] of every node of this cluster, at least one
      * @param queues queues to create or update on every node, see the primary constructor for the details. With a
      * fixed node list there are no nodes added later, so this happens once, at the first state update.
+     * @param options the options of this cluster, see [ClusterOptions]
      */
     @JvmOverloads
-    constructor(dataSources: List<DataSource>, queues: List<Queue<*>> = emptyList()) : this({ dataSources }, queues)
+    constructor(
+        dataSources: List<DataSource>,
+        queues: List<Queue<*>> = emptyList(),
+        options: ClusterOptions = ClusterOptions.DEFAULT
+    ) : this({ dataSources }, queues, options)
 
     @Volatile
     private var state: ClusterState = ClusterState.NOT_INITIALIZED
@@ -110,17 +116,13 @@ class Cluster @JvmOverloads constructor(
      *
      * Call this once, at application startup, right after the [Cluster] is created and before any role built on it
      * is used. It does two things: it runs [updateStateOnce] immediately, so the cluster is usable when the method
-     * returns, and it asks the executor of
-     * [Kolbasa.clusterStateUpdateConfig][kolbasa.Kolbasa.clusterStateUpdateConfig] to update the state again later.
-     * Every update schedules the next one, so the refresh continues for the life of the application. There is no way
-     * to stop it.
+     * returns, and it schedules the next update on [ClusterOptions.stateUpdateExecutor], in
+     * [ClusterOptions.stateUpdateInterval]. Every update schedules the next one, so the refresh continues for the life
+     * of the application. There is no way to stop it.
      *
      * If this first update fails, the method throws and schedules nothing: without a state the cluster can't work.
      * A later update that fails, for example because a node is down, keeps the old state. Its error goes to
-     * [StateUpdateErrorHandler.SYSTEM_LOG], and the next update is scheduled as usual.
-     *
-     * The interval and the executor are read again before every reschedule, so a change to
-     * [Kolbasa.clusterStateUpdateConfig][kolbasa.Kolbasa.clusterStateUpdateConfig] takes effect on the next cycle.
+     * [ClusterOptions.stateUpdateErrorHandler], and the next update is scheduled as usual.
      *
      * Calling this method a second time on the same [Cluster] starts a second, independent chain of updates. There
      * is no harm in the extra work, but there is no benefit either.
@@ -131,12 +133,10 @@ class Cluster @JvmOverloads constructor(
     }
 
     private fun scheduleStateUpdate() {
-        val (interval, executor) = Kolbasa.clusterStateUpdateConfig
-
-        executor.schedule(
+        options.stateUpdateExecutor.schedule(
             { scheduledStateUpdate() },
-            interval.seconds,
-            TimeUnit.SECONDS
+            options.stateUpdateInterval.toMillis(),
+            TimeUnit.MILLISECONDS
         )
     }
 
@@ -145,7 +145,7 @@ class Cluster @JvmOverloads constructor(
             updateStateOnce()
         } catch (e: Exception) {
             // The old state stays until the next update
-            StateUpdateErrorHandler.SYSTEM_LOG.onStateUpdateError(StateUpdateError(e))
+            options.stateUpdateErrorHandler.onStateUpdateError(StateUpdateError(e))
         } finally {
             // Always, even after a failure: one failed update must not stop all the next ones
             scheduleStateUpdate()
