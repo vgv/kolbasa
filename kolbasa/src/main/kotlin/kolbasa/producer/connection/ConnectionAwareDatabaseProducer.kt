@@ -62,21 +62,21 @@ class ConnectionAwareDatabaseProducer internal constructor(
         traceContext: Map<String, String>
     ): SendResult<Data> {
         val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
-        val approxStatsBytes = BytesCounter(queueMetrics.usePreciseStringSize())
+        val bytesCounter = queueMetrics.bytesCounter()
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
         val (execution, result) = TimeHelper.measure {
             when (partialInsert) {
                 PartialInsert.PROHIBITED -> {
-                    sendProhibited(connection, queue, approxStatsBytes, request, traceContext)
+                    sendProhibited(connection, queue, bytesCounter, request, traceContext)
                 }
 
                 PartialInsert.UNTIL_FIRST_FAILURE -> {
-                    sendUntilFirstFailure(connection, queue, approxStatsBytes, request, traceContext)
+                    sendUntilFirstFailure(connection, queue, bytesCounter, request, traceContext)
                 }
 
                 PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
-                    sendAsMuchAsPossible(connection, queue, approxStatsBytes, request, traceContext)
+                    sendAsMuchAsPossible(connection, queue, bytesCounter, request, traceContext)
                 }
             }
         }
@@ -88,7 +88,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             allMessages = request.data.size,
             failedMessages = result.failedMessages,
             executionNanos = execution.durationNanos,
-            approxBytes = approxStatsBytes.get(),
+            bytesSent = bytesCounter.get(),
             connection = connection
         )
 
@@ -221,7 +221,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
                     request = request,
                     traceContext = traceContext,
                     preparedStatement = preparedStatement,
-                    approxBytesCounter = approxStatsBytes
+                    bytesCounter = approxStatsBytes
                 )
 
                 val result = ArrayList<MessageResult<Data>>(request.data.size)

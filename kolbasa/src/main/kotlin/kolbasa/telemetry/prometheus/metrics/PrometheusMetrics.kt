@@ -4,8 +4,12 @@ import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Gauge
 import io.prometheus.metrics.core.metrics.Histogram
 import io.prometheus.metrics.model.registry.PrometheusRegistry
+import kolbasa.queue.Queue
+import kolbasa.telemetry.prometheus.PrometheusQueueMetrics
 import java.util.Collections
 import java.util.WeakHashMap
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * All metrics of the library, registered in one registry.
@@ -14,6 +18,17 @@ import java.util.WeakHashMap
  * first call and returns the same object after that.
  */
 internal class PrometheusMetrics private constructor(registry: PrometheusRegistry) {
+
+    // Performance: all metrics of a queue are made once, with their labels (queue name etc.), and kept here
+    // Recommendation: https://prometheus.github.io/client_java/getting-started/performance/
+    //
+    // One entry per queue in the registry, so every Config over it reads the queue gauges from the database on the
+    // same schedule
+    private val queues: ConcurrentMap<String, PrometheusQueueMetrics> = ConcurrentHashMap()
+
+    fun queueMetrics(queue: Queue<*>): PrometheusQueueMetrics {
+        return queues.computeIfAbsent(queue.name) { PrometheusQueueMetrics(queue, this) }
+    }
 
     // ----------------------------------------------------------------------------
     // Queue metrics

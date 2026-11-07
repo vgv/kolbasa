@@ -17,10 +17,10 @@ internal class ConsumerQueueMetrics(
         receivedMessages: Int,
         unreadableMessages: Int,
         executionNanos: Long,
-        approxBytes: Long
+        bytesReceived: Long
     ) {
         consumerReceiveCounter.inc()
-        consumerReceiveBytesCounter.incLong(approxBytes)
+        consumerReceiveBytesCounter.incLong(bytesReceived)
         consumerReceiveMessagesCounter.incInt(receivedMessages)
         consumerReceiveUnreadableMessagesCounter.incInt(unreadableMessages)
         consumerReceiveDuration.observeNanos(executionNanos)

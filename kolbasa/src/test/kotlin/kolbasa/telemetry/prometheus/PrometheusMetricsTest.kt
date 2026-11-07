@@ -84,6 +84,19 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testBytes() {
+        val queue = createQueue("metrics_bytes")
+        val mode = "partial_insert_type" to "UNTIL_FIRST_FAILURE"
+
+        // 6 characters, 12 bytes in UTF-8
+        DatabaseProducer(dataSource).send(queue, "Привет")
+        DatabaseConsumer(dataSource).receive(queue)
+
+        assertEquals(12.0, value("kolbasa_producer_send_bytes", queue, mode))
+        assertEquals(12.0, value("kolbasa_consumer_receive_bytes", queue))
+    }
+
+    @Test
     fun testMutate() {
         val queue = createQueue("metrics_mutate")
         val id = DatabaseProducer(dataSource).send(queue, "first").onlySuccessful().single().id
@@ -149,12 +162,29 @@ class PrometheusMetricsTest : AbstractPostgreSQLTest() {
         val mode = "partial_insert_type" to "UNTIL_FIRST_FAILURE"
 
         // A second config over the same registry as the global one: it shares the metrics, it doesn't fail
-        val config = PrometheusConfig.Config(preciseStringSize = true, registry = registry)
+        val config = PrometheusConfig.Config(registry = registry)
         DatabaseProducer(dataSource).send(queue, "first")
         DatabaseProducer(dataSource, ProducerOptions(prometheusConfig = config)).send(queue, "second")
 
         // Both calls went to the same counter
         assertEquals(2.0, value("kolbasa_producer_send", queue, mode))
+    }
+
+    @Test
+    fun testTwoConfigsOneRegistry_GaugesReadOnce() {
+        val queue = createQueue("metrics_two_configs_gauges")
+
+        // The first call reads the queue gauges from the database
+        DatabaseProducer(dataSource).send(queue, "first")
+        val size = value("kolbasa_queue_size", queue)
+        assertPositive(size)
+
+        // A second config over the same registry, and the queue grows a lot. The gauges were read less than
+        // a minute ago, so the second config doesn't read them again
+        val options = ProducerOptions(prometheusConfig = PrometheusConfig.Config(registry = registry))
+        DatabaseProducer(dataSource, options).send(queue, (1..1000).map { SendMessage("message $it") })
+
+        assertEquals(size, value("kolbasa_queue_size", queue))
     }
 
     @Test

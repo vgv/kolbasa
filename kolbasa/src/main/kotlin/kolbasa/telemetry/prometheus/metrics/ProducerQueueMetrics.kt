@@ -19,7 +19,7 @@ internal class ProducerQueueMetrics(
         allMessages: Int,
         failedMessages: Int,
         executionNanos: Long,
-        approxBytes: Long
+        bytesSent: Long
     ) {
         when (partialInsert) {
             PartialInsert.PROHIBITED -> {
@@ -27,7 +27,7 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterProhibited.incInt(allMessages)
                 producerSendFailedMessagesCounterProhibited.incInt(failedMessages)
                 producerSendDurationProhibited.observeNanos(executionNanos)
-                producerSendBytesCounterProhibited.incLong(approxBytes)
+                producerSendBytesCounterProhibited.incLong(bytesSent)
             }
 
             PartialInsert.UNTIL_FIRST_FAILURE -> {
@@ -35,7 +35,7 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterUntilFirstFailure.incInt(allMessages)
                 producerSendFailedMessagesCounterUntilFirstFailure.incInt(failedMessages)
                 producerSendDurationUntilFirstFailure.observeNanos(executionNanos)
-                producerSendBytesCounterUntilFirstFailure.incLong(approxBytes)
+                producerSendBytesCounterUntilFirstFailure.incLong(bytesSent)
             }
 
             PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
@@ -43,7 +43,7 @@ internal class ProducerQueueMetrics(
                 producerSendMessagesCounterInsertAsManyAsPossible.incInt(allMessages)
                 producerSendFailedMessagesCounterInsertAsManyAsPossible.incInt(failedMessages)
                 producerSendDurationInsertAsManyAsPossible.observeNanos(executionNanos)
-                producerSendBytesCounterInsertAsManyAsPossible.incLong(approxBytes)
+                producerSendBytesCounterInsertAsManyAsPossible.incLong(bytesSent)
             }
         }
     }

@@ -121,7 +121,7 @@ internal object ProducerSchemaHelpers {
         request: SendRequest<Data>,
         traceContext: Map<String, String>,
         preparedStatement: PreparedStatement,
-        approxBytesCounter: BytesCounter
+        bytesCounter: BytesCounter
     ) {
         val connection = preparedStatement.connection
         var columnIndex = 1
@@ -163,7 +163,7 @@ internal object ProducerSchemaHelpers {
             is DatabaseQueueDataType.Json -> {
                 val dataValues = Array(request.data.size) { index ->
                     val jsonString = queue.databaseDataType.serializer(request.data[index].data)
-                    approxBytesCounter.addString(jsonString)
+                    bytesCounter.addString(jsonString)
                     val jsonObject = PGobject()
                     jsonObject.type = queue.databaseDataType.dbColumnType
                     jsonObject.value = jsonString
@@ -175,7 +175,7 @@ internal object ProducerSchemaHelpers {
             is DatabaseQueueDataType.Binary -> {
                 val dataValues = Array(request.data.size) { index ->
                     val binaryData = queue.databaseDataType.serializer(request.data[index].data)
-                    approxBytesCounter.addByteArray(binaryData)
+                    bytesCounter.addByteArray(binaryData)
                     binaryData
                 }
                 connection.createArrayOf(queue.databaseDataType.dbColumnType, dataValues)
@@ -184,7 +184,7 @@ internal object ProducerSchemaHelpers {
             is DatabaseQueueDataType.Text -> {
                 val dataValues = Array(request.data.size) { index ->
                     val strData = queue.databaseDataType.serializer(request.data[index].data)
-                    approxBytesCounter.addString(strData)
+                    bytesCounter.addString(strData)
                     strData
                 }
                 connection.createArrayOf(queue.databaseDataType.dbColumnType, dataValues)
@@ -192,7 +192,7 @@ internal object ProducerSchemaHelpers {
 
             is DatabaseQueueDataType.Int -> {
                 val dataValues = Array(request.data.size) { index ->
-                    approxBytesCounter.addInt()
+                    bytesCounter.addInt()
                     queue.databaseDataType.serializer(request.data[index].data)
                 }
                 connection.createArrayOf(queue.databaseDataType.dbColumnType, dataValues)
@@ -200,7 +200,7 @@ internal object ProducerSchemaHelpers {
 
             is DatabaseQueueDataType.Long -> {
                 val dataValues = Array(request.data.size) { index ->
-                    approxBytesCounter.addLong()
+                    bytesCounter.addLong()
                     queue.databaseDataType.serializer(request.data[index].data)
                 }
                 connection.createArrayOf(queue.databaseDataType.dbColumnType, dataValues)
