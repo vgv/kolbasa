@@ -61,7 +61,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>,
         traceContext: Map<String, String>
     ): SendResult<Data> {
-        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val queueMetrics = (options.metricsConfig ?: Kolbasa.metricsConfig).queueMetrics(queue)
         val bytesCounter = queueMetrics.bytesCounter()
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
@@ -81,7 +81,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             }
         }
 
-        // Prometheus
+        // Metrics
         queueMetrics.producerSendMetrics(
             nodeId,
             partialInsert,

@@ -1,7 +1,7 @@
 package kolbasa
 
 import kolbasa.consumer.sweep.SweepConfig
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.sql.SqlDumpConfig
 import kolbasa.telemetry.tracing.Tracing
 import kolbasa.utils.DaemonThreadFactory
@@ -17,14 +17,14 @@ import java.util.concurrent.Executors
  * ## Usage Example
  *
  * ```kotlin
- * Kolbasa.prometheusConfig = PrometheusConfig.Config()
+ * Kolbasa.metricsConfig = MetricsConfig.Config(meterRegistry)
  * Kolbasa.sweepConfig = SweepConfig.builder().probability(0.001).build()
  * ```
  *
  * The same from Java:
  *
  * ```java
- * Kolbasa.setPrometheusConfig(new PrometheusConfig.Config());
+ * Kolbasa.setMetricsConfig(new MetricsConfig.Config(meterRegistry));
  * Kolbasa.setSweepConfig(SweepConfig.builder().probability(0.001).build());
  * ```
  */
@@ -52,19 +52,19 @@ object Kolbasa {
     var sqlDumpConfig: SqlDumpConfig = SqlDumpConfig()
 
     /**
-     * Prometheus metrics for every producer, consumer and mutator that doesn't set its own in
-     * [ProducerOptions.prometheusConfig][kolbasa.producer.ProducerOptions.prometheusConfig],
-     * [ConsumerOptions.prometheusConfig][kolbasa.consumer.ConsumerOptions.prometheusConfig] or
-     * [MutatorOptions.prometheusConfig][kolbasa.mutator.MutatorOptions.prometheusConfig].
+     * Metrics for every producer, consumer and mutator that doesn't set its own in
+     * [ProducerOptions.metricsConfig][kolbasa.producer.ProducerOptions.metricsConfig],
+     * [ConsumerOptions.metricsConfig][kolbasa.consumer.ConsumerOptions.metricsConfig] or
+     * [MutatorOptions.metricsConfig][kolbasa.mutator.MutatorOptions.metricsConfig].
      *
-     * The default, [PrometheusConfig.None], collects nothing.
+     * The default, [MetricsConfig.None], collects nothing.
      *
      * Read on every call of a producer, consumer or mutator, and on every sweep, so a change takes effect on the
      * next call.
      */
     @JvmStatic
     @Volatile
-    var prometheusConfig: PrometheusConfig = PrometheusConfig.None
+    var metricsConfig: MetricsConfig = MetricsConfig.None
 
     /**
      * Tracing for every producer and consumer that doesn't set its own in

@@ -1,7 +1,7 @@
 package kolbasa.producer
 
 import kolbasa.queue.Checks
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -160,12 +160,12 @@ data class ProducerOptions(
     val tracing: Tracing? = null,
 
     /**
-     * Prometheus metrics for this producer. By default, the value is unspecified (null), meaning that global
-     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     * Metrics for this producer. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.metricsConfig][kolbasa.Kolbasa.metricsConfig] will be used.
      *
-     * [PrometheusConfig.None] switches the metrics off for this producer only.
+     * [MetricsConfig.None] switches the metrics off for this producer only.
      */
-    val prometheusConfig: PrometheusConfig? = null,
+    val metricsConfig: MetricsConfig? = null,
 ) {
 
     init {
@@ -187,7 +187,7 @@ data class ProducerOptions(
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
         private var asyncExecutor: ExecutorService? = null
         private var tracing: Tracing? = null
-        private var prometheusConfig: PrometheusConfig? = null
+        private var metricsConfig: MetricsConfig? = null
 
         /**
          * Sets [ProducerOptions.delay] – how long the messages of this producer stay invisible to consumers.
@@ -230,9 +230,9 @@ data class ProducerOptions(
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
         /**
-         * Sets [ProducerOptions.prometheusConfig] – the metrics of this producer, used instead of the global ones.
+         * Sets [ProducerOptions.metricsConfig] – the metrics of this producer, used instead of the global ones.
          */
-        fun prometheusConfig(prometheusConfig: PrometheusConfig) = apply { this.prometheusConfig = prometheusConfig }
+        fun metricsConfig(metricsConfig: MetricsConfig) = apply { this.metricsConfig = metricsConfig }
 
         /**
          * Creates a new [ProducerOptions] instance: a fresh one on every call, nothing is cached or reused.
@@ -246,7 +246,7 @@ data class ProducerOptions(
             partialInsert = partialInsert,
             asyncExecutor = asyncExecutor,
             tracing = tracing,
-            prometheusConfig = prometheusConfig
+            metricsConfig = metricsConfig
         )
     }
 

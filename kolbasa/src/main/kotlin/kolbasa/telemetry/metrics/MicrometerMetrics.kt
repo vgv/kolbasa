@@ -1,8 +1,7 @@
-package kolbasa.telemetry.prometheus.metrics
+package kolbasa.telemetry.metrics
 
 import io.micrometer.core.instrument.MeterRegistry
 import kolbasa.queue.Queue
-import kolbasa.telemetry.prometheus.PrometheusQueueMetrics
 import java.lang.ref.WeakReference
 import java.util.Collections
 import java.util.WeakHashMap
@@ -15,7 +14,7 @@ import java.util.concurrent.ConcurrentMap
  * There is one such object per registry: [of] makes it on the first call and returns the same object after that. So
  * every config over a registry shares the meters of a queue, and reads the queue gauges on the same schedule.
  */
-internal class PrometheusMetrics private constructor(registry: MeterRegistry) {
+internal class MicrometerMetrics private constructor(registry: MeterRegistry) {
 
     // Weak: this object is a value in a map with weak keys, and a strong reference to its own key would keep both in
     // memory forever. Whoever calls this object holds the registry, so the registry is never gone during a call
@@ -25,10 +24,10 @@ internal class PrometheusMetrics private constructor(registry: MeterRegistry) {
     //
     // One entry per queue in the registry, so every config over it reads the queue gauges from the database on the
     // same schedule
-    private val queues: ConcurrentMap<String, PrometheusQueueMetrics> = ConcurrentHashMap()
+    private val queues: ConcurrentMap<String, MicrometerQueueMetrics> = ConcurrentHashMap()
 
-    fun queueMetrics(queue: Queue<*>): PrometheusQueueMetrics {
-        return queues.computeIfAbsent(queue.name) { PrometheusQueueMetrics(queue, this) }
+    fun queueMetrics(queue: Queue<*>): MicrometerQueueMetrics {
+        return queues.computeIfAbsent(queue.name) { MicrometerQueueMetrics(queue, this) }
     }
 
     private fun registry(): MeterRegistry {
@@ -56,7 +55,8 @@ internal class PrometheusMetrics private constructor(registry: MeterRegistry) {
         ::registry,
         name = "kolbasa.queue.size",
         description = "Queue size in bytes",
-        tagKeys = listOf("queue", "node_id")
+        tagKeys = listOf("queue", "node_id"),
+        baseUnit = "bytes"
     )
 
     // ----------------------------------------------------------------------------
@@ -214,11 +214,11 @@ internal class PrometheusMetrics private constructor(registry: MeterRegistry) {
     companion object {
 
         // Weak keys: a registry nobody uses any more is not kept in memory by this map
-        private val byRegistry: MutableMap<MeterRegistry, PrometheusMetrics> =
+        private val byRegistry: MutableMap<MeterRegistry, MicrometerMetrics> =
             Collections.synchronizedMap(WeakHashMap())
 
-        fun of(registry: MeterRegistry): PrometheusMetrics {
-            return byRegistry.computeIfAbsent(registry) { PrometheusMetrics(it) }
+        fun of(registry: MeterRegistry): MicrometerMetrics {
+            return byRegistry.computeIfAbsent(registry) { MicrometerMetrics(it) }
         }
     }
 }

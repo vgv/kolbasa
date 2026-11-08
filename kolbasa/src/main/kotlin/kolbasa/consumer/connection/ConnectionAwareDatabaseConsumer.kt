@@ -76,7 +76,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         limit: Int,
         receiveOptions: ReceiveOptions
     ): List<Message<Data>> {
-        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val queueMetrics = (options.metricsConfig ?: Kolbasa.metricsConfig).queueMetrics(queue)
         val bytesCounter = queueMetrics.bytesCounter()
 
         // delete expired messages before next read
@@ -113,7 +113,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         // SQL Dump
         SqlDumpHelper.dumpQuery(queue, nodeId, StatementKind.CONSUMER_SELECT, query, execution, result.size)
 
-        // Prometheus
+        // Metrics
         queueMetrics.consumerReceiveMetrics(
             nodeId = nodeId,
             receivedMessages = result.size,
@@ -156,8 +156,8 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         // SQL Dump
         SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, deleteQuery, execution, removedMessages)
 
-        // Prometheus
-        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        // Metrics
+        val queueMetrics = (options.metricsConfig ?: Kolbasa.metricsConfig).queueMetrics(queue)
         queueMetrics.consumerDeleteMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,

@@ -1,10 +1,9 @@
-package kolbasa.telemetry.prometheus
+package kolbasa.telemetry.metrics
 
 import kolbasa.inspector.connection.ConnectionAwareDatabaseInspector
 import kolbasa.producer.PartialInsert
 import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.metrics.*
 import kolbasa.utils.BytesCounter
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
@@ -12,9 +11,9 @@ import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
-internal class PrometheusQueueMetrics(
+internal class MicrometerQueueMetrics(
     private val queue: Queue<*>,
-    private val metrics: PrometheusMetrics
+    private val metrics: MicrometerMetrics
 ) : QueueMetrics {
 
     private val queueName = queue.name

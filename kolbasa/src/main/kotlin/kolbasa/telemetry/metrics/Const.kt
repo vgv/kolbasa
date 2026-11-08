@@ -1,4 +1,4 @@
-package kolbasa.telemetry.prometheus.metrics
+package kolbasa.telemetry.metrics
 
 import java.time.Duration
 

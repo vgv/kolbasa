@@ -1,15 +1,15 @@
-package kolbasa.telemetry.prometheus.metrics
+package kolbasa.telemetry.metrics
 
 import kolbasa.inspector.MessageAge
 import kolbasa.inspector.Messages
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.metrics.Extensions.asSeconds
-import kolbasa.telemetry.prometheus.metrics.Extensions.setLong
+import kolbasa.telemetry.metrics.Extensions.asSeconds
+import kolbasa.telemetry.metrics.Extensions.setLong
 
 internal class CommonQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    metrics: PrometheusMetrics
+    metrics: MicrometerMetrics
 ) {
 
     fun queueMetrics(

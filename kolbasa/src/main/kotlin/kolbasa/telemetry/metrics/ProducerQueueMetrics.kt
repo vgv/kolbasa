@@ -1,17 +1,17 @@
-package kolbasa.telemetry.prometheus.metrics
+package kolbasa.telemetry.metrics
 
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.Timer
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
-import kolbasa.telemetry.prometheus.metrics.Extensions.incLong
-import kolbasa.telemetry.prometheus.metrics.Extensions.observeNanos
+import kolbasa.telemetry.metrics.Extensions.incInt
+import kolbasa.telemetry.metrics.Extensions.incLong
+import kolbasa.telemetry.metrics.Extensions.observeNanos
 
 internal class ProducerQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    metrics: PrometheusMetrics
+    metrics: MicrometerMetrics
 ) {
 
     fun producerSendMetrics(
