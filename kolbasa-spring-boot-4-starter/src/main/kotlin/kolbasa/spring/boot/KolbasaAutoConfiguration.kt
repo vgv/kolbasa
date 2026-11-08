@@ -1,5 +1,7 @@
 package kolbasa.spring.boot
 
+import kolbasa.cluster.Cluster
+import kolbasa.cluster.ClusterTopologyUpdater
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.inspector.datasource.DatabaseInspector
@@ -28,6 +30,7 @@ import javax.sql.DataSource
  *
  * What it does depends on your beans:
  * - a [LocalKolbasaSettings] bean switches kolbasa on in the application's own database: the tables and the role beans;
+ * - a [ClusterKolbasaSettings] bean switches kolbasa on in a cluster: the `Cluster` bean and its topology updates;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing.
@@ -124,6 +127,40 @@ class KolbasaAutoConfiguration {
             schemaInitializer: LocalKolbasaSchemaInitializer?
         ): Inspector {
             return DatabaseInspector(dataSource)
+        }
+    }
+
+    /**
+     * Kolbasa in a cluster, switched on by a [ClusterKolbasaSettings] bean. Not named `Cluster`: that name is
+     * kolbasa's class.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnBean(ClusterKolbasaSettings::class)
+    internal class Clustered {
+
+        /**
+         * The cluster over [ClusterKolbasaSettings.nodes]. Build your own cluster roles over it, for example
+         * `ClusterProducer(cluster, options)`.
+         *
+         * It can be used only after [clusterKolbasaTopologyUpdater] has read the topology. A bean of yours that uses
+         * the cluster while it starts must wait for it: `@DependsOn("clusterKolbasaTopologyUpdater")`.
+         */
+        @Bean
+        fun kolbasaCluster(settings: ClusterKolbasaSettings): Cluster {
+            return Cluster(settings.nodes, settings.queues)
+        }
+
+        /**
+         * Reads the topology of the cluster at startup, and creates the queues on every node. Then it reads the
+         * topology again every minute, until the application stops.
+         *
+         * If the first read fails, the application doesn't start: the cluster can't work without the topology.
+         */
+        @Bean
+        fun clusterKolbasaTopologyUpdater(cluster: Cluster): ClusterTopologyUpdater {
+            val updater = ClusterTopologyUpdater(cluster)
+            updater.start()
+            return updater
         }
     }
 }

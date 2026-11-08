@@ -1,5 +1,6 @@
 package kolbasa.spring.boot
 
+import kolbasa.cluster.Cluster
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.inspector.datasource.Inspector
 import kolbasa.mutator.datasource.Mutator
@@ -35,6 +36,7 @@ class KolbasaAutoConfigurationTest {
             assertThat(context).doesNotHaveBean(Consumer::class.java)
             assertThat(context).doesNotHaveBean(Mutator::class.java)
             assertThat(context).doesNotHaveBean(Inspector::class.java)
+            assertThat(context).doesNotHaveBean(Cluster::class.java)
         }
     }
 
