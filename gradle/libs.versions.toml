@@ -9,7 +9,8 @@ kotlin = "2.3.21"
 nebula = "20.2.0"
 vanniktech = "0.37.0"
 
-micrometer = "1.17.2"
+# The oldest Micrometer the library supports: it is built and tested against it
+micrometer = "1.13.15"
 opentelemetry = "1.66.0"
 opentelemetry-instrumentation = "2.32.0"
 opentelemetry-instrumentation-incubator = "2.32.0-alpha"

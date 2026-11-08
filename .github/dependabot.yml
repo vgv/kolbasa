@@ -9,6 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
+    ignore:
+      # `micrometer` in gradle/libs.versions.toml is the oldest Micrometer the library supports, on purpose: take only
+      # its patches
+      - dependency-name: "io.micrometer:*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
