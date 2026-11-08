@@ -48,7 +48,7 @@ class ClusterInspectorTest : AbstractPostgreSQLTest() {
         }
 
         cluster = Cluster(dataSources)
-        cluster.updateStateOnce()
+        cluster.updateTopology()
 
         clusterInspector = ClusterInspector(cluster)
         clusterProducer = ClusterProducer(cluster)

@@ -42,7 +42,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         }
 
         cluster = Cluster(dataSources)
-        cluster.updateStateOnce()
+        cluster.updateTopology()
 
         clusterProducer = ClusterProducer(cluster)
     }
@@ -55,8 +55,8 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
         val sendResult = clusterProducer.send(queue, sendRequest)
 
         // read directly from the producer node
-        val producerNode = requireNotNull(cluster.getState().shards[ShardId.of(shard)]?.producerNode)
-        val dataSource = requireNotNull(cluster.getState().nodes[producerNode])
+        val producerNode = requireNotNull(cluster.getTopology().shards[ShardId.of(shard)]?.producerNode)
+        val dataSource = requireNotNull(cluster.getTopology().nodes[producerNode])
         val consumer = DatabaseConsumer(dataSource)
         val rawMessages = consumer.receive(queue, messagesToSend)
 
@@ -82,8 +82,8 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
                    """.trimIndent()
             statement.executeUpdate(sql)
         }
-        // re-read cluster state after shards changing
-        cluster.updateStateOnce()
+        // re-read cluster topology after shards changing
+        cluster.updateTopology()
 
         // send to random nodes
         val results = (1..messagesToSend).map {
@@ -124,11 +124,11 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
                    """.trimIndent()
             statement.executeUpdate(sql)
         }
-        // re-read cluster state after shards changing
-        cluster.updateStateOnce()
+        // re-read cluster topology after shards changing
+        cluster.updateTopology()
         // check that all producer nodes are NOT THE SAME that really existing nodes
-        val allProducerNodes = cluster.getState().shards.values.map { it.producerNode }.toSet()
-        val allNodes = cluster.getState().nodes.keys
+        val allProducerNodes = cluster.getTopology().shards.values.map { it.producerNode }.toSet()
+        val allNodes = cluster.getTopology().nodes.keys
         assertTrue(allNodes.intersect(allProducerNodes).isEmpty(), "allNodes: $allNodes, allProducerNodes: $allProducerNodes")
 
         // send to random nodes

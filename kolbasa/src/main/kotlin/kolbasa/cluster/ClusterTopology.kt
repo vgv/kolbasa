@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.sql.DataSource
 
-internal data class ClusterState(
+internal data class ClusterTopology(
     val nodes: Map<NodeId, DataSource>,
     val shards: Map<ShardId, Shard>
 ) {

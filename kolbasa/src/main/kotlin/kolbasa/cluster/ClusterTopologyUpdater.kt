@@ -6,13 +6,13 @@ import java.util.concurrent.TimeUnit
  * Keeps the topology of a [Cluster] fresh: reads it now, and then again and again, on a schedule.
  *
  * The topology is which nodes the cluster has and which node owns which shard. It changes when an operator moves
- * shards between nodes, or when a node is added. [Cluster.updateStateOnce] reads it once. This class calls it on a
+ * shards between nodes, or when a node is added. [Cluster.updateTopology] reads it once. This class calls it on a
  * schedule, so [ClusterProducer], [ClusterConsumer], [ClusterMutator] and [ClusterInspector] follow the changes
  * on their own.
  *
  * Create one updater per [Cluster], at application startup, and call [start] before you use any of these four
  * classes. If you already have a scheduler, Spring's `TaskScheduler` for example, you don't need this class: call
- * [Cluster.updateStateOnce] from your scheduler instead.
+ * [Cluster.updateTopology] from your scheduler instead.
  *
  * Call [close] when you are done with the updater: it stops the scheduled updates. This matters when the updater
  * lives shorter than the JVM, in tests for example. Spring, for example, calls it on its own when the context closes.
@@ -48,7 +48,7 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
     /**
      * Reads the topology now, and schedules the next reads.
      *
-     * It runs [Cluster.updateStateOnce] immediately, so the cluster is ready to use when the method returns.
+     * It runs [Cluster.updateTopology] immediately, so the cluster is ready to use when the method returns.
      * Then it schedules the next updates on [ClusterTopologyUpdaterOptions.executor], with
      * [ClusterTopologyUpdaterOptions.interval] between them, until [close].
      *
@@ -69,7 +69,7 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         }
 
         // If it throws, nothing is scheduled, and the method can be called again
-        cluster.updateStateOnce()
+        cluster.updateTopology()
         scheduleNextUpdate()
 
         lifecycle = Lifecycle.SCHEDULED
@@ -92,7 +92,7 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         }
 
         try {
-            cluster.updateStateOnce()
+            cluster.updateTopology()
         } catch (e: Exception) {
             // The old topology stays until the next update
             options.errorHandler.onTopologyUpdateError(TopologyUpdateError(e))

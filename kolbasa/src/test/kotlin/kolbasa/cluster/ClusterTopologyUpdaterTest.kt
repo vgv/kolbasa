@@ -65,8 +65,8 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
         val (shard, newNode) = moveRandomShard(cluster, dataSources)
 
-        // No updateStateOnce() here: only the scheduled update can bring the change
-        waitUntil { cluster.getState().shards[shard]?.producerNode == newNode }
+        // No updateTopology() here: only the scheduled update can bring the change
+        waitUntil { cluster.getTopology().shards[shard]?.producerNode == newNode }
     }
 
     @Test
@@ -83,7 +83,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
         // The node is back, and the updates go on
         val (shard, newNode) = moveRandomShard(cluster, dataSources)
-        waitUntil { cluster.getState().shards[shard]?.producerNode == newNode }
+        waitUntil { cluster.getTopology().shards[shard]?.producerNode == newNode }
     }
 
     @Test
@@ -138,16 +138,16 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testStart_AfterUpdateStateOnce() {
+    fun testStart_AfterUpdateTopology() {
         val dataSources = dataSources()
         val cluster = Cluster(dataSources)
-        cluster.updateStateOnce()
+        cluster.updateTopology()
 
         // The cluster already works, and the updater adds the schedule
         ClusterTopologyUpdater(cluster, options()).start()
 
         val (shard, newNode) = moveRandomShard(cluster, dataSources)
-        waitUntil { cluster.getState().shards[shard]?.producerNode == newNode }
+        waitUntil { cluster.getTopology().shards[shard]?.producerNode == newNode }
     }
 
     @Test
@@ -170,14 +170,14 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(dataSources())
         val updater = ClusterTopologyUpdater(cluster, options())
         updater.start()
-        val lastState = cluster.getState()
+        val lastTopology = cluster.getTopology()
 
         updater.close()
 
-        // The roles keep the last state, and the cluster can still be updated by hand
+        // The roles keep the last topology, and the cluster can still be updated by hand
         assertTrue(cluster.isInitialized())
-        assertSame(lastState, cluster.getState())
-        assertDoesNotThrow { cluster.updateStateOnce() }
+        assertSame(lastTopology, cluster.getTopology())
+        assertDoesNotThrow { cluster.updateTopology() }
     }
 
     @Test
@@ -224,10 +224,10 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
     // Gives a random shard to another node behind the cluster's back, straight in the shard table
     private fun moveRandomShard(cluster: Cluster, dataSources: List<DataSource>): Pair<ShardId, NodeId> {
-        val state = cluster.getState()
+        val topology = cluster.getTopology()
         val shard = ShardId.random()
-        val oldNode = requireNotNull(state.shards[shard]).producerNode
-        val newNode = (state.nodes.keys - oldNode).random()
+        val oldNode = requireNotNull(topology.shards[shard]).producerNode
+        val newNode = (topology.nodes.keys - oldNode).random()
 
         // The shard table lives on one node only
         val shardTableNode: DataSource = dataSources.single { dataSource ->

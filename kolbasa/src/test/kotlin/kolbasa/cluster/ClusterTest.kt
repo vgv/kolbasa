@@ -25,51 +25,51 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(emptyList())
 
         assertThrows<IllegalStateException> {
-            cluster.updateStateOnce()
+            cluster.updateTopology()
         }
     }
 
     @Test
-    fun testInitCluster_Test_State_Init_And_Not() {
+    fun testInitCluster_Test_Topology_Init_And_Not() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val cluster = Cluster(dataSources)
 
-        // State not updated
+        // Topology not updated
         assertFalse(cluster.isInitialized())
         assertThrows<IllegalStateException> {
-            cluster.getState()
+            cluster.getTopology()
         }
 
-        // Update the state
-        cluster.updateStateOnce()
+        // Update the topology
+        cluster.updateTopology()
 
-        // State updated
+        // Topology updated
         assertTrue(cluster.isInitialized())
         assertDoesNotThrow {
-            cluster.getState()
+            cluster.getTopology()
         }
     }
 
     @Test
-    fun testInitCluster_If_State_The_Same() {
+    fun testInitCluster_If_Topology_The_Same() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
         val cluster = Cluster(dataSources)
 
         // First initialization
-        cluster.updateStateOnce()
-        val firstState = cluster.getState()
+        cluster.updateTopology()
+        val firstTopology = cluster.getTopology()
 
-        // Second initialization, check that states are the same
-        cluster.updateStateOnce()
-        val secondState = cluster.getState()
+        // Second initialization, check that topologies are the same
+        cluster.updateTopology()
+        val secondTopology = cluster.getTopology()
 
-        assertSame(firstState, secondState)
-        assertTrue(firstState.nodes.isNotEmpty(), "State: $firstState")
+        assertSame(firstTopology, secondTopology)
+        assertTrue(firstTopology.nodes.isNotEmpty(), "Topology: $firstTopology")
     }
 
     @Test
-    fun testInitCluster_If_State_Not_The_Same() {
+    fun testInitCluster_If_Topology_Not_The_Same() {
         val dataSources = mapOf(
             "public" to dataSource,
             FIRST_SCHEMA_NAME to dataSourceFirstSchema,
@@ -79,14 +79,14 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(dataSources.values.toList())
 
         // First shard table initialization/read
-        cluster.updateStateOnce()
-        val firstState = cluster.getState()
+        cluster.updateTopology()
+        val firstTopology = cluster.getTopology()
 
         // ---------------------------------------------------------------------------------------
         // Make shard changes
         val shardToChange = ShardId.random()
-        val currentProducerConsumerNode = requireNotNull(firstState.shards[shardToChange]?.producerNode)
-        val newProducerConsumerNode = (firstState.nodes.keys - currentProducerConsumerNode).random()
+        val currentProducerConsumerNode = requireNotNull(firstTopology.shards[shardToChange]?.producerNode)
+        val newProducerConsumerNode = (firstTopology.nodes.keys - currentProducerConsumerNode).random()
         assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
 
         val shardTables = findShardTables(dataSources).filter { foundShardTable ->
@@ -108,12 +108,12 @@ class ClusterTest : AbstractPostgreSQLTest() {
         // ---------------------------------------------------------------------------------------
 
         // Second shard table read
-        cluster.updateStateOnce()
-        val secondState = cluster.getState()
+        cluster.updateTopology()
+        val secondTopology = cluster.getTopology()
 
-        assertNotEquals(firstState, secondState)
-        assertEquals(secondState.shards[shardToChange]?.producerNode, newProducerConsumerNode)
-        assertEquals(secondState.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
+        assertNotEquals(firstTopology, secondTopology)
+        assertEquals(secondTopology.shards[shardToChange]?.producerNode, newProducerConsumerNode)
+        assertEquals(secondTopology.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
     }
 
     @Test
@@ -127,14 +127,14 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(dataSources.values.toList())
 
         // First initialization
-        cluster.updateStateOnce()
+        cluster.updateTopology()
         val firstShardIDs = dataSources.mapNotNull { (_, dataSource) ->
             IdSchema.readNodeInfo(dataSource)
         }
         assertEquals(dataSources.size, firstShardIDs.size, "Data sources: $dataSources, shardIds: $firstShardIDs")
 
         // Second initialization, check that IDs are the same
-        cluster.updateStateOnce()
+        cluster.updateTopology()
         val secondShardIDs = dataSources.mapNotNull { (_, dataSource) ->
             IdSchema.readNodeInfo(dataSource)
         }
@@ -151,7 +151,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         )
 
         val cluster = Cluster(dataSources.values.toList())
-        cluster.updateStateOnce()
+        cluster.updateTopology()
 
         // Number of created shard tables
         val shardTables = findShardTables(dataSources)

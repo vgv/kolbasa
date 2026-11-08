@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture
  * [DatabaseProducer][kolbasa.producer.datasource.DatabaseProducer] per node behind the scenes. Creating one is
  * cheap, but `options` is fixed at that moment, so keep one instance per set of defaults you need. The
  * [Cluster] must be initialized before the first `send()`: by a [ClusterTopologyUpdater], or by your own call to
- * [Cluster.updateStateOnce].
+ * [Cluster.updateTopology].
  *
  * This class implements the [Producer] interface, so it's easy to use instead of [DatabaseProducer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
@@ -65,8 +65,8 @@ class ClusterProducer @JvmOverloads constructor(
             shardStrategy = Kolbasa.shardStrategy
         )
 
-        val currentState = cluster.getState()
-        val producer = currentState.getProducer(this, request.effectiveShard) { nodeId, dataSource ->
+        val topology = cluster.getTopology()
+        val producer = topology.getProducer(this, request.effectiveShard) { nodeId, dataSource ->
             val p = ConnectionAwareDatabaseProducer(nodeId, options)
             DatabaseProducer(dataSource, p)
         }

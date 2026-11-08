@@ -25,10 +25,10 @@ import javax.sql.DataSource
  *
  * A new instance knows nothing about the nodes yet. Before you use any of the four classes, start a
  * [ClusterTopologyUpdater] on the cluster: it reads the shard map now and keeps it fresh. If you skip this step,
- * every call to them fails with `Cluster state isn't initialized`.
+ * every call to them fails with `Cluster topology isn't initialized`.
  *
  * Growing the cluster needs nothing from your code beyond the node list itself. Build the [Cluster] with a function
- * that returns the current nodes, and a node added to that list is picked up by the next state update: the queues
+ * that returns the current nodes, and a node added to that list is picked up by the next topology update: the queues
  * you passed in `queues` are created on it, and shards can then be migrated to it.
  *
  * ## Usage Example
@@ -70,12 +70,12 @@ import javax.sql.DataSource
  * [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md).
  *
  * @constructor Creates a cluster whose node list is read from `dataSourcesProvider`. It is called again on every
- * state update, so use this form when nodes can be added or removed while the application runs.
+ * topology update, so use this form when nodes can be added or removed while the application runs.
  * @param dataSourcesProvider returns the [DataSource] of every node of this cluster. It must never return an empty list –
- * a state update over an empty list fails with `Data sources list is empty`.
- * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a state update,
+ * a topology update over an empty list fails with `Data sources list is empty`.
+ * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a topology update,
  * for the nodes that do not have them yet, so a node added later gets the whole schema on its own – within one
- * refresh interval, or at once if you call [updateStateOnce]. An empty list means "manage routing only, the schema
+ * refresh interval, or at once if you call [updateTopology]. An empty list means "manage routing only, the schema
  * is mine": nothing here touches your tables, and creating them stays your job, with
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
  */
@@ -93,7 +93,7 @@ class Cluster @JvmOverloads constructor(
      *
      * @param dataSources the [DataSource] of every node of this cluster, at least one
      * @param queues queues to create or update on every node, see the primary constructor for the details. With a
-     * fixed node list there are no nodes added later, so this happens once, at the first state update.
+     * fixed node list there are no nodes added later, so this happens once, at the first topology update.
      */
     @JvmOverloads
     constructor(
@@ -102,7 +102,7 @@ class Cluster @JvmOverloads constructor(
     ) : this({ dataSources }, queues)
 
     @Volatile
-    private var state: ClusterState? = null
+    private var topology: ClusterTopology? = null
 
     /**
      * Updating the schema can be a fairly resource-intensive operation, but if the queues don't change (and they don't),
@@ -111,7 +111,7 @@ class Cluster @JvmOverloads constructor(
     private var schemaUpdated: Boolean = false
 
     /**
-     * Reads the cluster state once, right now, and returns when it is done.
+     * Reads the cluster topology once, right now, and returns when it is done.
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the [Cluster] was created
      * with a list of queues – creates or updates those queues on the nodes that do not have them yet. If no node
@@ -119,14 +119,14 @@ class Cluster @JvmOverloads constructor(
      * initialized.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
-     * when you have your own scheduler, or when you want the new state at a known moment instead of waiting for the
+     * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
      * next scheduled run – after shards were moved between nodes, for example, or in a test.
      *
      * The method is synchronized, so calls from several threads run one after another. It talks to every node, so it
      * is not cheap – do not call it per message.
      */
     @Synchronized
-    fun updateStateOnce() {
+    fun updateTopology() {
         val dataSources = dataSourcesProvider.get()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
@@ -136,23 +136,23 @@ class Cluster @JvmOverloads constructor(
         val shards = initShards(nodes)
         initQueuesSchema(dataSources)
 
-        val newState = ClusterState(nodes.mapKeys { it.key.id }, shards)
-        if (newState != state) {
-            state = newState
+        val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
+        if (newTopology != topology) {
+            topology = newTopology
         }
     }
 
     /**
-     * Whether the cluster state has been read at least once, by [updateStateOnce] or [ClusterTopologyUpdater.start].
+     * Whether the cluster topology has been read at least once, by [updateTopology] or [ClusterTopologyUpdater.start].
      * Until then, every call to a [ClusterProducer], [ClusterConsumer], [ClusterMutator] or [ClusterInspector] fails.
      */
     fun isInitialized(): Boolean {
-        return state != null
+        return topology != null
     }
 
-    internal fun getState(): ClusterState {
-        return checkNotNull(state) {
-            "Cluster state isn't initialized, call updateStateOnce() or ClusterTopologyUpdater.start() first"
+    internal fun getTopology(): ClusterTopology {
+        return checkNotNull(topology) {
+            "Cluster topology isn't initialized, call updateTopology() or ClusterTopologyUpdater.start() first"
         }
     }
 

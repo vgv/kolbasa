@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture
  * [DatabaseMutator][kolbasa.mutator.datasource.DatabaseMutator] per node behind the scenes. Creating one is cheap,
  * but `options` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
  * must be initialized before the first call: by a [ClusterTopologyUpdater], or by your own call to
- * [Cluster.updateStateOnce].
+ * [Cluster.updateTopology].
  *
  * This class implements the [Mutator] interface, so it's easy to use instead of [DatabaseMutator] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
@@ -66,14 +66,14 @@ class ClusterMutator @JvmOverloads constructor(
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
-        val latestState = cluster.getState()
-        val byNodes = latestState.mapShardsToNodes(messages) { it.shard }
+        val topology = cluster.getTopology()
+        val byNodes = topology.mapShardsToNodes(messages) { it.shard }
 
         var mutatedMessagesCount = 0
         val mutatedMessagesResult = mutableListOf<MessageResult>()
         byNodes.forEach { (node, ids) ->
             if (node != null) {
-                val mutator = latestState.getMutator(this, node) { nodeId, dataSource ->
+                val mutator = topology.getMutator(this, node) { nodeId, dataSource ->
                     val peer = ConnectionAwareDatabaseMutator(nodeId, options)
                     DatabaseMutator(dataSource, peer)
                 }
@@ -97,9 +97,9 @@ class ClusterMutator @JvmOverloads constructor(
         mutations: List<Mutation>,
         filter: Filter.() -> Condition
     ): MutateResult {
-        val latestState = cluster.getState()
+        val topology = cluster.getTopology()
 
-        val allMutators = latestState.getMutators(this) { nodeId, dataSource ->
+        val allMutators = topology.getMutators(this) { nodeId, dataSource ->
             val peer = ConnectionAwareDatabaseMutator(nodeId, options)
             DatabaseMutator(dataSource, peer)
         }
