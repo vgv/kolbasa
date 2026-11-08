@@ -1,6 +1,10 @@
 package kolbasa.spring.boot
 
 import io.mockk.mockk
+import kolbasa.cluster.ClusterConsumer
+import kolbasa.cluster.ClusterInspector
+import kolbasa.cluster.ClusterMutator
+import kolbasa.cluster.ClusterProducer
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.inspector.datasource.Inspector
@@ -58,6 +62,24 @@ class KolbasaStandaloneRolesTest : AbstractPostgreSQLTest() {
             .run { context ->
                 assertThat(context).hasNotFailed()
                 assertSame(producer, context.getBean(Producer::class.java))
+            }
+    }
+
+    @Test
+    fun testOwnClusterRoles_StandaloneRolesStay() {
+        // Cluster beans of yours don't switch the standalone roles off
+        contextRunner
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .withBean(ClusterProducer::class.java, { mockk() })
+            .withBean(ClusterConsumer::class.java, { mockk() })
+            .withBean(ClusterMutator::class.java, { mockk() })
+            .withBean(ClusterInspector::class.java, { mockk() })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                assertThat(context).hasBean("kolbasaStandaloneProducer")
+                assertThat(context).hasBean("kolbasaStandaloneConsumer")
+                assertThat(context).hasBean("kolbasaStandaloneMutator")
+                assertThat(context).hasBean("kolbasaStandaloneInspector")
             }
     }
 

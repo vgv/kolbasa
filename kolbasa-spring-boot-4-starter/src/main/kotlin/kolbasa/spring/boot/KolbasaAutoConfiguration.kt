@@ -1,6 +1,10 @@
 package kolbasa.spring.boot
 
 import kolbasa.cluster.Cluster
+import kolbasa.cluster.ClusterConsumer
+import kolbasa.cluster.ClusterInspector
+import kolbasa.cluster.ClusterMutator
+import kolbasa.cluster.ClusterProducer
 import kolbasa.cluster.ClusterTopologyUpdater
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
@@ -31,10 +35,12 @@ import javax.sql.DataSource
  * What it does depends on your beans:
  * - a [KolbasaStandaloneSettings] bean switches kolbasa on in standalone mode, in the application's own database: the
  *   tables and the role beans;
- * - a [KolbasaClusterSettings] bean switches kolbasa on in a cluster: the `Cluster` bean and its topology updates;
+ * - a [KolbasaClusterSettings] bean switches kolbasa on in a cluster: the `Cluster` bean, its topology updates and
+ *   the role beans;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
- * Without them it does nothing.
+ * Without them it does nothing. With both settings beans the application has two beans of every role, see
+ * [KolbasaStandalone] and [KolbasaCluster].
  */
 @AutoConfiguration
 class KolbasaAutoConfiguration {
@@ -80,55 +86,67 @@ class KolbasaAutoConfiguration {
         // Every role below asks for the schema initializer and doesn't use it. Asking makes Spring create the tables
         // before the role, so a bean of yours that uses a role while it starts finds them. It is null when
         // kolbasa.standalone.schema.enabled=false
+        //
+        // The roles return the classes, not the interfaces. Spring Boot checks @ConditionalOnMissingBean before any
+        // bean is created, so it knows only the declared types. With the classes declared, the standalone roles can
+        // skip the cluster ones (ignored = Cluster*), and the cluster roles skip the standalone ones
 
         /**
-         * The `Producer` with [KolbasaStandaloneSettings.producerOptions]. A `Producer` bean of your own replaces it.
+         * The `Producer` with [KolbasaStandaloneSettings.producerOptions]. A `Producer` bean of your own replaces it,
+         * unless it is a `ClusterProducer`: that one belongs to the cluster.
          */
         @Bean
-        @ConditionalOnMissingBean(Producer::class)
+        @KolbasaStandalone
+        @ConditionalOnMissingBean(value = [Producer::class], ignored = [ClusterProducer::class])
         fun kolbasaStandaloneProducer(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
-        ): Producer {
+        ): DatabaseProducer {
             return DatabaseProducer(dataSource, settings.producerOptions)
         }
 
         /**
-         * The `Consumer` with [KolbasaStandaloneSettings.consumerOptions]. A `Consumer` bean of your own replaces it.
+         * The `Consumer` with [KolbasaStandaloneSettings.consumerOptions]. A `Consumer` bean of your own replaces it,
+         * unless it is a `ClusterConsumer`: that one belongs to the cluster.
          */
         @Bean
-        @ConditionalOnMissingBean(Consumer::class)
+        @KolbasaStandalone
+        @ConditionalOnMissingBean(value = [Consumer::class], ignored = [ClusterConsumer::class])
         fun kolbasaStandaloneConsumer(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
-        ): Consumer {
+        ): DatabaseConsumer {
             return DatabaseConsumer(dataSource, settings.consumerOptions)
         }
 
         /**
-         * The `Mutator` with [KolbasaStandaloneSettings.mutatorOptions]. A `Mutator` bean of your own replaces it.
+         * The `Mutator` with [KolbasaStandaloneSettings.mutatorOptions]. A `Mutator` bean of your own replaces it,
+         * unless it is a `ClusterMutator`: that one belongs to the cluster.
          */
         @Bean
-        @ConditionalOnMissingBean(Mutator::class)
+        @KolbasaStandalone
+        @ConditionalOnMissingBean(value = [Mutator::class], ignored = [ClusterMutator::class])
         fun kolbasaStandaloneMutator(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
-        ): Mutator {
+        ): DatabaseMutator {
             return DatabaseMutator(dataSource, settings.mutatorOptions)
         }
 
         /**
-         * The `Inspector`. An `Inspector` bean of your own replaces it.
+         * The `Inspector`. An `Inspector` bean of your own replaces it, unless it is a `ClusterInspector`: that one
+         * belongs to the cluster.
          */
         @Bean
-        @ConditionalOnMissingBean(Inspector::class)
+        @KolbasaStandalone
+        @ConditionalOnMissingBean(value = [Inspector::class], ignored = [ClusterInspector::class])
         fun kolbasaStandaloneInspector(
             dataSource: DataSource,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
-        ): Inspector {
+        ): DatabaseInspector {
             return DatabaseInspector(dataSource)
         }
     }
@@ -155,15 +173,81 @@ class KolbasaAutoConfiguration {
 
         /**
          * Reads the topology of the cluster at startup, and creates the queues on every node. Then it reads the
-         * topology again every minute, until the application stops.
+         * topology again on the schedule of [KolbasaClusterSettings.topologyUpdaterOptions], every minute by default,
+         * until the application stops.
          *
          * If the first read fails, the application doesn't start: the cluster can't work without the topology.
          */
         @Bean
-        fun kolbasaClusterTopologyUpdater(cluster: Cluster): ClusterTopologyUpdater {
-            val updater = ClusterTopologyUpdater(cluster)
+        fun kolbasaClusterTopologyUpdater(cluster: Cluster, settings: KolbasaClusterSettings): ClusterTopologyUpdater {
+            val updater = ClusterTopologyUpdater(cluster, settings.topologyUpdaterOptions)
             updater.start()
             return updater
+        }
+
+        // Every role below asks for the topology updater and doesn't use it. Asking makes Spring read the topology
+        // before the role, so a bean of yours that uses a role while it starts finds the cluster ready.
+        //
+        // The roles return the classes, not the interfaces, see the comment in Standalone
+
+        /**
+         * The `Producer` with [KolbasaClusterSettings.producerOptions] and [KolbasaClusterSettings.shardStrategy]. A
+         * `Producer` bean of your own replaces it, unless it is a `DatabaseProducer`: that one works with one
+         * database, not with the cluster.
+         */
+        @Bean
+        @KolbasaCluster
+        @ConditionalOnMissingBean(value = [Producer::class], ignored = [DatabaseProducer::class])
+        fun kolbasaClusterProducer(
+            cluster: Cluster,
+            settings: KolbasaClusterSettings,
+            topologyUpdater: ClusterTopologyUpdater
+        ): ClusterProducer {
+            return ClusterProducer(cluster, settings.producerOptions, settings.shardStrategy)
+        }
+
+        /**
+         * The `Consumer` with [KolbasaClusterSettings.consumerOptions]. A `Consumer` bean of your own replaces it,
+         * unless it is a `DatabaseConsumer`: that one works with one database, not with the cluster.
+         */
+        @Bean
+        @KolbasaCluster
+        @ConditionalOnMissingBean(value = [Consumer::class], ignored = [DatabaseConsumer::class])
+        fun kolbasaClusterConsumer(
+            cluster: Cluster,
+            settings: KolbasaClusterSettings,
+            topologyUpdater: ClusterTopologyUpdater
+        ): ClusterConsumer {
+            return ClusterConsumer(cluster, settings.consumerOptions)
+        }
+
+        /**
+         * The `Mutator` with [KolbasaClusterSettings.mutatorOptions]. A `Mutator` bean of your own replaces it,
+         * unless it is a `DatabaseMutator`: that one works with one database, not with the cluster.
+         */
+        @Bean
+        @KolbasaCluster
+        @ConditionalOnMissingBean(value = [Mutator::class], ignored = [DatabaseMutator::class])
+        fun kolbasaClusterMutator(
+            cluster: Cluster,
+            settings: KolbasaClusterSettings,
+            topologyUpdater: ClusterTopologyUpdater
+        ): ClusterMutator {
+            return ClusterMutator(cluster, settings.mutatorOptions)
+        }
+
+        /**
+         * The `Inspector`. An `Inspector` bean of your own replaces it, unless it is a `DatabaseInspector`: that one
+         * works with one database, not with the cluster.
+         */
+        @Bean
+        @KolbasaCluster
+        @ConditionalOnMissingBean(value = [Inspector::class], ignored = [DatabaseInspector::class])
+        fun kolbasaClusterInspector(
+            cluster: Cluster,
+            topologyUpdater: ClusterTopologyUpdater
+        ): ClusterInspector {
+            return ClusterInspector(cluster)
         }
     }
 }

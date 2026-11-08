@@ -1,18 +1,40 @@
 package kolbasa.spring.boot
 
+import io.mockk.mockk
 import kolbasa.cluster.Cluster
+import kolbasa.cluster.ClusterConsumer
+import kolbasa.cluster.ClusterInspector
+import kolbasa.cluster.ClusterMutator
 import kolbasa.cluster.ClusterProducer
+import kolbasa.cluster.ClusterTopologyUpdaterOptions
+import kolbasa.cluster.ShardStrategy
+import kolbasa.consumer.ConsumerOptions
+import kolbasa.consumer.datasource.Consumer
+import kolbasa.consumer.datasource.DatabaseConsumer
+import kolbasa.inspector.datasource.DatabaseInspector
+import kolbasa.inspector.datasource.Inspector
+import kolbasa.mutator.MutatorOptions
+import kolbasa.mutator.datasource.DatabaseMutator
+import kolbasa.mutator.datasource.Mutator
+import kolbasa.producer.ProducerOptions
+import kolbasa.producer.datasource.DatabaseProducer
+import kolbasa.producer.datasource.Producer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
+import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.test.AbstractPostgreSQLTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import javax.sql.DataSource
 
 class KolbasaClusterTest : AbstractPostgreSQLTest() {
+
+    private val nodes by lazy { listOf(dataSourceFirstSchema, dataSourceSecondSchema) }
 
     // No DataSource bean: a cluster doesn't need the application's own database
     private val contextRunner = ApplicationContextRunner()
@@ -20,8 +42,6 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testClusterSettings_ClusterReady() {
-        val nodes = listOf(dataSourceFirstSchema, dataSourceSecondSchema)
-
         contextRunner
             .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
             .run { context ->
@@ -45,6 +65,108 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
             }
     }
 
+    @Test
+    fun testClusterSettings_RolesGetOptions() {
+        // The updater schedules its next read here, so the test sees that it got the options
+        val executor = ScheduledThreadPoolExecutor(1)
+        val settings = KolbasaClusterSettings.builder(nodes, listOf(QUEUE))
+            .producerOptions(ProducerOptions(producer = "test"))
+            .consumerOptions(ConsumerOptions(consumer = "test"))
+            .mutatorOptions(MutatorOptions(prometheusConfig = PrometheusConfig.None))
+            .shardStrategy(ShardStrategy.Fixed(SHARD))
+            .topologyUpdaterOptions(ClusterTopologyUpdaterOptions(executor = executor))
+            .build()
+
+        try {
+            contextRunner
+                .withBean(KolbasaClusterSettings::class.java, { settings })
+                .run { context ->
+                    assertThat(context).hasNotFailed()
+                    assertEquals(settings.consumerOptions, context.getBean(Consumer::class.java).options)
+                    assertEquals(settings.mutatorOptions, context.getBean(Mutator::class.java).options)
+                    assertThat(context).hasSingleBean(Inspector::class.java)
+                    assertEquals(1, executor.queue.size)
+
+                    val producer = context.getBean(Producer::class.java)
+                    assertEquals(settings.producerOptions, producer.options)
+                    val sent = producer.send(QUEUE, "hello").onlySuccessful().single()
+                    assertEquals(SHARD, sent.id.shard.id)
+                }
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun testRoleUsedWhileStarting_FindsClusterReady() {
+        contextRunner
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
+            .withBean(StartupSender::class.java)
+            .run { context ->
+                assertThat(context).hasNotFailed()
+            }
+    }
+
+    @Test
+    fun testOwnDatabaseRoles_ClusterRolesStay() {
+        // Beans of yours that work with one database don't switch the cluster's roles off
+        contextRunner
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
+            .withBean(DatabaseProducer::class.java, { mockk() })
+            .withBean(DatabaseConsumer::class.java, { mockk() })
+            .withBean(DatabaseMutator::class.java, { mockk() })
+            .withBean(DatabaseInspector::class.java, { mockk() })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                assertThat(context).hasBean("kolbasaClusterProducer")
+                assertThat(context).hasBean("kolbasaClusterConsumer")
+                assertThat(context).hasBean("kolbasaClusterMutator")
+                assertThat(context).hasBean("kolbasaClusterInspector")
+            }
+    }
+
+    @Test
+    fun testStandaloneAndCluster_BothRoleSets() {
+        contextRunner
+            .withBean(DataSource::class.java, { dataSource })
+            .withBean(KolbasaStandaloneSettings::class.java, { KolbasaStandaloneSettings(listOf(QUEUE)) })
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
+            .withBean(BothRoleSets::class.java)
+            .run { context ->
+                assertThat(context).hasNotFailed()
+
+                val roles = context.getBean(BothRoleSets::class.java)
+                assertTrue(roles.standaloneProducer is DatabaseProducer)
+                assertTrue(roles.standaloneConsumer is DatabaseConsumer)
+                assertTrue(roles.standaloneMutator is DatabaseMutator)
+                assertTrue(roles.standaloneInspector is DatabaseInspector)
+                assertTrue(roles.clusterProducer is ClusterProducer)
+                assertTrue(roles.clusterConsumer is ClusterConsumer)
+                assertTrue(roles.clusterMutator is ClusterMutator)
+                assertTrue(roles.clusterInspector is ClusterInspector)
+            }
+    }
+
+    // Sends a message while it is created. Spring creates it before the starter's beans, so the send works only if
+    // the Producer brings the topology with it
+    class StartupSender(producer: Producer) {
+        init {
+            producer.send(QUEUE, "hello").throwExceptionIfAny()
+        }
+    }
+
+    // Gets every role twice, the way an application with both settings beans does
+    class BothRoleSets(
+        @KolbasaStandalone val standaloneProducer: Producer,
+        @KolbasaStandalone val standaloneConsumer: Consumer,
+        @KolbasaStandalone val standaloneMutator: Mutator,
+        @KolbasaStandalone val standaloneInspector: Inspector,
+        @KolbasaCluster val clusterProducer: Producer,
+        @KolbasaCluster val clusterConsumer: Consumer,
+        @KolbasaCluster val clusterMutator: Mutator,
+        @KolbasaCluster val clusterInspector: Inspector
+    )
+
     private fun tables(dataSource: DataSource, schema: String): Set<String> = dataSource.connection.use { connection ->
         connection.prepareStatement("select table_name from information_schema.tables where table_schema = ?").use {
             it.setString(1, schema)
@@ -55,6 +177,7 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
     }
 
     private companion object {
+        const val SHARD = 7
         val QUEUE = Queue.of("test", PredefinedDataTypes.String)
     }
 }
