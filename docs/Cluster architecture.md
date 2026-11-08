@@ -216,13 +216,12 @@ where the **most specific layer that sets a value wins**.
 ```
 ClusterProducer(shardStrategy = …)   this producer's default
   │
-  └─ ProducerOptions.shard           this producer
-       │
-       └─ SendOptions.shard          this send() call (applies to its whole batch)
+  └─ SendOptions.shard               this send() call (applies to its whole batch)
 ```
 
-The lower two layers *pin* a shard — you set it explicitly via the options. The top layer, the producer's `ShardStrategy` (a
-`ClusterProducer` constructor parameter), is the default that chooses a shard for any message you don't pin:
+The lower layer *pins* a shard — you set it explicitly in `SendOptions`. The top layer, the producer's `ShardStrategy` (a
+`ClusterProducer` constructor parameter), is the default that chooses a shard for any message you don't pin. To pin every
+message of one producer, give it `Fixed(n)`:
 
 | Strategy | Behavior |
 |---|---|
@@ -326,8 +325,7 @@ producer.send(orders, msg)
         ▼
   pick shard  ── most specific wins:
         │          SendOptions.shard      (this send() call, whole batch)
-        │            else ProducerOptions.shard   (this producer)
-        │              else the producer's ShardStrategy  (its default)
+        │            else the producer's ShardStrategy  (its default)
         ▼
   shardMap[shard] → producer_node   (in-memory; the cached q__shard snapshot, not a query)
         │

@@ -14,9 +14,8 @@ import java.util.concurrent.CompletableFuture
 /**
  * A [Producer] that sends messages to a cluster of nodes.
  *
- * Every message gets a shard number, and the shard decides which node stores it. The number comes from the first of
- * these that is set: the shard of the `send()` call ([SendOptions.shard][kolbasa.producer.SendOptions.shard]), the
- * shard of this producer ([ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard]), or the shard that
+ * Every message gets a shard number, and the shard decides which node stores it. The number is the shard of the
+ * `send()` call ([SendOptions.shard][kolbasa.producer.SendOptions.shard]) if it is set, or the shard that
  * `shardStrategy` of this producer picks. Any number is accepted: it is folded into the `0..1023` range for you.
  *
  * One `send()` call goes to one node, so a batch of messages that must land together must share a shard. If the
@@ -51,9 +50,9 @@ import java.util.concurrent.CompletableFuture
  *
  * @param cluster the cluster to send to
  * @param options the defaults of every `send()` of this producer
- * @param shardStrategy picks the shard of a message when neither the `send()` call nor [options] sets one, see
- * [ShardStrategy]. The default, [ShardStrategy.ThreadLocalWithInterval], keeps the messages of one thread on one
- * shard for five minutes at a time.
+ * @param shardStrategy picks the shard of a message when the `send()` call doesn't set one, see [ShardStrategy]. The
+ * default, [ShardStrategy.ThreadLocalWithInterval], keeps the messages of one thread on one shard for five minutes at
+ * a time. To send everything of this producer to one shard, pass [ShardStrategy.Fixed].
  * @see Cluster
  * @see kolbasa.producer.datasource.DatabaseProducer
  */
@@ -66,7 +65,6 @@ class ClusterProducer @JvmOverloads constructor(
     override fun <Data> send(queue: Queue<Data>, request: SendRequest<Data>): SendResult<Data> {
         request.effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(
             sendOptions = request.options,
-            producerOptions = options,
             shardStrategy = shardStrategy
         )
 

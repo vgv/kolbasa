@@ -5,10 +5,9 @@ import java.time.Duration
 /**
  * Chooses the shard of a message when nothing else does.
  *
- * A shard decides which node of a cluster stores a message. A message can get its shard from three places, and the
- * first one that is set wins: the `send()` call ([SendOptions.shard][kolbasa.producer.SendOptions.shard]), the
- * producer ([ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard]), and – when neither is set – the
- * strategy of the [ClusterProducer]. So a strategy is the default for the messages you did not place by hand.
+ * A shard decides which node of a cluster stores a message. A message gets its shard from the `send()` call
+ * ([SendOptions.shard][kolbasa.producer.SendOptions.shard]) or, when the call doesn't set one, from the strategy of
+ * the [ClusterProducer]. So a strategy is the default for the messages you did not place by hand.
  *
  * Every [ClusterProducer] has its own strategy, given to its constructor. A single-node producer has none: it stores
  * every message with shard `0`.
@@ -55,8 +54,8 @@ sealed class ShardStrategy {
     /**
      * Returns the shard for the next message.
      *
-     * Called once per `send()` call, when neither the call nor the producer sets a shard. It must be fast and safe
-     * to call from many threads at once.
+     * Called once per `send()` call that doesn't set a shard. It must be fast and safe to call from many threads at
+     * once.
      *
      * Any [Int] is allowed. Kolbasa folds the value into the `0..1023` range itself
      * (from [kolbasa.producer.ShardId.MIN_SHARD] to [kolbasa.producer.ShardId.MAX_SHARD]), so a strategy may return,

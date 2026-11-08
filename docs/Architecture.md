@@ -826,8 +826,8 @@ classes are ordinary per-instance options you construct and pass to a specific q
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |
-| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `shard`, `asyncExecutor`, `tracing`, `prometheusConfig` |
-| `SendOptions` | One `send()` call | per-call overrides of the producer options |
+| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `asyncExecutor`, `tracing`, `prometheusConfig` |
+| `SendOptions` | One `send()` call | per-call overrides of the producer options, plus `shard` |
 | `MessageOptions` | One message | per-message `delay`, `attempts` |
 | `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout`, `tracing`, `prometheusConfig` |
 | `ReceiveOptions` | One `receive()` call | `consumer`, `filter`, `order`, `visibilityTimeout`, `readMetadata` |
@@ -842,7 +842,7 @@ narrowed where you need it — from a process-wide default, down through a queue
 wins**, and anything left unset inherits from the layer above:
 
 ```
-Kolbasa                process-wide defaults (sweep, shard strategy, async executor, telemetry)
+Kolbasa                process-wide defaults (sweep, async executor, telemetry)
   │
   └─ QueueOptions      one queue's defaults (delay, attempts, visibility timeout, DLQ/archive)
        │
@@ -861,9 +861,10 @@ Kolbasa                process-wide defaults (sweep, shard strategy, async execu
 
 Each role narrows to the depth its work needs. The producer side goes deepest — a *send* setting like `delay` or `attempts` can be
 pinned all the way down to one message — while a *receive* setting like `visibilityTimeout` narrows through the consumer instead.
-A few producer knobs (`deduplicationMode`, `partialInsert`, `chunkSize`, `shard`) live only on the producer level and can be
-overridden per `send()`. The mutator is the shallowest: it has no per-call options, so its settings live on `MutatorOptions`
-alone.
+A few producer knobs (`deduplicationMode`, `partialInsert`, `chunkSize`) live only on the producer level and can be
+overridden per `send()`. `shard` is the other way round: it exists only per `send()`, and a cluster producer's own default
+comes from its `ShardStrategy`. The mutator is the shallowest: it has no per-call options, so its settings live on
+`MutatorOptions` alone.
 
 The table above lists which setting lives on which class; the takeaway here is the *shape* — broad defaults you set once,
 overridable at every narrower scope without re-stating the rest. For example, set `defaultDelay` once on the queue, and any

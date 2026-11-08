@@ -149,12 +149,22 @@ data class SendOptions(
     val partialInsert: PartialInsert? = null,
 
     /**
-     * Overrides [ProducerOptions.shard] for this send() call – which shard, and therefore which node of
-     * a cluster, the messages go to.
+     * Shard of the messages of this send() call, and therefore the node of a cluster they go to.
      *
-     * `null`, the default, means "do not override": the value of the producer is used.
+     * In a cluster, the [ShardStrategy][kolbasa.cluster.ShardStrategy] of the
+     * [ClusterProducer][kolbasa.cluster.ClusterProducer] spreads messages over the nodes. Sometimes related messages
+     * must be on one node instead:
+     * - Deduplication by unique meta fields. Unique indexes work only inside one PostgreSQL server.
+     * - Order. Messages of one `account_id`, for example, can be read in order only if they are on one server.
      *
-     * @see [ProducerOptions.shard]
+     * Messages with the same shard are always stored on the same node. Any [Int] works, for example the hash code of
+     * your business key: kolbasa folds it into the `0..1023` range. Messages with different shards may land on the
+     * same node or on different ones.
+     *
+     * `null`, the default, means "let the producer's strategy choose". A single-node producer ignores the value: it
+     * stores every message with shard `0`.
+     *
+     * @see kolbasa.cluster.ShardStrategy
      */
     val shard: Int? = null,
 

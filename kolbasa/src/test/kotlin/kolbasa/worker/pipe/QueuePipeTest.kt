@@ -167,16 +167,15 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     fun testProcess_ProducerOptions() {
         send("one", "two", "three")
 
-        // The pipe sets only the partial insert, the rest comes from the producer. A shard means something only in a
-        // cluster: a single node stores every message with shard 0
-        val producer = clusterProducer(ProducerOptions(shard = 42))
+        // The pipe sets only the partial insert, the rest comes from the producer
+        val producer = DatabaseProducer(toDataSource, ProducerOptions(producer = "pipe"))
         val pipe = QueuePipe.map(source, PipeTarget(to, producer)) { message ->
             SendMessage(message.data)
         }
 
         assertEquals(ProcessResult(succeeded = 3, skipped = 0, failed = 0, requested = 10), pipe.process())
-        val withShard = clusterNodes.sumOf { it.readInt("select count(*) from ${to.dbTableName} where shard = 42") }
-        assertEquals(3, withShard)
+        val withProducer = toDataSource.readInt("select count(*) from ${to.dbTableName} where producer = 'pipe'")
+        assertEquals(3, withProducer)
     }
 
     @Test
@@ -418,11 +417,11 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
     // The target queue as a cluster of two nodes
     private val clusterNodes by lazy { listOf(dataSourceFirstSchema, dataSourceSecondSchema) }
 
-    private fun clusterProducer(options: ProducerOptions = ProducerOptions.DEFAULT): ClusterProducer {
+    private fun clusterProducer(): ClusterProducer {
         clusterNodes.forEach { SchemaHelpers.createOrUpdateQueues(it, to) }
         val cluster = Cluster(clusterNodes, emptyList())
         cluster.updateTopology()
-        return ClusterProducer(cluster, options)
+        return ClusterProducer(cluster)
     }
 
     private fun send(vararg data: String) {
