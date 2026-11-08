@@ -8,11 +8,14 @@ import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
+import kolbasa.worker.QueueWorker
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization
+import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.sql.DataSource
@@ -23,10 +26,26 @@ import javax.sql.DataSource
  * Spring Boot finds it on its own, so adding the starter to the dependencies is enough. To turn it off, exclude it:
  * `@SpringBootApplication(exclude = [KolbasaAutoConfiguration::class])`.
  *
- * It does nothing on its own: kolbasa is switched on by a [LocalKolbasaSettings] bean.
+ * What it does depends on your beans:
+ * - a [LocalKolbasaSettings] bean switches kolbasa on in the application's own database: the tables and the role beans;
+ * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
+ *
+ * Without them it does nothing.
  */
 @AutoConfiguration
 class KolbasaAutoConfiguration {
+
+    /**
+     * Starts and stops the `QueueWorker` beans, see [QueueWorkersLifecycle].
+     *
+     * `kolbasa.workers.auto-startup=false` leaves them stopped, for example in tests. A test that needs a worker
+     * starts it by hand then: `worker.start()`. Spring still closes it with the context.
+     */
+    @Bean
+    @ConditionalOnBooleanProperty("kolbasa.workers.auto-startup", matchIfMissing = true)
+    fun kolbasaWorkersLifecycle(workers: ObjectProvider<QueueWorker>): SmartLifecycle {
+        return QueueWorkersLifecycle(workers)
+    }
 
     /**
      * Kolbasa in the application's own database, switched on by a [LocalKolbasaSettings] bean.
