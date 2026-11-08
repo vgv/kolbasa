@@ -23,13 +23,17 @@ dependencies {
 
     // Metrics
     compileOnly(libs.prometheus.metrics.core)
+    compileOnly(libs.micrometer.core)
+    compileOnly(libs.micrometer.registry.prometheus)
 
     // Test
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
     // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
-    // Prometheus is compileOnly above, so the metrics tests need it on their own classpath
+    // Prometheus and Micrometer are compileOnly above, so the metrics tests need them on their own classpath
     testImplementation(libs.prometheus.metrics.core)
+    testImplementation(libs.micrometer.core)
+    testImplementation(libs.micrometer.registry.prometheus)
 }
 
 // Kotlin settings

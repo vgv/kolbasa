@@ -1,8 +1,12 @@
 package kolbasa.telemetry.prometheus
 
+import io.micrometer.core.instrument.Clock
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kolbasa.queue.Queue
 import kolbasa.telemetry.prometheus.metrics.PrometheusMetrics
+import java.util.Collections
+import java.util.WeakHashMap
 
 /**
  * Says whether Kolbasa collects Prometheus metrics, and where it registers them.
@@ -47,9 +51,9 @@ sealed class PrometheusConfig {
     /**
      * Metrics, registered in a Prometheus registry.
      *
-     * Every metric of the library is created and registered when the first [Config] over a registry is created, not
-     * when the first message is sent. That is a deliberate trade: the work happens once, and reporting a value later
-     * costs almost nothing.
+     * The metrics of a queue are created and registered on the first call to that queue, not when a [Config] is
+     * created. That work happens once for every queue in a registry: later calls only report values, and that costs
+     * almost nothing.
      *
      * You can build as many [Config] objects over one registry as you like: they share the same metrics, and a new one
      * costs almost nothing. There is no need to pass one object around.
@@ -62,10 +66,25 @@ sealed class PrometheusConfig {
     ) : PrometheusConfig() {
 
         // All metrics of the library, shared by every Config over the same registry
-        private val metrics: PrometheusMetrics = PrometheusMetrics.of(registry)
+        private val metrics: PrometheusMetrics = PrometheusMetrics.of(meterRegistry(registry))
 
         override fun queueMetrics(queue: Queue<*>): QueueMetrics {
             return metrics.queueMetrics(queue)
+        }
+
+        private companion object {
+
+            // Temporary, until Config takes a Micrometer registry itself. One Micrometer registry over every
+            // Prometheus registry: a second one would put the same metrics into it again. The value holds its key, so
+            // a registry is never removed from this map
+            private val meterRegistries: MutableMap<PrometheusRegistry, PrometheusMeterRegistry> =
+                Collections.synchronizedMap(WeakHashMap())
+
+            fun meterRegistry(registry: PrometheusRegistry): PrometheusMeterRegistry {
+                return meterRegistries.computeIfAbsent(registry) {
+                    PrometheusMeterRegistry(io.micrometer.prometheusmetrics.PrometheusConfig.DEFAULT, it, Clock.SYSTEM)
+                }
+            }
         }
     }
 }

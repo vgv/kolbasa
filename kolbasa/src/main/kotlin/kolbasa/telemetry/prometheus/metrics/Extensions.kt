@@ -1,26 +1,26 @@
 package kolbasa.telemetry.prometheus.metrics
 
-import io.prometheus.metrics.core.datapoints.CounterDataPoint
-import io.prometheus.metrics.core.datapoints.DistributionDataPoint
-import io.prometheus.metrics.core.datapoints.GaugeDataPoint
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.Timer
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 internal object Extensions {
 
-    fun CounterDataPoint.incInt(n: Int) {
-        this.inc(n.toDouble())
+    fun Counter.incInt(n: Int) {
+        this.increment(n.toDouble())
     }
 
-    fun CounterDataPoint.incLong(n: Long) {
-        this.inc(n.toDouble())
+    fun Counter.incLong(n: Long) {
+        this.increment(n.toDouble())
     }
 
-    fun GaugeDataPoint.setLong(n: Long) {
+    fun GaugeValue.setLong(n: Long) {
         this.set(n.toDouble())
     }
 
-    fun DistributionDataPoint.observeNanos(nanos: Long) {
-        this.observe(nanos / NANOS_IN_SECOND)
+    fun Timer.observeNanos(nanos: Long) {
+        this.record(nanos, TimeUnit.NANOSECONDS)
     }
 
     fun Duration.asSeconds(): Double {

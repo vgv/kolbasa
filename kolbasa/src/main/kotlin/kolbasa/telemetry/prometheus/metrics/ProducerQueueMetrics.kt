@@ -1,7 +1,7 @@
 package kolbasa.telemetry.prometheus.metrics
 
-import io.prometheus.metrics.core.datapoints.CounterDataPoint
-import io.prometheus.metrics.core.datapoints.DistributionDataPoint
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.Timer
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
 import kolbasa.telemetry.prometheus.metrics.Extensions.incInt
@@ -23,7 +23,7 @@ internal class ProducerQueueMetrics(
     ) {
         when (partialInsert) {
             PartialInsert.PROHIBITED -> {
-                producerSendCounterProhibited.inc()
+                producerSendCounterProhibited.increment()
                 producerSendMessagesCounterProhibited.incInt(allMessages)
                 producerSendFailedMessagesCounterProhibited.incInt(failedMessages)
                 producerSendDurationProhibited.observeNanos(executionNanos)
@@ -31,7 +31,7 @@ internal class ProducerQueueMetrics(
             }
 
             PartialInsert.UNTIL_FIRST_FAILURE -> {
-                producerSendCounterUntilFirstFailure.inc()
+                producerSendCounterUntilFirstFailure.increment()
                 producerSendMessagesCounterUntilFirstFailure.incInt(allMessages)
                 producerSendFailedMessagesCounterUntilFirstFailure.incInt(failedMessages)
                 producerSendDurationUntilFirstFailure.observeNanos(executionNanos)
@@ -39,7 +39,7 @@ internal class ProducerQueueMetrics(
             }
 
             PartialInsert.INSERT_AS_MANY_AS_POSSIBLE -> {
-                producerSendCounterInsertAsManyAsPossible.inc()
+                producerSendCounterInsertAsManyAsPossible.increment()
                 producerSendMessagesCounterInsertAsManyAsPossible.incInt(allMessages)
                 producerSendFailedMessagesCounterInsertAsManyAsPossible.incInt(failedMessages)
                 producerSendDurationInsertAsManyAsPossible.observeNanos(executionNanos)
@@ -48,41 +48,41 @@ internal class ProducerQueueMetrics(
         }
     }
 
-    private val producerSendCounterProhibited: CounterDataPoint = metrics.producerSendCounter
-        .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendCounter
-        .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendCounter
-        .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
+    private val producerSendCounterProhibited: Counter = metrics.producerSendCounter
+        .withTags(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
+    private val producerSendCounterUntilFirstFailure: Counter = metrics.producerSendCounter
+        .withTags(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
+    private val producerSendCounterInsertAsManyAsPossible: Counter = metrics.producerSendCounter
+        .withTags(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendMessagesCounterProhibited: CounterDataPoint = metrics.producerSendMessagesCounter
-        .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendMessagesCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendMessagesCounter
-        .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendMessagesCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendMessagesCounter
-        .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
+    private val producerSendMessagesCounterProhibited: Counter = metrics.producerSendMessagesCounter
+        .withTags(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
+    private val producerSendMessagesCounterUntilFirstFailure: Counter = metrics.producerSendMessagesCounter
+        .withTags(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
+    private val producerSendMessagesCounterInsertAsManyAsPossible: Counter = metrics.producerSendMessagesCounter
+        .withTags(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendFailedMessagesCounterProhibited: CounterDataPoint =
+    private val producerSendFailedMessagesCounterProhibited: Counter =
         metrics.producerSendFailedMessagesCounter
-            .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendFailedMessagesCounterUntilFirstFailure: CounterDataPoint =
+            .withTags(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
+    private val producerSendFailedMessagesCounterUntilFirstFailure: Counter =
         metrics.producerSendFailedMessagesCounter
-            .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendFailedMessagesCounterInsertAsManyAsPossible: CounterDataPoint =
+            .withTags(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
+    private val producerSendFailedMessagesCounterInsertAsManyAsPossible: Counter =
         metrics.producerSendFailedMessagesCounter
-            .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
+            .withTags(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendDurationProhibited: DistributionDataPoint = metrics.producerSendDuration
-        .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendDurationUntilFirstFailure: DistributionDataPoint = metrics.producerSendDuration
-        .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendDurationInsertAsManyAsPossible: DistributionDataPoint = metrics.producerSendDuration
-        .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
+    private val producerSendDurationProhibited: Timer = metrics.producerSendDuration
+        .withTags(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
+    private val producerSendDurationUntilFirstFailure: Timer = metrics.producerSendDuration
+        .withTags(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
+    private val producerSendDurationInsertAsManyAsPossible: Timer = metrics.producerSendDuration
+        .withTags(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 
-    private val producerSendBytesCounterProhibited: CounterDataPoint = metrics.producerSendBytesCounter
-        .labelValues(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
-    private val producerSendBytesCounterUntilFirstFailure: CounterDataPoint = metrics.producerSendBytesCounter
-        .labelValues(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
-    private val producerSendBytesCounterInsertAsManyAsPossible: CounterDataPoint = metrics.producerSendBytesCounter
-        .labelValues(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
+    private val producerSendBytesCounterProhibited: Counter = metrics.producerSendBytesCounter
+        .withTags(queueName, PartialInsert.PROHIBITED.name, nodeId.id)
+    private val producerSendBytesCounterUntilFirstFailure: Counter = metrics.producerSendBytesCounter
+        .withTags(queueName, PartialInsert.UNTIL_FIRST_FAILURE.name, nodeId.id)
+    private val producerSendBytesCounterInsertAsManyAsPossible: Counter = metrics.producerSendBytesCounter
+        .withTags(queueName, PartialInsert.INSERT_AS_MANY_AS_POSSIBLE.name, nodeId.id)
 }
