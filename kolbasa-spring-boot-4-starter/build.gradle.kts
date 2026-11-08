@@ -20,6 +20,10 @@ dependencies {
     // Auto-configuration support. Every Spring Boot application has it already
     implementation(libs.spring.boot.autoconfigure)
 
+    // @DependsOnDatabaseInitialization: the queue tables are created after Flyway, Liquibase and schema.sql. Every
+    // application on Spring Boot's JDBC support has it already, through spring-boot-jdbc
+    implementation(libs.spring.boot.sql)
+
     // Test
     // Which PostgreSQL versions we test against, plus JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))

@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.context.annotation.ImportCandidates
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import java.util.function.Supplier
 
 class KolbasaAutoConfigurationTest {
 
@@ -28,5 +29,14 @@ class KolbasaAutoConfigurationTest {
             assertThat(context).hasNotFailed()
             assertThat(context).hasSingleBean(KolbasaAutoConfiguration::class.java)
         }
+    }
+
+    @Test
+    fun testLocalSettingsWithoutDataSource_Fails() {
+        contextRunner
+            .withBean(LocalKolbasaSettings::class.java, Supplier { LocalKolbasaSettings(emptyList()) })
+            .run { context ->
+                assertThat(context).hasFailed()
+            }
     }
 }
