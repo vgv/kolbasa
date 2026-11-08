@@ -36,7 +36,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
             SchemaHelpers.createOrUpdateQueues(dataSource, queue)
         }
 
-        cluster = Cluster(dataSources)
+        cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
         clusterConsumer = ClusterConsumer(cluster)

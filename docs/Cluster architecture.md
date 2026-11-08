@@ -136,12 +136,12 @@ producer.send(orders, message)
 val messages = consumer.receive(orders, limit = 100)
 ```
 
-**Cluster** introduces one new object — a `Cluster` — built from the **list** of per-node `DataSource`s, and then builds the
-roles from that `Cluster` instead of from a raw `DataSource`:
+**Cluster** introduces one new object — a `Cluster` — built from the **list** of per-node `DataSource`s and the list of your
+queues, and then builds the roles from that `Cluster` instead of from a raw `DataSource`:
 
 ```kotlin
-// One DataSource per node — the cluster connects to all of them.
-val cluster = Cluster(listOf(nodeA, nodeB, nodeC))
+// One DataSource per node — the cluster connects to all of them — and the queues it creates on every node.
+val cluster = Cluster(listOf(nodeA, nodeB, nodeC), listOf(orders))
 
 // Start the background poll that keeps each client's view of the
 // shard-ownership map fresh (see "Cluster topology").
@@ -601,7 +601,7 @@ here is the architectural shape.)
      (a `Supplier<List<DataSource>>`) that already returns the new node. The `Cluster` re-reads the supplier on every refresh (every
      minute by default), so within one interval it picks up the new node and runs schema generation against it — the whole schema
      appears on the new node with no action from you. (You can force it immediately with `cluster.updateTopology()` instead of
-     waiting for the tick.) This only creates queues if the `Cluster` was constructed with the `queues` list; an empty list means
+     waiting for the tick.) This only creates queues if the `Cluster` was given a non-empty list of queues; an empty list means
      it manages routing only and leaves schema to you, via one of the next two options.
    - **Generate it directly.** Call `SchemaHelpers.createOrUpdateQueues(newDataSource, queues)` against the new node's
      `DataSource` — the same call kolbasa makes internally.

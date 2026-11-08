@@ -29,8 +29,12 @@ import javax.sql.DataSource
  * every call to them fails with `Cluster topology isn't initialized`.
  *
  * Growing the cluster needs nothing from your code beyond the node list itself. Build the [Cluster] with a function
- * that returns the current nodes, and a node added to that list is picked up by the next topology update: the queues
- * you passed in `queues` are created on it, and shards can then be migrated to it.
+ * that returns the current nodes, and a node added to that list is picked up by the next topology update: your
+ * queues are created on it, and shards can then be migrated to it.
+ *
+ * Queues work the same way. Build the [Cluster] with a function that returns the current queues, and a queue added
+ * to that list is created on every node by the next topology update. To use it at once, call [updateTopology] right
+ * after you add it.
  *
  * ## Usage Example
  *
@@ -70,37 +74,37 @@ import javax.sql.DataSource
  * described in
  * [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md).
  *
- * @constructor Creates a cluster whose node list is read from `dataSourcesProvider`. It is called again on every
- * topology update, so use this form when nodes can be added or removed while the application runs.
+ * @constructor Creates a cluster whose nodes and queues are read from two functions. Both are called again on every
+ * topology update, so use this form when nodes or queues can be added while the application runs. If only one of
+ * the lists changes, return the other one as is: `Cluster({ currentNodes() }, { listOf(orders, customers) })`.
  * @param dataSourcesProvider returns the [DataSource] of every node of this cluster. It must never return an empty list –
  * a topology update over an empty list fails with `Data sources list is empty`.
- * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a topology update,
- * so a node added later gets the whole schema on its own – within one refresh interval, or at once if you call
- * [updateTopology]. An empty list means "manage routing only, the schema is mine": nothing here touches your
- * tables, and creating them stays your job, with
+ * @param queuesProvider returns the queues to create or update on every node of the cluster. Kolbasa does this during
+ * a topology update, so a node or a queue added later gets its schema on its own – within one refresh interval, or
+ * at once if you call [updateTopology]. An empty list means "manage routing only, the schema is mine": nothing here
+ * touches your tables, and creating them stays your job, with
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
  */
-class Cluster @JvmOverloads constructor(
+class Cluster(
     private val dataSourcesProvider: Supplier<List<DataSource>>,
-    private val queues: List<Queue<*>> = emptyList()
+    private val queuesProvider: Supplier<List<Queue<*>>>
 ) {
 
     /**
-     * Creates a cluster over a fixed list of nodes.
+     * Creates a cluster over a fixed list of nodes and a fixed list of queues.
      *
-     * Use this form when the node list is known at startup and does not change while the application runs. Adding a
-     * node later means restarting the application with the longer list. To add nodes without a restart, use the
+     * Use this form when both lists are known at startup and do not change while the application runs. Adding a node
+     * or a queue later means restarting the application with the longer list. To add them without a restart, use the
      * primary constructor.
      *
      * @param dataSources the [DataSource] of every node of this cluster, at least one
-     * @param queues queues to create or update on every node, see the primary constructor for the details. With a
-     * fixed node list there are no nodes added later, so this happens once, at the first topology update.
+     * @param queues queues to create or update on every node, see the primary constructor for the details. An empty
+     * list means "the schema is mine".
      */
-    @JvmOverloads
     constructor(
         dataSources: List<DataSource>,
-        queues: List<Queue<*>> = emptyList()
-    ) : this({ dataSources }, queues)
+        queues: List<Queue<*>>
+    ) : this({ dataSources }, { queues })
 
     @Volatile
     private var topology: ClusterTopology? = null
@@ -111,9 +115,9 @@ class Cluster @JvmOverloads constructor(
     /**
      * Reads the cluster topology once, right now, and returns when it is done.
      *
-     * One call asks every node for its identity, reads the shard ownership map, and – if the [Cluster] was created
-     * with a list of queues – creates or updates those queues on every node. If no node has a complete shard map
-     * yet, this method builds one and stores it, which is how a fresh cluster is initialized.
+     * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
+     * creates or updates them on every node. If no node has a complete shard map yet, this method builds one and
+     * stores it, which is how a fresh cluster is initialized.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -128,10 +132,11 @@ class Cluster @JvmOverloads constructor(
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
         }
+        val queues = queuesProvider.get()
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        updateSchema(nodes)
+        updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
         if (newTopology != topology) {
@@ -214,7 +219,7 @@ class Cluster @JvmOverloads constructor(
         return ShardSchema.readShards(dataSource)
     }
 
-    private fun updateSchema(nodes: SortedMap<Node, DataSource>) {
+    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>) {
         // No queues: the schema is the user's job, nothing here touches it
         if (queues.isEmpty()) {
             return

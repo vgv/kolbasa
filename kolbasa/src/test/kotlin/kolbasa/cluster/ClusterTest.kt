@@ -25,7 +25,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testInitCluster_If_No_DataSources() {
-        val cluster = Cluster(emptyList())
+        val cluster = Cluster(emptyList(), emptyList())
 
         assertThrows<IllegalStateException> {
             cluster.updateTopology()
@@ -35,7 +35,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testInitCluster_Test_Topology_Init_And_Not() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
 
         // Topology not updated
         assertFalse(cluster.isInitialized())
@@ -57,7 +57,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     fun testInitCluster_If_Topology_The_Same() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
 
         // First initialization
         cluster.updateTopology()
@@ -79,7 +79,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
 
         // First shard table initialization/read
         cluster.updateTopology()
@@ -127,7 +127,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
 
         // First initialization
         cluster.updateTopology()
@@ -153,7 +153,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
         cluster.updateTopology()
 
         // Number of created shard tables
@@ -179,7 +179,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     fun testUpdateTopology_NodeAddedLater_GetsQueues() {
         val queue = Queue.of("test", PredefinedDataTypes.Int)
         var nodes = listOf(dataSource, dataSourceFirstSchema)
-        val cluster = Cluster({ nodes }, listOf(queue))
+        val cluster = Cluster({ nodes }, { listOf(queue) })
 
         cluster.updateTopology()
         assertTrue(hasQueueTable(dataSourceFirstSchema, queue))
@@ -190,6 +190,25 @@ class ClusterTest : AbstractPostgreSQLTest() {
         cluster.updateTopology()
 
         assertTrue(hasQueueTable(dataSourceSecondSchema, queue))
+    }
+
+    @Test
+    fun testUpdateTopology_QueueAddedLater_IsCreated() {
+        val first = Queue.of("first", PredefinedDataTypes.Int)
+        val second = Queue.of("second", PredefinedDataTypes.Int)
+        val nodes = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        var queues = listOf(first)
+        val cluster = Cluster({ nodes }, { queues })
+
+        cluster.updateTopology()
+        assertTrue(nodes.all { hasQueueTable(it, first) })
+        assertTrue(nodes.none { hasQueueTable(it, second) })
+
+        // A new queue appears, and the next update creates it on every node
+        queues = queues + second
+        cluster.updateTopology()
+
+        assertTrue(nodes.all { hasQueueTable(it, second) })
     }
 
     private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {

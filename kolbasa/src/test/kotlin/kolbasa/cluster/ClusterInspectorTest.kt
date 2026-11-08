@@ -47,7 +47,7 @@ class ClusterInspectorTest : AbstractPostgreSQLTest() {
             SchemaHelpers.createOrUpdateQueues(ds, queue)
         }
 
-        cluster = Cluster(dataSources)
+        cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
         clusterInspector = ClusterInspector(cluster)

@@ -41,7 +41,7 @@ class ClusterProducerTest : AbstractPostgreSQLTest() {
             SchemaHelpers.createOrUpdateQueues(dataSource, queue)
         }
 
-        cluster = Cluster(dataSources)
+        cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
         clusterProducer = ClusterProducer(cluster)

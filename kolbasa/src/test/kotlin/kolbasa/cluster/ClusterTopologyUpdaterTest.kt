@@ -49,7 +49,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testStart_UpdatesAtOnce() {
-        val cluster = Cluster(dataSources())
+        val cluster = Cluster(dataSources(), emptyList())
         val updater = ClusterTopologyUpdater(cluster, options())
 
         updater.start()
@@ -60,7 +60,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testStart_PicksUpChangeLater() {
         val dataSources = dataSources()
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
         ClusterTopologyUpdater(cluster, options()).start()
 
         val (shard, newNode) = moveRandomShard(cluster, dataSources)
@@ -73,7 +73,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     fun testStart_SurvivesFailedUpdate() {
         val failingNode = FailingDataSource(dataSourceSecondSchema)
         val dataSources = listOf(dataSource, dataSourceFirstSchema, failingNode)
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
         ClusterTopologyUpdater(cluster, options { }).start()
 
         // The node goes away for a while: the scheduled updates in between fail
@@ -90,7 +90,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     fun testStart_FailedUpdateGoesToHandler() {
         val failingNode = FailingDataSource(dataSourceSecondSchema)
         val errors = CopyOnWriteArrayList<TopologyUpdateError>()
-        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, failingNode))
+        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, failingNode), emptyList())
         ClusterTopologyUpdater(cluster, options { errors += it }).start()
 
         failingNode.failing = true
@@ -104,7 +104,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testStart_Twice() {
         // A long interval: no scheduled update runs, and schedules again, while the test checks the count
-        val updater = ClusterTopologyUpdater(Cluster(dataSources()), options(interval = Duration.ofMinutes(1)))
+        val updater = ClusterTopologyUpdater(Cluster(dataSources(), emptyList()), options(interval = Duration.ofMinutes(1)))
         updater.start()
 
         // Does nothing: the updates are already scheduled, and there is no second chain of them
@@ -115,7 +115,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testStart_AgainAfterFailedFirstUpdate() {
         val failingNode = FailingDataSource(dataSourceSecondSchema)
-        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, failingNode))
+        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, failingNode), emptyList())
         val updater = ClusterTopologyUpdater(cluster, options())
 
         // The database isn't there at startup yet
@@ -131,7 +131,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testStart_AfterClose() {
-        val updater = ClusterTopologyUpdater(Cluster(dataSources()), options())
+        val updater = ClusterTopologyUpdater(Cluster(dataSources(), emptyList()), options())
         updater.close()
 
         assertThrows<IllegalStateException> { updater.start() }
@@ -140,7 +140,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testStart_AfterUpdateTopology() {
         val dataSources = dataSources()
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
         // The cluster already works, and the updater adds the schedule
@@ -153,7 +153,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testClose_StopsUpdates() {
         val node = FailingDataSource(dataSourceSecondSchema)
-        val updater = ClusterTopologyUpdater(Cluster(listOf(dataSource, dataSourceFirstSchema, node)), options())
+        val updater = ClusterTopologyUpdater(Cluster(listOf(dataSource, dataSourceFirstSchema, node), emptyList()), options())
         updater.start()
 
         updater.close()
@@ -167,7 +167,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testClose_ClusterKeepsWorking() {
-        val cluster = Cluster(dataSources())
+        val cluster = Cluster(dataSources(), emptyList())
         val updater = ClusterTopologyUpdater(cluster, options())
         updater.start()
         val lastTopology = cluster.getTopology()
@@ -182,7 +182,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testClose_Twice() {
-        val updater = ClusterTopologyUpdater(Cluster(dataSources()), options())
+        val updater = ClusterTopologyUpdater(Cluster(dataSources(), emptyList()), options())
         updater.start()
         updater.close()
 
@@ -192,7 +192,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     @Test
     fun testClose_WaitsForRunningUpdate() {
         val hangingNode = HangingDataSource(dataSourceSecondSchema)
-        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, hangingNode))
+        val cluster = Cluster(listOf(dataSource, dataSourceFirstSchema, hangingNode), emptyList())
         val updater = ClusterTopologyUpdater(cluster, options { })
         updater.start()
 
