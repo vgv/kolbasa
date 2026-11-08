@@ -2,6 +2,9 @@ package kolbasa.telemetry.metrics
 
 import io.micrometer.core.instrument.MeterRegistry
 import kolbasa.queue.Queue
+import java.lang.ref.WeakReference
+import java.util.Collections
+import java.util.WeakHashMap
 
 /**
  * Says whether Kolbasa collects metrics, and in which Micrometer registry.
@@ -65,10 +68,22 @@ sealed class MetricsConfig {
     ) : MetricsConfig() {
 
         // All metrics of the library, shared by every Config over the same registry
-        private val metrics: MicrometerMetrics = MicrometerMetrics.of(registry)
+        //
+        // MicrometerMetrics gets the registry through a weak reference: it is a value in a map with weak keys, and a
+        // strong reference to its own key would keep both in memory forever. This Config holds the registry, so the
+        // registry is never gone during a call
+        private val metrics: MicrometerMetrics = byRegistry.computeIfAbsent(registry) {
+            MicrometerMetrics(WeakReference(it))
+        }
 
         override fun queueMetrics(queue: Queue<*>): QueueMetrics {
             return metrics.queueMetrics(queue)
+        }
+
+        private companion object {
+            // Weak keys: a registry nobody uses any more is not kept in memory by this map
+            private val byRegistry: MutableMap<MeterRegistry, MicrometerMetrics> =
+                Collections.synchronizedMap(WeakHashMap())
         }
     }
 }

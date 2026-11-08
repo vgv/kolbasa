@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
+import java.lang.ref.WeakReference
 
 /**
  * Meters with one name and the same tag keys, the way Prometheus sees one metric with its labels.
@@ -14,7 +15,7 @@ import io.micrometer.core.instrument.Timer
  * registry on every call costs more than the call to the meter itself.
  */
 internal abstract class MeterFamily<M>(
-    private val registry: () -> MeterRegistry,
+    private val registry: WeakReference<MeterRegistry>,
     protected val name: String,
     protected val description: String,
     private val tagKeys: List<String>
@@ -26,14 +27,15 @@ internal abstract class MeterFamily<M>(
         }
 
         val tags = Tags.of(tagKeys.zip(tagValues).map { (key, value) -> Tag.of(key, value) })
-        return register(registry(), tags)
+        val target = checkNotNull(registry.get()) { "The meter registry is gone" }
+        return register(target, tags)
     }
 
     protected abstract fun register(registry: MeterRegistry, tags: Tags): M
 }
 
 internal class CounterFamily(
-    registry: () -> MeterRegistry,
+    registry: WeakReference<MeterRegistry>,
     name: String,
     description: String,
     tagKeys: List<String>,
@@ -53,7 +55,7 @@ internal class CounterFamily(
  * Durations of calls, with the same buckets for every family, see [Const.callsDurationHistogramBuckets].
  */
 internal class TimerFamily(
-    registry: () -> MeterRegistry,
+    registry: WeakReference<MeterRegistry>,
     name: String,
     description: String,
     tagKeys: List<String>
@@ -75,7 +77,7 @@ internal class TimerFamily(
  * second one would go nowhere.
  */
 internal class GaugeFamily(
-    registry: () -> MeterRegistry,
+    registry: WeakReference<MeterRegistry>,
     name: String,
     description: String,
     tagKeys: List<String>,
