@@ -12,7 +12,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import javax.sql.DataSource
 
-class ClusterKolbasaTest : AbstractPostgreSQLTest() {
+class KolbasaClusterTest : AbstractPostgreSQLTest() {
 
     // No DataSource bean: a cluster doesn't need the application's own database
     private val contextRunner = ApplicationContextRunner()
@@ -23,7 +23,7 @@ class ClusterKolbasaTest : AbstractPostgreSQLTest() {
         val nodes = listOf(dataSourceFirstSchema, dataSourceSecondSchema)
 
         contextRunner
-            .withBean(ClusterKolbasaSettings::class.java, { ClusterKolbasaSettings(nodes, listOf(QUEUE)) })
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
             .run { context ->
                 assertThat(context).hasNotFailed()
                 assertTrue("q_test" in tables(dataSourceFirstSchema, FIRST_SCHEMA_NAME))
@@ -37,7 +37,7 @@ class ClusterKolbasaTest : AbstractPostgreSQLTest() {
     @Test
     fun testFirstTopologyReadFails_StartupFails() {
         contextRunner
-            .withBean(ClusterKolbasaSettings::class.java, { ClusterKolbasaSettings(emptyList(), listOf(QUEUE)) })
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(emptyList(), listOf(QUEUE)) })
             .run { context ->
                 assertThat(context).hasFailed()
                 val rootCause = generateSequence(context.startupFailure) { it.cause }.last()

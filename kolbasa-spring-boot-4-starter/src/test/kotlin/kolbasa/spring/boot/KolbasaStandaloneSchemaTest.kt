@@ -12,19 +12,19 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import java.util.function.Supplier
 import javax.sql.DataSource
 
-class LocalKolbasaSchemaTest : AbstractPostgreSQLTest() {
+class KolbasaStandaloneSchemaTest : AbstractPostgreSQLTest() {
 
-    private val settings = LocalKolbasaSettings(listOf(Queue.of("test", PredefinedDataTypes.String)))
+    private val settings = KolbasaStandaloneSettings(listOf(Queue.of("test", PredefinedDataTypes.String)))
 
     // The context closes the DataSource when it stops, so every check runs inside run {}
     private val contextRunner = ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(KolbasaAutoConfiguration::class.java))
-        .withBean(DataSource::class.java, Supplier { dataSource })
+        .withBean(DataSource::class.java, { dataSource })
 
     @Test
-    fun testLocalSettings_CreatesTables() {
+    fun testStandaloneSettings_CreatesTables() {
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, Supplier { settings })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .run { context ->
                 assertThat(context).hasNotFailed()
                 assertTrue("q_test" in tables())
@@ -38,7 +38,7 @@ class LocalKolbasaSchemaTest : AbstractPostgreSQLTest() {
         execute("create table q_test(x int)")
 
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, Supplier { settings })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .run { context ->
                 assertThat(context).hasFailed()
                 val rootCause = generateSequence(context.startupFailure) { it.cause }.last()
@@ -50,20 +50,20 @@ class LocalKolbasaSchemaTest : AbstractPostgreSQLTest() {
     @Test
     fun testSchemaDisabled_NoTables() {
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, Supplier { settings })
-            .withPropertyValues("kolbasa.schema.enabled=false")
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .withPropertyValues("kolbasa.standalone.schema.enabled=false")
             .run { context ->
                 assertThat(context).hasNotFailed()
-                assertThat(context).doesNotHaveBean(LocalKolbasaSchemaInitializer::class.java)
+                assertThat(context).doesNotHaveBean(KolbasaStandaloneSchemaInitializer::class.java)
                 assertEquals(emptySet<String>(), tables())
             }
     }
 
     @Test
-    fun testNoLocalSettings_DatabaseNotTouched() {
+    fun testNoStandaloneSettings_DatabaseNotTouched() {
         contextRunner.run { context ->
             assertThat(context).hasNotFailed()
-            assertThat(context).doesNotHaveBean(LocalKolbasaSchemaInitializer::class.java)
+            assertThat(context).doesNotHaveBean(KolbasaStandaloneSchemaInitializer::class.java)
             assertEquals(emptySet<String>(), tables())
         }
     }

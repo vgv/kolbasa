@@ -41,9 +41,9 @@ class KolbasaAutoConfigurationTest {
     }
 
     @Test
-    fun testLocalSettingsWithoutDataSource_Fails() {
+    fun testStandaloneSettingsWithoutDataSource_Fails() {
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, { LocalKolbasaSettings(emptyList()) })
+            .withBean(KolbasaStandaloneSettings::class.java, { KolbasaStandaloneSettings(emptyList()) })
             .run { context ->
                 assertThat(context).hasFailed()
             }

@@ -29,8 +29,9 @@ import javax.sql.DataSource
  * `@SpringBootApplication(exclude = [KolbasaAutoConfiguration::class])`.
  *
  * What it does depends on your beans:
- * - a [LocalKolbasaSettings] bean switches kolbasa on in the application's own database: the tables and the role beans;
- * - a [ClusterKolbasaSettings] bean switches kolbasa on in a cluster: the `Cluster` bean and its topology updates;
+ * - a [KolbasaStandaloneSettings] bean switches kolbasa on in standalone mode, in the application's own database: the
+ *   tables and the role beans;
+ * - a [KolbasaClusterSettings] bean switches kolbasa on in a cluster: the `Cluster` bean and its topology updates;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing.
@@ -51,68 +52,70 @@ class KolbasaAutoConfiguration {
     }
 
     /**
-     * Kolbasa in the application's own database, switched on by a [LocalKolbasaSettings] bean.
+     * Kolbasa in standalone mode, in the application's own database, switched on by a [KolbasaStandaloneSettings] bean.
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnBean(LocalKolbasaSettings::class)
-    internal class Local {
+    @ConditionalOnBean(KolbasaStandaloneSettings::class)
+    internal class Standalone {
 
         /**
-         * Creates the tables of the local queues at startup, see [LocalKolbasaSchemaInitializer].
+         * Creates the tables of [KolbasaStandaloneSettings.queues] at startup, see
+         * [KolbasaStandaloneSchemaInitializer].
          *
          * It runs after the other database initializers: Flyway, Liquibase and Spring Boot's `schema.sql`.
          *
-         * `kolbasa.schema.enabled=false` switches it off, when someone else manages the schema: a DBA, or Flyway.
+         * `kolbasa.standalone.schema.enabled=false` switches it off, when someone else manages the schema: a DBA, or
+         * Flyway.
          */
         @Bean
-        @ConditionalOnBooleanProperty("kolbasa.schema.enabled", matchIfMissing = true)
+        @ConditionalOnBooleanProperty("kolbasa.standalone.schema.enabled", matchIfMissing = true)
         @DependsOnDatabaseInitialization
-        fun localKolbasaSchemaInitializer(
+        fun kolbasaStandaloneSchemaInitializer(
             dataSource: DataSource,
-            settings: LocalKolbasaSettings
-        ): LocalKolbasaSchemaInitializer {
-            return LocalKolbasaSchemaInitializer(dataSource, settings.queues)
+            settings: KolbasaStandaloneSettings
+        ): KolbasaStandaloneSchemaInitializer {
+            return KolbasaStandaloneSchemaInitializer(dataSource, settings.queues)
         }
 
         // Every role below asks for the schema initializer and doesn't use it. Asking makes Spring create the tables
         // before the role, so a bean of yours that uses a role while it starts finds them. It is null when
-        // kolbasa.schema.enabled=false
+        // kolbasa.standalone.schema.enabled=false
 
         /**
-         * The `Producer` with [LocalKolbasaSettings.producerOptions]. A `Producer` bean of your own replaces it.
+         * The `Producer` with [KolbasaStandaloneSettings.producerOptions]. A `Producer` bean of your own replaces it.
          */
         @Bean
         @ConditionalOnMissingBean(Producer::class)
-        fun localKolbasaProducer(
+        fun kolbasaStandaloneProducer(
             dataSource: DataSource,
-            settings: LocalKolbasaSettings,
-            schemaInitializer: LocalKolbasaSchemaInitializer?
+            settings: KolbasaStandaloneSettings,
+            schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): Producer {
             return DatabaseProducer(dataSource, settings.producerOptions)
         }
 
         /**
-         * The `Consumer` with [LocalKolbasaSettings.consumerOptions]. A `Consumer` bean of your own replaces it.
+         * The `Consumer` with [KolbasaStandaloneSettings.consumerOptions]. A `Consumer` bean of your own replaces it.
          */
         @Bean
         @ConditionalOnMissingBean(Consumer::class)
-        fun localKolbasaConsumer(
+        fun kolbasaStandaloneConsumer(
             dataSource: DataSource,
-            settings: LocalKolbasaSettings,
-            schemaInitializer: LocalKolbasaSchemaInitializer?
+            settings: KolbasaStandaloneSettings,
+            schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): Consumer {
             return DatabaseConsumer(dataSource, settings.consumerOptions)
         }
 
         /**
-         * The `Mutator` with [LocalKolbasaSettings.mutatorOptions]. A `Mutator` bean of your own replaces it.
+         * The `Mutator` with [KolbasaStandaloneSettings.mutatorOptions]. A `Mutator` bean of your own replaces it.
          */
         @Bean
         @ConditionalOnMissingBean(Mutator::class)
-        fun localKolbasaMutator(
+        fun kolbasaStandaloneMutator(
             dataSource: DataSource,
-            settings: LocalKolbasaSettings,
-            schemaInitializer: LocalKolbasaSchemaInitializer?
+            settings: KolbasaStandaloneSettings,
+            schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): Mutator {
             return DatabaseMutator(dataSource, settings.mutatorOptions)
         }
@@ -122,31 +125,31 @@ class KolbasaAutoConfiguration {
          */
         @Bean
         @ConditionalOnMissingBean(Inspector::class)
-        fun localKolbasaInspector(
+        fun kolbasaStandaloneInspector(
             dataSource: DataSource,
-            schemaInitializer: LocalKolbasaSchemaInitializer?
+            schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): Inspector {
             return DatabaseInspector(dataSource)
         }
     }
 
     /**
-     * Kolbasa in a cluster, switched on by a [ClusterKolbasaSettings] bean. Not named `Cluster`: that name is
+     * Kolbasa in a cluster, switched on by a [KolbasaClusterSettings] bean. Not named `Cluster`: that name is
      * kolbasa's class.
      */
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnBean(ClusterKolbasaSettings::class)
+    @ConditionalOnBean(KolbasaClusterSettings::class)
     internal class Clustered {
 
         /**
-         * The cluster over [ClusterKolbasaSettings.nodes]. Build your own cluster roles over it, for example
+         * The cluster over [KolbasaClusterSettings.nodes]. Build your own cluster roles over it, for example
          * `ClusterProducer(cluster, options)`.
          *
-         * It can be used only after [clusterKolbasaTopologyUpdater] has read the topology. A bean of yours that uses
-         * the cluster while it starts must wait for it: `@DependsOn("clusterKolbasaTopologyUpdater")`.
+         * It can be used only after [kolbasaClusterTopologyUpdater] has read the topology. A bean of yours that uses
+         * the cluster while it starts must wait for it: `@DependsOn("kolbasaClusterTopologyUpdater")`.
          */
         @Bean
-        fun kolbasaCluster(settings: ClusterKolbasaSettings): Cluster {
+        fun kolbasaCluster(settings: KolbasaClusterSettings): Cluster {
             return Cluster(settings.nodes, settings.queues)
         }
 
@@ -157,7 +160,7 @@ class KolbasaAutoConfiguration {
          * If the first read fails, the application doesn't start: the cluster can't work without the topology.
          */
         @Bean
-        fun clusterKolbasaTopologyUpdater(cluster: Cluster): ClusterTopologyUpdater {
+        fun kolbasaClusterTopologyUpdater(cluster: Cluster): ClusterTopologyUpdater {
             val updater = ClusterTopologyUpdater(cluster)
             updater.start()
             return updater

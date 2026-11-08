@@ -20,9 +20,9 @@ import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import javax.sql.DataSource
 
-class LocalKolbasaRolesTest : AbstractPostgreSQLTest() {
+class KolbasaStandaloneRolesTest : AbstractPostgreSQLTest() {
 
-    private val settings = LocalKolbasaSettings(listOf(QUEUE))
+    private val settings = KolbasaStandaloneSettings(listOf(QUEUE))
 
     // The context closes the DataSource when it stops, so every check runs inside run {}
     private val contextRunner = ApplicationContextRunner()
@@ -30,15 +30,15 @@ class LocalKolbasaRolesTest : AbstractPostgreSQLTest() {
         .withBean(DataSource::class.java, { dataSource })
 
     @Test
-    fun testLocalSettings_RolesGetOptions() {
-        val settings = LocalKolbasaSettings.builder(listOf(QUEUE))
+    fun testStandaloneSettings_RolesGetOptions() {
+        val settings = KolbasaStandaloneSettings.builder(listOf(QUEUE))
             .producerOptions(ProducerOptions(producer = "test"))
             .consumerOptions(ConsumerOptions(consumer = "test"))
             .mutatorOptions(MutatorOptions(prometheusConfig = PrometheusConfig.None))
             .build()
 
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, { settings })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .run { context ->
                 assertThat(context).hasNotFailed()
                 assertEquals(settings.producerOptions, context.getBean(Producer::class.java).options)
@@ -53,7 +53,7 @@ class LocalKolbasaRolesTest : AbstractPostgreSQLTest() {
         val producer = mockk<Producer>()
 
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, { settings })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .withBean(Producer::class.java, { producer })
             .run { context ->
                 assertThat(context).hasNotFailed()
@@ -64,7 +64,7 @@ class LocalKolbasaRolesTest : AbstractPostgreSQLTest() {
     @Test
     fun testRoleUsedWhileStarting_FindsTables() {
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, { settings })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .withBean(StartupSender::class.java)
             .run { context ->
                 assertThat(context).hasNotFailed()

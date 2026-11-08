@@ -6,7 +6,8 @@ import kolbasa.producer.ProducerOptions
 import kolbasa.queue.Queue
 
 /**
- * Switches kolbasa on in the application's own database, the `DataSource` that Spring Boot creates.
+ * Switches kolbasa on in standalone mode: the queues live in one database, the application's own `DataSource` that
+ * Spring Boot creates.
  *
  * Declare it as a bean, and the starter creates the tables of [queues] in that database at startup, and the beans that
  * work with them: `Producer`, `Consumer`, `Mutator` and `Inspector`. Without this bean the starter doesn't touch the
@@ -16,7 +17,7 @@ import kolbasa.queue.Queue
  *
  * ```kotlin
  * @Bean
- * fun localKolbasaSettings() = LocalKolbasaSettings(
+ * fun kolbasaStandaloneSettings() = KolbasaStandaloneSettings(
  *     queues = listOf(ORDERS, CUSTOMERS),
  *     consumerOptions = ConsumerOptions(consumer = "billing")
  * )
@@ -26,19 +27,19 @@ import kolbasa.queue.Queue
  *
  * ```java
  * @Bean
- * LocalKolbasaSettings localKolbasaSettings() {
- *     return LocalKolbasaSettings.builder(List.of(ORDERS, CUSTOMERS))
+ * KolbasaStandaloneSettings kolbasaStandaloneSettings() {
+ *     return KolbasaStandaloneSettings.builder(List.of(ORDERS, CUSTOMERS))
  *         .consumerOptions(ConsumerOptions.builder().consumer("billing").build())
  *         .build();
  * }
  * ```
  */
-data class LocalKolbasaSettings(
+data class KolbasaStandaloneSettings(
     /**
      * The queues that live in the application's database. Pass only main queues: the dead letter queue and the
      * archive queue of a queue are created together with it.
      *
-     * The starter creates or updates their tables at startup, unless `kolbasa.schema.enabled` is `false`.
+     * The starter creates or updates their tables at startup, unless `kolbasa.standalone.schema.enabled` is `false`.
      */
     val queues: List<Queue<*>>,
 
@@ -59,7 +60,7 @@ data class LocalKolbasaSettings(
 ) {
 
     /**
-     * Builder for flexible [LocalKolbasaSettings] creation, when only some of the options need to be set.
+     * Builder for flexible [KolbasaStandaloneSettings] creation, when only some of the options need to be set.
      */
     class Builder internal constructor(private val queues: List<Queue<*>>) {
         private var producerOptions: ProducerOptions = ProducerOptions.DEFAULT
@@ -67,24 +68,24 @@ data class LocalKolbasaSettings(
         private var mutatorOptions: MutatorOptions = MutatorOptions.DEFAULT
 
         /**
-         * Sets [LocalKolbasaSettings.producerOptions] – the options of the `Producer` bean.
+         * Sets [KolbasaStandaloneSettings.producerOptions] – the options of the `Producer` bean.
          */
         fun producerOptions(producerOptions: ProducerOptions) = apply { this.producerOptions = producerOptions }
 
         /**
-         * Sets [LocalKolbasaSettings.consumerOptions] – the options of the `Consumer` bean.
+         * Sets [KolbasaStandaloneSettings.consumerOptions] – the options of the `Consumer` bean.
          */
         fun consumerOptions(consumerOptions: ConsumerOptions) = apply { this.consumerOptions = consumerOptions }
 
         /**
-         * Sets [LocalKolbasaSettings.mutatorOptions] – the options of the `Mutator` bean.
+         * Sets [KolbasaStandaloneSettings.mutatorOptions] – the options of the `Mutator` bean.
          */
         fun mutatorOptions(mutatorOptions: MutatorOptions) = apply { this.mutatorOptions = mutatorOptions }
 
         /**
-         * Creates a new [LocalKolbasaSettings] instance: a fresh one on every call, nothing is cached or reused.
+         * Creates a new [KolbasaStandaloneSettings] instance: a fresh one on every call, nothing is cached or reused.
          */
-        fun build() = LocalKolbasaSettings(queues, producerOptions, consumerOptions, mutatorOptions)
+        fun build() = KolbasaStandaloneSettings(queues, producerOptions, consumerOptions, mutatorOptions)
     }
 
     companion object {

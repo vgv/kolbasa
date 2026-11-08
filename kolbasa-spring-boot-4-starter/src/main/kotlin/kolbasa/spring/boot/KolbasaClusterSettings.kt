@@ -12,23 +12,23 @@ import javax.sql.DataSource
  * stops.
  *
  * The cluster doesn't touch the application's own database, the `DataSource` that Spring Boot creates, unless it is
- * one of [nodes]. An application can have both settings beans: [LocalKolbasaSettings] for the queues in its own
+ * one of [nodes]. An application can have both settings beans: [KolbasaStandaloneSettings] for the queues in its own
  * database, and this one for the queues in the cluster.
  *
  * ## Usage Example
  *
  * ```kotlin
  * @Bean
- * fun clusterKolbasaSettings() = ClusterKolbasaSettings(
+ * fun kolbasaClusterSettings() = KolbasaClusterSettings(
  *     nodes = listOf(nodeA, nodeB, nodeC),
  *     queues = listOf(ORDERS, CUSTOMERS)
  * )
  * ```
  *
  * When nodes or queues can be added while the application runs, pass functions instead of lists:
- * `ClusterKolbasaSettings({ currentNodes() }, { listOf(ORDERS, CUSTOMERS) })`.
+ * `KolbasaClusterSettings({ currentNodes() }, { listOf(ORDERS, CUSTOMERS) })`.
  */
-data class ClusterKolbasaSettings(
+data class KolbasaClusterSettings(
     /**
      * Returns the `DataSource` of every node. It is called again on every topology update, so a node added to the
      * list is picked up without a restart.

@@ -6,16 +6,17 @@ import org.springframework.beans.factory.InitializingBean
 import javax.sql.DataSource
 
 /**
- * Creates or updates the tables of [LocalKolbasaSettings.queues] in the application's `DataSource` at startup.
+ * Creates or updates the tables of [KolbasaStandaloneSettings.queues] in the application's `DataSource` at startup.
  *
- * The starter creates this bean when there is a [LocalKolbasaSettings] bean and `kolbasa.schema.enabled` is not
- * `false`. The tables are ready once the bean is created, so a bean that depends on it can use the queues at once.
+ * The starter creates this bean when there is a [KolbasaStandaloneSettings] bean and
+ * `kolbasa.standalone.schema.enabled` is not `false`. The tables are ready once the bean is created, so a bean that
+ * depends on it can use the queues at once.
  *
  * A failed statement gets one more try. Two instances that start at the same time can race on the same statement,
  * and the second try finds the work done. If statements still fail, the application doesn't start, and the exception
  * lists them.
  */
-class LocalKolbasaSchemaInitializer internal constructor(
+class KolbasaStandaloneSchemaInitializer internal constructor(
     private val dataSource: DataSource,
     private val queues: List<Queue<*>>
 ) : InitializingBean {
