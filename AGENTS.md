@@ -64,7 +64,7 @@ an included build holding the shared build logic. The root project has no code.
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
   creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
   operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `telemetry`
-  (Prometheus metrics, SQL dumps, and the `Tracing` hook that a tracing system plugs into).
+  (metrics through Micrometer, SQL dumps, and the `Tracing` hook that a tracing system plugs into).
 - `kolbasa-opentelemetry/src/main/kotlin/kolbasa/opentelemetry/` — OpenTelemetry tracing, published as
   `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`
   hook. It depends on `:kolbasa` the way a user would, so it can only use the **public** API. That makes it the
@@ -157,8 +157,8 @@ covers:
   ids stay globally unique across nodes.
 - [docs/Message state transitions.md](<docs/Message state transitions.md>) — the message lifecycle
   deep-dive (states, transitions, uniqueness scopes).
-- [docs/Prometheus metrics.md](<docs/Prometheus metrics.md>) — Prometheus metrics: setup, per-role
-  config, every metric and label, how the queue state metrics are refreshed.
+- [docs/Metrics.md](docs/Metrics.md) — metrics through Micrometer: setup, per-role config, every metric and
+  tag, how the queue state metrics are refreshed.
 - [docs/SQL dump.md](<docs/SQL dump.md>) — SQL dump: setup, the record format, statement kinds.
 
 The [README](README.md) has a feature overview and walkthroughs of the examples.

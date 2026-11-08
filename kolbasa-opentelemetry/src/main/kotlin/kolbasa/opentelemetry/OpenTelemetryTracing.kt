@@ -40,7 +40,8 @@ import java.util.function.Supplier
  * [QueueWorker][kolbasa.worker.QueueWorker] thread that polls an empty queue. Such a span would say nothing
  * and only flood the traces, a new one-span trace on every poll. Inside a span of yours, an empty `receive()` still
  * makes its span, so a scheduled job shows that it found nothing. To see that a worker is alive, look at the metric
- * `kolbasa_consumer_receive` instead: it counts every `receive()`, the empty ones too.
+ * `kolbasa.consumer.receive` instead (`kolbasa_consumer_receive_total` in Prometheus): it counts every `receive()`,
+ * the empty ones too.
  *
  * One object serves all queues, so create it once and share it.
  *
