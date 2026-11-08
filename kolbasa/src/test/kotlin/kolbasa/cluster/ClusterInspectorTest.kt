@@ -1,7 +1,6 @@
 package kolbasa.cluster
 
 import kolbasa.test.AbstractPostgreSQLTest
-import kolbasa.Kolbasa
 import kolbasa.consumer.ReceiveOptions
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.inspector.CountOptions
@@ -41,8 +40,6 @@ class ClusterInspectorTest : AbstractPostgreSQLTest() {
 
     @BeforeEach
     fun before() {
-        Kolbasa.shardStrategy = ShardStrategy.Random
-
         dataSources.forEach { ds ->
             SchemaHelpers.createOrUpdateQueues(ds, queue)
         }
@@ -51,7 +48,7 @@ class ClusterInspectorTest : AbstractPostgreSQLTest() {
         cluster.updateTopology()
 
         clusterInspector = ClusterInspector(cluster)
-        clusterProducer = ClusterProducer(cluster)
+        clusterProducer = ClusterProducer(cluster, shardStrategy = ShardStrategy.Random)
     }
 
     @Test

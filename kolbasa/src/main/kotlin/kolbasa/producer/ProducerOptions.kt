@@ -145,28 +145,6 @@ data class ProducerOptions(
     val partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE,
 
     /**
-     * Shard number.
-     *
-     * If you are using Kolbasa Cluster and have multiple PostgreSQL servers, messages will be distributed among these servers
-     * in a non-deterministic, unknown manner. However, in some cases, it may be useful to control how messages are
-     * distributed across the servers. The two most common scenarios are:
-     * 1) Deduplication using unique meta fields. Kolbasa uses unique PostgreSQL indexes for deduplication, but unique indexes
-     *    do not work across multiple database servers. Therefore, messages must be on the same server for this to work correctly.
-     * 2) Enforcing message order when reading. For example, you want to put messages with specific `account_id` and read them
-     *    later in the same order (by another field or just time of sending). You can use filtering by `account_id` and sorting
-     *    by required field (fields), but, if messages are not on the same server, you can't have an order guarantee. To ensure
-     *    correct ordering, you must ensure that messages with the same `account_id` are on the same server.
-     *
-     * To control message persistence on specific servers in the cluster shard field should be used.
-     * Kolbasa guarantees that messages with the same shard value will be stored on the same server. The shard value can be any
-     * integer from [Int.MIN_VALUE] to [Int.MAX_VALUE]. For Kolbasa itself, the specific shard value carries no inherent
-     * meaning — it is arbitrary and determined by your business logic. The only guarantee is that messages with the same shard
-     * will persist on the same server. Messages with different shard values may be stored on the same server or on different
-     * ones, without any guarantee.
-     */
-    val shard: Int? = null,
-
-    /**
      * Executor used to send messages asynchronously in [Producer][kolbasa.producer.datasource.Producer] sendAsync() methods.
      *
      * If you need to customize the executor for a specific [Producer][kolbasa.producer.datasource.Producer], you can
@@ -207,7 +185,6 @@ data class ProducerOptions(
         private var deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
         private var chunkSize: Int = DEFAULT_CHUNK_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
-        private var shard: Int? = null
         private var asyncExecutor: ExecutorService? = null
         private var tracing: Tracing? = null
         private var prometheusConfig: PrometheusConfig? = null
@@ -243,11 +220,6 @@ data class ProducerOptions(
         fun partialInsert(partialInsert: PartialInsert) = apply { this.partialInsert = partialInsert }
 
         /**
-         * Sets [ProducerOptions.shard] – the value that keeps messages with the same shard on the same cluster server.
-         */
-        fun shard(shard: Int) = apply { this.shard = shard }
-
-        /**
          * Sets [ProducerOptions.asyncExecutor] – the executor used by this producer's sendAsync() methods.
          */
         fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
@@ -272,7 +244,6 @@ data class ProducerOptions(
             deduplicationMode = deduplicationMode,
             chunkSize = chunkSize,
             partialInsert = partialInsert,
-            shard = shard,
             asyncExecutor = asyncExecutor,
             tracing = tracing,
             prometheusConfig = prometheusConfig

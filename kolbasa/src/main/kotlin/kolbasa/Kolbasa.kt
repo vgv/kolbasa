@@ -1,6 +1,5 @@
 package kolbasa
 
-import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.telemetry.prometheus.PrometheusConfig
 import kolbasa.telemetry.sql.SqlDumpConfig
@@ -39,15 +38,6 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var sweepConfig: SweepConfig = SweepConfig()
-
-    /**
-     * Strategy that picks a shard for a message when neither the send() call nor the producer sets one.
-     *
-     * Only a [Cluster][kolbasa.cluster.Cluster] producer uses it, and it is read on every send().
-     */
-    @JvmStatic
-    @Volatile
-    var shardStrategy: ShardStrategy = ShardStrategy.ThreadLocalWithInterval()
 
     /**
      * SQL dump configuration – which statements are printed, for which queues, and where they are written.

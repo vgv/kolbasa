@@ -101,32 +101,19 @@ class ProducerSchemaHelpersTest {
     @Test
     fun testCalculateEffectiveShard_SendOptionsShardDefined() {
         val sendOptions = SendOptions(shard = -10000)
-        val producerOptions = ProducerOptions(shard = -20000)
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
-        val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
+        val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, shardStrategy)
         assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
         assertEquals(ShardId.of(-10000), effectiveShard)
     }
 
     @Test
-    fun testCalculateEffectiveShard_ProducerOptionsShardDefined() {
-        val sendOptions = SendOptions(shard = null)
-        val producerOptions = ProducerOptions(shard = -20000)
-        val shardStrategy = ShardStrategy.Fixed(-30000)
-
-        val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
-        assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
-        assertEquals(ShardId.of(-20000), effectiveShard)
-    }
-
-    @Test
     fun testCalculateEffectiveShard_ShardStrategyDefined() {
         val sendOptions = SendOptions(shard = null)
-        val producerOptions = ProducerOptions(shard = null)
         val shardStrategy = ShardStrategy.Fixed(-30000)
 
-        val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, producerOptions, shardStrategy)
+        val effectiveShard = ProducerSchemaHelpers.calculateEffectiveShard(sendOptions, shardStrategy)
         assertTrue(effectiveShard in ShardId.SHARDS_ID_RANGE, "effectiveShard=$effectiveShard")
         assertEquals(ShardId.of(-30000), effectiveShard)
     }

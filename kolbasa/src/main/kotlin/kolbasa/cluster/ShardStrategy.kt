@@ -5,14 +5,12 @@ import java.time.Duration
 /**
  * Chooses the shard of a message when nothing else does.
  *
- * A shard decides which node of a cluster stores a message. A message can get its shard from three places, and the
- * first one that is set wins: the `send()` call ([SendOptions.shard][kolbasa.producer.SendOptions.shard]), the
- * producer ([ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard]), and – when neither is set – the
- * strategy in [Kolbasa.shardStrategy][kolbasa.Kolbasa.shardStrategy]. So a strategy is the default for the messages
- * you did not place by hand.
+ * A shard decides which node of a cluster stores a message. A message gets its shard from the `send()` call
+ * ([SendOptions.shard][kolbasa.producer.SendOptions.shard]) or, when the call doesn't set one, from the strategy of
+ * the [ClusterProducer]. So a strategy is the default for the messages you did not place by hand.
  *
- * The strategy is read on every send, and only by a cluster producer
- * ([ClusterProducer]); a single-node producer stores every message with shard `0`.
+ * Every [ClusterProducer] has its own strategy, given to its constructor. A single-node producer has none: it stores
+ * every message with shard `0`.
  *
  * Which one to pick:
  * - [Random] spreads messages over the whole cluster as evenly as possible.
@@ -27,18 +25,22 @@ import java.time.Duration
  *
  * ```kotlin
  * // Spread every message over the cluster
- * Kolbasa.shardStrategy = ShardStrategy.Random
+ * val spreading = ClusterProducer(cluster, shardStrategy = ShardStrategy.Random)
  *
  * // Or keep the messages of one thread together for five minutes at a time
- * Kolbasa.shardStrategy = ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5))
+ * val grouping = ClusterProducer(cluster, shardStrategy = ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5)))
  * ```
  *
- * The same from Java:
+ * The same from Java, where the producer options have to be passed too:
  *
  * ```java
- * Kolbasa.setShardStrategy(ShardStrategy.Random.INSTANCE);
+ * var spreading = new ClusterProducer(cluster, ProducerOptions.DEFAULT, ShardStrategy.Random.INSTANCE);
  *
- * Kolbasa.setShardStrategy(new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5)));
+ * var grouping = new ClusterProducer(
+ *     cluster,
+ *     ProducerOptions.DEFAULT,
+ *     new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5))
+ * );
  * ```
  *
  * There are only these four strategies: the class is sealed, so you can't add your own. To choose the shard from
@@ -52,8 +54,8 @@ sealed class ShardStrategy {
     /**
      * Returns the shard for the next message.
      *
-     * Called once per `send()` call, when neither the call nor the producer sets a shard. It must be fast and safe
-     * to call from many threads at once.
+     * Called once per `send()` call that doesn't set a shard. It must be fast and safe to call from many threads at
+     * once.
      *
      * Any [Int] is allowed. Kolbasa folds the value into the `0..1023` range itself
      * (from [kolbasa.producer.ShardId.MIN_SHARD] to [kolbasa.producer.ShardId.MAX_SHARD]), so a strategy may return,
@@ -104,9 +106,9 @@ sealed class ShardStrategy {
     /**
      * One random shard per thread, replaced by a new one when the interval has passed.
      *
-     * This is the default strategy of Kolbasa, and it is a compromise between the two above. Inside the interval it
-     * behaves like [ThreadLocal] – all messages of a thread go to one node. After the interval the thread picks a
-     * new random shard, so over hours the load is spread like [Random].
+     * This is the default strategy of a [ClusterProducer], and it is a compromise between the two above. Inside the
+     * interval it behaves like [ThreadLocal] – all messages of a thread go to one node. After the interval the thread
+     * picks a new random shard, so over hours the load is spread like [Random].
      *
      * The interval is checked on send, not by a timer: a thread that stops sending keeps its shard until it sends
      * again.

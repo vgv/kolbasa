@@ -225,17 +225,9 @@ internal object ProducerSchemaHelpers {
         return sendOptions.partialInsert ?: producerOptions.partialInsert
     }
 
-    fun calculateEffectiveShard(
-        sendOptions: SendOptions,
-        producerOptions: ProducerOptions,
-        shardStrategy: ShardStrategy
-    ): ShardId {
+    fun calculateEffectiveShard(sendOptions: SendOptions, shardStrategy: ShardStrategy): ShardId {
         if (sendOptions.shard != null) {
             return ShardId.of(sendOptions.shard)
-        }
-
-        if (producerOptions.shard != null) {
-            return ShardId.of(producerOptions.shard)
         }
 
         return ShardId.of(shardStrategy.getShard())
