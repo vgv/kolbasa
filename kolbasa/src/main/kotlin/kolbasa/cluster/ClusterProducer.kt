@@ -22,12 +22,14 @@ import java.util.concurrent.CompletableFuture
  *
  * One `send()` call goes to one node, so a batch of messages that must land together must share a shard. If the
  * node that owns the shard is not part of the cluster at that moment, the messages are written to another node
- * instead of being lost, and a later auto-repair process moves them where they belong.
+ * instead of being lost. No consumer receives them there, because a consumer reads only the shards its node owns.
+ * They stay there: kolbasa has no procedure yet to move them to the node that owns their shard.
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseProducer][kolbasa.producer.datasource.DatabaseProducer] per node behind the scenes. Creating one is
- * cheap, but `producerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
- * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `send()`.
+ * cheap, but `options` is fixed at that moment, so keep one instance per set of defaults you need. The
+ * [Cluster] must be initialized before the first `send()`: by a [ClusterTopologyUpdater], or by your own call to
+ * [Cluster.updateStateOnce].
  *
  * This class implements the [Producer] interface, so it's easy to use instead of [DatabaseProducer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.

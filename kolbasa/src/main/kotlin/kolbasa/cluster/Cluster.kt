@@ -7,7 +7,6 @@ import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.SchemaHelpers
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 import javax.sql.DataSource
 
@@ -16,16 +15,17 @@ import javax.sql.DataSource
  *
  * In a cluster every queue is split into 1024 shards, and each shard belongs to one node. The map of "which node
  * owns which shard" is kept in the database, not in your code, and it changes when shards are moved between nodes.
- * This object holds a [DataSource] for every node, keeps a local copy of that map, and refreshes it from time to
- * time. The cluster-aware roles – [ClusterProducer], [ClusterConsumer], [ClusterMutator] and [ClusterInspector] –
- * use it to find the right node for every call.
+ * This object holds a [DataSource] for every node and a local copy of that map. [ClusterTopologyUpdater] keeps the
+ * copy fresh. [ClusterProducer], [ClusterConsumer], [ClusterMutator] and [ClusterInspector] use it to find the
+ * right node for every call.
  *
- * Create one instance per cluster, at application startup, and share it. It is a long-lived object: it keeps
- * connections to all nodes and schedules a background task. Do not create it per request, per queue or per call.
- * The roles built on top of it are cheap, but they are best created once as well.
+ * Create one instance per cluster, at application startup, and share it. It is a long-lived object: it holds the
+ * shard map, and reading that map talks to every node. Do not create it per request, per queue or per call. The
+ * four classes above are cheap to create, but they are best created once as well.
  *
- * A new instance knows nothing about the nodes yet, so call [initAndScheduleStateUpdate] before you use any role.
- * If you skip this step, every role call fails with `Cluster state isn't initialized`.
+ * A new instance knows nothing about the nodes yet. Before you use any of the four classes, start a
+ * [ClusterTopologyUpdater] on the cluster: it reads the shard map now and keeps it fresh. If you skip this step,
+ * every call to them fails with `Cluster state isn't initialized`.
  *
  * Growing the cluster needs nothing from your code beyond the node list itself. Build the [Cluster] with a function
  * that returns the current nodes, and a node added to that list is picked up by the next state update: the queues
@@ -38,7 +38,8 @@ import javax.sql.DataSource
  * val cluster = Cluster(listOf(nodeA, nodeB, nodeC), listOf(orders, customers))
  *
  * // Read the shard map now, and keep it fresh in the background
- * cluster.initAndScheduleStateUpdate()
+ * val updater = ClusterTopologyUpdater(cluster)
+ * updater.start()
  *
  * val producer: Producer = ClusterProducer(cluster)
  * val consumer: Consumer = ClusterConsumer(cluster)
@@ -53,7 +54,8 @@ import javax.sql.DataSource
  * ```java
  * var cluster = new Cluster(List.of(nodeA, nodeB, nodeC), List.of(orders, customers));
  *
- * cluster.initAndScheduleStateUpdate();
+ * var updater = new ClusterTopologyUpdater(cluster);
+ * updater.start();
  *
  * Producer producer = new ClusterProducer(cluster);
  * Consumer consumer = new ClusterConsumer(cluster);
@@ -67,8 +69,8 @@ import javax.sql.DataSource
  * described in
  * [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md).
  *
- * @constructor Creates a cluster whose node list is read from the `dataSources` function. The function is called
- * again on every state update, so use this form when nodes can be added or removed while the application runs.
+ * @constructor Creates a cluster whose node list is read from `dataSourcesProvider`. It is called again on every
+ * state update, so use this form when nodes can be added or removed while the application runs.
  * @param dataSourcesProvider returns the [DataSource] of every node of this cluster. It must never return an empty list –
  * a state update over an empty list fails with `Data sources list is empty`.
  * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a state update,
@@ -76,81 +78,37 @@ import javax.sql.DataSource
  * refresh interval, or at once if you call [updateStateOnce]. An empty list means "manage routing only, the schema
  * is mine": nothing here touches your tables, and creating them stays your job, with
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
- * @param options the options of this cluster, see [ClusterOptions]
  */
 class Cluster @JvmOverloads constructor(
     private val dataSourcesProvider: Supplier<List<DataSource>>,
-    private val queues: List<Queue<*>> = emptyList(),
-    private val options: ClusterOptions = ClusterOptions.DEFAULT
+    private val queues: List<Queue<*>> = emptyList()
 ) {
 
     /**
      * Creates a cluster over a fixed list of nodes.
      *
      * Use this form when the node list is known at startup and does not change while the application runs. Adding a
-     * node later means creating a new [Cluster] with the longer list.
+     * node later means restarting the application with the longer list. To add nodes without a restart, use the
+     * primary constructor.
      *
      * @param dataSources the [DataSource] of every node of this cluster, at least one
      * @param queues queues to create or update on every node, see the primary constructor for the details. With a
      * fixed node list there are no nodes added later, so this happens once, at the first state update.
-     * @param options the options of this cluster, see [ClusterOptions]
      */
     @JvmOverloads
     constructor(
         dataSources: List<DataSource>,
-        queues: List<Queue<*>> = emptyList(),
-        options: ClusterOptions = ClusterOptions.DEFAULT
-    ) : this({ dataSources }, queues, options)
+        queues: List<Queue<*>> = emptyList()
+    ) : this({ dataSources }, queues)
 
     @Volatile
-    private var state: ClusterState = ClusterState.NOT_INITIALIZED
+    private var state: ClusterState? = null
 
     /**
      * Updating the schema can be a fairly resource-intensive operation, but if the queues don't change (and they don't),
      * updating the database schema only once is sufficient. This flag controls this behavior.
      */
     private var schemaUpdated: Boolean = false
-
-    /**
-     * Reads the cluster state now, and schedules the next read.
-     *
-     * Call this once, at application startup, right after the [Cluster] is created and before any role built on it
-     * is used. It does two things: it runs [updateStateOnce] immediately, so the cluster is usable when the method
-     * returns, and it schedules the next update on [ClusterOptions.stateUpdateExecutor], in
-     * [ClusterOptions.stateUpdateInterval]. Every update schedules the next one, so the refresh continues for the life
-     * of the application. There is no way to stop it.
-     *
-     * If this first update fails, the method throws and schedules nothing: without a state the cluster can't work.
-     * A later update that fails, for example because a node is down, keeps the old state. Its error goes to
-     * [ClusterOptions.stateUpdateErrorHandler], and the next update is scheduled as usual.
-     *
-     * Calling this method a second time on the same [Cluster] starts a second, independent chain of updates. There
-     * is no harm in the extra work, but there is no benefit either.
-     */
-    fun initAndScheduleStateUpdate() {
-        updateStateOnce()
-        scheduleStateUpdate()
-    }
-
-    private fun scheduleStateUpdate() {
-        options.stateUpdateExecutor.schedule(
-            { scheduledStateUpdate() },
-            options.stateUpdateInterval.toMillis(),
-            TimeUnit.MILLISECONDS
-        )
-    }
-
-    private fun scheduledStateUpdate() {
-        try {
-            updateStateOnce()
-        } catch (e: Exception) {
-            // The old state stays until the next update
-            options.stateUpdateErrorHandler.onStateUpdateError(StateUpdateError(e))
-        } finally {
-            // Always, even after a failure: one failed update must not stop all the next ones
-            scheduleStateUpdate()
-        }
-    }
 
     /**
      * Reads the cluster state once, right now, and returns when it is done.
@@ -160,9 +118,9 @@ class Cluster @JvmOverloads constructor(
      * has a complete shard map yet, this method builds one and stores it, which is how a fresh cluster is
      * initialized.
      *
-     * Most applications never call this directly: [initAndScheduleStateUpdate] calls it and keeps calling it. Use it
-     * on its own when you want the new state at a known moment instead of waiting for the next scheduled run – after
-     * shards were moved between nodes, for example, or in a test.
+     * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
+     * when you have your own scheduler, or when you want the new state at a known moment instead of waiting for the
+     * next scheduled run – after shards were moved between nodes, for example, or in a test.
      *
      * The method is synchronized, so calls from several threads run one after another. It talks to every node, so it
      * is not cheap – do not call it per message.
@@ -184,16 +142,18 @@ class Cluster @JvmOverloads constructor(
         }
     }
 
-    fun clusterStateUpdatedAtLeastOnce(): Boolean {
-        return state != ClusterState.NOT_INITIALIZED
+    /**
+     * Whether the cluster state has been read at least once, by [updateStateOnce] or [ClusterTopologyUpdater.start].
+     * Until then, every call to a [ClusterProducer], [ClusterConsumer], [ClusterMutator] or [ClusterInspector] fails.
+     */
+    fun isInitialized(): Boolean {
+        return state != null
     }
 
     internal fun getState(): ClusterState {
-        check(state !== ClusterState.NOT_INITIALIZED) {
-            "Cluster state isn't initialized, maybe you forgot to call updateState() method?"
+        return checkNotNull(state) {
+            "Cluster state isn't initialized, call updateStateOnce() or ClusterTopologyUpdater.start() first"
         }
-
-        return state
     }
 
     private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
@@ -268,5 +228,4 @@ class Cluster @JvmOverloads constructor(
 
         schemaUpdated = true
     }
-
 }

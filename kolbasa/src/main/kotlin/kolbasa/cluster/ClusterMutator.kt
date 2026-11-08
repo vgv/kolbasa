@@ -23,15 +23,16 @@ import java.util.concurrent.CompletableFuture
  * - by filter – the filter can match messages anywhere, so every node is called.
  *
  * The results of all nodes are added up: [MutateResult.mutatedMessages][kolbasa.mutator.MutateResult.mutatedMessages]
- * is the total over the cluster. The list of changed messages is capped by
+ * is the total over the cluster. When you mutate by filter, the list of changed messages is capped by
  * [MutatorOptions.maxMutatedMessagesKeepInMemory][kolbasa.mutator.MutatorOptions.maxMutatedMessagesKeepInMemory]
- * for the whole call, not per node, and
- * [MutateResult.truncated][kolbasa.mutator.MutateResult.truncated] tells you when the cap was reached.
+ * for the whole call, not per node, and [MutateResult.truncated][kolbasa.mutator.MutateResult.truncated] tells you
+ * when the cap was reached. When you mutate by id, there is no cap: the list is never longer than the ids you passed.
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseMutator][kolbasa.mutator.datasource.DatabaseMutator] per node behind the scenes. Creating one is cheap,
- * but `mutatorOptions` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
- * must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
+ * but `options` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
+ * must be initialized before the first call: by a [ClusterTopologyUpdater], or by your own call to
+ * [Cluster.updateStateOnce].
  *
  * This class implements the [Mutator] interface, so it's easy to use instead of [DatabaseMutator] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.

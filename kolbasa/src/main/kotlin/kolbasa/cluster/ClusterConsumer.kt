@@ -24,8 +24,9 @@ import javax.sql.DataSource
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseConsumer][kolbasa.consumer.datasource.DatabaseConsumer] per node behind the scenes. Creating one is
- * cheap, but `consumerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
- * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `receive()`.
+ * cheap, but `options` is fixed at that moment, so keep one instance per set of defaults you need. The
+ * [Cluster] must be initialized before the first `receive()`: by a [ClusterTopologyUpdater], or by your own call
+ * to [Cluster.updateStateOnce].
  *
  * This class implements the [Consumer] interface, so it's easy to use instead of [DatabaseConsumer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.

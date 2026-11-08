@@ -246,8 +246,4 @@ internal data class ClusterState(
 
         return inspectors
     }
-
-    companion object {
-        val NOT_INITIALIZED = ClusterState(emptyMap(), emptyMap())
-    }
 }

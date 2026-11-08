@@ -38,12 +38,11 @@ import java.time.Duration
  * ```java
  * Kolbasa.setShardStrategy(ShardStrategy.Random.INSTANCE);
  *
- * Kolbasa.setShardStrategy(new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(10)));
+ * Kolbasa.setShardStrategy(new ShardStrategy.ThreadLocalWithInterval(Duration.ofMinutes(5)));
  * ```
  *
- * You can also write your own strategy, but there is no reason to: the four below cover the useful cases, and a
- * strategy that needs to look at the message itself belongs in
- * [SendOptions.shard][kolbasa.producer.SendOptions.shard] instead.
+ * There are only these four strategies: the class is sealed, so you can't add your own. To choose the shard from
+ * the message itself, set [SendOptions.shard][kolbasa.producer.SendOptions.shard] on the `send()` call.
  *
  * Why a shard matters at all, which node a given shard lives on, and what co-location buys you are described in
  * [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md#how-a-messages-shard-is-chosen).
@@ -53,7 +52,8 @@ sealed class ShardStrategy {
     /**
      * Returns the shard for the next message.
      *
-     * Called once per `send()` call, so it must be fast and safe to call from many threads at once.
+     * Called once per `send()` call, when neither the call nor the producer sets a shard. It must be fast and safe
+     * to call from many threads at once.
      *
      * Any [Int] is allowed. Kolbasa folds the value into the `0..1023` range itself
      * (from [kolbasa.producer.ShardId.MIN_SHARD] to [kolbasa.producer.ShardId.MAX_SHARD]), so a strategy may return,

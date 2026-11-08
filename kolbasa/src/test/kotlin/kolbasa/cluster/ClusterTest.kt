@@ -35,7 +35,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(dataSources)
 
         // State not updated
-        assertFalse(cluster.clusterStateUpdatedAtLeastOnce())
+        assertFalse(cluster.isInitialized())
         assertThrows<IllegalStateException> {
             cluster.getState()
         }
@@ -44,7 +44,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         cluster.updateStateOnce()
 
         // State updated
-        assertTrue(cluster.clusterStateUpdatedAtLeastOnce())
+        assertTrue(cluster.isInitialized())
         assertDoesNotThrow {
             cluster.getState()
         }

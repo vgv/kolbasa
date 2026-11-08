@@ -1,6 +1,6 @@
 package kolbasa.queue
 
-import kolbasa.cluster.ClusterOptions
+import kolbasa.cluster.ClusterTopologyUpdaterOptions
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.inspector.DistinctValuesOptions
@@ -526,27 +526,27 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckClusterStateUpdateInterval() {
+    fun testCheckClusterTopologyUpdateInterval() {
         assertThrows<IllegalArgumentException> {
             val ulp = Duration.ofNanos(1)
-            val aBitSmaller = ClusterOptions.MIN_STATE_UPDATE_INTERVAL - ulp
-            Checks.checkClusterStateUpdateInterval(aBitSmaller)
+            val aBitSmaller = ClusterTopologyUpdaterOptions.MIN_INTERVAL - ulp
+            Checks.checkClusterTopologyUpdateInterval(aBitSmaller)
         }
     }
 
     @Test
-    fun testCheckClusterStateUpdateInterval_MoreThanMax() {
+    fun testCheckClusterTopologyUpdateInterval_MoreThanMax() {
         assertThrows<IllegalArgumentException> {
             val ulp = Duration.ofNanos(1)
-            val aBitBigger = ClusterOptions.MAX_STATE_UPDATE_INTERVAL + ulp
-            Checks.checkClusterStateUpdateInterval(aBitBigger)
+            val aBitBigger = ClusterTopologyUpdaterOptions.MAX_INTERVAL + ulp
+            Checks.checkClusterTopologyUpdateInterval(aBitBigger)
         }
     }
 
     @Test
-    fun testCheckClusterStateUpdateInterval_Bounds() {
-        assertDoesNotThrow { Checks.checkClusterStateUpdateInterval(ClusterOptions.MIN_STATE_UPDATE_INTERVAL) }
-        assertDoesNotThrow { Checks.checkClusterStateUpdateInterval(ClusterOptions.MAX_STATE_UPDATE_INTERVAL) }
+    fun testCheckClusterTopologyUpdateInterval_Bounds() {
+        assertDoesNotThrow { Checks.checkClusterTopologyUpdateInterval(ClusterTopologyUpdaterOptions.MIN_INTERVAL) }
+        assertDoesNotThrow { Checks.checkClusterTopologyUpdateInterval(ClusterTopologyUpdaterOptions.MAX_INTERVAL) }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
