@@ -167,5 +167,7 @@ covers:
 - [docs/Prometheus metrics.md](<docs/Prometheus metrics.md>) — Prometheus metrics: setup, per-role
   config, every metric and label, how the queue state metrics are refreshed.
 - [docs/SQL dump.md](<docs/SQL dump.md>) — SQL dump: setup, the record format, statement kinds.
+- [docs/Spring Boot.md](<docs/Spring Boot.md>) — the Spring Boot 4 starter: standalone and cluster settings beans, the
+  beans they create, `@KolbasaStandalone`/`@KolbasaCluster`, the schema and its Flyway recipes, workers.
 
 The [README](README.md) has a feature overview and walkthroughs of the examples.
