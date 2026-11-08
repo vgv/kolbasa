@@ -1,5 +1,9 @@
 package kolbasa.spring.boot
 
+import kolbasa.consumer.datasource.Consumer
+import kolbasa.inspector.datasource.Inspector
+import kolbasa.mutator.datasource.Mutator
+import kolbasa.producer.datasource.Producer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -7,7 +11,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.context.annotation.ImportCandidates
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
-import java.util.function.Supplier
 
 class KolbasaAutoConfigurationTest {
 
@@ -28,13 +31,17 @@ class KolbasaAutoConfigurationTest {
         contextRunner.run { context ->
             assertThat(context).hasNotFailed()
             assertThat(context).hasSingleBean(KolbasaAutoConfiguration::class.java)
+            assertThat(context).doesNotHaveBean(Producer::class.java)
+            assertThat(context).doesNotHaveBean(Consumer::class.java)
+            assertThat(context).doesNotHaveBean(Mutator::class.java)
+            assertThat(context).doesNotHaveBean(Inspector::class.java)
         }
     }
 
     @Test
     fun testLocalSettingsWithoutDataSource_Fails() {
         contextRunner
-            .withBean(LocalKolbasaSettings::class.java, Supplier { LocalKolbasaSettings(emptyList()) })
+            .withBean(LocalKolbasaSettings::class.java, { LocalKolbasaSettings(emptyList()) })
             .run { context ->
                 assertThat(context).hasFailed()
             }
