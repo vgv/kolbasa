@@ -822,7 +822,7 @@ classes are ordinary per-instance options you construct and pass to a specific q
 
 | Class | Configures | Key fields |
 |---|---|---|
-| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `shardStrategy`, `asyncExecutor`, `prometheusConfig`, `tracing` |
+| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `asyncExecutor`, `prometheusConfig`, `tracing` |
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |

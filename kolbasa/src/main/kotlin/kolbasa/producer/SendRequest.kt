@@ -31,8 +31,8 @@ import kotlin.math.min
  * ## Cluster
  *
  * In a cluster, all messages of one request go to one shard, and so to one server. The shard is
- * [SendOptions.shard], or [ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard], or the one that
- * [Kolbasa.shardStrategy][kolbasa.Kolbasa.shardStrategy] picks. To spread messages over the servers, send several
+ * [SendOptions.shard], or [ProducerOptions.shard][kolbasa.producer.ProducerOptions.shard], or the one that the
+ * producer's [ShardStrategy][kolbasa.cluster.ShardStrategy] picks. To spread messages over the servers, send several
  * requests.
  *
  * ## Usage Example

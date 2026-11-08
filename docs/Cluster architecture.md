@@ -214,15 +214,15 @@ The shard follows the same **override hierarchy** as every other producer settin
 where the **most specific layer that sets a value wins**.
 
 ```
-Kolbasa.shardStrategy        process-wide default
+ClusterProducer(shardStrategy = …)   this producer's default
   │
-  └─ ProducerOptions.shard   this producer
+  └─ ProducerOptions.shard           this producer
        │
-       └─ SendOptions.shard  this send() call (applies to its whole batch)
+       └─ SendOptions.shard          this send() call (applies to its whole batch)
 ```
 
-The lower two layers *pin* a shard — you set it explicitly via the options. The top layer, `ShardStrategy`, is the default that
-chooses a shard for any message you don't pin:
+The lower two layers *pin* a shard — you set it explicitly via the options. The top layer, the producer's `ShardStrategy` (a
+`ClusterProducer` constructor parameter), is the default that chooses a shard for any message you don't pin:
 
 | Strategy | Behavior |
 |---|---|
@@ -241,8 +241,8 @@ hold *within* one node:
 - **Ordering.** Ordered processing of related messages requires them on one node — again, one shard.
 
 In both cases you derive the shard from whatever **business key** groups the related messages — for example `merchant_id`,
-`sale_number`, `user_id`, or `tenant_id` — usually `Fixed(key.hashCode())`, so every message for the same entity deterministically
-lands on the same shard, and therefore the same node.
+`sale_number`, `user_id`, or `tenant_id` — usually `SendOptions(shard = key.hashCode())`, so every message for the same entity
+deterministically lands on the same shard, and therefore the same node.
 
 These co-location concerns are why the `shard` column and the strategies exist even though they lie dormant on a single node (per
 the note above). Writing shard-aware code up front costs nothing and means **no code changes** when you later cluster — only that
@@ -327,7 +327,7 @@ producer.send(orders, msg)
   pick shard  ── most specific wins:
         │          SendOptions.shard      (this send() call, whole batch)
         │            else ProducerOptions.shard   (this producer)
-        │              else Kolbasa.shardStrategy  (process-wide default)
+        │              else the producer's ShardStrategy  (its default)
         ▼
   shardMap[shard] → producer_node   (in-memory; the cached q__shard snapshot, not a query)
         │

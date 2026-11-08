@@ -1,7 +1,6 @@
 package kolbasa.cluster
 
 import kolbasa.test.AbstractPostgreSQLTest
-import kolbasa.Kolbasa
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.Message
 import kolbasa.consumer.datasource.DatabaseConsumer
@@ -30,8 +29,6 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
 
     @BeforeEach
     fun before() {
-        Kolbasa.shardStrategy = ShardStrategy.Random
-
         dataSources.forEach { dataSource ->
             SchemaHelpers.createOrUpdateQueues(dataSource, queue)
         }
@@ -45,7 +42,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
     @Test
     fun testReceive_JustReceiveTest() {
         // Send N messages
-        val clusterProducer = ClusterProducer(cluster)
+        val clusterProducer = ClusterProducer(cluster, shardStrategy = ShardStrategy.Random)
         ShardId.SHARDS_RANGE.forEach { message ->
             clusterProducer.send(queue, message)
         }
@@ -59,7 +56,7 @@ class ClusterConsumerTest : AbstractPostgreSQLTest() {
     @Test
     fun testMessagesDistribution_TestOneMigratingShard() {
         // Send N messages randomly to all nodes
-        val clusterProducer = ClusterProducer(cluster)
+        val clusterProducer = ClusterProducer(cluster, shardStrategy = ShardStrategy.Random)
         ShardId.SHARDS_RANGE.forEach { message ->
             val sendRequest = SendRequest(
                 data = listOf(SendMessage(data = message)),
