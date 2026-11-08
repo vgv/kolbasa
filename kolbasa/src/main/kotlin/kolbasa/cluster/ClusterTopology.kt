@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import javax.sql.DataSource
 
-internal data class ClusterState(
+internal data class ClusterTopology(
     val nodes: Map<NodeId, DataSource>,
     val shards: Map<ShardId, Shard>
 ) {
@@ -245,9 +245,5 @@ internal data class ClusterState(
         }
 
         return inspectors
-    }
-
-    companion object {
-        val NOT_INITIALIZED = ClusterState(emptyMap(), emptyMap())
     }
 }

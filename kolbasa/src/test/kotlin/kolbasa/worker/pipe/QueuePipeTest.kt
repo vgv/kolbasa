@@ -420,8 +420,8 @@ class QueuePipeTest : AbstractPostgreSQLTest() {
 
     private fun clusterProducer(options: ProducerOptions = ProducerOptions.DEFAULT): ClusterProducer {
         clusterNodes.forEach { SchemaHelpers.createOrUpdateQueues(it, to) }
-        val cluster = Cluster(clusterNodes)
-        cluster.updateStateOnce()
+        val cluster = Cluster(clusterNodes, emptyList())
+        cluster.updateTopology()
         return ClusterProducer(cluster, options)
     }
 

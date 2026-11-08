@@ -1,6 +1,6 @@
 package kolbasa.queue
 
-import kolbasa.cluster.ClusterStateUpdateConfig
+import kolbasa.cluster.ClusterTopologyUpdaterOptions
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.inspector.CountOptions
 import kolbasa.inspector.DistinctValuesOptions
@@ -526,12 +526,27 @@ internal class ChecksTest {
     // ---------------------------------------------------------------------------------------------------------------
 
     @Test
-    fun testCheckClusterStateUpdateInterval() {
+    fun testCheckClusterTopologyUpdateInterval() {
         assertThrows<IllegalArgumentException> {
             val ulp = Duration.ofNanos(1)
-            val aBitSmaller = ClusterStateUpdateConfig.MIN_INTERVAL - ulp
-            Checks.checkClusterStateUpdateInterval(aBitSmaller)
+            val aBitSmaller = ClusterTopologyUpdaterOptions.MIN_INTERVAL - ulp
+            Checks.checkClusterTopologyUpdateInterval(aBitSmaller)
         }
+    }
+
+    @Test
+    fun testCheckClusterTopologyUpdateInterval_MoreThanMax() {
+        assertThrows<IllegalArgumentException> {
+            val ulp = Duration.ofNanos(1)
+            val aBitBigger = ClusterTopologyUpdaterOptions.MAX_INTERVAL + ulp
+            Checks.checkClusterTopologyUpdateInterval(aBitBigger)
+        }
+    }
+
+    @Test
+    fun testCheckClusterTopologyUpdateInterval_Bounds() {
+        assertDoesNotThrow { Checks.checkClusterTopologyUpdateInterval(ClusterTopologyUpdaterOptions.MIN_INTERVAL) }
+        assertDoesNotThrow { Checks.checkClusterTopologyUpdateInterval(ClusterTopologyUpdaterOptions.MAX_INTERVAL) }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

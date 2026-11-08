@@ -24,8 +24,9 @@ import javax.sql.DataSource
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseConsumer][kolbasa.consumer.datasource.DatabaseConsumer] per node behind the scenes. Creating one is
- * cheap, but `consumerOptions` is fixed at that moment, so keep one instance per set of defaults you need. The
- * [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first `receive()`.
+ * cheap, but `options` is fixed at that moment, so keep one instance per set of defaults you need. The
+ * [Cluster] must be initialized before the first `receive()`: by a [ClusterTopologyUpdater], or by your own call
+ * to [Cluster.updateTopology].
  *
  * This class implements the [Consumer] interface, so it's easy to use instead of [DatabaseConsumer] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
@@ -55,9 +56,9 @@ class ClusterConsumer @JvmOverloads constructor(
 ) : Consumer {
 
     override fun <Data> receive(queue: Queue<Data>, limit: Int, receiveOptions: ReceiveOptions): List<Message<Data>> {
-        val latestState = cluster.getState()
+        val topology = cluster.getTopology()
 
-        val consumer = latestState.getActiveConsumer(this) { nodeId, dataSource, shards ->
+        val consumer = topology.getActiveConsumer(this) { nodeId, dataSource, shards ->
             val peer = ConnectionAwareDatabaseConsumer(nodeId, options, shards)
             DatabaseConsumer(dataSource, peer)
         }
@@ -74,9 +75,9 @@ class ClusterConsumer @JvmOverloads constructor(
     }
 
     override fun <Data> delete(queue: Queue<Data>, messageIds: List<Id>): Int {
-        val latestState = cluster.getState()
+        val topology = cluster.getTopology()
 
-        val byNodes = latestState.mapShardsToNodes(messageIds) { it.shard }
+        val byNodes = topology.mapShardsToNodes(messageIds) { it.shard }
 
         var deleted = byNodes
             .map { (node, ids) ->
@@ -84,7 +85,7 @@ class ClusterConsumer @JvmOverloads constructor(
                     return@map 0
                 }
 
-                val consumer = latestState.getConsumer(this, node) { nodeId, dataSource ->
+                val consumer = topology.getConsumer(this, node) { nodeId, dataSource ->
                     val peer = ConnectionAwareDatabaseConsumer(nodeId, options, Shards.ALL_SHARDS)
                     DatabaseConsumer(dataSource, peer)
                 }
@@ -93,7 +94,7 @@ class ClusterConsumer @JvmOverloads constructor(
             }.sum()
 
         if (deleted < messageIds.size) {
-            val consumers = latestState.getConsumers(this) { nodeId, dataSource: DataSource ->
+            val consumers = topology.getConsumers(this) { nodeId, dataSource: DataSource ->
                 val peer = ConnectionAwareDatabaseConsumer(nodeId, options, Shards.ALL_SHARDS)
                 DatabaseConsumer(dataSource, peer)
             }

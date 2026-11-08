@@ -33,7 +33,8 @@ import kolbasa.queue.meta.MetaField
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseInspector][kolbasa.inspector.datasource.DatabaseInspector] per node behind the scenes. Creating one is
- * cheap. The [Cluster] must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
+ * cheap. The [Cluster] must be initialized before the first call: by a [ClusterTopologyUpdater], or by your own
+ * call to [Cluster.updateTopology].
  *
  * This class implements the [Inspector] interface, so it's easy to use instead of [DatabaseInspector] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
@@ -123,8 +124,8 @@ class ClusterInspector(private val cluster: Cluster) : Inspector {
     }
 
     private fun getAllInspectors(): List<Inspector> {
-        val latestState = cluster.getState()
-        return latestState.getInspectors(this) { _, dataSource ->
+        val topology = cluster.getTopology()
+        return topology.getInspectors(this) { _, dataSource ->
             val peer = ConnectionAwareDatabaseInspector()
             DatabaseInspector(dataSource, peer)
         }

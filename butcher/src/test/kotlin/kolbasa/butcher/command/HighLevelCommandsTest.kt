@@ -41,7 +41,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     fun before() {
         // Seeded the way a real cluster is: by an application starting against it. That creates every
         // node's identity, the shard table with all 1024 shards, and the queue on every node
-        Cluster(dataSources, listOf(QUEUE)).updateStateOnce()
+        Cluster(dataSources, listOf(QUEUE)).updateTopology()
     }
 
     @Test

@@ -1,6 +1,5 @@
 package kolbasa
 
-import kolbasa.cluster.ClusterStateUpdateConfig
 import kolbasa.cluster.ShardStrategy
 import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.telemetry.prometheus.PrometheusConfig
@@ -89,15 +88,6 @@ object Kolbasa {
     @JvmStatic
     @Volatile
     var tracing: Tracing = Tracing.NONE
-
-    /**
-     * How often a [Cluster][kolbasa.cluster.Cluster] refreshes its view of the nodes, and on which executor.
-     *
-     * Read again before every reschedule, so a change affects the next cycle.
-     */
-    @JvmStatic
-    @Volatile
-    var clusterStateUpdateConfig: ClusterStateUpdateConfig = ClusterStateUpdateConfig()
 
     /**
      * Default executor for async operations

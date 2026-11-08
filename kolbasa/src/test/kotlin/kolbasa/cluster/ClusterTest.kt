@@ -3,8 +3,11 @@ package kolbasa.cluster
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,71 +25,71 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testInitCluster_If_No_DataSources() {
-        val cluster = Cluster(emptyList())
+        val cluster = Cluster(emptyList(), emptyList())
 
         assertThrows<IllegalStateException> {
-            cluster.updateStateOnce()
+            cluster.updateTopology()
         }
     }
 
     @Test
-    fun testInitCluster_Test_State_Init_And_Not() {
+    fun testInitCluster_Test_Topology_Init_And_Not() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
 
-        // State not updated
-        assertFalse(cluster.clusterStateUpdatedAtLeastOnce())
+        // Topology not updated
+        assertFalse(cluster.isInitialized())
         assertThrows<IllegalStateException> {
-            cluster.getState()
+            cluster.getTopology()
         }
 
-        // Update the state
-        cluster.updateStateOnce()
+        // Update the topology
+        cluster.updateTopology()
 
-        // State updated
-        assertTrue(cluster.clusterStateUpdatedAtLeastOnce())
+        // Topology updated
+        assertTrue(cluster.isInitialized())
         assertDoesNotThrow {
-            cluster.getState()
+            cluster.getTopology()
         }
     }
 
     @Test
-    fun testInitCluster_If_State_The_Same() {
+    fun testInitCluster_If_Topology_The_Same() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
-        val cluster = Cluster(dataSources)
+        val cluster = Cluster(dataSources, emptyList())
 
         // First initialization
-        cluster.updateStateOnce()
-        val firstState = cluster.getState()
+        cluster.updateTopology()
+        val firstTopology = cluster.getTopology()
 
-        // Second initialization, check that states are the same
-        cluster.updateStateOnce()
-        val secondState = cluster.getState()
+        // Second initialization, check that topologies are the same
+        cluster.updateTopology()
+        val secondTopology = cluster.getTopology()
 
-        assertSame(firstState, secondState)
-        assertTrue(firstState.nodes.isNotEmpty(), "State: $firstState")
+        assertSame(firstTopology, secondTopology)
+        assertTrue(firstTopology.nodes.isNotEmpty(), "Topology: $firstTopology")
     }
 
     @Test
-    fun testInitCluster_If_State_Not_The_Same() {
+    fun testInitCluster_If_Topology_Not_The_Same() {
         val dataSources = mapOf(
             "public" to dataSource,
             FIRST_SCHEMA_NAME to dataSourceFirstSchema,
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
 
         // First shard table initialization/read
-        cluster.updateStateOnce()
-        val firstState = cluster.getState()
+        cluster.updateTopology()
+        val firstTopology = cluster.getTopology()
 
         // ---------------------------------------------------------------------------------------
         // Make shard changes
         val shardToChange = ShardId.random()
-        val currentProducerConsumerNode = requireNotNull(firstState.shards[shardToChange]?.producerNode)
-        val newProducerConsumerNode = (firstState.nodes.keys - currentProducerConsumerNode).random()
+        val currentProducerConsumerNode = requireNotNull(firstTopology.shards[shardToChange]?.producerNode)
+        val newProducerConsumerNode = (firstTopology.nodes.keys - currentProducerConsumerNode).random()
         assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
 
         val shardTables = findShardTables(dataSources).filter { foundShardTable ->
@@ -108,12 +111,12 @@ class ClusterTest : AbstractPostgreSQLTest() {
         // ---------------------------------------------------------------------------------------
 
         // Second shard table read
-        cluster.updateStateOnce()
-        val secondState = cluster.getState()
+        cluster.updateTopology()
+        val secondTopology = cluster.getTopology()
 
-        assertNotEquals(firstState, secondState)
-        assertEquals(secondState.shards[shardToChange]?.producerNode, newProducerConsumerNode)
-        assertEquals(secondState.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
+        assertNotEquals(firstTopology, secondTopology)
+        assertEquals(secondTopology.shards[shardToChange]?.producerNode, newProducerConsumerNode)
+        assertEquals(secondTopology.shards[shardToChange]?.consumerNode, newProducerConsumerNode)
     }
 
     @Test
@@ -124,17 +127,17 @@ class ClusterTest : AbstractPostgreSQLTest() {
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
 
         // First initialization
-        cluster.updateStateOnce()
+        cluster.updateTopology()
         val firstShardIDs = dataSources.mapNotNull { (_, dataSource) ->
             IdSchema.readNodeInfo(dataSource)
         }
         assertEquals(dataSources.size, firstShardIDs.size, "Data sources: $dataSources, shardIds: $firstShardIDs")
 
         // Second initialization, check that IDs are the same
-        cluster.updateStateOnce()
+        cluster.updateTopology()
         val secondShardIDs = dataSources.mapNotNull { (_, dataSource) ->
             IdSchema.readNodeInfo(dataSource)
         }
@@ -150,8 +153,8 @@ class ClusterTest : AbstractPostgreSQLTest() {
             SECOND_SCHEMA_NAME to dataSourceSecondSchema
         )
 
-        val cluster = Cluster(dataSources.values.toList())
-        cluster.updateStateOnce()
+        val cluster = Cluster(dataSources.values.toList(), emptyList())
+        cluster.updateTopology()
 
         // Number of created shard tables
         val shardTables = findShardTables(dataSources)
@@ -172,6 +175,45 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertEquals(smallestExistingId.id, nodeIdWithShardTable)
     }
 
+    @Test
+    fun testUpdateTopology_NodeAddedLater_GetsQueues() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        var nodes = listOf(dataSource, dataSourceFirstSchema)
+        val cluster = Cluster({ nodes }, { listOf(queue) })
+
+        cluster.updateTopology()
+        assertTrue(hasQueueTable(dataSourceFirstSchema, queue))
+        assertFalse(hasQueueTable(dataSourceSecondSchema, queue))
+
+        // A new node joins the cluster, and the next update creates the queue on it
+        nodes = nodes + dataSourceSecondSchema
+        cluster.updateTopology()
+
+        assertTrue(hasQueueTable(dataSourceSecondSchema, queue))
+    }
+
+    @Test
+    fun testUpdateTopology_QueueAddedLater_IsCreated() {
+        val first = Queue.of("first", PredefinedDataTypes.Int)
+        val second = Queue.of("second", PredefinedDataTypes.Int)
+        val nodes = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        var queues = listOf(first)
+        val cluster = Cluster({ nodes }, { queues })
+
+        cluster.updateTopology()
+        assertTrue(nodes.all { hasQueueTable(it, first) })
+        assertTrue(nodes.none { hasQueueTable(it, second) })
+
+        // A new queue appears, and the next update creates it on every node
+        queues = queues + second
+        cluster.updateTopology()
+
+        assertTrue(nodes.all { hasQueueTable(it, second) })
+    }
+
+    private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {
+        return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
+    }
 
     private fun findShardTables(dataSources: Map<String, DataSource>): List<FoundShardTable> {
         return dataSources

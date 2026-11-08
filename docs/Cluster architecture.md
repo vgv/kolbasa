@@ -1,7 +1,7 @@
 # Cluster architecture
 
 This document describes what changes when you run kolbasa across **multiple PostgreSQL nodes** — the shard model, how produce and
-consume are routed, where cluster state lives, and how shards migrate between nodes.
+consume are routed, where the cluster topology lives, and how shards migrate between nodes.
 
 It assumes you've read [Architecture.md](Architecture.md) for the single-node model. The single-node concepts — queues, tables,
 meta-fields, the message lifecycle, deduplication, DLQ/archive, sweep — are **not** re-explained here; a cluster is many
@@ -13,7 +13,7 @@ CLI), see [Butcher.md](Butcher.md).
 1. [From single node to cluster](#from-single-node-to-cluster)
 2. [Enabling cluster mode in code](#enabling-cluster-mode-in-code)
 3. [Shards](#shards)
-4. [Cluster state](#cluster-state)
+4. [Cluster topology](#cluster-topology)
 5. [Message routing](#message-routing)
 6. [The cluster roles](#the-cluster-roles)
 7. [Shard migration](#shard-migration)
@@ -136,16 +136,17 @@ producer.send(orders, message)
 val messages = consumer.receive(orders, limit = 100)
 ```
 
-**Cluster** introduces one new object — a `Cluster` — built from the **list** of per-node `DataSource`s, and then builds the
-roles from that `Cluster` instead of from a raw `DataSource`:
+**Cluster** introduces one new object — a `Cluster` — built from the **list** of per-node `DataSource`s and the list of your
+queues, and then builds the roles from that `Cluster` instead of from a raw `DataSource`:
 
 ```kotlin
-// One DataSource per node — the cluster connects to all of them.
-val cluster = Cluster(listOf(nodeA, nodeB, nodeC))
+// One DataSource per node — the cluster connects to all of them — and the queues it creates on every node.
+val cluster = Cluster(listOf(nodeA, nodeB, nodeC), listOf(orders))
 
 // Start the background poll that keeps each client's view of the
-// shard-ownership map fresh (see "Cluster state").
-cluster.initAndScheduleStateUpdate()
+// shard-ownership map fresh (see "Cluster topology").
+val updater = ClusterTopologyUpdater(cluster)
+updater.start()
 
 val producer: Producer = ClusterProducer(cluster)
 val consumer: Consumer = ClusterConsumer(cluster)
@@ -155,7 +156,7 @@ producer.send(orders, message)
 val messages = consumer.receive(orders, limit = 100)
 ```
 
-That is the whole migration of application code: build a `Cluster`, start its state updater, and replace
+That is the whole migration of application code: build a `Cluster`, start a `ClusterTopologyUpdater` on it, and replace
 `DatabaseProducer`/`DatabaseConsumer` with `ClusterProducer`/`ClusterConsumer`. The `Mutator` and `Inspector` roles have the same
 treatment (`ClusterMutator`, `ClusterInspector`) — see [The cluster roles](#the-cluster-roles). Everything else in this document
 explains what that `Cluster` object does on your behalf.
@@ -163,19 +164,24 @@ explains what that `Cluster` object does on your behalf.
 ### One `Cluster` object per kolbasa cluster
 
 A `Cluster` object represents exactly one kolbasa cluster — the set of PostgreSQL nodes you pass into it. It is a long-lived
-object that holds a connection (`DataSource`) to **every** one of those nodes and runs a background thread monitoring the
-[shard-ownership map](#cluster-state), so it is **not** something to build per request, per queue, or per operation:
+object that holds a connection (`DataSource`) to **every** one of those nodes and a copy of the
+[shard-ownership map](#cluster-topology), which a `ClusterTopologyUpdater` keeps fresh, so it is **not** something to build per
+request, per queue, or per operation:
 
 - **One object covers the whole cluster.** A `Cluster` is not scoped to a queue (queues are passed to each `send`/`receive` call,
   not to the `Cluster`) and not scoped to a node (it holds them all). The same instance serves every queue across the entire node
   set, however many there are.
-- **Create it once, at startup, and share it.** Build the `Cluster` and call `initAndScheduleStateUpdate()` during application
+- **Create it once, at startup, and share it.** Build the `Cluster` and start a `ClusterTopologyUpdater` on it during application
   bootstrap — usually registered as a singleton in your dependency-injection container (Spring, Guice, Koin, …) — then inject it
   wherever roles are built. The `ClusterProducer` / `ClusterConsumer` / `ClusterMutator` / `ClusterInspector` wrappers are cheap,
   so creating one is never a problem — but in practice they are best treated the same way: build each once and keep it for the
   life of the application, since a single role instance already handles every queue and every node. You would keep more than one
   of the same role only to pin different defaults — e.g. two `ClusterProducer`s carrying different `ProducerOptions` — since those
   options are fixed when the wrapper is built. The heavyweight, shared thing they all point at is the one `Cluster`.
+- **Close the updater when you are done with it.** `ClusterTopologyUpdater.close()` stops the background refresh. It matters
+  when the updater lives shorter than the JVM, in tests for example. Spring, for example, calls it on its own when the context
+  closes, since the updater is `AutoCloseable`. The `Cluster` itself has nothing to close: the roles keep working on the last
+  map read, and the `DataSource`s are yours.
 
 You only need more than one `Cluster` object if your application genuinely talks to more than one *separate* kolbasa cluster — one
 object per cluster. That is uncommon in practice: because a single cluster scales out to 1024 nodes, most applications grow their
@@ -223,7 +229,7 @@ chooses a shard for any message you don't pin:
 | `Random` | A fresh random shard per message — spreads load evenly. |
 | `Fixed(n)` | Always shard `n`. |
 | `ThreadLocal` | A stable random shard per thread. |
-| `ThreadLocalWithInterval(d)` | A per-thread shard that rotates every interval `d` (default 15 min). **This is the default.** |
+| `ThreadLocalWithInterval(d)` | A per-thread shard that rotates every interval `d` (default 5 min). **This is the default.** |
 
 Whichever layer supplies the value, any `Int` is accepted and normalized into the `0..1023` range.
 
@@ -242,7 +248,7 @@ These co-location concerns are why the `shard` column and the strategies exist e
 the note above). Writing shard-aware code up front costs nothing and means **no code changes** when you later cluster — only that
 the shard you choose starts taking effect.
 
-## Cluster state
+## Cluster topology
 
 We now know there are 1024 shards and that each is owned by one node — but *which* node owns *which* shard is not fixed by any
 rule. The assignment is arbitrary (it starts random) and changes over the cluster's life as shards migrate, so it cannot be
@@ -286,15 +292,15 @@ node that butcher sets up gets the id from its config line (see [Butcher.md → 
 `Cluster` sets up first gets a random 16-character id. A row mid-migration looks different: `consumer_node` is null and
 `next_consumer_node` names the destination — see [Shard migration](#shard-migration).)
 
-Every client process holds a **`Cluster`** object (`kolbasa.cluster.Cluster`) — it opens connections to every node and keeps a
-cached snapshot of this table, which all the routing below consults. Three things are worth knowing about how that state is
+Every client process holds a **`Cluster`** object (`kolbasa.cluster.Cluster`) — it keeps a `DataSource` for every node and a
+cached snapshot of this table, which all the routing below consults. Three things are worth knowing about how that snapshot is
 managed:
 
 - **It lives on one node, not all of them.** The table is authoritative and unreplicated. When a `Cluster` starts, it scans the
   nodes for a fully-initialized `q__shard` (all 1024 rows); if none exists yet, it creates one on the node with the lowest node id and
   seeds all 1024 shards, each assigned to a **random** node in a stable state.
-- **Clients discover state by polling.** That cached snapshot is refreshed on a timer — every
-  `Kolbasa.clusterStateUpdateConfig.interval` (default **1 minute**). There is no push or live subscription. The practical
+- **Clients discover the topology by polling.** That cached snapshot is refreshed on a timer — every
+  `ClusterTopologyUpdaterOptions.interval` (default **1 minute**). There is no push or live subscription. The practical
   consequence: after an operator changes ownership (a migration step), it takes up to one refresh interval for every client to
   notice. This lag is *designed for* — the migration protocol stays correct across it (see [Shard migration](#shard-migration)).
 - **Startup also reconciles identity and schema.** Bringing up a `Cluster` remaps any colliding
@@ -304,14 +310,13 @@ managed:
 > **If the node holding `q__shard` is down.** Because the map is *cached* in every client, routing keeps working off the last
 > snapshot — a brief outage of that node does not by itself stall producers or consumers. What stops is the *refresh*: each
 > refresh reads from **all** nodes (it reconciles identity and schema too), so if any node is unreachable, the whole refresh fails
-> and the cached map is simply kept as-is. A failed refresh also ends the periodic update loop — the schedule for the next tick is
-> set only after a successful pass — so the snapshot then stays frozen until the `Cluster` is recreated (typically an application
-> restart). The practical guidance: keep the node that hosts `q__shard` available, and restart clients if they have been running
-> against an unreachable cluster long enough for the map to drift.
+> and the cached map is simply kept as-is. A failed refresh does not stop the updates: the `ClusterTopologyUpdater` schedules the
+> next one anyway, and the map catches up as soon as every node answers again. The practical guidance: keep every node available,
+> the one that hosts `q__shard` above all. While any node is down, no client sees a migration.
 
 ## Message routing
 
-With shards and the ownership map in hand, routing is straightforward. Both directions consult the cached cluster state.
+With shards and the ownership map in hand, routing is straightforward. Both directions consult the cached cluster topology.
 
 ### Produce path
 
@@ -337,10 +342,10 @@ nodes, yet the value is still globally unique across the cluster — so clusteri
 If the shard's `producer_node` is **not a current member of the cluster** — for example the cached map still points at a node
 that has since been removed — the producer does **not** fail. Rather than drop the message, it stores it on another node instead,
 preferring one that currently has an active producer (and falling back to any node if somehow none do). The reasoning is "better
-to store the message on the wrong node than to lose it": a later migration relocates it to wherever its shard is owned. The cost
-is that a message can briefly live on a node that doesn't currently own its shard.
+to store the message on the wrong node than to lose it". The cost is that no consumer receives it there: a consumer reads only
+the shards its node owns, and kolbasa has no procedure yet to move such a message to the node that owns its shard.
 
-(This fallback is about the target node being *absent from the cluster state*, not about a live connection failing. If the target
+(This fallback is about the target node being *absent from the cluster topology*, not about a live connection failing. If the target
 node is a known cluster member but its database is momentarily unreachable, the `send` surfaces that error normally — it is not
 silently rerouted.)
 
@@ -418,7 +423,7 @@ it; or perhaps load has drifted **unevenly** and you simply want to rebalance. A
 shards from one node to another. That primitive is **migration**.
 
 Migration is the heart of cluster operations and the reason the `q__shard` columns are shaped the way they are. The whole protocol
-is built on the two legal shard states from the `check` constraint [above](#cluster-state):
+is built on the two legal shard states from the `check` constraint [above](#cluster-topology):
 
 ```
 STABLE                                   MIGRATING (A → B)
@@ -576,7 +581,8 @@ schema-consistency check is the right place to catch it early.
 | A node is **unreachable during produce** | Routing is by the cached map, not by live probing, so a *known* node that is simply down is still chosen and the `send` fails (the caller can retry). Redirection happens only when the shard's `producer_node` is **absent from the cluster map** (e.g. a removed node) — then the message is stored elsewhere instead of lost, and relocated later by migration. |
 | A node is **unreachable during consume** | Each `receive()` picks one consumer node from the map at random, without checking reachability first; if that node happens to be down, that call fails. A subsequent `receive()` re-rolls and may land on a healthy node. Messages on the down node are not lost — they wait until it returns. |
 | A node is **unreachable during `move`** | The move can't drain that node's rows; re-run it once the node is back. Because move is re-runnable, an interruption is harmless. |
-| **Stale cluster state** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
+| A node is **unreachable during a topology refresh** | The whole refresh fails, and the client keeps its old map until the next refresh. The error goes to the `TopologyUpdateErrorHandler`, a warning in the log by default. The first refresh, at startup, throws instead: without a map the cluster can't work. |
+| **Stale cluster topology** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
 | **Schema divergence** between nodes | Detected by the schema-consistency check; `move` fails fast rather than copying mismatched tables. Fix by re-running schema generation (or restoring the missing objects) on the lagging node. |
 | Shard **left in migrating state** too long | Its messages on the source node are not consumed until finalize. Not data loss, but a growing backlog — finish the migration. |
 
@@ -592,10 +598,10 @@ here is the architectural shape.)
 2. Create the kolbasa schema (all your queue tables) on the new node, so it can hold data once shards migrate in. Any of three
    ways works — pick whichever fits how your application is wired:
    - **Do nothing — let the `Cluster` do it.** The easiest option *if you supplied the node list as a dynamic supplier*
-     (`() -> List<DataSource>`) that already returns the new node. The `Cluster` re-reads the supplier on every refresh (every
+     (a `Supplier<List<DataSource>>`) that already returns the new node. The `Cluster` re-reads the supplier on every refresh (every
      minute by default), so within one interval it picks up the new node and runs schema generation against it — the whole schema
-     appears on the new node with no action from you. (You can force it immediately with `cluster.updateStateOnce()` instead of
-     waiting for the tick.) This only creates queues if the `Cluster` was constructed with the `queues` list; an empty list means
+     appears on the new node with no action from you. (You can force it immediately with `cluster.updateTopology()` instead of
+     waiting for the tick.) This only creates queues if the `Cluster` was given a non-empty list of queues; an empty list means
      it manages routing only and leaves schema to you, via one of the next two options.
    - **Generate it directly.** Call `SchemaHelpers.createOrUpdateQueues(newDataSource, queues)` against the new node's
      `DataSource` — the same call kolbasa makes internally.
@@ -630,7 +636,8 @@ minimum-movement redistribution, but applying it is a deliberate, operator-drive
 
 | Type | Source | Role |
 |---|---|---|
-| `Cluster` | `kolbasa/cluster/Cluster.kt` | Holds node connections + cached state; schedules state refresh. |
+| `Cluster` | `kolbasa/cluster/Cluster.kt` | Holds the nodes' `DataSource`s and the cached topology; reads the topology on `updateTopology()`. |
+| `ClusterTopologyUpdater` | `kolbasa/cluster/ClusterTopologyUpdater.kt` | Calls `updateTopology()` on a schedule. |
 | `ShardStrategy` | `kolbasa/cluster/ShardStrategy.kt` | Picks a message's shard at send time. |
 | `ClusterProducer` / `ClusterConsumer` / `ClusterMutator` / `ClusterInspector` | `kolbasa/cluster/Cluster*.kt` | Cluster-aware roles. |
 

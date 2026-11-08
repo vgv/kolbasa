@@ -23,15 +23,16 @@ import java.util.concurrent.CompletableFuture
  * - by filter – the filter can match messages anywhere, so every node is called.
  *
  * The results of all nodes are added up: [MutateResult.mutatedMessages][kolbasa.mutator.MutateResult.mutatedMessages]
- * is the total over the cluster. The list of changed messages is capped by
+ * is the total over the cluster. When you mutate by filter, the list of changed messages is capped by
  * [MutatorOptions.maxMutatedMessagesKeepInMemory][kolbasa.mutator.MutatorOptions.maxMutatedMessagesKeepInMemory]
- * for the whole call, not per node, and
- * [MutateResult.truncated][kolbasa.mutator.MutateResult.truncated] tells you when the cap was reached.
+ * for the whole call, not per node, and [MutateResult.truncated][kolbasa.mutator.MutateResult.truncated] tells you
+ * when the cap was reached. When you mutate by id, there is no cap: the list is never longer than the ids you passed.
  *
  * This class is a thin wrapper around a [Cluster]: it holds no connections of its own and creates a plain
  * [DatabaseMutator][kolbasa.mutator.datasource.DatabaseMutator] per node behind the scenes. Creating one is cheap,
- * but `mutatorOptions` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
- * must be initialized (see [Cluster.initAndScheduleStateUpdate]) before the first call.
+ * but `options` is fixed at that moment, so keep one instance per set of defaults you need. The [Cluster]
+ * must be initialized before the first call: by a [ClusterTopologyUpdater], or by your own call to
+ * [Cluster.updateTopology].
  *
  * This class implements the [Mutator] interface, so it's easy to use instead of [DatabaseMutator] if you need to
  * migrate from a single-node setup to a Kolbasa cluster.
@@ -65,14 +66,14 @@ class ClusterMutator @JvmOverloads constructor(
         mutations: List<Mutation>,
         messages: List<Id>
     ): MutateResult {
-        val latestState = cluster.getState()
-        val byNodes = latestState.mapShardsToNodes(messages) { it.shard }
+        val topology = cluster.getTopology()
+        val byNodes = topology.mapShardsToNodes(messages) { it.shard }
 
         var mutatedMessagesCount = 0
         val mutatedMessagesResult = mutableListOf<MessageResult>()
         byNodes.forEach { (node, ids) ->
             if (node != null) {
-                val mutator = latestState.getMutator(this, node) { nodeId, dataSource ->
+                val mutator = topology.getMutator(this, node) { nodeId, dataSource ->
                     val peer = ConnectionAwareDatabaseMutator(nodeId, options)
                     DatabaseMutator(dataSource, peer)
                 }
@@ -96,9 +97,9 @@ class ClusterMutator @JvmOverloads constructor(
         mutations: List<Mutation>,
         filter: Filter.() -> Condition
     ): MutateResult {
-        val latestState = cluster.getState()
+        val topology = cluster.getTopology()
 
-        val allMutators = latestState.getMutators(this) { nodeId, dataSource ->
+        val allMutators = topology.getMutators(this) { nodeId, dataSource ->
             val peer = ConnectionAwareDatabaseMutator(nodeId, options)
             DatabaseMutator(dataSource, peer)
         }
