@@ -141,6 +141,35 @@ data class Queue<Data> internal constructor(
         null
 
     /**
+     * Returns a copy of this queue with a different name, leaving this instance untouched.
+     *
+     * The data type, the metadata and the options stay the same. Use it for a queue that has to keep the same messages
+     * as this one somewhere else, for example an outbox in your own database for a queue in a cluster. The two queues
+     * can't drift apart then.
+     *
+     * Only a [MAIN][QueueRole.MAIN] queue can be copied. A DLQ or an archive is made by its main queue, see
+     * [deadLetterQueue] and [archiveQueue].
+     */
+    fun withName(newName: String): Queue<Data> {
+        check(role == QueueRole.MAIN) { "Only MAIN queues can be copied, but '$name' is a $role queue" }
+        return copy(name = newName)
+    }
+
+    /**
+     * Returns a copy of this queue with different options, leaving this instance untouched.
+     *
+     * The name, the data type and the metadata stay the same. The new options replace the old ones as a whole: an
+     * option not set in them gets its default value, not the value of this queue.
+     *
+     * Only a [MAIN][QueueRole.MAIN] queue can be copied. A DLQ or an archive is made by its main queue, see
+     * [deadLetterQueue] and [archiveQueue].
+     */
+    fun withOptions(newOptions: QueueOptions): Queue<Data> {
+        check(role == QueueRole.MAIN) { "Only MAIN queues can be copied, but '$name' is a $role queue" }
+        return copy(options = newOptions)
+    }
+
+    /**
      * Builder for flexible [Queue] creation, when only some of the properties need to be set.
      */
     class Builder<Data> internal constructor(
