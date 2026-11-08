@@ -1,0 +1,41 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+
+    // JUnit settings and one Test task per supported PostgreSQL image, shared with any other module
+    // that gets a test suite. See gradle/build-logic/src/main/kotlin/kolbasa.testing.gradle.kts
+    id("kolbasa.testing")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // The library this starter configures
+    api(project(":kolbasa"))
+
+    // Auto-configuration support. Every Spring Boot application has it already
+    implementation(libs.spring.boot.autoconfigure)
+
+    // Test
+    // Which PostgreSQL versions we test against, plus JUnit, Testcontainers and the AbstractPostgreSQLTest base class
+    testImplementation(project(":test-support"))
+
+    // ApplicationContextRunner, and AssertJ: the runner's context assertions are built on it
+    testImplementation(libs.spring.boot.test)
+    testImplementation(libs.assertj.core)
+}
+
+// Kotlin settings
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        apiVersion = KotlinVersion.KOTLIN_2_1
+        languageVersion = KotlinVersion.KOTLIN_2_1
+        // We need JVM default methods for interfaces, but don't need the compatibility bridges
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+    }
+}

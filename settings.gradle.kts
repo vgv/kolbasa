@@ -10,6 +10,7 @@ pluginManagement {
 
 include("kolbasa")
 include("kolbasa-opentelemetry")
+include("kolbasa-spring-boot-4-starter")
 include("test-support")
 include("examples")
 include("performance")

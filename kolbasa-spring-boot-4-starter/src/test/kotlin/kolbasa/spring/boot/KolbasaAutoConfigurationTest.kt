@@ -1,0 +1,32 @@
+package kolbasa.spring.boot
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.context.annotation.ImportCandidates
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
+
+class KolbasaAutoConfigurationTest {
+
+    private val contextRunner = ApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(KolbasaAutoConfiguration::class.java))
+
+    @Test
+    fun testImportsFile_ListsAutoConfiguration() {
+        // Spring Boot finds auto-configurations through the imports file. With a typo there the starter does nothing,
+        // and nothing fails
+        val candidates = ImportCandidates.load(AutoConfiguration::class.java, javaClass.classLoader)
+
+        assertTrue(KolbasaAutoConfiguration::class.java.name in candidates.candidates)
+    }
+
+    @Test
+    fun testContext_Starts() {
+        contextRunner.run { context ->
+            assertThat(context).hasNotFailed()
+            assertThat(context).hasSingleBean(KolbasaAutoConfiguration::class.java)
+        }
+    }
+}
