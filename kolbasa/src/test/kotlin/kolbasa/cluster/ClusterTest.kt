@@ -3,8 +3,11 @@ package kolbasa.cluster
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -172,6 +175,26 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertEquals(smallestExistingId.id, nodeIdWithShardTable)
     }
 
+    @Test
+    fun testUpdateTopology_NodeAddedLater_GetsQueues() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        var nodes = listOf(dataSource, dataSourceFirstSchema)
+        val cluster = Cluster({ nodes }, listOf(queue))
+
+        cluster.updateTopology()
+        assertTrue(hasQueueTable(dataSourceFirstSchema, queue))
+        assertFalse(hasQueueTable(dataSourceSecondSchema, queue))
+
+        // A new node joins the cluster, and the next update creates the queue on it
+        nodes = nodes + dataSourceSecondSchema
+        cluster.updateTopology()
+
+        assertTrue(hasQueueTable(dataSourceSecondSchema, queue))
+    }
+
+    private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {
+        return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
+    }
 
     private fun findShardTables(dataSources: Map<String, DataSource>): List<FoundShardTable> {
         return dataSources

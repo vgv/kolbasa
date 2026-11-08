@@ -5,6 +5,7 @@ import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaHelpers
 import java.util.*
 import java.util.function.Supplier
@@ -74,9 +75,9 @@ import javax.sql.DataSource
  * @param dataSourcesProvider returns the [DataSource] of every node of this cluster. It must never return an empty list –
  * a topology update over an empty list fails with `Data sources list is empty`.
  * @param queues queues to create or update on every node of the cluster. Kolbasa does this during a topology update,
- * for the nodes that do not have them yet, so a node added later gets the whole schema on its own – within one
- * refresh interval, or at once if you call [updateTopology]. An empty list means "manage routing only, the schema
- * is mine": nothing here touches your tables, and creating them stays your job, with
+ * so a node added later gets the whole schema on its own – within one refresh interval, or at once if you call
+ * [updateTopology]. An empty list means "manage routing only, the schema is mine": nothing here touches your
+ * tables, and creating them stays your job, with
  * [SchemaHelpers.createOrUpdateQueues][kolbasa.schema.SchemaHelpers.createOrUpdateQueues].
  */
 class Cluster @JvmOverloads constructor(
@@ -104,19 +105,15 @@ class Cluster @JvmOverloads constructor(
     @Volatile
     private var topology: ClusterTopology? = null
 
-    /**
-     * Updating the schema can be a fairly resource-intensive operation, but if the queues don't change (and they don't),
-     * updating the database schema only once is sufficient. This flag controls this behavior.
-     */
-    private var schemaUpdated: Boolean = false
+    // The nodes and queues the schema was last generated for
+    private var schemaGeneratedFor: SchemaKey = SchemaKey(emptySet(), emptySet())
 
     /**
      * Reads the cluster topology once, right now, and returns when it is done.
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the [Cluster] was created
-     * with a list of queues – creates or updates those queues on the nodes that do not have them yet. If no node
-     * has a complete shard map yet, this method builds one and stores it, which is how a fresh cluster is
-     * initialized.
+     * with a list of queues – creates or updates those queues on every node. If no node has a complete shard map
+     * yet, this method builds one and stores it, which is how a fresh cluster is initialized.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -134,7 +131,7 @@ class Cluster @JvmOverloads constructor(
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        initQueuesSchema(dataSources)
+        updateSchema(nodes)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
         if (newTopology != topology) {
@@ -217,15 +214,26 @@ class Cluster @JvmOverloads constructor(
         return ShardSchema.readShards(dataSource)
     }
 
-    private fun initQueuesSchema(dataSources: List<DataSource>) {
-        if (schemaUpdated || queues.isEmpty()) {
+    private fun updateSchema(nodes: SortedMap<Node, DataSource>) {
+        // No queues: the schema is the user's job, nothing here touches it
+        if (queues.isEmpty()) {
             return
         }
 
-        dataSources.forEach { dataSource: DataSource ->
+        val schemaKey = SchemaKey(nodes.keys.map { it.id }.toSet(), queues.toSet())
+        if (schemaKey == schemaGeneratedFor) {
+            return
+        }
+
+        // Something has changed: the whole schema, on every node. If a node fails, the key stays old, and the next
+        // update tries again
+        nodes.values.forEach { dataSource ->
             SchemaHelpers.createOrUpdateQueues(dataSource, queues)
         }
 
-        schemaUpdated = true
+        schemaGeneratedFor = schemaKey
     }
+
+    // What the schema was generated for
+    private data class SchemaKey(val nodes: Set<NodeId>, val queues: Set<Queue<*>>)
 }
