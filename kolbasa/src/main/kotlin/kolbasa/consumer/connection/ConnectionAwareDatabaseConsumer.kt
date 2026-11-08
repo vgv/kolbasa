@@ -34,6 +34,9 @@ class ConnectionAwareDatabaseConsumer internal constructor(
     private val shards: Shards
 ) : ConnectionAwareConsumer {
 
+    // The select SQL is the same for the same queue and call options, so it is made once
+    private val receiveQueryCache = LruCache<CacheKey, String>(capacity = 1000)
+
     /**
      * Creates a consumer that works inside a transaction you manage.
      *
@@ -84,7 +87,7 @@ class ConnectionAwareDatabaseConsumer internal constructor(
             SweepHelper.sweep(connection, queue, nodeId, limit, queueMetrics)
         }
 
-        val query = receiveQueryCache.getOrPut(CacheKey(queue, options, shards, receiveOptions, limit)) {
+        val query = receiveQueryCache.getOrPut(CacheKey(queue, receiveOptions, limit)) {
             ConsumerSchemaHelpers.generateSelectPreparedQuery(queue, options, shards, receiveOptions, limit)
         }
 
@@ -168,16 +171,10 @@ class ConnectionAwareDatabaseConsumer internal constructor(
         return removedMessages
     }
 
-    private companion object {
-
-        data class CacheKey(
-            val queue: Queue<*>,
-            val consumerOptions: ConsumerOptions,
-            val shards: Shards,
-            val receiveOptions: ReceiveOptions,
-            val limit: Int
-        )
-
-        val receiveQueryCache = LruCache<CacheKey, String>(capacity = 1000)
-    }
+    // Everything the select SQL depends on, besides the options and shards of this consumer
+    private data class CacheKey(
+        val queue: Queue<*>,
+        val receiveOptions: ReceiveOptions,
+        val limit: Int
+    )
 }
