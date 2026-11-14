@@ -5,6 +5,9 @@ nebula-release = { id = "com.netflix.nebula.release", version.ref = "nebula" }
 
 [versions]
 
+# The oldest Java we support: the toolchain of every module. The CI workflows in .github/workflows set up the same JDK,
+# change them together
+java = "17"
 # The Kotlin compiler, for our build only. Applications get the language and the standard library of `kotlin-language` below
 kotlin = "2.3.21"
 # The oldest Kotlin we support: the language and API version of every module and the standard library in our POMs.

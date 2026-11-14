@@ -35,7 +35,8 @@ kotlin {
     // The oldest Kotlin we support, `kotlin-language` in gradle/libs.versions.toml
     val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
 
-    jvmToolchain(17)
+    // The oldest Java we support, `java` in gradle/libs.versions.toml
+    jvmToolchain(libs.versions.java.get().toInt())
     compilerOptions {
         apiVersion = language
         languageVersion = language
