@@ -2,7 +2,7 @@ package kolbasa.producer
 
 import kolbasa.queue.Checks
 import java.time.Duration
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 
 /**
  * Configuration options for a single `send()` call.
@@ -175,7 +175,7 @@ data class SendOptions(
      *
      * @see [ProducerOptions.asyncExecutor]
      */
-    val asyncExecutor: ExecutorService? = null,
+    val asyncExecutor: Executor? = null,
 ) {
 
     init {
@@ -196,7 +196,7 @@ data class SendOptions(
         private var chunkSize: Int? = null
         private var partialInsert: PartialInsert? = null
         private var shard: Int? = null
-        private var asyncExecutor: ExecutorService? = null
+        private var asyncExecutor: Executor? = null
 
         /**
          * Sets [SendOptions.delay] – how long the messages of this send() call stay invisible to consumers.
@@ -236,7 +236,7 @@ data class SendOptions(
         /**
          * Sets [SendOptions.asyncExecutor] – the executor used by the producer's sendAsync() methods.
          */
-        fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
+        fun asyncExecutor(asyncExecutor: Executor) = apply { this.asyncExecutor = asyncExecutor }
 
         /**
          * Creates a new [SendOptions] instance: a fresh one on every call, nothing is cached or reused.

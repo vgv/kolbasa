@@ -5,7 +5,7 @@ import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.sql.SqlDumpConfig
 import kolbasa.telemetry.tracing.Tracing
 import kolbasa.utils.DaemonThreadFactory
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 /**
@@ -96,6 +96,6 @@ object Kolbasa {
      */
     @JvmStatic
     @Volatile
-    var asyncExecutor: ExecutorService = Executors.newSingleThreadExecutor(DaemonThreadFactory("kolbasa-async"))
+    var asyncExecutor: Executor = Executors.newSingleThreadExecutor(DaemonThreadFactory("kolbasa-async"))
 
 }
