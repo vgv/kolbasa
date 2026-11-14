@@ -24,8 +24,8 @@ postgresql = "42.7.14"
 
 clikt = "5.1.0"
 
-# The oldest Spring Boot 4 line still supported: the starter is built against it, so it works with 4.0 and later
-spring-boot = "4.0.9"
+# The oldest Spring Boot 4 the starter supports: it is built and tested against it, so it works with any 4.x
+spring-boot = "4.0.0"
 
 logback = "1.6.6"
 testcontainers = "2.0.5"

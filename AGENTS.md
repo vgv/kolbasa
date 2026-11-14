@@ -73,9 +73,8 @@ an included build holding the shared build logic. The root project has no code.
 - `kolbasa-spring-boot-4-starter/src/main/kotlin/kolbasa/spring/boot/` — the Spring Boot 4 starter, in progress and not
   published yet. `KolbasaAutoConfiguration` is the entry point; Spring Boot finds it through
   `src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. It is built
-  against the oldest Spring Boot 4 line still supported (`spring-boot` in `gradle/libs.versions.toml`), so it works with
-  4.0 and later. Like `kolbasa-opentelemetry`, it depends on `:kolbasa` the way a user would and can only use the
-  **public** API.
+  against the oldest Spring Boot 4, 4.0.0 (`spring-boot` in `gradle/libs.versions.toml`), so it works with any 4.x.
+  Like `kolbasa-opentelemetry`, it depends on `:kolbasa` the way a user would and can only use the **public** API.
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules: `PostgreSQLImages`,
   which reads `postgresql-test-images.txt` from this module's resources, and `AbstractPostgreSQLTest`, the base class
   for tests that need a database. Which PostgreSQL versions the repository is tested against is decided here, once,

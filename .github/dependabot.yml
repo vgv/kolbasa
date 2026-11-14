@@ -11,12 +11,14 @@ updates:
       interval: "monthly"
     ignore:
       # `micrometer` in gradle/libs.versions.toml is the oldest Micrometer the library supports, on purpose: take only
-      # its patches
+      # its patches. Micrometer is compileOnly, so its version never reaches an application
       - dependency-name: "io.micrometer:*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
-      # The same for `opentelemetry`: the oldest OpenTelemetry the library supports
+      # `opentelemetry` and `spring-boot` are the oldest versions we support too, but they go into the POMs of our
+      # artifacts. Gradle takes the highest version it sees, so even a patch would raise them in an application on an
+      # older one. No updates at all
       - dependency-name: "io.opentelemetry:*"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "org.springframework.boot:*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
