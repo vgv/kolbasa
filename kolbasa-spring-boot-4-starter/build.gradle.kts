@@ -24,6 +24,10 @@ dependencies {
     // application on Spring Boot's JDBC support has it already, through spring-boot-jdbc
     implementation(libs.spring.boot.sql)
 
+    // Metrics: kolbasa reports to the application's MeterRegistry bean. compileOnly, so an application without
+    // Micrometer doesn't get it from us
+    compileOnly(libs.micrometer.core)
+
     // Test
     // Which PostgreSQL versions we test against, plus JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
@@ -31,6 +35,9 @@ dependencies {
     // ApplicationContextRunner, and AssertJ: the runner's context assertions are built on it
     testImplementation(libs.spring.boot.test)
     testImplementation(libs.assertj.core)
+
+    // Spring Boot's own metrics setup: the auto-configurations that make the MeterRegistry bean
+    testImplementation(libs.spring.boot.micrometer.metrics)
 }
 
 // Kotlin settings

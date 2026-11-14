@@ -1,5 +1,6 @@
 package kolbasa.spring.boot
 
+import io.micrometer.core.instrument.MeterRegistry
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterConsumer
 import kolbasa.cluster.ClusterInspector
@@ -14,11 +15,13 @@ import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.worker.QueueWorker
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization
 import org.springframework.context.SmartLifecycle
@@ -37,12 +40,16 @@ import javax.sql.DataSource
  *   tables and the role beans;
  * - a [KolbasaClusterSettings] bean switches kolbasa on in a cluster: the `Cluster` bean, its topology updates and
  *   the role beans;
+ * - a `MeterRegistry` bean, for example the one Spring Boot Actuator makes, gives a `MetricsConfig` bean over it;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing. With both settings beans the application has two beans of every role, see
  * [KolbasaStandalone] and [KolbasaCluster].
  */
-@AutoConfiguration
+@AutoConfiguration(
+    // The metrics need the MeterRegistry bean, so Spring Boot's metrics go first
+    afterName = [METRICS_AUTO_CONFIGURATION, COMPOSITE_METER_REGISTRY_AUTO_CONFIGURATION]
+)
 class KolbasaAutoConfiguration {
 
     /**
@@ -55,6 +62,28 @@ class KolbasaAutoConfiguration {
     @ConditionalOnBooleanProperty("kolbasa.workers.auto-startup", matchIfMissing = true)
     fun kolbasaWorkersLifecycle(workers: ObjectProvider<QueueWorker>): SmartLifecycle {
         return QueueWorkersLifecycle(workers)
+    }
+
+    /**
+     * Kolbasa's metrics in the application's `MeterRegistry`, for example the one Spring Boot Actuator makes. Only when
+     * Micrometer is on the classpath.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(MeterRegistry::class)
+    internal class Micrometer {
+
+        /**
+         * The metrics config over the application's `MeterRegistry`.
+         *
+         * A `MetricsConfig` bean of your own replaces it, for example `MetricsConfig.None` to switch kolbasa's metrics
+         * off.
+         */
+        @Bean
+        @ConditionalOnBean(MeterRegistry::class)
+        @ConditionalOnMissingBean(MetricsConfig::class)
+        fun kolbasaMetricsConfig(registry: MeterRegistry): MetricsConfig {
+            return MetricsConfig.Config(registry)
+        }
     }
 
     /**
@@ -251,3 +280,11 @@ class KolbasaAutoConfiguration {
         }
     }
 }
+
+// Spring Boot's metrics auto-configurations, the ones that make the MeterRegistry bean. Strings, not classes: an application
+// without Spring Boot's metrics doesn't have these classes. KolbasaMetricsTest checks them against the real classes
+internal const val METRICS_AUTO_CONFIGURATION =
+    "org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration"
+internal const val COMPOSITE_METER_REGISTRY_AUTO_CONFIGURATION =
+    "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration"
+
