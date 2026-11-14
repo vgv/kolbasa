@@ -1,13 +1,7 @@
 package kolbasa.spring.boot
 
 import io.mockk.mockk
-import kolbasa.cluster.Cluster
-import kolbasa.cluster.ClusterConsumer
-import kolbasa.cluster.ClusterInspector
-import kolbasa.cluster.ClusterMutator
-import kolbasa.cluster.ClusterProducer
-import kolbasa.cluster.ClusterTopologyUpdaterOptions
-import kolbasa.cluster.ShardStrategy
+import kolbasa.cluster.*
 import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
@@ -21,7 +15,7 @@ import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.test.AbstractPostgreSQLTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -72,7 +66,7 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
         val settings = KolbasaClusterSettings.builder(nodes, listOf(QUEUE))
             .producerOptions(ProducerOptions(producer = "test"))
             .consumerOptions(ConsumerOptions(consumer = "test"))
-            .mutatorOptions(MutatorOptions(prometheusConfig = PrometheusConfig.None))
+            .mutatorOptions(MutatorOptions(metricsConfig = MetricsConfig.None))
             .shardStrategy(ShardStrategy.Fixed(SHARD))
             .topologyUpdaterOptions(ClusterTopologyUpdaterOptions(executor = executor))
             .build()

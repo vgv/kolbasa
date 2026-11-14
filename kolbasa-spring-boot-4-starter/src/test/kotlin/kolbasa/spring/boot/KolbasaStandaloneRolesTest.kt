@@ -14,7 +14,7 @@ import kolbasa.producer.ProducerOptions
 import kolbasa.producer.datasource.Producer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.test.AbstractPostgreSQLTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -38,7 +38,7 @@ class KolbasaStandaloneRolesTest : AbstractPostgreSQLTest() {
         val settings = KolbasaStandaloneSettings.builder(listOf(QUEUE))
             .producerOptions(ProducerOptions(producer = "test"))
             .consumerOptions(ConsumerOptions(consumer = "test"))
-            .mutatorOptions(MutatorOptions(prometheusConfig = PrometheusConfig.None))
+            .mutatorOptions(MutatorOptions(metricsConfig = MetricsConfig.None))
             .build()
 
         contextRunner
