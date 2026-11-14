@@ -5,11 +5,11 @@ import kolbasa.producer.Id
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.utils.TimeHelper
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 
 internal object MutatorSchemaHelpers {
 
-    fun calculateAsyncExecutor(mutatorExecutor: ExecutorService?, defaultExecutor: ExecutorService): ExecutorService {
+    fun calculateAsyncExecutor(mutatorExecutor: Executor?, defaultExecutor: Executor): Executor {
         if (mutatorExecutor != null) {
             return mutatorExecutor
         }
