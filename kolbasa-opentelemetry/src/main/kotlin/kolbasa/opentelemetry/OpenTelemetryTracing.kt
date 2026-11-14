@@ -174,7 +174,7 @@ class OpenTelemetryTracing(
             .setSpanKind(SpanKind.CONSUMER)
             .setMessagingAttributes(queueName, "process")
             .setAttribute(MESSAGING_MESSAGE_ID, call.message.id.toString())
-            .setAttribute(LAST_ATTEMPT_ATTRIBUTE_KEY, call.message.isLastAttempt())
+            .setAttribute(KOLBASA_MESSAGE_LAST_ATTEMPT, call.message.isLastAttempt())
 
         // Case 1: the job span is there, but it is not the parent
         val callerSpanContext = Span.fromContext(callerContext).spanContext
@@ -189,7 +189,7 @@ class OpenTelemetryTracing(
                 call.proceed()
             }
         } catch (e: Exception) {
-            span.setAttribute(PROCESS_RESULT_ATTRIBUTE_KEY, "failed")
+            span.setAttribute(KOLBASA_PROCESS_RESULT, "failed")
             span.recordErrors(listOf(e))
             span.end()
             throw e
@@ -200,7 +200,7 @@ class OpenTelemetryTracing(
             HandleResult.DONE -> "succeeded"
             HandleResult.SKIP -> "skipped"
         }
-        span.setAttribute(PROCESS_RESULT_ATTRIBUTE_KEY, processResult)
+        span.setAttribute(KOLBASA_PROCESS_RESULT, processResult)
         span.end()
 
         return result
@@ -277,7 +277,7 @@ class OpenTelemetryTracing(
     // Only in a cluster: outside of one, the node id is empty
     private fun SpanBuilder.setNodeId(nodeId: NodeId): SpanBuilder {
         return if (nodeId.id.isNotEmpty()) {
-            setAttribute(NODE_ID_ATTRIBUTE_KEY, nodeId.id)
+            setAttribute(KOLBASA_NODE_ID, nodeId.id)
         } else {
             this
         }
@@ -306,8 +306,8 @@ class OpenTelemetryTracing(
         private val MESSAGING_BATCH_MESSAGE_COUNT = AttributeKey.longKey("messaging.batch.message_count")
 
         // Our own attributes
-        private val NODE_ID_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.node.id")
-        private val PROCESS_RESULT_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.process.result")
-        private val LAST_ATTEMPT_ATTRIBUTE_KEY = AttributeKey.booleanKey("kolbasa.message.last_attempt")
+        private val KOLBASA_NODE_ID = AttributeKey.stringKey("kolbasa.node.id")
+        private val KOLBASA_PROCESS_RESULT = AttributeKey.stringKey("kolbasa.process.result")
+        private val KOLBASA_MESSAGE_LAST_ATTEMPT = AttributeKey.booleanKey("kolbasa.message.last_attempt")
     }
 }
