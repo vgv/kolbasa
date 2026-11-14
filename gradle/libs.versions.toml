@@ -5,9 +5,11 @@ nebula-release = { id = "com.netflix.nebula.release", version.ref = "nebula" }
 
 [versions]
 
+# The Kotlin compiler, for our build only. Applications get the language and the standard library of `kotlin-language` below
 kotlin = "2.3.21"
-# The oldest Kotlin we support: the language and API version of every module. A compiler accepts only a few recent
-# versions, so this one goes up together with `kotlin`
+# The oldest Kotlin we support: the language and API version of every module and the standard library in our POMs.
+# Keep it the lowest version the compiler accepts without a warning: the lower it is, the more applications can use
+# kolbasa. A compiler accepts only a few recent versions, so this one goes up together with `kotlin`
 kotlin-language = "2.1"
 nebula = "20.2.0"
 vanniktech = "0.37.0"
@@ -35,9 +37,6 @@ assertj = "3.27.7"
 
 # Build logic: plugins that our convention plugins apply, see gradle/build-logic
 vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "vanniktech" }
-
-# Kotlin
-kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 
 # Micrometer
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }

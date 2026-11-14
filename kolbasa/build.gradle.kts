@@ -40,6 +40,10 @@ kotlin {
     val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
 
     jvmToolchain(17)
+    // The standard library in our POM: the oldest we support, too. Without this line it is the compiler's version.
+    // Gradle would raise an application's standard library to it, and an application on an older Kotlin would stop
+    // compiling: its compiler reads a standard library at most one version newer
+    coreLibrariesVersion = "${language.version}.0"
     compilerOptions {
         apiVersion = language
         languageVersion = language
