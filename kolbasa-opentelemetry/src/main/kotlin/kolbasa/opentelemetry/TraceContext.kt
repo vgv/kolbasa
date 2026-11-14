@@ -3,14 +3,14 @@ package kolbasa.opentelemetry
 import io.opentelemetry.context.propagation.TextMapGetter
 import io.opentelemetry.context.propagation.TextMapSetter
 
-internal class TraceContextSetter : TextMapSetter<SendSpanInput> {
+internal class TraceContextSetter : TextMapSetter<MutableMap<String, String>> {
 
-    override fun set(carrier: SendSpanInput?, key: String, value: String) {
+    override fun set(carrier: MutableMap<String, String>?, key: String, value: String) {
         if (carrier == null) {
             return
         }
 
-        carrier.traceContext[key] = value
+        carrier[key] = value
     }
 }
 
