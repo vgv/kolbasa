@@ -7,12 +7,15 @@ import kolbasa.cluster.ClusterInspector
 import kolbasa.cluster.ClusterMutator
 import kolbasa.cluster.ClusterProducer
 import kolbasa.cluster.ClusterTopologyUpdater
+import kolbasa.consumer.ConsumerOptions
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.consumer.datasource.DatabaseConsumer
 import kolbasa.inspector.datasource.DatabaseInspector
 import kolbasa.inspector.datasource.Inspector
+import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
+import kolbasa.producer.ProducerOptions
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
 import kolbasa.telemetry.metrics.MetricsConfig
@@ -40,7 +43,8 @@ import javax.sql.DataSource
  *   tables and the role beans;
  * - a [KolbasaClusterSettings] bean switches kolbasa on in a cluster: the `Cluster` bean, its topology updates and
  *   the role beans;
- * - a `MeterRegistry` bean, for example the one Spring Boot Actuator makes, gives a `MetricsConfig` bean over it;
+ * - a `MeterRegistry` bean, for example the one Spring Boot Actuator makes, gives a `MetricsConfig` bean over it, and
+ *   the role beans report their metrics there;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing. With both settings beans the application has two beans of every role, see
@@ -73,7 +77,8 @@ class KolbasaAutoConfiguration {
     internal class Micrometer {
 
         /**
-         * The metrics config over the application's `MeterRegistry`.
+         * The metrics config over the application's `MeterRegistry`. The role beans of the starter report to it, unless
+         * their options set `metricsConfig`.
          *
          * A `MetricsConfig` bean of your own replaces it, for example `MetricsConfig.None` to switch kolbasa's metrics
          * off.
@@ -130,9 +135,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaStandaloneProducer(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
+            metricsConfig: MetricsConfig?,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): DatabaseProducer {
-            return DatabaseProducer(dataSource, settings.producerOptions)
+            return DatabaseProducer(dataSource, settings.producerOptions.withMetrics(metricsConfig))
         }
 
         /**
@@ -145,9 +151,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaStandaloneConsumer(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
+            metricsConfig: MetricsConfig?,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): DatabaseConsumer {
-            return DatabaseConsumer(dataSource, settings.consumerOptions)
+            return DatabaseConsumer(dataSource, settings.consumerOptions.withMetrics(metricsConfig))
         }
 
         /**
@@ -160,9 +167,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaStandaloneMutator(
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
+            metricsConfig: MetricsConfig?,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): DatabaseMutator {
-            return DatabaseMutator(dataSource, settings.mutatorOptions)
+            return DatabaseMutator(dataSource, settings.mutatorOptions.withMetrics(metricsConfig))
         }
 
         /**
@@ -230,9 +238,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaClusterProducer(
             cluster: Cluster,
             settings: KolbasaClusterSettings,
+            metricsConfig: MetricsConfig?,
             topologyUpdater: ClusterTopologyUpdater
         ): ClusterProducer {
-            return ClusterProducer(cluster, settings.producerOptions, settings.shardStrategy)
+            return ClusterProducer(cluster, settings.producerOptions.withMetrics(metricsConfig), settings.shardStrategy)
         }
 
         /**
@@ -245,9 +254,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaClusterConsumer(
             cluster: Cluster,
             settings: KolbasaClusterSettings,
+            metricsConfig: MetricsConfig?,
             topologyUpdater: ClusterTopologyUpdater
         ): ClusterConsumer {
-            return ClusterConsumer(cluster, settings.consumerOptions)
+            return ClusterConsumer(cluster, settings.consumerOptions.withMetrics(metricsConfig))
         }
 
         /**
@@ -260,9 +270,10 @@ class KolbasaAutoConfiguration {
         fun kolbasaClusterMutator(
             cluster: Cluster,
             settings: KolbasaClusterSettings,
+            metricsConfig: MetricsConfig?,
             topologyUpdater: ClusterTopologyUpdater
         ): ClusterMutator {
-            return ClusterMutator(cluster, settings.mutatorOptions)
+            return ClusterMutator(cluster, settings.mutatorOptions.withMetrics(metricsConfig))
         }
 
         /**
@@ -279,6 +290,20 @@ class KolbasaAutoConfiguration {
             return ClusterInspector(cluster)
         }
     }
+}
+
+// The MetricsConfig bean goes into the options that don't set their own. Without the bean the options stay as they are,
+// and kolbasa takes Kolbasa.metricsConfig for them
+private fun ProducerOptions.withMetrics(config: MetricsConfig?): ProducerOptions {
+    return if (metricsConfig == null && config != null) copy(metricsConfig = config) else this
+}
+
+private fun ConsumerOptions.withMetrics(config: MetricsConfig?): ConsumerOptions {
+    return if (metricsConfig == null && config != null) copy(metricsConfig = config) else this
+}
+
+private fun MutatorOptions.withMetrics(config: MetricsConfig?): MutatorOptions {
+    return if (metricsConfig == null && config != null) copy(metricsConfig = config) else this
 }
 
 // Spring Boot's metrics auto-configurations, the ones that make the MeterRegistry bean. Strings, not classes: an application

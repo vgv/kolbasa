@@ -1,5 +1,7 @@
 package kolbasa.spring.boot
 
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.mockk
 import kolbasa.cluster.ClusterConsumer
 import kolbasa.cluster.ClusterInspector
@@ -49,6 +51,46 @@ class KolbasaStandaloneRolesTest : AbstractPostgreSQLTest() {
                 assertEquals(settings.consumerOptions, context.getBean(Consumer::class.java).options)
                 assertEquals(settings.mutatorOptions, context.getBean(Mutator::class.java).options)
                 assertThat(context).hasSingleBean(Inspector::class.java)
+            }
+    }
+
+    @Test
+    fun testMeterRegistry_RolesReportToIt() {
+        val registry = SimpleMeterRegistry()
+
+        contextRunner
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .withBean(MeterRegistry::class.java, { registry })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                val metricsConfig = MetricsConfig.Config(registry)
+                assertEquals(metricsConfig, context.getBean(Producer::class.java).options.metricsConfig)
+                assertEquals(metricsConfig, context.getBean(Consumer::class.java).options.metricsConfig)
+                assertEquals(metricsConfig, context.getBean(Mutator::class.java).options.metricsConfig)
+
+                context.getBean(Producer::class.java).send(QUEUE, "hello").throwExceptionIfAny()
+                // One counter for every partial insert type, so the message is in one of them
+                val sent = registry.find("kolbasa.producer.send.messages").counters().sumOf { it.count() }
+                assertEquals(1.0, sent)
+            }
+    }
+
+    @Test
+    fun testMetricsConfigInOptions_Stays() {
+        // Options with their own metrics config keep it, the others get the registry
+        val settings = KolbasaStandaloneSettings.builder(listOf(QUEUE))
+            .producerOptions(ProducerOptions(metricsConfig = MetricsConfig.None))
+            .build()
+        val registry = SimpleMeterRegistry()
+
+        contextRunner
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .withBean(MeterRegistry::class.java, { registry })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                assertSame(MetricsConfig.None, context.getBean(Producer::class.java).options.metricsConfig)
+                val consumer = context.getBean(Consumer::class.java)
+                assertEquals(MetricsConfig.Config(registry), consumer.options.metricsConfig)
             }
     }
 

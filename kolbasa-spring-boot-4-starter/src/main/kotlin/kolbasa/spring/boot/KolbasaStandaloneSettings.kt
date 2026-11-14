@@ -13,6 +13,9 @@ import kolbasa.queue.Queue
  * work with them: `Producer`, `Consumer`, `Mutator` and `Inspector`. Without this bean the starter doesn't touch the
  * database at all.
  *
+ * With a `MeterRegistry` bean in the application, for example the one Spring Boot Actuator makes, the role beans
+ * report their metrics to it. Options that set their own `metricsConfig` keep it.
+ *
  * ## Usage Example
  *
  * ```kotlin

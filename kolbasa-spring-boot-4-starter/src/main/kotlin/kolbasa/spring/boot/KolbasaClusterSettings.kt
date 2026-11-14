@@ -20,6 +20,9 @@ import javax.sql.DataSource
  * one of [nodes]. An application can have both settings beans: [KolbasaStandaloneSettings] for the queues in its own
  * database, and this one for the queues in the cluster. Then it has two beans of every role, see [KolbasaStandalone].
  *
+ * With a `MeterRegistry` bean in the application, for example the one Spring Boot Actuator makes, the role beans
+ * report their metrics to it. Options that set their own `metricsConfig` keep it.
+ *
  * ## Usage Example
  *
  * ```kotlin

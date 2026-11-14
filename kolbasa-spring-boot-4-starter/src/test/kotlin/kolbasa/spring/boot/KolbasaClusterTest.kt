@@ -1,5 +1,7 @@
 package kolbasa.spring.boot
 
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.mockk
 import kolbasa.cluster.*
 import kolbasa.consumer.ConsumerOptions
@@ -89,6 +91,27 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
         } finally {
             executor.shutdownNow()
         }
+    }
+
+    @Test
+    fun testMeterRegistry_RolesReportToIt() {
+        val registry = SimpleMeterRegistry()
+
+        contextRunner
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
+            .withBean(MeterRegistry::class.java, { registry })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                val metricsConfig = MetricsConfig.Config(registry)
+                assertEquals(metricsConfig, context.getBean(Producer::class.java).options.metricsConfig)
+                assertEquals(metricsConfig, context.getBean(Consumer::class.java).options.metricsConfig)
+                assertEquals(metricsConfig, context.getBean(Mutator::class.java).options.metricsConfig)
+
+                context.getBean(Producer::class.java).send(QUEUE, "hello").throwExceptionIfAny()
+                // One counter for every partial insert type, so the message is in one of them
+                val sent = registry.find("kolbasa.producer.send.messages").counters().sumOf { it.count() }
+                assertEquals(1.0, sent)
+            }
     }
 
     @Test
