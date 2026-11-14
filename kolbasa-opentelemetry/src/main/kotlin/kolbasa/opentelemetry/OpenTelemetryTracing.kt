@@ -3,11 +3,7 @@ package kolbasa.opentelemetry
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.AttributesBuilder
-import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanBuilder
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.api.trace.*
 import io.opentelemetry.context.Context
 import io.opentelemetry.context.propagation.TextMapPropagator
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesExtractor
@@ -15,8 +11,6 @@ import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.Messagin
 import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingSpanNameExtractor
 import io.opentelemetry.instrumentation.api.instrumenter.AttributesExtractor
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
-import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
-import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
 import kolbasa.consumer.Message
 import kolbasa.producer.MessageResult
 import kolbasa.producer.SendResult
@@ -82,9 +76,6 @@ class OpenTelemetryTracing(
 
     private val propagator: TextMapPropagator = openTelemetry.propagators.textMapPropagator
 
-    private val consumerInstrumenter: Instrumenter<ReceiveSpanInput, Unit> =
-        buildConsumerInstrumenter(openTelemetry)
-
     private val processInstrumenter: Instrumenter<ProcessSpanInput, HandleResult> =
         buildProcessInstrumenter(openTelemetry)
 
@@ -135,10 +126,10 @@ class OpenTelemetryTracing(
             call.proceed()
         } catch (e: Exception) {
             // No messages, so the span has no links, only the error
-            makeConsumerSpan(call, emptyList(), e, start)
+            makeConsumerSpan(call = call, messages = emptyList(), error = e, start = start)
             throw e
         }
-        makeConsumerSpan(call, result, null, start)
+        makeConsumerSpan(call = call, messages = result, error = null, start = start)
 
         return result
     }
@@ -181,20 +172,42 @@ class OpenTelemetryTracing(
         start: Instant
     ) {
         val end = Instant.now()
-        val parentContext = Context.current()
 
         // An empty poll with no span around it says nothing, see the class KDoc. A failed receive is not empty, it
         // always makes its span
         val isEmptyPoll = messages.isEmpty() && error == null
-        val hasParentSpan = Span.fromContext(parentContext).spanContext.isValid
+        val hasParentSpan = Span.current().spanContext.isValid
         if (isEmptyPoll && !hasParentSpan) {
             return
         }
 
-        val spanInput = ReceiveSpanInput(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
-        if (consumerInstrumenter.shouldStart(parentContext, spanInput)) {
-            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, spanInput, null, error, start, end)
+        val queueName = call.queue.name
+        val spanBuilder = tracer.spanBuilder("$queueName receive")
+            .setSpanKind(SpanKind.CONSUMER)
+            .setStartTimestamp(start)
+            .setMessagingAttributes(queueName, "receive")
+            .setBatchMessageCount(messages.size)
+            .setNodeId(call.nodeId)
+
+        // Only for one message, as for send and process: a batch has no single id
+        if (messages.size == 1) {
+            spanBuilder.setAttribute(MESSAGING_MESSAGE_ID, messages[0].id.toString())
         }
+
+        // A link to the span that sent each message. A message sent without tracing has no context, so no link
+        messages.forEach { message ->
+            val senderContext = propagator.extract(Context.root(), call.traceContext(message), TraceContextGetter())
+            val senderSpanContext = Span.fromContext(senderContext).spanContext
+            if (senderSpanContext.isValid) {
+                spanBuilder.addLink(senderSpanContext)
+            }
+        }
+
+        val span = spanBuilder.startSpan()
+        if (error != null) {
+            span.recordErrors(listOf(error))
+        }
+        span.end(end)
     }
 
     // The attributes every span has: who made it, which queue, and what was done
@@ -230,47 +243,6 @@ class OpenTelemetryTracing(
 
         errors.forEach { error -> recordException(error) }
         setStatus(StatusCode.ERROR)
-    }
-
-    private fun buildConsumerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ReceiveSpanInput, Unit> {
-        val getter = ReceiveSpanAttributesGetter()
-        val operationType = MessagingOperationType.RECEIVE
-        // Name of our own method, goes to "messaging.operation.name"
-        val operationName = "receive"
-
-        val messagingAttributesExtractor = MessagingAttributesExtractor.create(getter, operationType, operationName)
-
-        val nodeIdAttributesExtractor = object : AttributesExtractor<ReceiveSpanInput, Unit> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ReceiveSpanInput) {
-                if (request.nodeId.id.isNotEmpty()) {
-                    attributes.put(NODE_ID_ATTRIBUTE_KEY, request.nodeId.id)
-                }
-            }
-
-            override fun onEnd(
-                attributes: AttributesBuilder,
-                context: Context,
-                request: ReceiveSpanInput,
-                response: Unit?,
-                error: Throwable?
-            ) {
-            }
-        }
-
-        return Instrumenter.builder<ReceiveSpanInput, Unit>(
-            openTelemetry,
-            "kolbasa",
-            MessagingSpanNameExtractor.create(getter, operationType, operationName)
-        )
-            .addSpanLinksExtractor(
-                ReceiveSpanLinksExtractor(
-                    openTelemetry.propagators.textMapPropagator,
-                    TraceContextGetter()
-                )
-            )
-            .addAttributesExtractor(messagingAttributesExtractor)
-            .addAttributesExtractor(nodeIdAttributesExtractor)
-            .buildInstrumenter(SpanKindExtractor.alwaysConsumer())
     }
 
     private fun buildProcessInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ProcessSpanInput, HandleResult> {
@@ -330,6 +302,6 @@ class OpenTelemetryTracing(
         // Our own attributes
         private val NODE_ID_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.node.id")
         private val PROCESS_RESULT_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.process.result")
-        private val LAST_ATTEMPT_ATTRIBUTE_KEY= AttributeKey.booleanKey("kolbasa.message.last_attempt")
+        private val LAST_ATTEMPT_ATTRIBUTE_KEY = AttributeKey.booleanKey("kolbasa.message.last_attempt")
     }
 }
