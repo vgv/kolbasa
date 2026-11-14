@@ -296,6 +296,10 @@ class OpenTelemetryTracing(
     companion object {
         // The name of the tracer, it shows up in every span
         private const val INSTRUMENTATION_NAME = "kolbasa"
+
+        // The semantic conventions 1.24.0, with the old names for messaging. On purpose: the OpenTelemetry Java
+        // instrumentations (Kafka, RabbitMQ...) still emit these names by default, so in one application our spans
+        // look like theirs. They move to the new names in their version 3.0, and we should move with them
         private const val SCHEMA_URL = "https://opentelemetry.io/schemas/1.24.0"
 
         // Attributes from the semantic conventions for messaging

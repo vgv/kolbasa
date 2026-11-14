@@ -11,7 +11,9 @@ vanniktech = "0.37.0"
 
 # The oldest Micrometer the library supports: it is built and tested against it
 micrometer = "1.13.15"
-opentelemetry = "1.66.0"
+# The oldest OpenTelemetry the library supports: it is built and tested against it. One version for all the
+# OpenTelemetry artifacts, they are released together
+opentelemetry = "1.12.0"
 hikaricp = "7.1.0"
 postgresql = "42.7.14"
 
