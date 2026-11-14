@@ -62,6 +62,7 @@ spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-aut
 spring-boot-sql = { module = "org.springframework.boot:spring-boot-sql", version.ref = "spring-boot" }
 spring-boot-test = { module = "org.springframework.boot:spring-boot-test", version.ref = "spring-boot" }
 spring-boot-micrometer-metrics = { module = "org.springframework.boot:spring-boot-micrometer-metrics", version.ref = "spring-boot" }
+spring-boot-opentelemetry = { module = "org.springframework.boot:spring-boot-opentelemetry", version.ref = "spring-boot" }
 
 # Logging
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }

@@ -1,6 +1,7 @@
 package kolbasa.spring.boot
 
 import io.micrometer.core.instrument.MeterRegistry
+import io.opentelemetry.api.OpenTelemetry
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterConsumer
 import kolbasa.cluster.ClusterInspector
@@ -15,10 +16,12 @@ import kolbasa.inspector.datasource.Inspector
 import kolbasa.mutator.MutatorOptions
 import kolbasa.mutator.datasource.DatabaseMutator
 import kolbasa.mutator.datasource.Mutator
+import kolbasa.opentelemetry.OpenTelemetryTracing
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
 import kolbasa.telemetry.metrics.MetricsConfig
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.worker.QueueWorker
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.AutoConfiguration
@@ -45,14 +48,21 @@ import javax.sql.DataSource
  *   the role beans;
  * - a `MeterRegistry` bean, for example the one Spring Boot Actuator makes, gives a `MetricsConfig` bean over it, and
  *   the role beans report their metrics there;
+ * - an `OpenTelemetry` bean, for example the one Spring Boot makes, gives a `Tracing` bean over it, when
+ *   `kolbasa-opentelemetry` is on the classpath;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing. With both settings beans the application has two beans of every role, see
  * [KolbasaStandalone] and [KolbasaCluster].
  */
 @AutoConfiguration(
-    // The metrics need the MeterRegistry bean, so Spring Boot's metrics go first
-    afterName = [METRICS_AUTO_CONFIGURATION, COMPOSITE_METER_REGISTRY_AUTO_CONFIGURATION]
+    // The metrics need the MeterRegistry bean, and the tracing needs the OpenTelemetry bean. So the Spring Boot
+    // auto-configurations that make them go first
+    afterName = [
+        METRICS_AUTO_CONFIGURATION,
+        COMPOSITE_METER_REGISTRY_AUTO_CONFIGURATION,
+        OPEN_TELEMETRY_SDK_AUTO_CONFIGURATION
+    ]
 )
 class KolbasaAutoConfiguration {
 
@@ -88,6 +98,27 @@ class KolbasaAutoConfiguration {
         @ConditionalOnMissingBean(MetricsConfig::class)
         fun kolbasaMetricsConfig(registry: MeterRegistry): MetricsConfig {
             return MetricsConfig.Config(registry)
+        }
+    }
+
+    /**
+     * Kolbasa's tracing through the application's `OpenTelemetry`, for example the one Spring Boot makes. Only when
+     * `kolbasa-opentelemetry` is on the classpath.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(OpenTelemetryTracing::class)
+    internal class OpenTel {
+
+        /**
+         * The tracing over the application's `OpenTelemetry`.
+         *
+         * A `Tracing` bean of your own replaces it, for example `Tracing.NONE` to switch kolbasa's tracing off.
+         */
+        @Bean
+        @ConditionalOnBean(OpenTelemetry::class)
+        @ConditionalOnMissingBean(Tracing::class)
+        fun kolbasaTracing(openTelemetry: OpenTelemetry): Tracing {
+            return OpenTelemetryTracing(openTelemetry)
         }
     }
 
@@ -313,3 +344,7 @@ internal const val METRICS_AUTO_CONFIGURATION =
 internal const val COMPOSITE_METER_REGISTRY_AUTO_CONFIGURATION =
     "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration"
 
+// Spring Boot's OpenTelemetry auto-configuration, the one that makes the OpenTelemetry bean. A string for the same
+// reason, KolbasaTracingTest checks it against the real class
+internal const val OPEN_TELEMETRY_SDK_AUTO_CONFIGURATION =
+    "org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration"

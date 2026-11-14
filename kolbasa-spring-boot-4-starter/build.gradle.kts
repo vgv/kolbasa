@@ -28,6 +28,10 @@ dependencies {
     // Micrometer doesn't get it from us
     compileOnly(libs.micrometer.core)
 
+    // Tracing: kolbasa-opentelemetry over the application's OpenTelemetry bean. compileOnly too, an application adds it
+    // when it wants the tracing
+    compileOnly(project(":kolbasa-opentelemetry"))
+
     // Test
     // Which PostgreSQL versions we test against, plus JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
@@ -38,6 +42,10 @@ dependencies {
 
     // Spring Boot's own metrics setup: the auto-configurations that make the MeterRegistry bean
     testImplementation(libs.spring.boot.micrometer.metrics)
+
+    // The tracing, and Spring Boot's own OpenTelemetry setup: the auto-configuration that makes the OpenTelemetry bean
+    testImplementation(project(":kolbasa-opentelemetry"))
+    testImplementation(libs.spring.boot.opentelemetry)
 }
 
 // Kotlin settings
