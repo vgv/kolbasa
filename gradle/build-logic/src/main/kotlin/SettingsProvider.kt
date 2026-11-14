@@ -11,7 +11,11 @@ object SettingsProvider {
     const val ARTIFACT_GROUP_ID = "io.github.vgv"
 
     // Every module published to Maven Central. The module name is its artifact id
-    val ARTIFACT_NAMES = listOf("kolbasa", "kolbasa-opentelemetry")
+    val ARTIFACT_NAMES = listOf(
+        "kolbasa",
+        "kolbasa-opentelemetry",
+        "kolbasa-spring-boot-4-starter"
+    )
 
     private const val GITHUB_HEAD_REF_PROPERTY = "GITHUB_HEAD_REF"
 }
