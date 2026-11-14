@@ -35,10 +35,13 @@ dependencies {
 
 // Kotlin settings
 kotlin {
+    // The oldest Kotlin we support, `kotlin-language` in gradle/libs.versions.toml
+    val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
+
     jvmToolchain(17)
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = language
+        languageVersion = language
         // We need JVM default methods for interfaces, but don't need the compatibility bridges
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }

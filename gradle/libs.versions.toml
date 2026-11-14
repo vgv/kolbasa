@@ -6,6 +6,9 @@ nebula-release = { id = "com.netflix.nebula.release", version.ref = "nebula" }
 [versions]
 
 kotlin = "2.3.21"
+# The oldest Kotlin we support: the language and API version of every module. A compiler accepts only a few recent
+# versions, so this one goes up together with `kotlin`
+kotlin-language = "2.1"
 nebula = "20.2.0"
 vanniktech = "0.37.0"
 
