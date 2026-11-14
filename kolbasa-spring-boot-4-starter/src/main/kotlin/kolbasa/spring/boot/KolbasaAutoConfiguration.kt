@@ -49,7 +49,7 @@ import javax.sql.DataSource
  * - a `MeterRegistry` bean, for example the one Spring Boot Actuator makes, gives a `MetricsConfig` bean over it, and
  *   the role beans report their metrics there;
  * - an `OpenTelemetry` bean, for example the one Spring Boot makes, gives a `Tracing` bean over it, when
- *   `kolbasa-opentelemetry` is on the classpath;
+ *   `kolbasa-opentelemetry` is on the classpath, and the producer and consumer beans trace through it;
  * - every `QueueWorker` bean is started once the application is up, and stopped when it stops.
  *
  * Without them it does nothing. With both settings beans the application has two beans of every role, see
@@ -110,7 +110,8 @@ class KolbasaAutoConfiguration {
     internal class OpenTel {
 
         /**
-         * The tracing over the application's `OpenTelemetry`.
+         * The tracing over the application's `OpenTelemetry`. The producer and consumer beans of the starter trace
+         * through it, unless their options set `tracing`.
          *
          * A `Tracing` bean of your own replaces it, for example `Tracing.NONE` to switch kolbasa's tracing off.
          */
@@ -167,9 +168,11 @@ class KolbasaAutoConfiguration {
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
             metricsConfig: MetricsConfig?,
+            tracing: Tracing?,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): DatabaseProducer {
-            return DatabaseProducer(dataSource, settings.producerOptions.withMetrics(metricsConfig))
+            val options = settings.producerOptions.withMetrics(metricsConfig).withTracing(tracing)
+            return DatabaseProducer(dataSource, options)
         }
 
         /**
@@ -183,9 +186,11 @@ class KolbasaAutoConfiguration {
             dataSource: DataSource,
             settings: KolbasaStandaloneSettings,
             metricsConfig: MetricsConfig?,
+            tracing: Tracing?,
             schemaInitializer: KolbasaStandaloneSchemaInitializer?
         ): DatabaseConsumer {
-            return DatabaseConsumer(dataSource, settings.consumerOptions.withMetrics(metricsConfig))
+            val options = settings.consumerOptions.withMetrics(metricsConfig).withTracing(tracing)
+            return DatabaseConsumer(dataSource, options)
         }
 
         /**
@@ -270,9 +275,11 @@ class KolbasaAutoConfiguration {
             cluster: Cluster,
             settings: KolbasaClusterSettings,
             metricsConfig: MetricsConfig?,
+            tracing: Tracing?,
             topologyUpdater: ClusterTopologyUpdater
         ): ClusterProducer {
-            return ClusterProducer(cluster, settings.producerOptions.withMetrics(metricsConfig), settings.shardStrategy)
+            val options = settings.producerOptions.withMetrics(metricsConfig).withTracing(tracing)
+            return ClusterProducer(cluster, options, settings.shardStrategy)
         }
 
         /**
@@ -286,9 +293,11 @@ class KolbasaAutoConfiguration {
             cluster: Cluster,
             settings: KolbasaClusterSettings,
             metricsConfig: MetricsConfig?,
+            tracing: Tracing?,
             topologyUpdater: ClusterTopologyUpdater
         ): ClusterConsumer {
-            return ClusterConsumer(cluster, settings.consumerOptions.withMetrics(metricsConfig))
+            val options = settings.consumerOptions.withMetrics(metricsConfig).withTracing(tracing)
+            return ClusterConsumer(cluster, options)
         }
 
         /**
@@ -335,6 +344,15 @@ private fun ConsumerOptions.withMetrics(config: MetricsConfig?): ConsumerOptions
 
 private fun MutatorOptions.withMetrics(config: MetricsConfig?): MutatorOptions {
     return if (metricsConfig == null && config != null) copy(metricsConfig = config) else this
+}
+
+// The same for the Tracing bean. A mutator has no tracing
+private fun ProducerOptions.withTracing(bean: Tracing?): ProducerOptions {
+    return if (tracing == null && bean != null) copy(tracing = bean) else this
+}
+
+private fun ConsumerOptions.withTracing(bean: Tracing?): ConsumerOptions {
+    return if (tracing == null && bean != null) copy(tracing = bean) else this
 }
 
 // Spring Boot's metrics auto-configurations, the ones that make the MeterRegistry bean. Strings, not classes: an application

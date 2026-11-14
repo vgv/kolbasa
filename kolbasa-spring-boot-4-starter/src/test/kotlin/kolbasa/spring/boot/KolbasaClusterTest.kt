@@ -2,6 +2,7 @@ package kolbasa.spring.boot
 
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.mockk.mockk
 import kolbasa.cluster.*
 import kolbasa.consumer.ConsumerOptions
@@ -18,12 +19,15 @@ import kolbasa.producer.datasource.Producer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.telemetry.metrics.MetricsConfig
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.test.AbstractPostgreSQLTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import javax.sql.DataSource
@@ -111,6 +115,26 @@ class KolbasaClusterTest : AbstractPostgreSQLTest() {
                 // One counter for every partial insert type, so the message is in one of them
                 val sent = registry.find("kolbasa.producer.send.messages").counters().sumOf { it.count() }
                 assertEquals(1.0, sent)
+            }
+    }
+
+    @Test
+    fun testSpringBootOpenTelemetry_ProducerAndConsumerTrace() {
+        // Spring Boot's own OpenTelemetry bean, over a tracer provider that records the spans
+        val spans = RecordingSpanProcessor()
+
+        contextRunner
+            .withConfiguration(AutoConfigurations.of(OpenTelemetrySdkAutoConfiguration::class.java))
+            .withBean(SdkTracerProvider::class.java, { SdkTracerProvider.builder().addSpanProcessor(spans).build() })
+            .withBean(KolbasaClusterSettings::class.java, { KolbasaClusterSettings(nodes, listOf(QUEUE)) })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                val tracing = context.getBean(Tracing::class.java)
+                assertSame(tracing, context.getBean(Producer::class.java).options.tracing)
+                assertSame(tracing, context.getBean(Consumer::class.java).options.tracing)
+
+                context.getBean(Producer::class.java).send(QUEUE, "hello").throwExceptionIfAny()
+                assertEquals(listOf("test publish"), spans.ended)
             }
     }
 

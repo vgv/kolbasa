@@ -21,7 +21,8 @@ import javax.sql.DataSource
  * database, and this one for the queues in the cluster. Then it has two beans of every role, see [KolbasaStandalone].
  *
  * With a `MeterRegistry` bean in the application, for example the one Spring Boot Actuator makes, the role beans
- * report their metrics to it. Options that set their own `metricsConfig` keep it.
+ * report their metrics to it. With an `OpenTelemetry` bean and `kolbasa-opentelemetry` on the classpath, the
+ * `Producer` and `Consumer` beans trace through it. Options that set their own `metricsConfig` or `tracing` keep them.
  *
  * ## Usage Example
  *

@@ -2,6 +2,8 @@ package kolbasa.spring.boot
 
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.mockk.mockk
 import kolbasa.cluster.ClusterConsumer
 import kolbasa.cluster.ClusterInspector
@@ -17,12 +19,15 @@ import kolbasa.producer.datasource.Producer
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.telemetry.metrics.MetricsConfig
+import kolbasa.telemetry.tracing.Tracing
 import kolbasa.test.AbstractPostgreSQLTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.opentelemetry.autoconfigure.OpenTelemetrySdkAutoConfiguration
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import javax.sql.DataSource
 
@@ -91,6 +96,41 @@ class KolbasaStandaloneRolesTest : AbstractPostgreSQLTest() {
                 assertSame(MetricsConfig.None, context.getBean(Producer::class.java).options.metricsConfig)
                 val consumer = context.getBean(Consumer::class.java)
                 assertEquals(MetricsConfig.Config(registry), consumer.options.metricsConfig)
+            }
+    }
+
+    @Test
+    fun testSpringBootOpenTelemetry_ProducerAndConsumerTrace() {
+        // Spring Boot's own OpenTelemetry bean, over a tracer provider that records the spans
+        val spans = RecordingSpanProcessor()
+
+        contextRunner
+            .withConfiguration(AutoConfigurations.of(OpenTelemetrySdkAutoConfiguration::class.java))
+            .withBean(SdkTracerProvider::class.java, { SdkTracerProvider.builder().addSpanProcessor(spans).build() })
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                context.getBean(Producer::class.java).send(QUEUE, "hello").throwExceptionIfAny()
+                assertNotNull(context.getBean(Consumer::class.java).receive(QUEUE))
+                assertEquals(listOf("test publish", "test receive"), spans.ended)
+            }
+    }
+
+    @Test
+    fun testTracingInOptions_Stays() {
+        // Options with their own tracing keep it, the others get the Tracing bean
+        val settings = KolbasaStandaloneSettings.builder(listOf(QUEUE))
+            .producerOptions(ProducerOptions(tracing = Tracing.NONE))
+            .build()
+
+        contextRunner
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .withBean(OpenTelemetry::class.java, { OpenTelemetry.noop() })
+            .run { context ->
+                assertThat(context).hasNotFailed()
+                assertSame(Tracing.NONE, context.getBean(Producer::class.java).options.tracing)
+                val consumer = context.getBean(Consumer::class.java)
+                assertSame(context.getBean(Tracing::class.java), consumer.options.tracing)
             }
     }
 
