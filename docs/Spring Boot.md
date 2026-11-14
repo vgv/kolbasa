@@ -2,7 +2,8 @@
 
 `kolbasa-spring-boot-4-starter` sets kolbasa up in a Spring Boot application. You describe your queues in one bean, and
 the starter creates their tables at startup, gives you `Producer`, `Consumer`, `Mutator` and `Inspector` beans, and
-starts and stops your `QueueWorker`s together with the application.
+starts and stops your `QueueWorker`s together with the application. It also connects kolbasa to Spring Boot's metrics
+and tracing.
 
 It needs Spring Boot 4.0 or later.
 
@@ -15,8 +16,9 @@ It needs Spring Boot 4.0 or later.
 5. [The schema](#the-schema)
 6. [Using kolbasa while the application starts](#using-kolbasa-while-the-application-starts)
 7. [Workers](#workers)
-8. [Your own beans instead of the starter's](#your-own-beans-instead-of-the-starters)
-9. [Properties](#properties)
+8. [Metrics and tracing](#metrics-and-tracing)
+9. [Your own beans instead of the starter's](#your-own-beans-instead-of-the-starters)
+10. [Properties](#properties)
 
 ---
 
@@ -377,6 +379,51 @@ A `QueueWorker` over a `QueuePipe` works the same way, as in the [outbox recipe]
 
 ---
 
+## Metrics and tracing
+
+The starter connects its role beans to the metrics and the tracing your application already has.
+
+**Metrics.** With a `MeterRegistry` bean, the role beans report their metrics to it. Spring Boot makes one when the
+application has `spring-boot-starter-actuator`. Add `micrometer-registry-prometheus` and open the endpoint with
+`management.endpoints.web.exposure.include=health,prometheus`, and kolbasa's metrics are at `/actuator/prometheus`,
+together with the rest. Every metric and tag is in [Metrics.md](Metrics.md).
+
+**Tracing.** Add `kolbasa-opentelemetry`, with the same version as the starter:
+
+```groovy
+implementation "io.github.vgv:kolbasa-opentelemetry:$kolbasaVersion"
+```
+
+With it and an `OpenTelemetry` bean, the producer and consumer beans trace through that bean. Spring Boot makes one
+when the application has `spring-boot-starter-opentelemetry`. A `QueueWorker` over the starter's consumer traces the
+handling of every message too: its `QueueProcessor` takes the tracing from the consumer. The spans are described in the
+KDoc of `OpenTelemetryTracing`. A mutator has metrics, but no tracing.
+
+**How it works.** The starter makes two beans, `kolbasaMetricsConfig` over the `MeterRegistry` and `kolbasaTracing`
+over the `OpenTelemetry`. It puts them into the options of its role beans, but only where `metricsConfig` or `tracing`
+is not set:
+
+- an option you set in `producerOptions`, `consumerOptions` or `mutatorOptions` stays as it is;
+- a `MetricsConfig` or `Tracing` bean of yours replaces the starter's, for every role bean. `MetricsConfig.None` and
+  `Tracing.NONE` take kolbasa out of the metrics or the traces, and the rest of the application keeps them;
+- without these beans the options stay empty, and kolbasa uses `Kolbasa.metricsConfig` and `Kolbasa.tracing`, as it
+  does without the starter. The starter never sets them.
+
+A role you build yourself doesn't get them on its own. Take the beans and pass them in:
+
+```kotlin
+@Bean
+@DependsOn("kolbasaClusterTopologyUpdater")
+fun auditProducer(cluster: Cluster, metricsConfig: MetricsConfig?, tracing: Tracing?) = ClusterProducer(
+    cluster,
+    ProducerOptions(producer = "audit", metricsConfig = metricsConfig, tracing = tracing)
+)
+```
+
+The `?` makes them optional: without a `MeterRegistry` or an `OpenTelemetry` bean, the parameter is `null`.
+
+---
+
 ## Your own beans instead of the starter's
 
 A role bean of yours replaces the starter's: declare a `Producer` bean, and the starter doesn't create its own. This is
@@ -393,6 +440,8 @@ fun auditingProducer(dataSource: DataSource): DatabaseProducer = DatabaseProduce
 ```
 
 A bean declared only as `Producer` replaces both producers of the starter.
+
+The same goes for the `MetricsConfig` and `Tracing` beans, see [Metrics and tracing](#metrics-and-tracing).
 
 `Cluster`, the topology updater and the schema initializer can't be replaced. The schema initializer can only be
 switched off, with `kolbasa.standalone.schema.enabled=false`.
