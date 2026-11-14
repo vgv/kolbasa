@@ -1,15 +1,15 @@
-package kolbasa.telemetry.prometheus.metrics
+package kolbasa.telemetry.metrics
 
 import kolbasa.inspector.MessageAge
 import kolbasa.inspector.Messages
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.metrics.Extensions.asSeconds
-import kolbasa.telemetry.prometheus.metrics.Extensions.setLong
+import kolbasa.telemetry.metrics.Extensions.asSeconds
+import kolbasa.telemetry.metrics.Extensions.setLong
 
 internal class CommonQueueMetrics(
     queueName: String,
     nodeId: NodeId,
-    metrics: PrometheusMetrics
+    metrics: MicrometerMetrics
 ) {
 
     fun queueMetrics(
@@ -34,23 +34,23 @@ internal class CommonQueueMetrics(
     }
 
     private val queueMessagesGaugeScheduled = metrics.queueMessagesGauge
-        .labelValues(queueName, "SCHEDULED", nodeId.id)
+        .withTags(queueName, "SCHEDULED", nodeId.id)
     private val queueMessagesGaugeReady = metrics.queueMessagesGauge
-        .labelValues(queueName, "READY", nodeId.id)
+        .withTags(queueName, "READY", nodeId.id)
     private val queueMessagesGaugeInFlight = metrics.queueMessagesGauge
-        .labelValues(queueName, "IN_FLIGHT", nodeId.id)
+        .withTags(queueName, "IN_FLIGHT", nodeId.id)
     private val queueMessagesGaugeRetry = metrics.queueMessagesGauge
-        .labelValues(queueName, "RETRY", nodeId.id)
+        .withTags(queueName, "RETRY", nodeId.id)
     private val queueMessagesGaugeDead = metrics.queueMessagesGauge
-        .labelValues(queueName, "DEAD", nodeId.id)
+        .withTags(queueName, "DEAD", nodeId.id)
 
     private val queueMessageAgesGaugeOldest = metrics.queueMessageAgesGauge
-        .labelValues(queueName, "OLDEST", nodeId.id)
+        .withTags(queueName, "OLDEST", nodeId.id)
     private val queueMessageAgesGaugeNewest = metrics.queueMessageAgesGauge
-        .labelValues(queueName, "NEWEST", nodeId.id)
+        .withTags(queueName, "NEWEST", nodeId.id)
     private val queueMessageAgesGaugeOldestReady = metrics.queueMessageAgesGauge
-        .labelValues(queueName, "OLDEST_READY", nodeId.id)
+        .withTags(queueName, "OLDEST_READY", nodeId.id)
 
     private val queueSizeGauge = metrics.queueSizeGauge
-        .labelValues(queueName, nodeId.id)
+        .withTags(queueName, nodeId.id)
 }

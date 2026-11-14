@@ -1,7 +1,7 @@
 package kolbasa.consumer
 
 import kolbasa.queue.Checks
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
 
@@ -90,12 +90,12 @@ data class ConsumerOptions(
     val tracing: Tracing? = null,
 
     /**
-     * Prometheus metrics for this consumer, and for the sweeps it runs. By default, the value is unspecified (null),
-     * meaning that global [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     * Metrics for this consumer, and for the sweeps it runs. By default, the value is unspecified (null),
+     * meaning that global [Kolbasa.metricsConfig][kolbasa.Kolbasa.metricsConfig] will be used.
      *
-     * [PrometheusConfig.None] switches the metrics off for this consumer only.
+     * [MetricsConfig.None] switches the metrics off for this consumer only.
      */
-    val prometheusConfig: PrometheusConfig? = null,
+    val metricsConfig: MetricsConfig? = null,
 
     /**
      * What to do with a received message that can't be read. By default, a warning goes to the log and the message
@@ -116,7 +116,7 @@ data class ConsumerOptions(
         private var consumer: String? = null
         private var visibilityTimeout: Duration? = null
         private var tracing: Tracing? = null
-        private var prometheusConfig: PrometheusConfig? = null
+        private var metricsConfig: MetricsConfig? = null
         private var readErrorHandler: ReadErrorHandler = ReadErrorHandler.SYSTEM_LOG
 
         /**
@@ -135,9 +135,9 @@ data class ConsumerOptions(
         fun tracing(tracing: Tracing) = apply { this.tracing = tracing }
 
         /**
-         * Sets [ConsumerOptions.prometheusConfig] – the metrics of this consumer, used instead of the global ones.
+         * Sets [ConsumerOptions.metricsConfig] – the metrics of this consumer, used instead of the global ones.
          */
-        fun prometheusConfig(prometheusConfig: PrometheusConfig) = apply { this.prometheusConfig = prometheusConfig }
+        fun metricsConfig(metricsConfig: MetricsConfig) = apply { this.metricsConfig = metricsConfig }
 
         /**
          * Sets [ConsumerOptions.readErrorHandler] – what to do with a received message that can't be read.
@@ -147,7 +147,7 @@ data class ConsumerOptions(
         /**
          * Creates a new [ConsumerOptions] instance: a fresh one on every call, nothing is cached or reused.
          */
-        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, prometheusConfig, readErrorHandler)
+        fun build() = ConsumerOptions(consumer, visibilityTimeout, tracing, metricsConfig, readErrorHandler)
     }
 
     companion object {

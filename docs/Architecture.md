@@ -817,21 +817,21 @@ false`).
 
 `Kolbasa` is a **global singleton** — the settings on it are process-wide, shared by every queue, producer, and consumer in the
 JVM. You normally set them once at startup; changing one affects everything. Three of them are only defaults: `asyncExecutor`,
-`tracing` and `prometheusConfig` can also be set in the options of one role, and that role uses its own value. The remaining
+`tracing` and `metricsConfig` can also be set in the options of one role, and that role uses its own value. The remaining
 classes are ordinary per-instance options you construct and pass to a specific queue, role, or call.
 
 | Class | Configures | Key fields |
 |---|---|---|
-| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `asyncExecutor`, `prometheusConfig`, `tracing` |
+| `Kolbasa` (object) | Process-wide defaults | `sweepConfig`, `asyncExecutor`, `metricsConfig`, `tracing` |
 | `QueueOptions` | A queue's defaults | `defaultDelay`, `defaultAttempts` (5), `defaultVisibilityTimeout` (60s), `dlqOptions`, `archiveQueueOptions`, `sqlPutFunction` |
 | `DlqOptions` | DLQ retention | `retention` (30d), `maxMessages` |
 | `ArchiveQueueOptions` | Archive retention | `retention` (30d), `maxMessages` |
-| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `asyncExecutor`, `tracing`, `prometheusConfig` |
+| `ProducerOptions` | A producer's defaults | `delay`, `attempts`, `producer`, `deduplicationMode`, `chunkSize` (500), `partialInsert`, `asyncExecutor`, `tracing`, `metricsConfig` |
 | `SendOptions` | One `send()` call | per-call overrides of the producer options, plus `shard` |
 | `MessageOptions` | One message | per-message `delay`, `attempts` |
-| `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout`, `tracing`, `prometheusConfig` |
+| `ConsumerOptions` | A consumer's defaults | `consumer`, `visibilityTimeout`, `tracing`, `metricsConfig` |
 | `ReceiveOptions` | One `receive()` call | `consumer`, `filter`, `order`, `visibilityTimeout`, `readMetadata` |
-| `MutatorOptions` | A mutator | `maxMutatedMessagesKeepInMemory` (100), `asyncExecutor`, `tracing`, `prometheusConfig` |
+| `MutatorOptions` | A mutator | `maxMutatedMessagesKeepInMemory` (100), `asyncExecutor`, `tracing`, `metricsConfig` |
 | `SweepConfig` | Sweep behavior | `probability` (0.0001), `maxMessages` (10,000) |
 
 ### The override hierarchy

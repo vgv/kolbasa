@@ -100,7 +100,7 @@ statements are printed for them, not for the main queue. To see them, register t
 `.queue(ordersQueue.deadLetterQueue!!)`.
 
 Some statements are never printed: the inspector's queries (also those behind the
-[Prometheus queue state metrics](Prometheus%20metrics.md#how-queue-state-is-updated)), schema creation and migration,
+[queue state metrics](Metrics.md#how-queue-state-is-updated)), schema creation and migration,
 and the cluster's own bookkeeping.
 
 ## Things to know

@@ -1,4 +1,4 @@
-package kolbasa.telemetry.prometheus
+package kolbasa.telemetry.metrics
 
 import kolbasa.producer.PartialInsert
 import kolbasa.schema.NodeId
