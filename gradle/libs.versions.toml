@@ -11,9 +11,9 @@ vanniktech = "0.37.0"
 
 # The oldest Micrometer the library supports: it is built and tested against it
 micrometer = "1.13.15"
-opentelemetry = "1.66.0"
-opentelemetry-instrumentation = "2.32.0"
-opentelemetry-instrumentation-incubator = "2.32.0-alpha"
+# The oldest OpenTelemetry the library supports: it is built and tested against it. One version for all the
+# OpenTelemetry artifacts, they are released together
+opentelemetry = "1.12.0"
 hikaricp = "7.1.0"
 postgresql = "42.7.14"
 
@@ -44,8 +44,6 @@ micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-p
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
 opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
 opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "opentelemetry" }
-opentelemetry-instrumentation-api = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api", version.ref = "opentelemetry-instrumentation" }
-opentelemetry-instrumentation-api-incubator = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-api-incubator", version.ref = "opentelemetry-instrumentation-incubator" }
 
 # PostgreSQL
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
