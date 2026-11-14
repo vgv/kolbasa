@@ -1,8 +1,8 @@
 package kolbasa.cluster
 
 import kolbasa.queue.Checks
+import kolbasa.utils.Threads
 import java.time.Duration
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 /**
@@ -118,10 +118,7 @@ data class ClusterTopologyUpdaterOptions(
         val MAX_INTERVAL: Duration = Duration.ofMinutes(15)
 
         // One executor for every updater in the JVM. Its thread starts with the first scheduled update
-        private val DEFAULT_EXECUTOR: ScheduledExecutorService =
-            Executors.newSingleThreadScheduledExecutor { runnable ->
-                Thread(runnable, "kolbasa-cluster-topology-updater").apply { isDaemon = true }
-            }
+        private val DEFAULT_EXECUTOR: ScheduledExecutorService = Threads.newClusterTopologyUpdaterExecutor()
 
         /**
          * Default options: the topology is read every minute, on the shared thread, errors go to the log.
