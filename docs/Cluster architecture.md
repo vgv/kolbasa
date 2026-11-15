@@ -558,6 +558,12 @@ kolbasa keeps schemas aligned for you: when a `Cluster` starts up, it runs the n
 everywhere with the same shape. Divergence generally arises only from out-of-band changes (a node restored from an old backup, a
 manual `ALTER`, a node that missed a deploy).
 
+A statement of that schema can fail on a node: say, the node already has a table with the queue's name that isn't a queue
+table, or the user lacks a permission. That doesn't stop the topology update. The new map is in use anyway, and
+`Cluster.updateTopology()` returns the nodes where the schema failed, with their statements. The next update runs the schema
+again, until every statement goes through, so once you fix the cause, the tables appear on their own. A
+`ClusterTopologyUpdater` reports every such failure to its `TopologyUpdateErrorHandler`, a warning in the log by default.
+
 Two consistency notions matter operationally, both surfaced by [`butcher`](Butcher.md)'s checks:
 
 - **Cross-node schema divergence.** Every kolbasa table that exists anywhere should exist on every node with the same shape. The
@@ -580,6 +586,7 @@ schema-consistency check is the right place to catch it early.
 | A node is **unreachable during consume** | Each `receive()` picks one consumer node from the map at random, without checking reachability first; if that node happens to be down, that call fails. A subsequent `receive()` re-rolls and may land on a healthy node. Messages on the down node are not lost — they wait until it returns. |
 | A node is **unreachable during `move`** | The move can't drain that node's rows; re-run it once the node is back. Because move is re-runnable, an interruption is harmless. |
 | A node is **unreachable during a topology refresh** | The whole refresh fails, and the client keeps its old map until the next refresh. The error goes to the `TopologyUpdateErrorHandler`, a warning in the log by default. The first refresh, at startup, throws instead: without a map the cluster can't work. |
+| A **schema statement fails** on a node | The refresh goes on: the new map is in use. The failure goes to the `TopologyUpdateErrorHandler`, a warning in the log by default, also on the first refresh at startup. Every next refresh runs the schema again until it goes through. A direct `cluster.updateTopology()` returns the failed nodes instead. |
 | **Stale cluster topology** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
 | **Schema divergence** between nodes | Detected by the schema-consistency check; `move` fails fast rather than copying mismatched tables. Fix by re-running schema generation (or restoring the missing objects) on the lagging node. |
 | Shard **left in migrating state** too long | Its messages on the source node are not consumed until finalize. Not data loss, but a growing backlog — finish the migration. |
