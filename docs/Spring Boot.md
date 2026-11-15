@@ -323,8 +323,9 @@ DDL from `SchemaHelpers.generateCreateOrUpdateStatements` and put it into your m
 
 ### Cluster mode
 
-The cluster creates its schema itself, on every topology update: the queues from `KolbasaClusterSettings`, on every
-node. A node or a queue added later gets its tables within one update interval.
+The cluster creates its schema itself, during the topology updates: the queues from `KolbasaClusterSettings`, on every
+node. It runs the schema at startup, and again whenever the nodes or the queues change, so a node or a queue added
+later gets its tables within one update interval.
 
 At startup a failed statement is tried again, the same way as in standalone mode: by default 5 tries, 1 second apart,
 see `kolbasa.cluster.schema.startup-attempts` and `kolbasa.cluster.schema.startup-retry-delay`. If the last one fails
