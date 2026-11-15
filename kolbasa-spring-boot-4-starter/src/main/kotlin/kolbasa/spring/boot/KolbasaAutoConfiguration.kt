@@ -272,10 +272,11 @@ class KolbasaAutoConfiguration {
             // The first reads by hand: the updater's start() would only report a failed statement, not stop the
             // application
             val startup = SchemaStartupAttempts.read(environment, SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX)
-            val failures = startup.run({ cluster.updateTopology() }, { it.isEmpty() })
-            check(failures.isEmpty()) {
+            val schemaResult = startup.run({ cluster.updateTopology() }, { it.failedStatements == 0 })
+            check(schemaResult.failedStatements == 0) {
                 "Can't create the tables of kolbasa queues on some nodes after ${startup.attempts} attempts, see " +
-                    "${SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX}.startup-attempts:\n" + describe(failures)
+                    "${SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX}.startup-attempts:\n" +
+                    describe(schemaResult.failedNodes)
             }
 
             // The schema is done, so this read doesn't run it again

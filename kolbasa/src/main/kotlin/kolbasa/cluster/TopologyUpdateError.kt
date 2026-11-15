@@ -1,8 +1,5 @@
 package kolbasa.cluster
 
-import kolbasa.schema.NodeId
-import kolbasa.schema.SchemaResult
-
 /**
  * A topology update that went wrong, see [TopologyUpdateErrorHandler].
  *
@@ -27,8 +24,8 @@ sealed class TopologyUpdateError {
      */
     data class SchemaFailed(
         /**
-         * The nodes where the schema failed, each with its [SchemaResult].
+         * What the schema did on every node. [ClusterSchemaResult.failedNodes] are the nodes where it failed.
          */
-        val failures: Map<NodeId, SchemaResult>
+        val result: ClusterSchemaResult
     ) : TopologyUpdateError()
 }

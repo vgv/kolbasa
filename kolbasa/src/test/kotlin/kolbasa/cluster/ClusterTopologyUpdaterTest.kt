@@ -121,7 +121,7 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
         assertTrue(cluster.isInitialized())
         val second = requireNotNull(IdSchema.readNodeInfo(dataSourceSecondSchema)).id
         val error = errors.single() as TopologyUpdateError.SchemaFailed
-        assertEquals(setOf(second), error.failures.keys)
+        assertEquals(setOf(second), error.result.failedNodes.keys)
 
         // The default handler writes it to the log
         assertDoesNotThrow { TopologyUpdateErrorHandler.SYSTEM_LOG.onTopologyUpdateError(error) }

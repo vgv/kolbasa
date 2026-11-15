@@ -7,7 +7,6 @@ import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaHelpers
-import kolbasa.schema.SchemaResult
 import java.util.*
 import java.util.function.Supplier
 import javax.sql.DataSource
@@ -127,15 +126,15 @@ class Cluster(
      * The method is synchronized, so calls from several threads run one after another. It talks to every node, so it
      * is not cheap – do not call it per message.
      *
-     * It returns the nodes where the schema update failed, each with its [SchemaResult]. READ IT: a statement that
-     * fails doesn't throw, the same as in [SchemaHelpers.createOrUpdateQueues]. An empty map means no failures: the
-     * schema went through on every node, or there was nothing to do. After a failure the new topology is in use anyway,
-     * and every next update runs the schema again, until all statements go through.
+     * It returns what the schema update did on every node, see [ClusterSchemaResult]. READ IT: a statement that fails
+     * doesn't throw, the same as in [SchemaHelpers.createOrUpdateQueues]. The short check is `failedStatements == 0`.
+     * After a failure the new topology is in use anyway, and every next update runs the schema again, until all
+     * statements go through.
      *
      * Other failures throw, a node that is down for example. Then the old topology stays.
      */
     @Synchronized
-    fun updateTopology(): Map<NodeId, SchemaResult> {
+    fun updateTopology(): ClusterSchemaResult {
         val dataSources = dataSourcesProvider.get()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
@@ -144,14 +143,14 @@ class Cluster(
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        val schemaFailures = updateSchema(nodes, queues)
+        val schemaResult = updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
         if (newTopology != topology) {
             topology = newTopology
         }
 
-        return schemaFailures
+        return schemaResult
     }
 
     /**
@@ -229,30 +228,31 @@ class Cluster(
         return ShardSchema.readShards(dataSource)
     }
 
-    // Returns only the nodes where the schema failed
-    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): Map<NodeId, SchemaResult> {
+    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): ClusterSchemaResult {
         // No queues: the schema is the user's job, nothing here touches it
         if (queues.isEmpty()) {
-            return emptyMap()
+            return ClusterSchemaResult(emptyMap())
         }
 
         val schemaKey = SchemaKey(nodes.keys.map { it.id }.toSet(), queues.toSet())
         if (schemaKey == schemaGeneratedFor) {
-            return emptyMap()
+            return ClusterSchemaResult(emptyMap())
         }
 
         // Something has changed: the whole schema, on every node
-        val failures = nodes.entries
-            .associate { (node, dataSource) -> node.id to SchemaHelpers.createOrUpdateQueues(dataSource, queues) }
-            .filterValues { it.failedStatements > 0 }
+        val result = ClusterSchemaResult(
+            nodes.entries.associate { (node, dataSource) ->
+                node.id to SchemaHelpers.createOrUpdateQueues(dataSource, queues)
+            }
+        )
 
         // Remember the key only when every statement went through. Otherwise the next update runs the schema again,
         // and executes only what is still missing. A node that throws skips this line too
-        if (failures.isEmpty()) {
+        if (result.failedStatements == 0) {
             schemaGeneratedFor = schemaKey
         }
 
-        return failures
+        return result
     }
 
     // What the schema was generated for

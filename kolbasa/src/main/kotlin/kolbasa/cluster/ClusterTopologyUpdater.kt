@@ -74,14 +74,14 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         }
 
         // If it throws, nothing is scheduled, and the method can be called again
-        val schemaFailures = cluster.updateTopology()
+        val schemaResult = cluster.updateTopology()
         scheduleNextUpdate()
 
         lifecycle = Lifecycle.SCHEDULED
 
         // The topology is in use anyway, and the next update runs the schema again
-        if (schemaFailures.isNotEmpty()) {
-            options.errorHandler.onTopologyUpdateError(TopologyUpdateError.SchemaFailed(schemaFailures))
+        if (schemaResult.failedStatements > 0) {
+            options.errorHandler.onTopologyUpdateError(TopologyUpdateError.SchemaFailed(schemaResult))
         }
     }
 
@@ -104,9 +104,9 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         try {
             // The handler is called outside the inner try: if it throws, it must not be reported as a failed update
             val error = try {
-                val schemaFailures = cluster.updateTopology()
+                val schemaResult = cluster.updateTopology()
                 // The new topology is in use, and the next update runs the schema again
-                if (schemaFailures.isEmpty()) null else TopologyUpdateError.SchemaFailed(schemaFailures)
+                if (schemaResult.failedStatements == 0) null else TopologyUpdateError.SchemaFailed(schemaResult)
             } catch (e: Exception) {
                 // The old topology stays until the next update
                 TopologyUpdateError.UpdateFailed(e)

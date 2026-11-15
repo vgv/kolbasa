@@ -51,7 +51,7 @@ fun interface TopologyUpdateErrorHandler {
 
                 is TopologyUpdateError.SchemaFailed -> {
                     val message = "Can't create the tables of kolbasa queues on some nodes, the next topology update " +
-                        "tries again:\n" + TopologyUpdateErrorLogSupport.describe(error.failures)
+                        "tries again:\n" + TopologyUpdateErrorLogSupport.describe(error.result.failedNodes)
                     TopologyUpdateErrorLogSupport.logger.log(System.Logger.Level.WARNING, message)
                 }
             }
