@@ -180,7 +180,7 @@ internal data class PutFunction(
 private val REQUIRED_QUEUE_COLUMNS: Map<String, Set<ColumnType>> = mapOf(
     Const.ID_COLUMN_NAME to EnumSet.of(ColumnType.BIGINT),
     Const.USELESS_COUNTER_COLUMN_NAME to EnumSet.of(ColumnType.INT),
-    Const.OPENTELEMETRY_COLUMN_NAME to EnumSet.of(ColumnType.VARCHAR_ARRAY),
+    Const.TRACE_CONTEXT_COLUMN_NAME to EnumSet.of(ColumnType.VARCHAR_ARRAY),
     Const.SHARD_COLUMN_NAME to EnumSet.of(ColumnType.INT),
     Const.CREATED_AT_COLUMN_NAME to EnumSet.of(ColumnType.TIMESTAMP, ColumnType.TIMESTAMPTZ),
     Const.SCHEDULED_AT_COLUMN_NAME to EnumSet.of(ColumnType.TIMESTAMP, ColumnType.TIMESTAMPTZ),

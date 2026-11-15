@@ -37,7 +37,7 @@ internal object ConsumerSchemaHelpers {
             Const.PROCESSING_AT_COLUMN_NAME,
             Const.SCHEDULED_AT_COLUMN_NAME,
             Const.REMAINING_ATTEMPTS_COLUMN_NAME,
-            Const.OPENTELEMETRY_COLUMN_NAME,
+            Const.TRACE_CONTEXT_COLUMN_NAME,
             Const.DATA_COLUMN_NAME
         )
         // if we need metadata - we need to read these fields

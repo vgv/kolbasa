@@ -77,7 +77,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // Trace context - scalar parameter, null if there is no context
-        insertColumns += Const.OPENTELEMETRY_COLUMN_NAME
+        insertColumns += Const.TRACE_CONTEXT_COLUMN_NAME
         selectExprs += "?::varchar[]"
 
         // deduplication - uc derived from ordinality
