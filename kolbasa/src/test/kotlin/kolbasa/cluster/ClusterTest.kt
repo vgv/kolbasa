@@ -211,6 +211,32 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertTrue(nodes.all { hasQueueTable(it, second) })
     }
 
+    @Test
+    fun testUpdateTopology_FailedStatement_ReturnedAndRetried() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        val cluster = Cluster(listOf(dataSourceFirstSchema, dataSourceSecondSchema), listOf(queue))
+
+        // A table with the queue's name on the second node, but not a queue table. Kolbasa leaves it as is, and the
+        // indexes on its missing columns fail on every try
+        dataSourceSecondSchema.useStatement { statement: Statement -> statement.execute("create table q_test(x int)") }
+
+        // Only the failed node comes back, nothing throws, and the topology is in use anyway
+        val failed = cluster.updateTopology()
+        assertTrue(cluster.isInitialized())
+        val second = requireNotNull(IdSchema.readNodeInfo(dataSourceSecondSchema)).id
+        assertEquals(setOf(second), failed.keys)
+        assertTrue(failed.getValue(second).failedStatements > 0)
+
+        // Nothing has changed, but the next update runs the schema again: the failure is not forgotten
+        assertEquals(setOf(second), cluster.updateTopology().keys)
+
+        // The cause is gone, and the next update creates the queue
+        dataSourceSecondSchema.useStatement { statement: Statement -> statement.execute("drop table q_test") }
+        val fixed = cluster.updateTopology()
+        assertTrue(fixed.isEmpty(), "$fixed")
+        assertTrue(hasQueueTable(dataSourceSecondSchema, queue))
+    }
+
     private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {
         return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
     }
