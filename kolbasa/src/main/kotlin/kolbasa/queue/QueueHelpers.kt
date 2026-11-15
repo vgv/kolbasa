@@ -22,7 +22,7 @@ internal object QueueHelpers {
 
         // for PG the case doesn't matter, so for us it doesn't either
         // Make all database names lowercase to prevent any possible collisions inside
-        // the library itself (cache names, Prometheus stats names etc.)
+        // the library itself (cache names, metric names etc.)
         return result.lowercase()
     }
 

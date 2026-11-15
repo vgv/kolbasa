@@ -9,7 +9,8 @@ kotlin = "2.3.21"
 nebula = "20.2.0"
 vanniktech = "0.37.0"
 
-prometheus = "1.10.0"
+# The oldest Micrometer the library supports: it is built and tested against it
+micrometer = "1.13.15"
 opentelemetry = "1.66.0"
 opentelemetry-instrumentation = "2.32.0"
 opentelemetry-instrumentation-incubator = "2.32.0-alpha"
@@ -31,9 +32,9 @@ vanniktech-publish-plugin = { module = "com.vanniktech:gradle-maven-publish-plug
 # Kotlin
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 
-# Prometheus
-prometheus-metrics-core = { module = "io.prometheus:prometheus-metrics-core", version.ref = "prometheus" }
-prometheus-metrics-exporter-httpserver = { module = "io.prometheus:prometheus-metrics-exporter-httpserver", version.ref = "prometheus" }
+# Micrometer
+micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 
 # OpenTelemetry
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }

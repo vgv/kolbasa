@@ -1,6 +1,6 @@
 package kolbasa.mutator
 
-import kolbasa.telemetry.prometheus.PrometheusConfig
+import kolbasa.telemetry.metrics.MetricsConfig
 import java.util.concurrent.ExecutorService
 
 /**
@@ -54,12 +54,12 @@ data class MutatorOptions(
     val asyncExecutor: ExecutorService? = null,
 
     /**
-     * Prometheus metrics for this mutator. By default, the value is unspecified (null), meaning that global
-     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     * Metrics for this mutator. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.metricsConfig][kolbasa.Kolbasa.metricsConfig] will be used.
      *
-     * [PrometheusConfig.None] switches the metrics off for this mutator only.
+     * [MetricsConfig.None] switches the metrics off for this mutator only.
      */
-    val prometheusConfig: PrometheusConfig? = null,
+    val metricsConfig: MetricsConfig? = null,
 ) {
 
     /**
@@ -68,7 +68,7 @@ data class MutatorOptions(
     class Builder {
         private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
         private var asyncExecutor: ExecutorService? = null
-        private var prometheusConfig: PrometheusConfig? = null
+        private var metricsConfig: MetricsConfig? = null
 
         /**
          * Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry.
@@ -85,10 +85,10 @@ data class MutatorOptions(
         }
 
         /**
-         * Sets [MutatorOptions.prometheusConfig] – the metrics of this mutator, used instead of the global ones.
+         * Sets [MutatorOptions.metricsConfig] – the metrics of this mutator, used instead of the global ones.
          */
-        fun prometheusConfig(value: PrometheusConfig) = apply {
-            this.prometheusConfig = value
+        fun metricsConfig(value: MetricsConfig) = apply {
+            this.metricsConfig = value
         }
 
         /**
@@ -98,7 +98,7 @@ data class MutatorOptions(
             return MutatorOptions(
                 maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
                 asyncExecutor = asyncExecutor,
-                prometheusConfig = prometheusConfig
+                metricsConfig = metricsConfig
             )
         }
     }
