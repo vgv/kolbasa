@@ -19,6 +19,18 @@
       "defaultValue": true
     },
     {
+      "name": "kolbasa.standalone.schema.startup-attempts",
+      "type": "java.lang.Integer",
+      "description": "How many times to try the schema of the standalone queues at startup, at least 1. If the last try fails too, the application does not start.",
+      "defaultValue": 5
+    },
+    {
+      "name": "kolbasa.standalone.schema.startup-retry-delay",
+      "type": "java.time.Duration",
+      "description": "The pause before every next try of the schema of the standalone queues at startup, see kolbasa.standalone.schema.startup-attempts. 0 means no pause.",
+      "defaultValue": "1s"
+    },
+    {
       "name": "kolbasa.workers.auto-startup",
       "type": "java.lang.Boolean",
       "description": "Whether to start the QueueWorker beans once the application is up. Switch it off to keep them stopped, for example in tests.",

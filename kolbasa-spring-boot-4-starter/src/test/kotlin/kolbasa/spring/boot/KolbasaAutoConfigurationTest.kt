@@ -52,7 +52,11 @@ class KolbasaAutoConfigurationTest {
             .associate { (it.value + it.name).single() to it.matchIfMissing.toString() }
 
         // And the schema attempts at startup, read by SchemaStartupAttempts
-        val startup = listOf(SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX).flatMap { prefix ->
+        val prefixes = listOf(
+            SchemaStartupAttempts.STANDALONE_SCHEMA_PREFIX,
+            SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX
+        )
+        val startup = prefixes.flatMap { prefix ->
             listOf(
                 "$prefix.startup-attempts" to SchemaStartupAttempts.DEFAULT_ATTEMPTS.toString(),
                 "$prefix.startup-retry-delay" to SchemaStartupAttempts.DEFAULT_RETRY_DELAY

@@ -38,6 +38,7 @@ internal class SchemaStartupAttempts(
 
     companion object {
 
+        const val STANDALONE_SCHEMA_PREFIX = "kolbasa.standalone.schema"
         const val CLUSTER_SCHEMA_PREFIX = "kolbasa.cluster.schema"
 
         const val DEFAULT_ATTEMPTS = 5

@@ -140,16 +140,19 @@ class KolbasaAutoConfiguration {
          * It runs after the other database initializers: Flyway, Liquibase and Spring Boot's `schema.sql`.
          *
          * `kolbasa.standalone.schema.enabled=false` switches it off, when someone else manages the schema: a DBA, or
-         * Flyway.
+         * Flyway. `kolbasa.standalone.schema.startup-attempts` and `kolbasa.standalone.schema.startup-retry-delay` say
+         * how many times to try a failed statement, and how long to wait before every next try.
          */
         @Bean
         @ConditionalOnBooleanProperty("kolbasa.standalone.schema.enabled", matchIfMissing = true)
         @DependsOnDatabaseInitialization
         fun kolbasaStandaloneSchemaInitializer(
             dataSource: DataSource,
-            settings: KolbasaStandaloneSettings
+            settings: KolbasaStandaloneSettings,
+            environment: Environment
         ): KolbasaStandaloneSchemaInitializer {
-            return KolbasaStandaloneSchemaInitializer(dataSource, settings.queues)
+            val startup = SchemaStartupAttempts.read(environment, SchemaStartupAttempts.STANDALONE_SCHEMA_PREFIX)
+            return KolbasaStandaloneSchemaInitializer(dataSource, settings.queues, startup)
         }
 
         // Every role below asks for the schema initializer and doesn't use it. Asking makes Spring create the tables
