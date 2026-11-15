@@ -38,15 +38,27 @@ class KolbasaAutoConfigurationTest {
         val described = javaClass.classLoader.getResources("META-INF/spring-configuration-metadata.json").toList()
             .map { it.readText() }
             .filter { "\"kolbasa." in it } // Spring Boot's jars have this file too
+            // One line: without Jackson the parser is BasicJsonParser, and it reads an object in the middle of a list
+            // as a string when there is a line break around it
+            .map { it.replace(Regex("\\s*\\n\\s*"), "") }
             .flatMap { parser.parseMap(it)["properties"] as List<*> }
             .map { it as Map<*, *> }
             .associate { it["name"] to it["defaultValue"].toString() }
 
         // Every property the starter reads, with its default: matchIfMissing is what an absent property means
-        val read = (KolbasaAutoConfiguration::class.java.declaredClasses + KolbasaAutoConfiguration::class.java)
+        val switches = (KolbasaAutoConfiguration::class.java.declaredClasses + KolbasaAutoConfiguration::class.java)
             .flatMap { it.declaredMethods.toList() }
             .mapNotNull { it.getAnnotation(ConditionalOnBooleanProperty::class.java) }
             .associate { (it.value + it.name).single() to it.matchIfMissing.toString() }
+
+        // And the schema attempts at startup, read by SchemaStartupAttempts
+        val startup = listOf(SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX).flatMap { prefix ->
+            listOf(
+                "$prefix.startup-attempts" to SchemaStartupAttempts.DEFAULT_ATTEMPTS.toString(),
+                "$prefix.startup-retry-delay" to SchemaStartupAttempts.DEFAULT_RETRY_DELAY
+            )
+        }
+        val read = switches + startup
 
         assertEquals(read, described)
     }

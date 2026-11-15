@@ -20,6 +20,8 @@ import kolbasa.opentelemetry.OpenTelemetryTracing
 import kolbasa.producer.ProducerOptions
 import kolbasa.producer.datasource.DatabaseProducer
 import kolbasa.producer.datasource.Producer
+import kolbasa.schema.NodeId
+import kolbasa.schema.SchemaResult
 import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.tracing.Tracing
 import kolbasa.worker.QueueWorker
@@ -33,6 +35,7 @@ import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializat
 import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
 import javax.sql.DataSource
 
 /**
@@ -250,9 +253,29 @@ class KolbasaAutoConfiguration {
          * until the application stops.
          *
          * If the first read fails, the application doesn't start: the cluster can't work without the topology.
+         *
+         * A failed statement of the schema is tried again: `kolbasa.cluster.schema.startup-attempts` times in all, 5 by
+         * default, with `kolbasa.cluster.schema.startup-retry-delay` before every next try, 1 second by default. If it
+         * still fails, the application doesn't start either, and the exception lists the statements with their nodes.
+         * Later, while the application runs, a failed statement goes to the error handler of
+         * [KolbasaClusterSettings.topologyUpdaterOptions], and every next update tries it again.
          */
         @Bean
-        fun kolbasaClusterTopologyUpdater(cluster: Cluster, settings: KolbasaClusterSettings): ClusterTopologyUpdater {
+        fun kolbasaClusterTopologyUpdater(
+            cluster: Cluster,
+            settings: KolbasaClusterSettings,
+            environment: Environment
+        ): ClusterTopologyUpdater {
+            // The first reads by hand: the updater's start() would only report a failed statement, not stop the
+            // application
+            val startup = SchemaStartupAttempts.read(environment, SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX)
+            val failures = startup.run({ cluster.updateTopology() }, { it.isEmpty() })
+            check(failures.isEmpty()) {
+                "Can't create the tables of kolbasa queues on some nodes after ${startup.attempts} attempts, see " +
+                    "${SchemaStartupAttempts.CLUSTER_SCHEMA_PREFIX}.startup-attempts:\n" + describe(failures)
+            }
+
+            // The schema is done, so this read doesn't run it again
             val updater = ClusterTopologyUpdater(cluster, settings.topologyUpdaterOptions)
             updater.start()
             return updater
@@ -353,6 +376,14 @@ private fun ProducerOptions.withTracing(bean: Tracing?): ProducerOptions {
 
 private fun ConsumerOptions.withTracing(bean: Tracing?): ConsumerOptions {
     return if (tracing == null && bean != null) copy(tracing = bean) else this
+}
+
+// Every failed statement under its node, the same way kolbasa's own log lists them
+private fun describe(failures: Map<NodeId, SchemaResult>): String {
+    return failures.entries.joinToString("\n") { (node, result) ->
+        val failed = result.failedTableStatements + result.failedIndexStatements
+        "Node ${node.id}:\n" + failed.joinToString("\n") { "${it.statement}\n  -> ${it.error.message}" }
+    }
 }
 
 // Spring Boot's metrics auto-configurations, the ones that make the MeterRegistry bean. Strings, not classes: an application
