@@ -57,6 +57,11 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
      * example because a node is down, keeps the old topology. Its error goes to
      * [ClusterTopologyUpdaterOptions.errorHandler], and the next update runs as usual.
      *
+     * A failed statement of the schema doesn't throw, neither in the first update nor later: the new topology is in
+     * use anyway. The failure goes to [ClusterTopologyUpdaterOptions.errorHandler] as
+     * [TopologyUpdateError.SchemaFailed], and every next update runs the schema again, until all statements go
+     * through.
+     *
      * Once the updates are scheduled, a second call does nothing. After [close] the method throws
      * [IllegalStateException].
      */
@@ -69,10 +74,15 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         }
 
         // If it throws, nothing is scheduled, and the method can be called again
-        cluster.updateTopology()
+        val schemaFailures = cluster.updateTopology()
         scheduleNextUpdate()
 
         lifecycle = Lifecycle.SCHEDULED
+
+        // The topology is in use anyway, and the next update runs the schema again
+        if (schemaFailures.isNotEmpty()) {
+            options.errorHandler.onTopologyUpdateError(TopologyUpdateError.SchemaFailed(schemaFailures))
+        }
     }
 
     private fun scheduleNextUpdate() {
@@ -92,10 +102,19 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
         }
 
         try {
-            cluster.updateTopology()
-        } catch (e: Exception) {
-            // The old topology stays until the next update
-            options.errorHandler.onTopologyUpdateError(TopologyUpdateError(e))
+            // The handler is called outside the inner try: if it throws, it must not be reported as a failed update
+            val error = try {
+                val schemaFailures = cluster.updateTopology()
+                // The new topology is in use, and the next update runs the schema again
+                if (schemaFailures.isEmpty()) null else TopologyUpdateError.SchemaFailed(schemaFailures)
+            } catch (e: Exception) {
+                // The old topology stays until the next update
+                TopologyUpdateError.UpdateFailed(e)
+            }
+
+            if (error != null) {
+                options.errorHandler.onTopologyUpdateError(error)
+            }
         } finally {
             // Always, even after a failure or a handler that throws: one failure must not stop all the next updates
             scheduleNextUpdate()

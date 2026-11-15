@@ -49,7 +49,8 @@ data class ClusterTopologyUpdaterOptions(
     val executor: ScheduledExecutorService = DEFAULT_EXECUTOR,
 
     /**
-     * What to do when a scheduled update fails. By default, [TopologyUpdateErrorHandler.SYSTEM_LOG].
+     * What to do when an update goes wrong, see [TopologyUpdateErrorHandler]. By default,
+     * [TopologyUpdateErrorHandler.SYSTEM_LOG].
      */
     val errorHandler: TopologyUpdateErrorHandler = TopologyUpdateErrorHandler.SYSTEM_LOG
 ) {
@@ -81,7 +82,7 @@ data class ClusterTopologyUpdaterOptions(
         }
 
         /**
-         * Sets [ClusterTopologyUpdaterOptions.errorHandler] – what to do when a scheduled update fails.
+         * Sets [ClusterTopologyUpdaterOptions.errorHandler] – what to do when an update goes wrong.
          */
         fun errorHandler(errorHandler: TopologyUpdateErrorHandler) = apply {
             this.errorHandler = errorHandler

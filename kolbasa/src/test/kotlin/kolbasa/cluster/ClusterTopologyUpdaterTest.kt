@@ -2,8 +2,12 @@ package kolbasa.cluster
 
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
+import kolbasa.queue.PredefinedDataTypes
+import kolbasa.queue.Queue
+import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
 import kolbasa.test.AbstractPostgreSQLTest
+import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
 import java.sql.SQLException
+import java.sql.Statement
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
@@ -97,8 +102,46 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
         waitUntil { errors.isNotEmpty() }
 
         // What the node threw, maybe wrapped on the way
-        val causes = generateSequence(errors.first().cause as Throwable) { it.cause }
-        assertTrue(causes.any { it.message == "The node is down" }) { "Unexpected error: ${errors.first().cause}" }
+        val error = errors.first() as TopologyUpdateError.UpdateFailed
+        val causes = generateSequence(error.cause as Throwable) { it.cause }
+        assertTrue(causes.any { it.message == "The node is down" }) { "Unexpected error: ${error.cause}" }
+    }
+
+    @Test
+    fun testStart_SchemaFailureGoesToHandler() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        breakQueueTable(dataSourceSecondSchema)
+        val errors = CopyOnWriteArrayList<TopologyUpdateError>()
+        val cluster = Cluster(listOf(dataSourceFirstSchema, dataSourceSecondSchema), listOf(queue))
+
+        // A long interval: only the first update runs. It doesn't throw, the topology is in use, and the failure goes
+        // to the handler
+        ClusterTopologyUpdater(cluster, options(interval = Duration.ofMinutes(1)) { errors += it }).start()
+
+        assertTrue(cluster.isInitialized())
+        val second = requireNotNull(IdSchema.readNodeInfo(dataSourceSecondSchema)).id
+        val error = errors.single() as TopologyUpdateError.SchemaFailed
+        assertEquals(setOf(second), error.failures.keys)
+
+        // The default handler writes it to the log
+        assertDoesNotThrow { TopologyUpdateErrorHandler.SYSTEM_LOG.onTopologyUpdateError(error) }
+    }
+
+    @Test
+    fun testStart_SchemaFailureTriedAgainOnSchedule() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        breakQueueTable(dataSourceSecondSchema)
+        val errors = CopyOnWriteArrayList<TopologyUpdateError>()
+        val cluster = Cluster(listOf(dataSourceFirstSchema, dataSourceSecondSchema), listOf(queue))
+        ClusterTopologyUpdater(cluster, options { errors += it }).start()
+
+        // The first update and the scheduled ones after it: every one runs the schema again, and reports the failure
+        waitUntil { errors.size >= 3 }
+        assertTrue(errors.all { it is TopologyUpdateError.SchemaFailed }) { "Unexpected errors: $errors" }
+
+        // The cause is gone, and a scheduled update creates the queue
+        dataSourceSecondSchema.useStatement { statement: Statement -> statement.execute("drop table q_test") }
+        waitUntil { dataSourceSecondSchema.readBoolean("select to_regclass('q_test') is not null") }
     }
 
     @Test
@@ -211,6 +254,12 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
     }
 
     private fun dataSources() = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+
+    // A table with the name of the queue "test", but not a queue table. Kolbasa leaves it as is, and the indexes on its
+    // missing columns fail on every try
+    private fun breakQueueTable(node: DataSource) {
+        node.useStatement { statement: Statement -> statement.execute("create table q_test(x int)") }
+    }
 
     // The shortest interval and our own executor, so the test is fast and can stop the updates
     private fun options(
