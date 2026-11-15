@@ -559,7 +559,7 @@ everywhere with the same shape. Divergence generally arises only from out-of-ban
 manual `ALTER`, a node that missed a deploy).
 
 A statement of that schema can fail on a node: say, the node already has a table with the queue's name that isn't a queue
-table, or the user lacks a permission. That doesn't stop the topology update. The new map is in use anyway, and
+table, or the database user lacks a permission. That doesn't stop the topology update. The new map is in use anyway, and
 `Cluster.updateTopology()` returns a `ClusterSchemaResult` with what the schema did on every node. The next update runs the schema
 again, until every statement goes through, so once you fix the cause, the tables appear on their own. A
 `ClusterTopologyUpdater` reports every such failure to its `TopologyUpdateErrorHandler`, a warning in the log by default.

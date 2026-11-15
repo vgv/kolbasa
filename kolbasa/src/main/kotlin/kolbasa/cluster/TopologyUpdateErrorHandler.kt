@@ -15,7 +15,8 @@ import kolbasa.schema.SchemaResult
  * - [TopologyUpdateError.SchemaFailed] comes from the first update too: the topology is in use, so `start()` doesn't
  *   throw for it.
  *
- * A direct call of [Cluster.updateTopology] doesn't come here at all: it throws, or returns the schema failures.
+ * A direct call of [Cluster.updateTopology] doesn't come here at all: it throws, or returns the schema failures in its
+ * [ClusterSchemaResult].
  *
  * **A handler must not throw.** If it does, the next update is still scheduled, but the exception is lost. If your
  * handler calls code that can fail, for example your own logging or alerting, catch everything inside the handler.

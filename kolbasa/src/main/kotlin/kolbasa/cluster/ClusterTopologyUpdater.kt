@@ -55,7 +55,8 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
      * If this first update fails, the method throws and schedules nothing: without a topology the cluster can't work.
      * Then the method can be called again, for example when the database is back. A later update that fails, for
      * example because a node is down, keeps the old topology. Its error goes to
-     * [ClusterTopologyUpdaterOptions.errorHandler], and the next update runs as usual.
+     * [ClusterTopologyUpdaterOptions.errorHandler] as [TopologyUpdateError.UpdateFailed], and the next update runs as
+     * usual.
      *
      * A failed statement of the schema doesn't throw, neither in the first update nor later: the new topology is in
      * use anyway. The failure goes to [ClusterTopologyUpdaterOptions.errorHandler] as
