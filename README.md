@@ -24,6 +24,7 @@
 * Metrics through Micrometer (Prometheus, OTLP, Datadog and others) and SQL dump for monitoring and debugging
 * Background processing: give your business code to a worker, it receives, deletes, waits and retries for you
 * Move messages to another queue, on another server too: in batches, as they are or changed on the way
+* Spring Boot 4 starter: queues, roles and workers as beans, wired to Spring Boot's metrics and tracing
 
 ## Concepts
 Kolbasa is a pure Kotlin library, so it can be used with any JVM language (Java, Kotlin, Clojure, Scala etc.).
@@ -56,6 +57,29 @@ Kolbasa.tracing = OpenTelemetryTracing(openTelemetry)
 ```java
 Kolbasa.setTracing(new OpenTelemetryTracing(openTelemetry));
 ```
+
+### Spring Boot
+In a Spring Boot 4 application, add the starter, with the same version. It brings `kolbasa` along:
+```groovy
+implementation "io.github.vgv:kolbasa-spring-boot-4-starter:0.234.0"
+```
+
+Then describe your queues in one bean:
+```kotlin
+@Bean
+fun kolbasaStandaloneSettings() = KolbasaStandaloneSettings(queues = listOf(ORDERS, EMAILS))
+```
+From Java, use the builder:
+```java
+@Bean
+KolbasaStandaloneSettings kolbasaStandaloneSettings() {
+    return KolbasaStandaloneSettings.builder(List.of(ORDERS, EMAILS)).build();
+}
+```
+
+The starter creates their tables at startup and gives you `Producer`, `Consumer`, `Mutator` and `Inspector` beans. It
+starts and stops your `QueueWorker` beans with the application, and connects kolbasa to Spring Boot's metrics and
+tracing. Cluster mode, the schema and the rest: [Spring Boot](docs/Spring%20Boot.md).
 
 ## Examples
 The easiest way to try kolbasa is to try running real, working examples, illustrating different features and modes. All examples
@@ -389,3 +413,5 @@ Beyond the examples above, these documents explain how Kolbasa works under the h
   producer, consumer or mutator, every metric with its tags, and how the queue state metrics are updated.
 - [SQL dump.md](docs/SQL%20dump.md) — how to print the SQL that kolbasa runs for chosen queues, what each record
   means, and what to watch out for.
+- [Spring Boot.md](docs/Spring%20Boot.md) — the Spring Boot 4 starter: the settings beans of standalone and cluster
+  mode, the beans the starter creates, the schema and its Flyway recipes, workers, metrics and tracing.

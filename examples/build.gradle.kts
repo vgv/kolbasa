@@ -31,10 +31,14 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    // The oldest Kotlin we support, `kotlin-language` in gradle/libs.versions.toml
+    val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
+
+    // The oldest Java we support, `java` in gradle/libs.versions.toml
+    jvmToolchain(libs.versions.java.get().toInt())
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = language
+        languageVersion = language
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }

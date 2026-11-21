@@ -7,7 +7,8 @@ Guidance for AI coding agents working in this repository.
 **kolbasa** is a reliable message & job queue for Java & Kotlin, built on PostgreSQL — no Kafka, no
 RabbitMQ, just the database you already run. It is a pure Kotlin library (usable from any JVM language),
 published to Maven Central as `io.github.vgv:kolbasa`. OpenTelemetry tracing is a separate, optional artifact,
-`io.github.vgv:kolbasa-opentelemetry`. Requires PostgreSQL 10+ and JVM 17+.
+`io.github.vgv:kolbasa-opentelemetry`, and so is the Spring Boot 4 starter,
+`io.github.vgv:kolbasa-spring-boot-4-starter`. Requires PostgreSQL 10+ and JVM 17+.
 
 ## Mental model
 
@@ -22,9 +23,10 @@ published to Maven Central as `io.github.vgv:kolbasa`. OpenTelemetry tracing is 
 
 ## Build, test, run
 
-This is a **Gradle** project (Kotlin DSL) with six modules — `:kolbasa`, `:kolbasa-opentelemetry`, `:butcher`,
-`:test-support`, `:examples` and `:performance` (see [Layout](#layout)). Use the wrapper. A task name without a project prefix runs in every module
-that has it — `./gradlew test` runs the library's suite, `./gradlew :kolbasa:test` is the explicit form:
+This is a **Gradle** project (Kotlin DSL) with seven modules — `:kolbasa`, `:kolbasa-opentelemetry`,
+`:kolbasa-spring-boot-4-starter`, `:butcher`, `:test-support`, `:examples` and `:performance` (see [Layout](#layout)). Use
+the wrapper. A task name without a project prefix runs in every module that has it — `./gradlew test` runs the library's
+suite, `./gradlew :kolbasa:test` is the explicit form:
 
 - Build: `./gradlew build`
 - Compile only: `./gradlew compileKotlin`
@@ -52,8 +54,8 @@ Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 
 ## Layout
 
-The build has six Gradle modules — `:kolbasa` and `:kolbasa-opentelemetry` are published — plus `gradle/build-logic`,
-an included build holding the shared build logic. The root project has no code.
+The build has seven Gradle modules — `:kolbasa`, `:kolbasa-opentelemetry` and `:kolbasa-spring-boot-4-starter` are
+published — plus `gradle/build-logic`, an included build holding the shared build logic. The root project has no code.
 
 - `kolbasa/src/main/kotlin/kolbasa/` — the library. Key packages: `producer`, `consumer`, `mutator`,
   `inspector` (the four roles), `worker` (the poll loop, a layer on top of the roles: `QueueWorker` runs any
@@ -69,6 +71,11 @@ an included build holding the shared build logic. The root project has no code.
   `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`
   hook. It depends on `:kolbasa` the way a user would, so it can only use the **public** API. That makes it the
   proof that the hook is complete: if tracing needs something the hook doesn't give, it fails to compile here.
+- `kolbasa-spring-boot-4-starter/src/main/kotlin/kolbasa/spring/boot/` — the Spring Boot 4 starter, published as
+  `io.github.vgv:kolbasa-spring-boot-4-starter`. `KolbasaAutoConfiguration` is the entry point; Spring Boot finds it
+  through `src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. It is
+  built against the oldest Spring Boot 4, 4.0.0 (`spring-boot` in `gradle/libs.versions.toml`), so it works with any
+  4.x. Like `kolbasa-opentelemetry`, it depends on `:kolbasa` the way a user would and can only use the **public** API.
 - `test-support/src/main/kotlin/kolbasa/test/` — test infrastructure shared by the other modules: `PostgreSQLImages`,
   which reads `postgresql-test-images.txt` from this module's resources, and `AbstractPostgreSQLTest`, the base class
   for tests that need a database. Which PostgreSQL versions the repository is tested against is decided here, once,
@@ -160,5 +167,8 @@ covers:
 - [docs/Metrics.md](docs/Metrics.md) — metrics through Micrometer: setup, per-role config, every metric and
   tag, how the queue state metrics are refreshed.
 - [docs/SQL dump.md](<docs/SQL dump.md>) — SQL dump: setup, the record format, statement kinds.
+- [docs/Spring Boot.md](<docs/Spring Boot.md>) — the Spring Boot 4 starter: standalone and cluster settings beans, the
+  beans they create, `@KolbasaStandalone`/`@KolbasaCluster`, the schema and its Flyway recipes, workers, metrics and
+  tracing.
 
 The [README](README.md) has a feature overview and walkthroughs of the examples.

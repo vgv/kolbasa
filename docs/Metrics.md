@@ -34,6 +34,9 @@ is the `MeterRegistry` bean:
 Kolbasa.metricsConfig = MetricsConfig.Config(meterRegistry)
 ```
 
+With the Spring Boot starter, its role beans don't need this line: they take the `MeterRegistry` bean themselves, see
+[Spring Boot](Spring%20Boot.md#metrics-and-tracing).
+
 There is no default registry, on purpose. Micrometer has a global one, `Metrics.globalRegistry`, but it only passes
 metrics on to the registries added to it. With none added, it accepts kolbasa's metrics and sends them nowhere, without
 an error. If you do use it, pass it explicitly: `MetricsConfig.Config(Metrics.globalRegistry)`.

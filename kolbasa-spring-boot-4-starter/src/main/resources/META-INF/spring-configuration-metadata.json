@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "kolbasa.standalone.schema.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to create or update the tables of the standalone queues at startup. Switch it off when someone else manages the schema, a DBA or Flyway.",
+      "defaultValue": true
+    },
+    {
+      "name": "kolbasa.workers.auto-startup",
+      "type": "java.lang.Boolean",
+      "description": "Whether to start the QueueWorker beans once the application is up. Switch it off to keep them stopped, for example in tests.",
+      "defaultValue": true
+    }
+  ]
+}
