@@ -25,7 +25,7 @@ opentelemetry = "1.12.0"
 hikaricp = "7.1.0"
 postgresql = "42.7.14"
 
-clikt = "5.1.0"
+clikt = "5.2.1"
 
 # The oldest Spring Boot 4 the starter supports: it is built and tested against it, so it works with any 4.x
 spring-boot = "4.0.0"
