@@ -363,9 +363,7 @@ object SchemaHelpers {
         }
     }
 
-    // Temporarily 1. This release adds a column to every queue table, and all statements of a chunk run in one
-    // transaction, so a chunk of 25 "alter table" statements would hold locks on 25 tables at once
-    private const val DEFAULT_CHUNK_SIZE = 1
+    private const val DEFAULT_CHUNK_SIZE = 25
 
     private fun checkAllQueuesAreMain(mainQueues: List<Queue<*>>) {
         mainQueues.forEach { queue ->

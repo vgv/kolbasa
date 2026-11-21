@@ -174,7 +174,7 @@ class DatabaseProducerTest : AbstractPostgreSQLTest() {
         producer.send(queue, "bugaga").throwExceptionIfAny()
 
         // check database
-        val sql = "select count(*) from ${queue.dbTableName} where ${Const.OPENTELEMETRY_COLUMN_NAME} is null"
+        val sql = "select count(*) from ${queue.dbTableName} where ${Const.TRACE_CONTEXT_COLUMN_NAME} is null"
         assertEquals(1, dataSource.readInt(sql))
     }
 

@@ -126,7 +126,7 @@ class OpenTelemetryTracingTest : AbstractPostgreSQLTest() {
             "traceparent 00-${span.traceId}-${span.spanId}-${span.spanContext.traceFlags.asHex()}"
         }
 
-        val contexts = readStrings("select array_to_string(opentelemetry, ' ') from q_tracing order by id")
+        val contexts = readStrings("select array_to_string(trace_context, ' ') from q_tracing order by id")
         assertEquals(expected, contexts)
     }
 

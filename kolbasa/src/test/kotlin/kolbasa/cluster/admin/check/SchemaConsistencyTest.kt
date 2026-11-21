@@ -349,7 +349,7 @@ class SchemaConsistencyTest {
     private val REQUIRED_QUEUE_COLUMNS = setOf(
         Column(Const.ID_COLUMN_NAME, ColumnType.BIGINT, false, null),
         Column(Const.USELESS_COUNTER_COLUMN_NAME, ColumnType.INT, false, null),
-        Column(Const.OPENTELEMETRY_COLUMN_NAME, ColumnType.VARCHAR_ARRAY, true, null),
+        Column(Const.TRACE_CONTEXT_COLUMN_NAME, ColumnType.VARCHAR_ARRAY, true, null),
         Column(Const.SHARD_COLUMN_NAME, ColumnType.INT, false, null),
         Column(Const.CREATED_AT_COLUMN_NAME, ColumnType.TIMESTAMP, false, null),
         Column(Const.SCHEDULED_AT_COLUMN_NAME, ColumnType.TIMESTAMP, false, null),
