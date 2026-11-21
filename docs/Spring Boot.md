@@ -139,7 +139,8 @@ With this bean the starter creates:
 - `kolbasaCluster`, the `Cluster` over these nodes;
 - `kolbasaClusterTopologyUpdater`. At startup it reads the cluster topology and creates the queues on every node. Then
   it reads the topology again every minute, until the application stops. If the first read fails, the application
-  doesn't start: the cluster can't work without the topology;
+  doesn't start: the cluster can't work without the topology. A failed statement of the schema gets a few more tries
+  first, see [The schema](#cluster-mode-1);
 - four beans: `kolbasaClusterProducer`, `kolbasaClusterConsumer`, `kolbasaClusterMutator` and
   `kolbasaClusterInspector`. You use them the same way as in standalone mode, by their interfaces.
 
@@ -263,9 +264,10 @@ what differs, see [Schema generation and migration](Architecture.md#schema-gener
 It runs after the other database initializers: Flyway, Liquibase and Spring Boot's `schema.sql`. So a migration can
 prepare the database for kolbasa, but can't use kolbasa's tables. The recipes below show what to do then.
 
-A failed statement gets one more try: two instances that start at the same time can race on the same statement, and
-the second try finds the work done. If it fails again, the application doesn't start, and the exception lists the
-failed statements.
+A failed statement is tried again: two instances that start at the same time can race on the same statement, and the
+next try finds the work done. By default there are 5 tries, 1 second apart, see
+`kolbasa.standalone.schema.startup-attempts` and `kolbasa.standalone.schema.startup-retry-delay`. If the last one fails
+too, the application doesn't start, and the exception lists the failed statements.
 
 `kolbasa.standalone.schema.enabled=false` switches the schema initializer off.
 
@@ -321,8 +323,17 @@ DDL from `SchemaHelpers.generateCreateOrUpdateStatements` and put it into your m
 
 ### Cluster mode
 
-The cluster creates its schema itself, on every topology update: the queues from `KolbasaClusterSettings`, on every
-node. A node or a queue added later gets its tables within one update interval.
+The cluster creates its schema itself, during the topology updates: the queues from `KolbasaClusterSettings`, on every
+node. It runs the schema at startup, and again whenever the nodes or the queues change, so a node or a queue added
+later gets its tables within one update interval.
+
+At startup a failed statement is tried again, the same way as in standalone mode: by default 5 tries, 1 second apart,
+see `kolbasa.cluster.schema.startup-attempts` and `kolbasa.cluster.schema.startup-retry-delay`. If the last one fails
+too, the application doesn't start, and the exception lists the failed statements with their nodes.
+
+Later, while the application runs, a failed statement stops nothing. The topology update goes on, the failure goes to
+the error handler of `topologyUpdaterOptions`, a warning in the log by default, and every next update tries the
+statement again. So once you fix the cause, the tables appear on their own, without a restart.
 
 `kolbasa.standalone.schema.enabled` doesn't apply here. An empty `queues` list means "the schema is mine": the cluster
 creates no tables.
@@ -453,6 +464,10 @@ switched off, with `kolbasa.standalone.schema.enabled=false`.
 | Property | Default | What it does |
 |---|---|---|
 | `kolbasa.standalone.schema.enabled` | `true` | Creates or updates the tables of the standalone queues at startup |
+| `kolbasa.standalone.schema.startup-attempts` | `5` | How many times to try the standalone schema at startup, at least 1 |
+| `kolbasa.standalone.schema.startup-retry-delay` | `1s` | The pause before every next try of the standalone schema |
+| `kolbasa.cluster.schema.startup-attempts` | `5` | How many times to try the cluster schema at startup, at least 1 |
+| `kolbasa.cluster.schema.startup-retry-delay` | `1s` | The pause before every next try of the cluster schema |
 | `kolbasa.workers.auto-startup` | `true` | Starts the `QueueWorker` beans with the application |
 
 Everything else — the queues, the nodes and the options — goes into the settings beans.

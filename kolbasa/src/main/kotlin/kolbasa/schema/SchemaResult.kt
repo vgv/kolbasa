@@ -4,7 +4,9 @@ package kolbasa.schema
  * What happened when a [Schema] was executed – which statements ran, and which ones failed.
  *
  * Returned by [SchemaHelpers.createOrUpdateQueues], [SchemaHelpers.renameQueues], [SchemaHelpers.deleteQueues] and
- * [SchemaHelpers.executeSchemaStatements].
+ * [SchemaHelpers.executeSchemaStatements]. In a cluster,
+ * [Cluster.updateTopology][kolbasa.cluster.Cluster.updateTopology] returns one for every node, in a
+ * [ClusterSchemaResult][kolbasa.cluster.ClusterSchemaResult].
  *
  * READ THE RESULT. A statement that fails does not stop the run and does not throw an exception: the other
  * statements still run, and the failure is recorded here. If you ignore the result, an application can start with a

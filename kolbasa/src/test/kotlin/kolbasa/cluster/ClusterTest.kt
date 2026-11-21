@@ -211,6 +211,39 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertTrue(nodes.all { hasQueueTable(it, second) })
     }
 
+    @Test
+    fun testUpdateTopology_FailedStatement_ReturnedAndRetried() {
+        val queue = Queue.of("test", PredefinedDataTypes.Int)
+        val cluster = Cluster(listOf(dataSourceFirstSchema, dataSourceSecondSchema), listOf(queue))
+
+        // A table with the queue's name on the second node, but not a queue table. Kolbasa leaves it as is, and the
+        // indexes on its missing columns fail on every try
+        dataSourceSecondSchema.useStatement { statement: Statement -> statement.execute("create table q_test(x int)") }
+
+        // Both nodes come back, the second one with its failures. Nothing throws, and the topology is in use anyway
+        val failed = cluster.updateTopology()
+        assertTrue(cluster.isInitialized())
+        val first = requireNotNull(IdSchema.readNodeInfo(dataSourceFirstSchema)).id
+        val second = requireNotNull(IdSchema.readNodeInfo(dataSourceSecondSchema)).id
+        assertEquals(setOf(first, second), failed.nodes.keys)
+        assertEquals(setOf(second), failed.failedNodes.keys)
+        assertEquals(failed.nodes.getValue(second).failedStatements, failed.failedStatements)
+        assertTrue(failed.failedStatements > 0)
+
+        // Nothing has changed, but the next update runs the schema again: the failure is not forgotten
+        assertEquals(setOf(second), cluster.updateTopology().failedNodes.keys)
+
+        // The cause is gone, and the next update creates the queue
+        dataSourceSecondSchema.useStatement { statement: Statement -> statement.execute("drop table q_test") }
+        val fixed = cluster.updateTopology()
+        assertEquals(0, fixed.failedStatements, "$fixed")
+        assertEquals(setOf(first, second), fixed.nodes.keys)
+        assertTrue(hasQueueTable(dataSourceSecondSchema, queue))
+
+        // Now the schema is done, and an update with the same nodes and queues doesn't run it
+        assertTrue(cluster.updateTopology().nodes.isEmpty())
+    }
+
     private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {
         return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
     }

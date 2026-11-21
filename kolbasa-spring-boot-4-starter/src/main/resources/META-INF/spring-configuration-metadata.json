@@ -1,10 +1,34 @@
 {
   "properties": [
     {
+      "name": "kolbasa.cluster.schema.startup-attempts",
+      "type": "java.lang.Integer",
+      "description": "How many times to try the schema of the cluster queues at startup, at least 1. If the last try fails too, the application does not start.",
+      "defaultValue": 5
+    },
+    {
+      "name": "kolbasa.cluster.schema.startup-retry-delay",
+      "type": "java.time.Duration",
+      "description": "The pause before every next try of the schema of the cluster queues at startup, see kolbasa.cluster.schema.startup-attempts. 0 means no pause.",
+      "defaultValue": "1s"
+    },
+    {
       "name": "kolbasa.standalone.schema.enabled",
       "type": "java.lang.Boolean",
       "description": "Whether to create or update the tables of the standalone queues at startup. Switch it off when someone else manages the schema, a DBA or Flyway.",
       "defaultValue": true
+    },
+    {
+      "name": "kolbasa.standalone.schema.startup-attempts",
+      "type": "java.lang.Integer",
+      "description": "How many times to try the schema of the standalone queues at startup, at least 1. If the last try fails too, the application does not start.",
+      "defaultValue": 5
+    },
+    {
+      "name": "kolbasa.standalone.schema.startup-retry-delay",
+      "type": "java.time.Duration",
+      "description": "The pause before every next try of the schema of the standalone queues at startup, see kolbasa.standalone.schema.startup-attempts. 0 means no pause.",
+      "defaultValue": "1s"
     },
     {
       "name": "kolbasa.workers.auto-startup",

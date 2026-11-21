@@ -87,8 +87,9 @@ data class KolbasaClusterSettings(
     val shardStrategy: ShardStrategy = ShardStrategy.ThreadLocalWithInterval(),
 
     /**
-     * How often the topology is read again, on what executor, and what to do when a read fails. By default,
-     * [ClusterTopologyUpdaterOptions.DEFAULT]: every minute.
+     * How often the topology is read again, on what executor, and what to do when an update goes wrong: a node is
+     * down, or a statement of the schema fails. By default, [ClusterTopologyUpdaterOptions.DEFAULT]: every minute, and
+     * a warning in the log.
      */
     val topologyUpdaterOptions: ClusterTopologyUpdaterOptions = ClusterTopologyUpdaterOptions.DEFAULT
 ) {

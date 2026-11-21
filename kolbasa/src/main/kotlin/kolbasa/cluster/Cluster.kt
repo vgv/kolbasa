@@ -125,9 +125,16 @@ class Cluster(
      *
      * The method is synchronized, so calls from several threads run one after another. It talks to every node, so it
      * is not cheap – do not call it per message.
+     *
+     * It returns what the schema update did on every node, see [ClusterSchemaResult]. READ IT: a statement that fails
+     * doesn't throw, the same as in [SchemaHelpers.createOrUpdateQueues]. The short check is `failedStatements == 0`.
+     * After a failure the new topology is in use anyway, and every next update runs the schema again, until all
+     * statements go through.
+     *
+     * Other failures throw, a node that is down for example. Then the old topology stays.
      */
     @Synchronized
-    fun updateTopology() {
+    fun updateTopology(): ClusterSchemaResult {
         val dataSources = dataSourcesProvider.get()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
@@ -136,12 +143,14 @@ class Cluster(
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        updateSchema(nodes, queues)
+        val schemaResult = updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
         if (newTopology != topology) {
             topology = newTopology
         }
+
+        return schemaResult
     }
 
     /**
@@ -219,24 +228,31 @@ class Cluster(
         return ShardSchema.readShards(dataSource)
     }
 
-    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>) {
+    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): ClusterSchemaResult {
         // No queues: the schema is the user's job, nothing here touches it
         if (queues.isEmpty()) {
-            return
+            return ClusterSchemaResult(emptyMap())
         }
 
         val schemaKey = SchemaKey(nodes.keys.map { it.id }.toSet(), queues.toSet())
         if (schemaKey == schemaGeneratedFor) {
-            return
+            return ClusterSchemaResult(emptyMap())
         }
 
-        // Something has changed: the whole schema, on every node. If a node fails, the key stays old, and the next
-        // update tries again
-        nodes.values.forEach { dataSource ->
-            SchemaHelpers.createOrUpdateQueues(dataSource, queues)
+        // Something has changed: the whole schema, on every node
+        val result = ClusterSchemaResult(
+            nodes.entries.associate { (node, dataSource) ->
+                node.id to SchemaHelpers.createOrUpdateQueues(dataSource, queues)
+            }
+        )
+
+        // Remember the key only when every statement went through. Otherwise the next update runs the schema again,
+        // and executes only what is still missing. A node that throws skips this line too
+        if (result.failedStatements == 0) {
+            schemaGeneratedFor = schemaKey
         }
 
-        schemaGeneratedFor = schemaKey
+        return result
     }
 
     // What the schema was generated for

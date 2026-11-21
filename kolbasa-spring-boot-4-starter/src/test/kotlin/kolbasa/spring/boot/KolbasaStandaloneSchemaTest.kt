@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import java.time.Duration
 import java.util.function.Supplier
 import javax.sql.DataSource
 
@@ -32,18 +33,41 @@ class KolbasaStandaloneSchemaTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testBrokenTable_StartupFails() {
+    fun testBrokenTable_StartupFailsAfterAttempts() {
         // A table with the queue's name, but not a queue table. Kolbasa leaves it as is, and the indexes on its
         // missing columns fail on every try
         execute("create table q_test(x int)")
 
+        // Three attempts take at least two pauses: that is how the test knows they all ran
+        val start = System.nanoTime()
         contextRunner
+            .withPropertyValues(
+                "kolbasa.standalone.schema.startup-attempts=3",
+                "kolbasa.standalone.schema.startup-retry-delay=1s"
+            )
             .withBean(KolbasaStandaloneSettings::class.java, { settings })
             .run { context ->
                 assertThat(context).hasFailed()
                 val rootCause = generateSequence(context.startupFailure) { it.cause }.last()
-                assertTrue(rootCause is IllegalStateException)
-                assertTrue("create index" in rootCause.message.orEmpty())
+                assertTrue(rootCause is IllegalStateException) { "Unexpected failure: $rootCause" }
+                val message = rootCause.message.orEmpty()
+                assertTrue("after 3 attempts" in message && "create index" in message) { "Unexpected: $message" }
+            }
+
+        val elapsed = Duration.ofNanos(System.nanoTime() - start)
+        assertTrue(elapsed >= Duration.ofSeconds(2)) { "Elapsed: $elapsed" }
+    }
+
+    @Test
+    fun testNoStartupAttempts_StartupFails() {
+        contextRunner
+            .withPropertyValues("kolbasa.standalone.schema.startup-attempts=0")
+            .withBean(KolbasaStandaloneSettings::class.java, { settings })
+            .run { context ->
+                assertThat(context).hasFailed()
+                val rootCause = generateSequence(context.startupFailure) { it.cause }.last()
+                val message = rootCause.message.orEmpty()
+                assertTrue("kolbasa.standalone.schema.startup-attempts" in message) { "Unexpected: $message" }
             }
     }
 
