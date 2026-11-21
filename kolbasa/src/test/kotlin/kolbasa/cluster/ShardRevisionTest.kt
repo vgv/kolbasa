@@ -59,7 +59,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val first = nodes.values.first()
-        createFirstMap(first, nodes.keys.toList())
+        seedShardTable(first, nodes.keys.toList())
 
         val deleted = (10..19).toList()
         first.useStatement { statement ->
@@ -77,7 +77,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testTrigger_HandEdit_GetsRevisionNewerThanAll() {
-        val first = createFirstMap()
+        val first = seedShardTable()
 
         moveShard(first, shard = 5, node = "node-x")
         val revision5 = revisionOf(first, 5)
@@ -93,7 +93,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testTrigger_HandEdit_SmallerOrEqualRevisionIgnored() {
-        val first = createFirstMap()
+        val first = seedShardTable()
         moveShard(first, shard = 5, node = "node-x")
         val revision5 = revisionOf(first, 5)
 
@@ -110,7 +110,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testTrigger_NewerRevisionKept() {
-        val first = createFirstMap()
+        val first = seedShardTable()
 
         moveShard(first, shard = 5, node = "node-x", revision = "2100-01-01 00:00:00+00")
 
@@ -119,7 +119,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testTrigger_EmptyUpdate_RevisionStays() {
-        val first = createFirstMap()
+        val first = seedShardTable()
         moveShard(first, shard = 5, node = "node-x")
         val revision5 = revisionOf(first, 5)
 
@@ -142,7 +142,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
     @Test
     fun testTrigger_HandEditFromAnotherSchema() {
         // The map lives in the 'first' schema, the edit comes from a session that works in 'public'
-        createFirstMap(dataSourceFirstSchema)
+        seedShardTable(dataSourceFirstSchema)
 
         dataSource.useStatement { statement ->
             statement.execute(
@@ -182,7 +182,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testCreateOrUpdateShardTable_ChangedFunctionReplaced() {
-        val first = createFirstMap()
+        val first = seedShardTable()
 
         // A function from another kolbasa version: it does nothing
         first.useStatement { statement ->
@@ -202,22 +202,22 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
         assertTrue(revisionOf(first, 5) > Instant.EPOCH)
     }
 
-    // A first map on the node with the smallest id, every row with the initial revision
-    private fun createFirstMap(): DataSource {
+    // A new shard table on the node with the smallest id, seeded: every row has the initial revision
+    private fun seedShardTable(): DataSource {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val first = nodes.values.first()
-        createFirstMap(first, nodes.keys.toList())
+        seedShardTable(first, nodes.keys.toList())
         return first
     }
 
-    private fun createFirstMap(dataSource: DataSource) {
+    private fun seedShardTable(dataSource: DataSource) {
         val nodes = ClusterHelper.readNodes(listOf(dataSource))
-        createFirstMap(dataSource, nodes.keys.toList())
+        seedShardTable(dataSource, nodes.keys.toList())
     }
 
-    private fun createFirstMap(dataSource: DataSource, nodes: List<kolbasa.schema.Node>) {
+    private fun seedShardTable(dataSource: DataSource, nodes: List<kolbasa.schema.Node>) {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes, firstMap = true)
+        ShardSchema.fillShardTable(dataSource, nodes, initialRevision = true)
     }
 
     // Gives the shard to another node by hand, with a revision of its own if one is given

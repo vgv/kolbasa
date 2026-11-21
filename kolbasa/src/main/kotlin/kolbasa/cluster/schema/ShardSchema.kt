@@ -23,10 +23,16 @@ internal object ShardSchema {
     const val PRODUCER_NODE_COLUMN_NAME = "producer_node"
     const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"
     const val NEXT_CONSUMER_NODE_COLUMN_NAME = "next_consumer_node"
+
+    /**
+     * The revision of a row: when its content last changed. It is a simple kind of hybrid logical clock, set by the
+     * [SET_REVISION_FUNCTION_NAME] trigger
+     */
     const val REVISION_COLUMN_NAME = "revision"
 
     /**
-     * The revision of the first shard map, and of the rows that were there before revisions existed
+     * The revision of the rows kolbasa seeds into a new shard table, and of the rows that were there before revisions
+     * existed
      */
     const val INITIAL_REVISION = "1970-01-01 00:00:00+00"
 
@@ -72,7 +78,7 @@ internal object ShardSchema {
             max_existing_revision timestamptz;
         begin
             if tg_op = 'INSERT' then
-                -- An insert with a revision: the first map (0) or repair. Keep it
+                -- An insert with a revision: the rows seeded into a new table (0) or repair. Keep it
                 if new.$REVISION_COLUMN_NAME is not null then
                     return new;
                 end if;
@@ -98,8 +104,9 @@ internal object ShardSchema {
                 -- A smaller or equal revision set by the statement is ignored, a new revision is set below
             end if;
 
-            -- A new revision: the server's time, but always later than every revision in the table,
-            -- even when this server's clock is behind. On an empty table max_existing_revision is null, and greatest skips it
+            -- A new revision, a simple hybrid logical clock: the server's time, but always later than every revision
+            -- in the table, even when this server's clock is behind. On an empty table max_existing_revision is null,
+            -- and greatest skips it
             server_time := clock_timestamp();
             select max($REVISION_COLUMN_NAME) into max_existing_revision from $SHARD_TABLE_NAME;
             new.$REVISION_COLUMN_NAME := greatest(server_time, max_existing_revision + interval '1 microsecond');
@@ -217,23 +224,23 @@ internal object ShardSchema {
     /**
      * Gives every shard that has no row yet a random node of [nodes].
      *
-     * With [firstMap] the new rows get [INITIAL_REVISION]: a new cluster has no messages, nothing depends on them yet.
-     * Otherwise the trigger gives them the current time.
+     * With [initialRevision] the new rows get [INITIAL_REVISION]. This is for seeding a new table: a new cluster has
+     * no messages, nothing depends on these rows yet. Otherwise the trigger gives them the current time.
      */
-    fun fillShardTable(dataSource: DataSource, nodes: List<Node>, firstMap: Boolean = false) {
+    fun fillShardTable(dataSource: DataSource, nodes: List<Node>, initialRevision: Boolean = false) {
         val shardsPerStatement = 100
         val statements = ShardId.SHARDS_RANGE.chunked(shardsPerStatement).map { shards ->
             val values = shards.map { shard ->
                 val randomNode = nodes.random()
                 val randomNodeStringId: String = randomNode.id.id
-                if (firstMap) {
+                if (initialRevision) {
                     "($shard, '$randomNodeStringId', '$randomNodeStringId', '$INITIAL_REVISION')"
                 } else {
                     "($shard, '$randomNodeStringId', '$randomNodeStringId')"
                 }
             }
 
-            val columns = if (firstMap) {
+            val columns = if (initialRevision) {
                 "$SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $REVISION_COLUMN_NAME"
             } else {
                 "$SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME"

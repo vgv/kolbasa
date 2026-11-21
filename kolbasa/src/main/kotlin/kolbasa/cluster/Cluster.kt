@@ -228,7 +228,7 @@ class Cluster(
             ShardTableSearch.Missing -> {
                 val dataSource = nodes.values.first()
                 ShardSchema.createOrUpdateShardTable(dataSource)
-                ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), firstMap = true)
+                ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), initialRevision = true)
                 return ShardSchema.readShards(dataSource)
             }
         }

@@ -263,6 +263,7 @@ create table q__shard(
     producer_node      varchar(100) not null,             -- node new messages are written to
     consumer_node      varchar(100),                      -- node read from for this shard (null while migrating)
     next_consumer_node varchar(100),                      -- migration destination (null while stable)
+    revision           timestamptz not null,              -- hybrid logical clock: when the content last changed
     check (
         (producer_node = consumer_node      and next_consumer_node is null) or  -- stable
         (producer_node = next_consumer_node and consumer_node      is null)      -- migrating
@@ -273,18 +274,28 @@ create table q__shard(
 The `check` constraint encodes the only two legal states a shard can be in; it is impossible to store an illegal one. We come
 back to those two states in [Shard migration](#shard-migration).
 
+Every row also has a **revision**: when its content last changed. It is a simple kind of hybrid logical clock. It follows the
+server's clock, but never goes back: a new revision is the current time or the latest revision in the table plus one
+microsecond, whichever is later. So a new revision is always later than every revision already there, even when the server's
+clock is behind. A trigger on the table, `q__shard_set_revision`, sets it, so an `update` made by hand gets one too. An `update`
+that changes nothing keeps the old revision. The rows that kolbasa seeds into a new table, and the rows that were there before
+the column existed, have revision `1970-01-01 00:00:00+00`.
+
 **A snapshot, for concreteness.** In a healthy three-node cluster every shard is in the stable state — `producer_node` and
 `consumer_node` are equal and `next_consumer_node` is empty — with the 1024 shards scattered across the nodes:
 
 ```
- shard | producer_node | consumer_node | next_consumer_node
--------+---------------+---------------+--------------------
-     0 | node A        | node A        | (null)
-     1 | node C        | node C        | (null)
-     2 | node A        | node A        | (null)
-   ... | ...           | ...           | ...
-  1023 | node B        | node B        | (null)
+ shard | producer_node | consumer_node | next_consumer_node | revision
+-------+---------------+---------------+--------------------+-------------------------------
+     0 | node A        | node A        | (null)             | 1970-01-01 00:00:00+00
+     1 | node C        | node C        | (null)             | 2026-11-21 14:05:12.483021+00
+     2 | node A        | node A        | (null)             | 1970-01-01 00:00:00+00
+   ... | ...           | ...           | ...                | ...
+  1023 | node B        | node B        | (null)             | 1970-01-01 00:00:00+00
 ```
+
+Shard 1 was moved to node C after kolbasa seeded the table, so its revision is the time of that move. The other rows still have
+the revision they were seeded with.
 
 (The `*_node` values shown are friendly labels; the real column holds each node's **node id**, kept in its `q__node` table. A
 node that butcher sets up gets the id from its config line (see [Butcher.md → Node ids](Butcher.md#node-ids)); a node that a
