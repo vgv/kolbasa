@@ -30,7 +30,7 @@ clikt = "5.1.0"
 # The oldest Spring Boot 4 the starter supports: it is built and tested against it, so it works with any 4.x
 spring-boot = "4.0.0"
 
-logback = "1.6.6"
+logback = "1.6.7"
 testcontainers = "2.0.5"
 junit = "6.1.3"
 mockk = "1.14.11"
