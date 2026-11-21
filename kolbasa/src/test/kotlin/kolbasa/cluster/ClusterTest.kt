@@ -19,7 +19,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.sql.Statement
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
+import kotlin.random.Random
 
 class ClusterTest : AbstractPostgreSQLTest() {
 
@@ -176,6 +179,112 @@ class ClusterTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testUpdateTopology_IncompleteShardTable_FilledInPlace() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, third) = nodes.values.toList()
+
+        // An incomplete table on the second node, not on the one with the smallest id
+        ShardSchema.createShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        val before = ShardSchema.readShards(second)
+        val deleted = deleteRandomShards(second)
+
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+
+        // The table was filled where it is, no new table appeared next to it
+        assertFalse(ShardSchema.shardTableExists(first))
+        assertFalse(ShardSchema.shardTableExists(third))
+        val after = ShardSchema.readShards(second)
+        assertEquals(ShardId.SHARD_COUNT, after.size)
+        assertEquals(after, cluster.getTopology().shards)
+
+        // The shards that were there kept their nodes
+        assertEquals(before - deleted, after - deleted)
+    }
+
+    @Test
+    fun testUpdateTopology_CompleteShardTable_WinsOverIncomplete() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, _) = nodes.values.toList()
+
+        // An incomplete table on the first node, a complete one on the second
+        ShardSchema.createShardTable(first)
+        ShardSchema.fillShardTable(first, nodes.keys.toList())
+        val deleted = deleteRandomShards(first)
+        ShardSchema.createShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList())
+
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+
+        // The complete table is used, the incomplete one is left as it is
+        assertEquals(ShardSchema.readShards(second), cluster.getTopology().shards)
+        assertEquals(ShardId.SHARD_COUNT - deleted.size, ShardSchema.readShards(first).size)
+    }
+
+    @Test
+    fun testUpdateTopology_ShardTableReadFails_OldTopologyStays() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (firstNode, secondNode, _) = nodes.keys.toList()
+        val (first, second, third) = nodes.values.toList()
+
+        // The map lives on the second node
+        ShardSchema.createShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList())
+
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+        val topology = cluster.getTopology()
+
+        // The table is still there, but reading it fails
+        second.useStatement { statement: Statement ->
+            statement.execute(
+                "alter table ${ShardSchema.SHARD_TABLE_NAME} rename column ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} to broken"
+            )
+        }
+
+        val exception = assertThrows<IllegalStateException> {
+            cluster.updateTopology()
+        }
+        assertTrue(secondNode.id.id in exception.message.orEmpty(), exception.message)
+
+        // No new map anywhere, and the old topology stays
+        assertFalse(ShardSchema.shardTableExists(first), "Node ${firstNode.id.id}")
+        assertFalse(ShardSchema.shardTableExists(third))
+        assertSame(topology, cluster.getTopology())
+    }
+
+    @Test
+    fun testUpdateTopology_ShardTableCreatedAtTheSameMoment_SecondTryFindsIt() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val first = nodes.values.first()
+
+        // Another client is creating the table on the first node right now and hasn't committed yet
+        first.connection.use { otherClient ->
+            otherClient.autoCommit = false
+            otherClient.createStatement().use { statement ->
+                statement.execute(ShardSchema.CREATE_SHARD_TABLE_STATEMENT)
+            }
+
+            val cluster = Cluster(dataSources, emptyList())
+            val update = CompletableFuture.supplyAsync { cluster.updateTopology() }
+
+            // Our create waits for the other one, then loses on the catalog once it commits
+            waitUntil { dataSource.readInt(WAITING_SHARD_TABLE_CREATES) > 0 }
+            otherClient.commit()
+
+            update.get(30, TimeUnit.SECONDS)
+            assertEquals(ShardId.SHARD_COUNT, cluster.getTopology().shards.size)
+            assertEquals(ShardSchema.readShards(first), cluster.getTopology().shards)
+        }
+    }
+
+    @Test
     fun testUpdateTopology_NodeAddedLater_GetsQueues() {
         val queue = Queue.of("test", PredefinedDataTypes.Int)
         var nodes = listOf(dataSource, dataSourceFirstSchema)
@@ -244,6 +353,28 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertTrue(cluster.updateTopology().nodes.isEmpty())
     }
 
+    // Deletes from 50 to 150 random shards, and returns them
+    private fun deleteRandomShards(dataSource: DataSource): Set<ShardId> {
+        val shards = ShardId.SHARDS_RANGE.shuffled().take(Random.nextInt(50, 150))
+        dataSource.useStatement { statement: Statement ->
+            statement.execute(
+                """
+                delete from ${ShardSchema.SHARD_TABLE_NAME}
+                where ${ShardSchema.SHARD_COLUMN_NAME} in (${shards.joinToString(",")})
+                """.trimIndent()
+            )
+        }
+        return shards.map { ShardId.of(it) }.toSet()
+    }
+
+    private fun waitUntil(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+        while (!condition()) {
+            check(System.nanoTime() < deadline) { "The condition wasn't met in 30 seconds" }
+            Thread.sleep(20)
+        }
+    }
+
     private fun hasQueueTable(dataSource: DataSource, queue: Queue<*>): Boolean {
         return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
     }
@@ -273,5 +404,17 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val schema: String,
         val datasource: DataSource
     )
+
+    private companion object {
+        // Creates of q__shard in this database that wait for a lock
+        val WAITING_SHARD_TABLE_CREATES = """
+            select count(*)
+            from pg_stat_activity
+            where
+                datname = current_database() and
+                wait_event_type = 'Lock' and
+                position('create table if not exists ${ShardSchema.SHARD_TABLE_NAME}' in query) > 0
+        """.trimIndent()
+    }
 
 }

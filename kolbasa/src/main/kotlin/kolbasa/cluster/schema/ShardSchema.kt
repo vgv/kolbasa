@@ -6,9 +6,11 @@ import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.schema.SchemaExtractor
 import kolbasa.utils.JdbcHelpers.useStatement
 import kolbasa.utils.JdbcHelpers.withAutoCommit
 import java.sql.Statement
+import java.util.*
 import javax.sql.DataSource
 
 internal object ShardSchema {
@@ -20,7 +22,7 @@ internal object ShardSchema {
     const val CONSUMER_NODE_COLUMN_NAME = "consumer_node"
     const val NEXT_CONSUMER_NODE_COLUMN_NAME = "next_consumer_node"
 
-    private const val CREATE_SHARD_TABLE_STATEMENT = """
+    const val CREATE_SHARD_TABLE_STATEMENT = """
         create table if not exists $SHARD_TABLE_NAME(
             $SHARD_COLUMN_NAME int not null primary key,
             $PRODUCER_NODE_COLUMN_NAME varchar(${IdSchema.ID_COLUMN_LENGTH}) not null,
@@ -44,7 +46,20 @@ internal object ShardSchema {
             $SHARD_COLUMN_NAME
     """
 
+    /**
+     * Creates `q__shard`, unless it already exists
+     */
     fun createShardTable(dataSource: DataSource) {
+        try {
+            createShardTableOnce(dataSource)
+        } catch (_: Exception) {
+            // Another client created the table at the same moment, and our create lost on the catalog.
+            // Its table is committed by now, so the second try finds it and does nothing
+            createShardTableOnce(dataSource)
+        }
+    }
+
+    private fun createShardTableOnce(dataSource: DataSource) {
         val ddlStatements = listOf(
             CREATE_SHARD_TABLE_STATEMENT,
         )
@@ -80,6 +95,50 @@ internal object ShardSchema {
         dataSource.useStatement { statement ->
             statements.forEach { statement.execute(it) }
         }
+    }
+
+    /**
+     * Whether `q__shard` exists. The catalog answers it, so a failed read is never taken for a missing table
+     */
+    fun shardTableExists(dataSource: DataSource): Boolean {
+        return SchemaExtractor.extractRawSchema(dataSource, setOf(SHARD_TABLE_NAME)).containsKey(SHARD_TABLE_NAME)
+    }
+
+    /**
+     * Looks for the shard table on [nodes], in node order, and stops at the first one that has every shard.
+     *
+     * A node whose check or read fails stops the search with an exception that names the node. A failed read is
+     * not a missing table.
+     */
+    fun findShardTable(nodes: SortedMap<Node, DataSource>): ShardTableSearch {
+        var firstIncomplete: ShardTableSearch.Incomplete? = null
+
+        for ((node, dataSource) in nodes) {
+            val shards = try {
+                if (shardTableExists(dataSource))
+                    readShards(dataSource)
+                else
+                    null
+            } catch (e: Exception) {
+                throw IllegalStateException("Can't read $SHARD_TABLE_NAME on node ${node.id.id}", e)
+            }
+
+            if (shards == null) {
+                continue
+            }
+
+            if (shards.size == ShardId.SHARD_COUNT) {
+                return ShardTableSearch.Complete(node, dataSource, shards)
+            }
+
+            // A complete table on a later node still wins, so go on
+            if (firstIncomplete == null) {
+                firstIncomplete = ShardTableSearch.Incomplete(node, dataSource, shards.size)
+            }
+        }
+
+        // If there isn’t a single incomplete shard table - there is no shard table at all
+        return firstIncomplete ?: ShardTableSearch.Missing
     }
 
     fun readShards(dataSource: DataSource): Map<ShardId, Shard> {

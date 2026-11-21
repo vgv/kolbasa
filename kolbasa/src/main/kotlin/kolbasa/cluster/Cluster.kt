@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.cluster.schema.ShardTableSearch
 import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -205,24 +206,19 @@ class Cluster(
     }
 
     private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
-        // First, try to find a node with a 100% initialized shard table, if found, return it
-        for ((_, dataSource) in nodes) {
-            val shards = try {
-                ShardSchema.readShards(dataSource)
-            } catch (_: Exception) {
-                // Shard table doesn't exist
-                emptyMap()
-            }
+        val dataSource = when (val search = ShardSchema.findShardTable(nodes)) {
+            // Shard table found, nothing to do
+            is ShardTableSearch.Complete -> return search.shards
 
-            // Shard table is 100% initialized, return it
-            if (shards.size == ShardId.SHARD_COUNT) {
-                return shards
-            }
+            // The table lacks some shards. Add only them, to this same table, and keep the other rows:
+            // the messages of those shards are already stored on the nodes these rows name
+            is ShardTableSearch.Incomplete -> search.dataSource
+
+            // No table anywhere: a new cluster, the map goes to the node with the smallest id
+            ShardTableSearch.Missing -> nodes.values.first()
         }
 
-        // No fully initialized shard table found, let's create a
-        // fully initialized shard table on the node with the smallest id
-        val (_, dataSource) = nodes.entries.first()
+        // Only the missing shards get a random node
         ShardSchema.createShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         return ShardSchema.readShards(dataSource)
