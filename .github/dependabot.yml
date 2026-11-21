@@ -14,6 +14,9 @@ updates:
       # its patches
       - dependency-name: "io.micrometer:*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # The same for `opentelemetry`: the oldest OpenTelemetry the library supports
+      - dependency-name: "io.opentelemetry:*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

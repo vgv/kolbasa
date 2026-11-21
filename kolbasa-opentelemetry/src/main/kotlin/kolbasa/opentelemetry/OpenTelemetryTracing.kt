@@ -2,18 +2,13 @@ package kolbasa.opentelemetry
 
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.AttributesBuilder
-import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.*
 import io.opentelemetry.context.Context
-import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingAttributesExtractor
-import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingOperationType
-import io.opentelemetry.instrumentation.api.incubator.semconv.messaging.MessagingSpanNameExtractor
-import io.opentelemetry.instrumentation.api.instrumenter.AttributesExtractor
-import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter
-import io.opentelemetry.instrumentation.api.instrumenter.SpanKindExtractor
-import io.opentelemetry.instrumentation.api.internal.InstrumenterUtil
+import io.opentelemetry.context.propagation.TextMapPropagator
 import kolbasa.consumer.Message
+import kolbasa.producer.MessageResult
 import kolbasa.producer.SendResult
+import kolbasa.schema.NodeId
 import kolbasa.telemetry.tracing.ProcessCall
 import kolbasa.telemetry.tracing.ReceiveCall
 import kolbasa.telemetry.tracing.SendCall
@@ -67,43 +62,51 @@ class OpenTelemetryTracing(
     openTelemetry: OpenTelemetry
 ) : Tracing {
 
-    private val producerInstrumenter: Instrumenter<SendSpanInput, SendResult<*>> =
-        buildProducerInstrumenter(openTelemetry)
+    private val tracer: Tracer = openTelemetry.tracerProvider
+        .tracerBuilder(INSTRUMENTATION_NAME)
+        // Which version of the semantic conventions the names and attributes of the spans follow
+        .setSchemaUrl(SCHEMA_URL)
+        .build()
 
-    private val consumerInstrumenter: Instrumenter<ReceiveSpanInput, Unit> =
-        buildConsumerInstrumenter(openTelemetry)
-
-    private val processInstrumenter: Instrumenter<ProcessSpanInput, HandleResult> =
-        buildProcessInstrumenter(openTelemetry)
+    private val propagator: TextMapPropagator = openTelemetry.propagators.textMapPropagator
 
     override fun <Data> send(call: SendCall<Data>): SendResult<Data> {
-        val spanInput = SendSpanInput(call.queue.name, call.nodeId, call.request)
-        val parentContext = Context.current()
-        if (!producerInstrumenter.shouldStart(parentContext, spanInput)) {
-            return call.proceed(emptyMap())
-        }
+        val queueName = call.queue.name
+        val messageCount = call.request.data.size
+        val span = tracer.spanBuilder("$queueName publish")
+            .setSpanKind(SpanKind.PRODUCER)
+            .setMessagingAttributes(queueName, "publish")
+            .setBatchMessageCount(messageCount)
+            .setNodeId(call.nodeId)
+            .startSpan()
 
-        // Start instrumenting. It also writes the new span context into spanInput
-        val context = producerInstrumenter.start(parentContext, spanInput)
+        // The context of the new span goes into the messages, so the receiving side can find this span
+        val context = Context.current().with(span)
+        val traceContext = mutableMapOf<String, String>()
+        propagator.inject(context, traceContext, TraceContextSetter())
+
         val response = try {
             context.makeCurrent().use {
-                call.proceed(spanInput.traceContext)
+                call.proceed(traceContext)
             }
         } catch (e: Exception) {
-            producerInstrumenter.end(context, spanInput, null, e)
+            span.recordErrors(listOf(e))
+            span.end()
             throw e
         }
 
-        // A failed send doesn't throw, it returns its errors inside the response. Pass them on, so the span is marked
-        // as an error too. The instrumenter.end() takes only one error, the others should go to the span directly, e.g.
-        // 1) first exception goes to the instrumenter.end() call
-        // 2) other exceptions (if any) go to the span directly by span.recordException()
-        val errors = response.gatherExceptions()
-        val span = Span.fromContext(context)
-        for (i in 1 until errors.size) {
-            span.recordException(errors[i])
+        // Only for one message, as for receive and process: a batch has no single id.
+        // And only if it was sent - a duplicate or a failed message has no id
+        if (messageCount == 1) {
+            val result = response.messages.singleOrNull() as? MessageResult.Success<*>
+            if (result != null) {
+                span.setAttribute(MESSAGING_MESSAGE_ID, result.id.toString())
+            }
         }
-        producerInstrumenter.end(context, spanInput, response, errors.firstOrNull())
+
+        // A failed send doesn't throw, it returns its errors inside the response. They go to the span all the same
+        span.recordErrors(response.gatherExceptions())
+        span.end()
 
         return response
     }
@@ -114,34 +117,91 @@ class OpenTelemetryTracing(
             call.proceed()
         } catch (e: Exception) {
             // No messages, so the span has no links, only the error
-            makeConsumerSpan(call, emptyList(), e, start)
+            makeConsumerSpan(call = call, messages = emptyList(), error = e, start = start)
             throw e
         }
-        makeConsumerSpan(call, result, null, start)
+        makeConsumerSpan(call = call, messages = result, error = null, start = start)
 
         return result
     }
 
     override fun <Data> process(call: ProcessCall<Data>): HandleResult {
-        val parentContext = Context.current()
-        val callerSpanContext = Span.fromContext(parentContext).spanContext
-        val spanInput = ProcessSpanInput(call.queue.name, call.message, call.traceContext(), callerSpanContext)
-        if (!processInstrumenter.shouldStart(parentContext, spanInput)) {
-            return call.proceed()
+        // The process span has a parent, and it may have a link. Two spans decide them:
+        //   publish - the span that sent the message. Its trace context is stored with the message
+        //   job     - the span that was current when QueueProcessor.process() was called, e.g. a scheduled job
+        //
+        // A box inside a box is a child span. It is not inside in time: a message may be processed hours/days after it
+        // was sent.
+        //
+        // 1. Both spans are there. The parent is publish, and the link goes to job. So, looking at the processing
+        //    of a message, you can find the job that did it
+        //
+        //    ┌ publish ────────────────┐
+        //    │ ┌ process ────────────┐ │   link   ┌ job ────────────────────┐
+        //    │ │                     ├─┼─────────>│                         │
+        //    │ └─────────────────────┘ │          └─────────────────────────┘
+        //    └─────────────────────────┘
+        //
+        // 2. Only publish, e.g. in a QueueWorker thread. The parent is publish, there is no link
+        //
+        //    ┌ publish ────────────────┐
+        //    │ ┌ process ────────────┐ │
+        //    │ └─────────────────────┘ │
+        //    └─────────────────────────┘
+        //
+        // 3. Only job: the message was sent without tracing, or by the q_<queue>_put() SQL function. The parent is
+        //    job, so it needs no link
+        //
+        //    ┌ job ────────────────────┐
+        //    │ ┌ process ────────────┐ │
+        //    │ └─────────────────────┘ │
+        //    └─────────────────────────┘
+        //
+        // 4. Neither. The process span starts a new trace
+        //
+        //    ┌ process ────────────┐
+        //    └─────────────────────┘
+        val callerContext = Context.current()
+
+        // extract() reads the publish span from the message and puts it into the caller's context, in place of the
+        // job span (cases 1 and 2). A message without a trace context changes nothing: the job span stays the parent
+        // (case 3), or there is no parent at all (case 4)
+        val parentContext = propagator.extract(callerContext, call.traceContext(), TraceContextGetter())
+
+        val queueName = call.queue.name
+        val spanBuilder = tracer.spanBuilder("$queueName process")
+            .setParent(parentContext)
+            .setSpanKind(SpanKind.CONSUMER)
+            .setMessagingAttributes(queueName, "process")
+            .setAttribute(MESSAGING_MESSAGE_ID, call.message.id.toString())
+            .setAttribute(KOLBASA_MESSAGE_LAST_ATTEMPT, call.message.isLastAttempt())
+
+        // Case 1: the job span is there, but it is not the parent
+        val callerSpanContext = Span.fromContext(callerContext).spanContext
+        if (callerSpanContext.isValid && callerSpanContext != Span.fromContext(parentContext).spanContext) {
+            spanBuilder.addLink(callerSpanContext)
         }
 
-        // The instrumenter takes the sender's context from the message and makes it the parent. While the handler
-        // runs, the process span is the current one, so the handler's own spans become its children
-        val context = processInstrumenter.start(parentContext, spanInput)
+        // While the handler runs, the process span is the current one, so the handler's own spans become its children
+        val span = spanBuilder.startSpan()
         val result = try {
-            context.makeCurrent().use {
+            parentContext.with(span).makeCurrent().use {
                 call.proceed()
             }
         } catch (e: Exception) {
-            processInstrumenter.end(context, spanInput, null, e)
+            span.setAttribute(KOLBASA_PROCESS_RESULT, "failed")
+            span.recordErrors(listOf(e))
+            span.end()
             throw e
         }
-        processInstrumenter.end(context, spanInput, result, null)
+
+        // The same words as the counters of ProcessResult, which QueueProcessor.process() returns
+        val processResult = when (result) {
+            HandleResult.DONE -> "succeeded"
+            HandleResult.SKIP -> "skipped"
+        }
+        span.setAttribute(KOLBASA_PROCESS_RESULT, processResult)
+        span.end()
 
         return result
     }
@@ -160,146 +220,98 @@ class OpenTelemetryTracing(
         start: Instant
     ) {
         val end = Instant.now()
-        val parentContext = Context.current()
 
         // An empty poll with no span around it says nothing, see the class KDoc. A failed receive is not empty, it
         // always makes its span
         val isEmptyPoll = messages.isEmpty() && error == null
-        val hasParentSpan = Span.fromContext(parentContext).spanContext.isValid
+        val hasParentSpan = Span.current().spanContext.isValid
         if (isEmptyPoll && !hasParentSpan) {
             return
         }
 
-        val spanInput = ReceiveSpanInput(call.queue.name, call.nodeId, messages, messages.map(call::traceContext))
-        if (consumerInstrumenter.shouldStart(parentContext, spanInput)) {
-            InstrumenterUtil.startAndEnd(consumerInstrumenter, parentContext, spanInput, null, error, start, end)
+        val queueName = call.queue.name
+        val spanBuilder = tracer.spanBuilder("$queueName receive")
+            .setSpanKind(SpanKind.CONSUMER)
+            .setStartTimestamp(start)
+            .setMessagingAttributes(queueName, "receive")
+            .setBatchMessageCount(messages.size)
+            .setNodeId(call.nodeId)
+
+        // Only for one message, as for send and process: a batch has no single id
+        if (messages.size == 1) {
+            spanBuilder.setAttribute(MESSAGING_MESSAGE_ID, messages[0].id.toString())
+        }
+
+        // A link to the span that sent each message. A message sent without tracing has no context, so no link
+        messages.forEach { message ->
+            val senderContext = propagator.extract(Context.root(), call.traceContext(message), TraceContextGetter())
+            val senderSpanContext = Span.fromContext(senderContext).spanContext
+            if (senderSpanContext.isValid) {
+                spanBuilder.addLink(senderSpanContext)
+            }
+        }
+
+        val span = spanBuilder.startSpan()
+        if (error != null) {
+            span.recordErrors(listOf(error))
+        }
+        span.end(end)
+    }
+
+    // The attributes every span has: who made it, which queue, and what was done
+    private fun SpanBuilder.setMessagingAttributes(queueName: String, operation: String): SpanBuilder {
+        return setAttribute(MESSAGING_SYSTEM, "kolbasa")
+            .setAttribute(MESSAGING_DESTINATION_NAME, queueName)
+            .setAttribute(MESSAGING_OPERATION, operation)
+    }
+
+    // Only for a batch: one message has its id instead
+    private fun SpanBuilder.setBatchMessageCount(messageCount: Int): SpanBuilder {
+        return if (messageCount > 1) {
+            setAttribute(MESSAGING_BATCH_MESSAGE_COUNT, messageCount.toLong())
+        } else {
+            this
         }
     }
 
-    private fun buildProducerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<SendSpanInput, SendResult<*>> {
-        val getter = SendSpanAttributesGetter()
-        val operationType = MessagingOperationType.SEND
-        // Name of our own method, goes to "messaging.operation.name"
-        val operationName = "send"
-
-        val spanNameExtractor = MessagingSpanNameExtractor.create(getter, operationType, operationName)
-
-        val messagingAttributesExtractor =
-            MessagingAttributesExtractor.create(getter, operationType, operationName)
-
-        val nodeIdAttributesExtractor = object : AttributesExtractor<SendSpanInput, SendResult<*>> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: SendSpanInput) {
-                if (request.nodeId.id.isNotEmpty()) {
-                    attributes.put(NODE_ID_ATTRIBUTE_KEY, request.nodeId.id)
-                }
-            }
-
-            override fun onEnd(
-                attributes: AttributesBuilder,
-                context: Context,
-                request: SendSpanInput,
-                response: SendResult<*>?,
-                error: Throwable?
-            ) {
-            }
+    // Only in a cluster: outside of one, the node id is empty
+    private fun SpanBuilder.setNodeId(nodeId: NodeId): SpanBuilder {
+        return if (nodeId.id.isNotEmpty()) {
+            setAttribute(KOLBASA_NODE_ID, nodeId.id)
+        } else {
+            this
         }
-
-        return Instrumenter.builder<SendSpanInput, SendResult<*>>(
-            openTelemetry,
-            "kolbasa",
-            spanNameExtractor
-        )
-            .addAttributesExtractor(messagingAttributesExtractor)
-            .addAttributesExtractor(nodeIdAttributesExtractor)
-            .buildProducerInstrumenter(TraceContextSetter())
     }
 
-    private fun buildConsumerInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ReceiveSpanInput, Unit> {
-        val getter = ReceiveSpanAttributesGetter()
-        val operationType = MessagingOperationType.RECEIVE
-        // Name of our own method, goes to "messaging.operation.name"
-        val operationName = "receive"
-
-        val messagingAttributesExtractor = MessagingAttributesExtractor.create(getter, operationType, operationName)
-
-        val nodeIdAttributesExtractor = object : AttributesExtractor<ReceiveSpanInput, Unit> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ReceiveSpanInput) {
-                if (request.nodeId.id.isNotEmpty()) {
-                    attributes.put(NODE_ID_ATTRIBUTE_KEY, request.nodeId.id)
-                }
-            }
-
-            override fun onEnd(
-                attributes: AttributesBuilder,
-                context: Context,
-                request: ReceiveSpanInput,
-                response: Unit?,
-                error: Throwable?
-            ) {
-            }
+    // Each error becomes an "exception" event of the span, and one error is enough to mark the whole span as failed
+    private fun Span.recordErrors(errors: List<Throwable>) {
+        if (errors.isEmpty()) {
+            return
         }
 
-        return Instrumenter.builder<ReceiveSpanInput, Unit>(
-            openTelemetry,
-            "kolbasa",
-            MessagingSpanNameExtractor.create(getter, operationType, operationName)
-        )
-            .addSpanLinksExtractor(
-                ReceiveSpanLinksExtractor(
-                    openTelemetry.propagators.textMapPropagator,
-                    TraceContextGetter()
-                )
-            )
-            .addAttributesExtractor(messagingAttributesExtractor)
-            .addAttributesExtractor(nodeIdAttributesExtractor)
-            .buildInstrumenter(SpanKindExtractor.alwaysConsumer())
-    }
-
-    private fun buildProcessInstrumenter(openTelemetry: OpenTelemetry): Instrumenter<ProcessSpanInput, HandleResult> {
-        val getter = ProcessSpanAttributesGetter()
-        val operationType = MessagingOperationType.PROCESS
-        // Name of the operation, goes to "messaging.operation.name"
-        val operationName = "process"
-
-        // Whether this is the message's last attempt, and how the handling ended
-        val processAttributesExtractor = object : AttributesExtractor<ProcessSpanInput, HandleResult> {
-            override fun onStart(attributes: AttributesBuilder, parentContext: Context, request: ProcessSpanInput) {
-                attributes.put(LAST_ATTEMPT_ATTRIBUTE_KEY, request.message.isLastAttempt())
-            }
-
-            override fun onEnd(
-                attributes: AttributesBuilder,
-                context: Context,
-                request: ProcessSpanInput,
-                response: HandleResult?,
-                error: Throwable?
-            ) {
-                // The same words as in ProcessResult
-                val result = when {
-                    error != null -> "failed"
-                    response == HandleResult.DONE -> "succeeded"
-                    response == HandleResult.SKIP -> "skipped"
-                    else -> return
-                }
-                attributes.put(PROCESS_RESULT_ATTRIBUTE_KEY, result)
-            }
-        }
-
-        return Instrumenter.builder<ProcessSpanInput, HandleResult>(
-            openTelemetry,
-            "kolbasa",
-            MessagingSpanNameExtractor.create(getter, operationType, operationName)
-        )
-            .addSpanLinksExtractor(ProcessSpanLinksExtractor())
-            .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operationType, operationName))
-            .addAttributesExtractor(processAttributesExtractor)
-            // A consumer span whose parent comes from the message
-            .buildConsumerInstrumenter(ProcessTraceContextGetter())
+        errors.forEach { error -> recordException(error) }
+        setStatus(StatusCode.ERROR)
     }
 
     companion object {
-        private val NODE_ID_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.node.id")
-        private val PROCESS_RESULT_ATTRIBUTE_KEY = AttributeKey.stringKey("kolbasa.process.result")
-        private val LAST_ATTEMPT_ATTRIBUTE_KEY= AttributeKey.booleanKey("kolbasa.message.last_attempt")
+        // The name of the tracer, it shows up in every span
+        private const val INSTRUMENTATION_NAME = "kolbasa"
+
+        // The semantic conventions 1.24.0, with the old names for messaging. On purpose: the OpenTelemetry Java
+        // instrumentations (Kafka, RabbitMQ...) still emit these names by default, so in one application our spans
+        // look like theirs. They move to the new names in their version 3.0, and we should move with them
+        private const val SCHEMA_URL = "https://opentelemetry.io/schemas/1.24.0"
+
+        // Attributes from the semantic conventions for messaging
+        private val MESSAGING_SYSTEM = AttributeKey.stringKey("messaging.system")
+        private val MESSAGING_DESTINATION_NAME = AttributeKey.stringKey("messaging.destination.name")
+        private val MESSAGING_OPERATION = AttributeKey.stringKey("messaging.operation")
+        private val MESSAGING_MESSAGE_ID = AttributeKey.stringKey("messaging.message.id")
+        private val MESSAGING_BATCH_MESSAGE_COUNT = AttributeKey.longKey("messaging.batch.message_count")
+
+        // Our own attributes
+        private val KOLBASA_NODE_ID = AttributeKey.stringKey("kolbasa.node.id")
+        private val KOLBASA_PROCESS_RESULT = AttributeKey.stringKey("kolbasa.process.result")
+        private val KOLBASA_MESSAGE_LAST_ATTEMPT = AttributeKey.booleanKey("kolbasa.message.last_attempt")
     }
 }

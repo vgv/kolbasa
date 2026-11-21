@@ -24,10 +24,6 @@ dependencies {
     // OpenTelemetryTracing takes an OpenTelemetry instance, so the API is a part of this module's API
     api(libs.opentelemetry.api)
 
-    // Used only inside
-    implementation(libs.opentelemetry.instrumentation.api)
-    implementation(libs.opentelemetry.instrumentation.api.incubator)
-
     // Test
     // Which PostgreSQL versions we test against, plus JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))

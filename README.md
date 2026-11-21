@@ -39,14 +39,16 @@ version 10 and above.
 
 ## How to add Kolbasa into your project
 ```groovy
-implementation "io.github.vgv:kolbasa:0.230.0"
+implementation "io.github.vgv:kolbasa:0.234.0"
 ```
 
 ### OpenTelemetry (optional)
 To trace sends and receives with OpenTelemetry, add one more artifact, with the same version as `kolbasa`:
 ```groovy
-implementation "io.github.vgv:kolbasa-opentelemetry:0.230.0"
+implementation "io.github.vgv:kolbasa-opentelemetry:0.234.0"
 ```
+It needs OpenTelemetry 1.12 or newer and works with the version your application already has.
+
 Then turn it on once, at startup:
 ```kotlin
 Kolbasa.tracing = OpenTelemetryTracing(openTelemetry)
