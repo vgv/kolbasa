@@ -117,8 +117,9 @@ class Cluster(
      * Reads the cluster topology once, right now, and returns when it is done.
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
-     * creates or updates them on every node. If no node has a complete shard map yet, this method builds one and
-     * stores it, which is how a fresh cluster is initialized.
+     * creates or updates them on every node. If no node has a shard map yet, this method builds one on the node with
+     * the smallest id, which is how a fresh cluster is initialized. If the map lacks some shards, the method adds
+     * them, and the shards that are there keep their nodes.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -132,7 +133,8 @@ class Cluster(
      * After a failure the new topology is in use anyway, and every next update runs the schema again, until all
      * statements go through.
      *
-     * Other failures throw, a node that is down for example. Then the old topology stays.
+     * Other failures throw, a node that is down for example, or a shard map that can't be read. Then the old topology
+     * stays.
      */
     @Synchronized
     fun updateTopology(): ClusterSchemaResult {

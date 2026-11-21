@@ -296,8 +296,10 @@ cached snapshot of this table, which all the routing below consults. Three thing
 managed:
 
 - **It lives on one node, not all of them.** The table is authoritative and unreplicated. When a `Cluster` starts, it scans the
-  nodes for a fully-initialized `q__shard` (all 1024 rows); if none exists yet, it creates one on the node with the lowest node id and
-  seeds all 1024 shards, each assigned to a **random** node in a stable state.
+  nodes for a complete `q__shard` (all 1024 rows) and uses the first one it finds. If no node has the table at all, it creates one
+  on the node with the lowest node id and seeds all 1024 shards, each assigned to a **random** node in a stable state. If the
+  table is there but lacks some shards, it adds just the missing ones, with random nodes, to that same table. The other rows keep
+  their nodes. If a node's `q__shard` can't be read, the refresh fails: a failed read is never taken for a missing table.
 - **Clients discover the topology by polling.** That cached snapshot is refreshed on a timer — every
   `ClusterTopologyUpdaterOptions.interval` (default **1 minute**). There is no push or live subscription. The practical
   consequence: after an operator changes ownership (a migration step), it takes up to one refresh interval for every client to
