@@ -48,7 +48,7 @@ the forked test JVM, and only the `testPg_*` tasks pass it through.
 
 **Changing SQL or schema generation? Run `./gradlew testBoundaryPgVersions`** — the whole `@unit-db`
 suite against the first and last patch of every supported major. kolbasa supports PostgreSQL 10
-through 18, and the single random image a plain `test` run picks proves very little about that span.
+through 19, and the single random image a plain `test` run picks proves very little about that span.
 
 Toolchain: JVM 17, Kotlin API/language level 2.1, JUnit 6.
 

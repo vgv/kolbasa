@@ -177,7 +177,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
      * Hands all 1024 shards to [nodes], which is one node when a skewed cluster is what the test needs
      */
     private fun seedShardTable(nodes: List<Node>) {
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
     }
 

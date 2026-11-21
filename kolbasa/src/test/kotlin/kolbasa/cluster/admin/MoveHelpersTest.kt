@@ -6,10 +6,12 @@ import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.sql.Statement
 import kotlin.IllegalStateException
 
 class MoveHelpersTest : AbstractPostgreSQLTest() {
@@ -18,7 +20,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     fun testReadShards_Success() {
         // Create shard table on the second node
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
-        ShardSchema.createShardTable(dataSourceFirstSchema)
+        ShardSchema.createOrUpdateShardTable(dataSourceFirstSchema)
         ShardSchema.fillShardTable(dataSourceFirstSchema, nodes.keys.toList())
         val expectedShardTable = ShardSchema.readShards(dataSourceFirstSchema)
 
@@ -36,6 +38,25 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         assertThrows<ClusterOperationException.ExecutionException> {
             MoveHelpers.readShards(nodes)
         }
+    }
+
+    @Test
+    fun testReadShards_ReadFails() {
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val (node, nodeDataSource) = nodes.entries.first { it.value == dataSourceFirstSchema }
+        ShardSchema.createOrUpdateShardTable(nodeDataSource)
+        ShardSchema.fillShardTable(nodeDataSource, nodes.keys.toList())
+        nodeDataSource.useStatement { statement: Statement ->
+            statement.execute(
+                "alter table ${ShardSchema.SHARD_TABLE_NAME} rename column ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} to broken"
+            )
+        }
+
+        val exception = assertThrows<ClusterOperationException.ExecutionException> {
+            MoveHelpers.readShards(nodes)
+        }
+        // A failed read must not look like a missing table: that one says "not found" instead
+        assertTrue("Can't read ${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}" in exception.message, exception.message)
     }
 
     @Test

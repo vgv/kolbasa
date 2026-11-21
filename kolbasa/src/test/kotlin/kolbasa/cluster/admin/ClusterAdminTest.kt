@@ -153,7 +153,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
     private fun seedShardTable(dataSources: List<DataSource>) {
         val nodes = ClusterHelper.readNodes(dataSources)
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
     }
 

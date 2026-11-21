@@ -1,6 +1,9 @@
 # PostgreSQL images for the test matrix. One image per line.
 # Blank lines and lines starting with '#' are ignored.
 
+# 19.x
+postgres:19.0-alpine
+
 # 18.x
 postgres:18.0-alpine
 postgres:18.1-alpine
