@@ -4,9 +4,8 @@ import kolbasa.consumer.sweep.SweepConfig
 import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.sql.SqlDumpConfig
 import kolbasa.telemetry.tracing.Tracing
-import kolbasa.utils.DaemonThreadFactory
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import kolbasa.utils.Threads
+import java.util.concurrent.Executor
 
 /**
  * Global, process-wide Kolbasa settings.
@@ -80,22 +79,32 @@ object Kolbasa {
     var tracing: Tracing = Tracing.NONE
 
     /**
-     * Default executor for async operations
-     *
-     * By default, it's a single-thread executor because
-     * 1) It looks like a good idea to keep time order of operations
-     * 2) 99% of Kolbasa usage will work when many clients are connected to several real PostgreSQL servers, so there is no point
-     *    in increasing parallelism for one client, many clients will create many simultaneous requests to several servers anyway.
-     *    For cases when you know exactly your use case, for example, one producer for a cluster of PostgreSQL servers,
-     *    each containing a few physical disks, you can configure the required parallelism accordingly.
-     *
-     * If you want to use a custom executor for a specific [Producer][kolbasa.producer.datasource.Producer] or
-     * [Mutator][kolbasa.mutator.datasource.Mutator], please look at
+     * Executor for every `sendAsync()` and `mutateAsync()` call that doesn't set its own in
+     * [SendOptions.asyncExecutor][kolbasa.producer.SendOptions.asyncExecutor],
      * [ProducerOptions.asyncExecutor][kolbasa.producer.ProducerOptions.asyncExecutor] or
-     * [MutatorOptions.asyncExecutor][kolbasa.mutator.MutatorOptions.asyncExecutor]
+     * [MutatorOptions.asyncExecutor][kolbasa.mutator.MutatorOptions.asyncExecutor].
+     *
+     * The default is one background (daemon) thread for the whole JVM. The calls run on it one by one, in the order
+     * they were made. The thread starts with the first call and ends after a minute without calls; the next call
+     * starts it again. One thread is enough for most applications: the parallelism comes from many clients working at
+     * once, not from one client.
+     *
+     * Know what this default means:
+     * - All these calls share the thread. A call that hangs, for example on a node that doesn't answer, holds up all
+     *   the others, for as long as the connection and socket timeouts allow.
+     * - The queue of the thread has no limit. If you call `sendAsync()` faster than the database takes the messages,
+     *   they pile up in memory.
+     * - Nobody shuts the executor down. When the JVM exits, the calls still in the queue are lost, and their futures
+     *   never complete.
+     *
+     * If async calls matter to your application, set your own executor here, once, at startup: with the number of
+     * threads, the queue limit and the monitoring you need, and shut it down when your application stops. Any
+     * [Executor] fits, Spring's `TaskExecutor` too.
+     *
+     * Read on every async call, so a change takes effect on the next call.
      */
     @JvmStatic
     @Volatile
-    var asyncExecutor: ExecutorService = Executors.newSingleThreadExecutor(DaemonThreadFactory("kolbasa-async"))
+    var asyncExecutor: Executor = Threads.newAsyncExecutor()
 
 }

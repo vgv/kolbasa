@@ -1,11 +1,10 @@
 package kolbasa.worker
 
+import kolbasa.utils.NonDaemonThreadFactory
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Processes a queue in the background: starts [QueueWorkerOptions.threads] threads, and every thread calls
@@ -80,7 +79,7 @@ class QueueWorker @JvmOverloads constructor(
         }
         state = State.RUNNING
 
-        val threadFactory = options.threadFactory ?: WorkerThreadFactory(processor.queue.name)
+        val threadFactory = options.threadFactory ?: NonDaemonThreadFactory("kolbasa-worker-${processor.queue.name}")
         threads = List(options.threads) { threadFactory.newThread(::loop) }
         threads.forEach(Thread::start)
     }
@@ -109,7 +108,7 @@ class QueueWorker @JvmOverloads constructor(
             try {
                 // At least one millisecond, because join(0) waits forever
                 thread.join(TimeUnit.NANOSECONDS.toMillis(left).coerceAtLeast(1))
-            } catch (e: InterruptedException) {
+            } catch (_: InterruptedException) {
                 // The thread that waits was interrupted: stop waiting, and keep the interruption for its owner
                 Thread.currentThread().interrupt()
                 break
@@ -178,20 +177,5 @@ class QueueWorker @JvmOverloads constructor(
 
     private companion object {
         const val JITTER = 0.2
-    }
-}
-
-/**
- * Ordinary (not daemon) threads named `kolbasa-worker-<queue>-<number>`, the default of
- * [QueueWorkerOptions.threadFactory].
- */
-private class WorkerThreadFactory(private val queueName: String) : ThreadFactory {
-
-    override fun newThread(r: Runnable): Thread {
-        return Thread(r, "kolbasa-worker-$queueName-${counter.incrementAndGet()}")
-    }
-
-    private companion object {
-        val counter = AtomicInteger(0)
     }
 }

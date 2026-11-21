@@ -4,7 +4,7 @@ import kolbasa.queue.Checks
 import kolbasa.telemetry.metrics.MetricsConfig
 import kolbasa.telemetry.tracing.Tracing
 import java.time.Duration
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 
 /**
  * Configuration options for a [Producer][kolbasa.producer.datasource.Producer] instance.
@@ -148,10 +148,10 @@ data class ProducerOptions(
      * Executor used to send messages asynchronously in [Producer][kolbasa.producer.datasource.Producer] sendAsync() methods.
      *
      * If you need to customize the executor for a specific [Producer][kolbasa.producer.datasource.Producer], you can
-     * provide your own [ExecutorService]. If you don't provide a custom executor, producer will use the global,
+     * provide your own [Executor]. If you don't provide a custom executor, producer will use the global,
      * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
      */
-    val asyncExecutor: ExecutorService? = null,
+    val asyncExecutor: Executor? = null,
 
     /**
      * Tracing for this producer. By default, the value is unspecified (null), meaning that global
@@ -185,7 +185,7 @@ data class ProducerOptions(
         private var deduplicationMode: DeduplicationMode = DeduplicationMode.FAIL_ON_DUPLICATE
         private var chunkSize: Int = DEFAULT_CHUNK_SIZE
         private var partialInsert: PartialInsert = PartialInsert.UNTIL_FIRST_FAILURE
-        private var asyncExecutor: ExecutorService? = null
+        private var asyncExecutor: Executor? = null
         private var tracing: Tracing? = null
         private var metricsConfig: MetricsConfig? = null
 
@@ -222,7 +222,7 @@ data class ProducerOptions(
         /**
          * Sets [ProducerOptions.asyncExecutor] – the executor used by this producer's sendAsync() methods.
          */
-        fun asyncExecutor(asyncExecutor: ExecutorService) = apply { this.asyncExecutor = asyncExecutor }
+        fun asyncExecutor(asyncExecutor: Executor) = apply { this.asyncExecutor = asyncExecutor }
 
         /**
          * Sets [ProducerOptions.tracing] – the tracing of this producer, used instead of the global one.
