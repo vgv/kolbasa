@@ -29,7 +29,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testCreateShardTableAndFill_FromEmptyToFull() {
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
 
         // Table just created, should be empty
         val empty = ShardSchema.readShards(dataSource)
@@ -43,7 +43,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testCreateShardTableAndFill_TestShardsOutOfBounds() {
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
 
         // insert additional shards with invalid shard numbers
@@ -71,7 +71,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testCreateShardTableAndFill_FromNotSoEmptyToFull() {
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
 
         // Check that shards table is full

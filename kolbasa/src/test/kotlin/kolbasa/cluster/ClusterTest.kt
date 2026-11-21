@@ -185,7 +185,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val (first, second, third) = nodes.values.toList()
 
         // An incomplete table on the second node, not on the one with the smallest id
-        ShardSchema.createShardTable(second)
+        ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.fillShardTable(second, nodes.keys.toList())
         val before = ShardSchema.readShards(second)
         val deleted = deleteRandomShards(second)
@@ -211,10 +211,10 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val (first, second, _) = nodes.values.toList()
 
         // An incomplete table on the first node, a complete one on the second
-        ShardSchema.createShardTable(first)
+        ShardSchema.createOrUpdateShardTable(first)
         ShardSchema.fillShardTable(first, nodes.keys.toList())
         val deleted = deleteRandomShards(first)
-        ShardSchema.createShardTable(second)
+        ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.fillShardTable(second, nodes.keys.toList())
 
         val cluster = Cluster(dataSources, emptyList())
@@ -233,7 +233,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val (first, second, third) = nodes.values.toList()
 
         // The map lives on the second node
-        ShardSchema.createShardTable(second)
+        ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.fillShardTable(second, nodes.keys.toList())
 
         val cluster = Cluster(dataSources, emptyList())

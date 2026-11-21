@@ -208,22 +208,30 @@ class Cluster(
     }
 
     private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
-        val dataSource = when (val search = ShardSchema.findShardTable(nodes)) {
-            // Shard table found, nothing to do
-            is ShardTableSearch.Complete -> return search.shards
+        when (val search = ShardSchema.findShardTable(nodes)) {
+            // Shard table found, only its schema may need an update
+            is ShardTableSearch.Complete -> {
+                ShardSchema.createOrUpdateShardTable(search.dataSource)
+                return search.shards
+            }
 
             // The table lacks some shards. Add only them, to this same table, and keep the other rows:
-            // the messages of those shards are already stored on the nodes these rows name
-            is ShardTableSearch.Incomplete -> search.dataSource
+            // the messages of those shards are already stored on the nodes these rows name.
+            // The new rows get the current time as their revision
+            is ShardTableSearch.Incomplete -> {
+                ShardSchema.createOrUpdateShardTable(search.dataSource)
+                ShardSchema.fillShardTable(search.dataSource, nodes.keys.toList())
+                return ShardSchema.readShards(search.dataSource)
+            }
 
             // No table anywhere: a new cluster, the map goes to the node with the smallest id
-            ShardTableSearch.Missing -> nodes.values.first()
+            ShardTableSearch.Missing -> {
+                val dataSource = nodes.values.first()
+                ShardSchema.createOrUpdateShardTable(dataSource)
+                ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), firstMap = true)
+                return ShardSchema.readShards(dataSource)
+            }
         }
-
-        // Only the missing shards get a random node
-        ShardSchema.createShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
-        return ShardSchema.readShards(dataSource)
     }
 
     private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): ClusterSchemaResult {

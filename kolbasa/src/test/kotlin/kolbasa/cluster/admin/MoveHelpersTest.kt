@@ -20,7 +20,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     fun testReadShards_Success() {
         // Create shard table on the second node
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
-        ShardSchema.createShardTable(dataSourceFirstSchema)
+        ShardSchema.createOrUpdateShardTable(dataSourceFirstSchema)
         ShardSchema.fillShardTable(dataSourceFirstSchema, nodes.keys.toList())
         val expectedShardTable = ShardSchema.readShards(dataSourceFirstSchema)
 
@@ -44,7 +44,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     fun testReadShards_ReadFails() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val (node, nodeDataSource) = nodes.entries.first { it.value == dataSourceFirstSchema }
-        ShardSchema.createShardTable(nodeDataSource)
+        ShardSchema.createOrUpdateShardTable(nodeDataSource)
         ShardSchema.fillShardTable(nodeDataSource, nodes.keys.toList())
         nodeDataSource.useStatement { statement: Statement ->
             statement.execute(
