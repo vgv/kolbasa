@@ -3,14 +3,15 @@ package kolbasa.schema
 import kolbasa.producer.ShardId
 import kotlin.random.Random
 
-internal data class Node(
+internal class Node(
     val id: NodeId,
     val identifiersBucket: Int
 ) : Comparable<Node> {
 
-    override fun compareTo(other: Node): Int {
-        return this.id.compareTo(other.id)
-    }
+    override fun compareTo(other: Node): Int = id.compareTo(other.id)
+    override fun equals(other: Any?): Boolean = other is Node && id == other.id
+    override fun hashCode(): Int = id.hashCode()
+    override fun toString(): String = "node[${id.id},$identifiersBucket]"
 
     companion object {
         const val MIN_BUCKET = ShardId.MIN_SHARD

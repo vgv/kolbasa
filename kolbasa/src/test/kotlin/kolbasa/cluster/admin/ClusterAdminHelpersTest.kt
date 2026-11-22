@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.postgresql.ds.PGSimpleDataSource
+import javax.sql.DataSource
 
 class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
 
@@ -41,8 +42,8 @@ class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
         )
 
         assertEquals(listOf(NodeId("node-01"), NodeId("node-02")), setUp)
-        assertEquals(Node(NodeId("node-01"), Node.MIN_BUCKET), IdSchema.readNodeInfo(dataSource))
-        assertEquals(Node(NodeId("node-02"), Node.MIN_BUCKET + 1), IdSchema.readNodeInfo(dataSourceFirstSchema))
+        assertNodeInfo(dataSource, "node-01", Node.MIN_BUCKET)
+        assertNodeInfo(dataSourceFirstSchema, "node-02", Node.MIN_BUCKET + 1)
     }
 
     @Test
@@ -52,7 +53,7 @@ class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
         val setUp = ClusterAdminHelpers.checkNodeIds(mapOf(NodeId("node-01") to dataSource))
 
         assertEquals(emptyList<NodeId>(), setUp)
-        assertEquals(Node(NodeId("node-01"), 5), IdSchema.readNodeInfo(dataSource))
+        assertNodeInfo(dataSource, "node-01", 5)
     }
 
     @Test
@@ -63,7 +64,7 @@ class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
             mapOf(NodeId("node-01") to dataSource, NodeId("node-02") to dataSourceFirstSchema)
         )
 
-        assertEquals(Node(NodeId("node-02"), Node.MIN_BUCKET + 1), IdSchema.readNodeInfo(dataSourceFirstSchema))
+        assertNodeInfo(dataSourceFirstSchema, "node-02", Node.MIN_BUCKET + 1)
     }
 
     @Test
@@ -100,5 +101,12 @@ class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
         }
 
         assertEquals(mapOf(NodeId("node-02") to NodeId("node-01")), exception.mismatches)
+    }
+
+    // Both the id and the bucket: Node.equals compares the id only
+    private fun assertNodeInfo(dataSource: DataSource, id: String, bucket: Int) {
+        val node = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        assertEquals(NodeId(id), node.id)
+        assertEquals(bucket, node.identifiersBucket)
     }
 }

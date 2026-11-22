@@ -106,7 +106,9 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         )
 
         // The same owners with a newer revision
-        val updatedShards = shards.mapValues { (_, shard) -> shard.copy(revision = Instant.now()) }
+        val updatedShards = shards.mapValues { (_, shard) ->
+            Shard(shard.shard, shard.producerNode, shard.consumerNode, shard.nextConsumerNode, Instant.now())
+        }
 
         val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
         assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
@@ -125,10 +127,12 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         val randomShardToChange = shards.keys.random()
         val updatedShards = shards.mapValues { (shardNumber, shard) ->
             if (shardNumber == randomShardToChange) {
-                shard.copy(
+                Shard(
+                    shard = shard.shard,
                     producerNode = NodeId("another_node_${shardNumber.id}"),
                     consumerNode = null,
                     nextConsumerNode = NodeId("another_node_${shardNumber.id}"),
+                    revision = shard.revision
                 )
             } else {
                 shard

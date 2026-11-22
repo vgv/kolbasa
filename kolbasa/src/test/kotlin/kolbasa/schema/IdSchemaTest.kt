@@ -37,7 +37,10 @@ class IdSchemaTest : AbstractPostgreSQLTest() {
         val created = IdSchema.createAndInitIdTable(dataSource, NodeId("node-01"), identifierBucket = 7)
 
         assertTrue(created)
-        assertEquals(Node(NodeId("node-01"), 7), IdSchema.readNodeInfo(dataSource))
+        // Both the id and the bucket: Node.equals compares the id only
+        val node = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        assertEquals(NodeId("node-01"), node.id)
+        assertEquals(7, node.identifiersBucket)
     }
 
     @Test

@@ -16,7 +16,7 @@ package kolbasa.schema
  *
  * See [Cluster architecture](https://github.com/vgv/kolbasa/blob/main/docs/Cluster%20architecture.md).
  */
-data class NodeId(val id: String) : Comparable<NodeId> {
+class NodeId(val id: String) : Comparable<NodeId> {
 
     override fun compareTo(other: NodeId): Int = id.compareTo(other.id)
     override fun equals(other: Any?): Boolean = other is NodeId && id == other.id
