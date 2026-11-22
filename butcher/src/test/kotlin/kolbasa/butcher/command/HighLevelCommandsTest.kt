@@ -50,7 +50,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val crowdedNode = nodeIds().first()
         giveEveryShardTo(crowdedNode)
 
-        val result = cli().test("rebalance-cluster --shards-per-round=200 --yes ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=200 --yes")
 
         assertEquals(0, result.statusCode, result.output)
         // 1024 shards over 3 nodes leaves 682 to move: four rounds of at most 200
@@ -65,9 +65,9 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     @Test
     fun testRebalanceClusterOnABalancedClusterDoesNothing() {
         giveEveryShardTo(nodeIds().first())
-        cli().test("rebalance-cluster --shards-per-round=1024 --yes ${config().absolutePath}")
+        cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=1024 --yes")
 
-        val result = cli().test("rebalance-cluster --shards-per-round=200 --yes ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=200 --yes")
 
         assertEquals(0, result.statusCode, result.output)
         // Not a single round: there was nothing to agree to and nothing to do
@@ -84,7 +84,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
         // No --yes and no terminal: a question would fail with "no terminal"
         listOf("rebalance-cluster", "drain-nodes --nodes=${drainedNode.id}").forEach { command ->
-            val result = cli().test("$command ${config().absolutePath}")
+            val result = cli().test("-c ${config().absolutePath} $command")
 
             assertEquals(1, result.statusCode, result.output)
             assertTrue(result.output.contains("The shard map is not complete"), result.output)
@@ -97,7 +97,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val drainedNode = nodeIds().first()
 
         val result = cli().test(
-            "drain-nodes --nodes=${drainedNode.id} --shards-per-round=300 --yes ${config().absolutePath}"
+            "-c ${config().absolutePath} drain-nodes --nodes=${drainedNode.id} --shards-per-round=300 --yes"
         )
 
         assertEquals(0, result.statusCode, result.output)
@@ -114,8 +114,8 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val (stayingNode, drainedNodes) = nodeIds().let { it.first() to it.drop(1) }
 
         val result = cli().test(
-            "drain-nodes --nodes=${drainedNodes.joinToString(",") { it.id }} --shards-per-round=300 --yes " +
-                config().absolutePath
+            "-c ${config().absolutePath} drain-nodes --nodes=${drainedNodes.joinToString(",") { it.id }} " +
+                "--shards-per-round=300 --yes"
         )
 
         assertEquals(0, result.statusCode, result.output)
@@ -128,7 +128,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testDrainNodesRefusesANodeTheClusterDoesNotHave() {
-        val result = cli().test("drain-nodes --nodes=node-404 --shards-per-round=10 --yes ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} drain-nodes --nodes=node-404 --shards-per-round=10 --yes")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("node-404"), result.output)
@@ -141,7 +141,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         // Names that are not the nodes' own ids, the way every config file had them before
         val config = config(publicId = "line-1", firstId = "line-2", secondId = "line-3")
 
-        val result = cli().test("rebalance-cluster --shards-per-round=10 --yes ${config.absolutePath}")
+        val result = cli().test("-c ${config.absolutePath} rebalance-cluster --shards-per-round=10 --yes")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("Node ids don't match"), result.output)
@@ -157,7 +157,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         }
         val config = config().apply { appendText(configLine("node-four", "node_four")) }
 
-        val result = cli().test("check-cluster ${config.absolutePath}")
+        val result = cli().test("-c ${config.absolutePath} check-cluster")
 
         assertEquals(0, result.statusCode, result.output)
         assertTrue(result.output.contains("Initialized node node-four"), result.output)
@@ -172,11 +172,11 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val target = nodeWithout(shard = 5)
         // A hand-driven migration, prepared and deliberately not finished
         val prepared = cli().test(
-            "prepare-migration --target=${target.id} --shards=5 --yes ${config().absolutePath}"
+            "-c ${config().absolutePath} prepare-migration --target=${target.id} --shards=5 --yes"
         )
         assertEquals(0, prepared.statusCode, prepared.output)
 
-        val result = cli().test("rebalance-cluster --shards-per-round=10 --yes ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=10 --yes")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("already migrating"), result.output)
@@ -190,7 +190,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         // An even cluster has no plan at all, so the refusal has to come before the plan is looked at.
         // Shards no node consumes are the one thing worth hearing about here
         giveEveryShardTo(nodeIds().first())
-        cli().test("rebalance-cluster --shards-per-round=1024 --yes ${config().absolutePath}")
+        cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=1024 --yes")
 
         // One shard from the heaviest node to the lightest keeps every node at floor or ceil, so the
         // balance report still has nothing to propose
@@ -201,7 +201,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         )
         assertTrue(ClusterAdmin(dataSources).checkShardBalance().isBalanced, "the cluster must still be even")
 
-        val result = cli().test("rebalance-cluster --shards-per-round=10 --yes ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=10 --yes")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("already migrating"), result.output)
@@ -210,14 +210,14 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     @Test
     fun testDrainRefusesAMigrationEvenWhenTheNodeIsAlreadyEmpty() {
         val drainedNode = nodeIds().first()
-        val drainArguments = "--nodes=${drainedNode.id} --shards-per-round=300 --yes ${config().absolutePath}"
-        cli().test("drain-nodes $drainArguments")
+        val drainCommand = "-c ${config().absolutePath} drain-nodes --nodes=${drainedNode.id} --shards-per-round=300 --yes"
+        cli().test(drainCommand)
         // Somebody else's migration, between the two nodes that stay. The drained node keeps owning
         // nothing, so this drain still has no plan of its own
         val remainingNodes = nodeIds().filterNot { it == drainedNode }
         prepareOneShard(from = remainingNodes.first(), to = remainingNodes.last())
 
-        val result = cli().test("drain-nodes $drainArguments")
+        val result = cli().test(drainCommand)
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("already migrating"), result.output)
@@ -232,7 +232,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val shard = ClusterAdmin(dataSources).checkShardBalance().currentDistribution.getValue(from).first()
 
         val prepared = cli().test(
-            "prepare-migration --target=${to.id} --shards=${shard.id} --yes ${config().absolutePath}"
+            "-c ${config().absolutePath} prepare-migration --target=${to.id} --shards=${shard.id} --yes"
         )
         assertEquals(0, prepared.statusCode, prepared.output)
     }

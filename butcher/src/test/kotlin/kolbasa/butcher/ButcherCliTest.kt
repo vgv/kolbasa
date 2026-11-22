@@ -99,7 +99,7 @@ class ButcherCliTest {
 
     @Test
     fun testMissingTargetIsReported() {
-        val result = cli().test("prepare-migration --shards=0 ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} prepare-migration --shards=0")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("--target"), result.output)
@@ -107,7 +107,7 @@ class ButcherCliTest {
 
     @Test
     fun testMissingShardsIsReported() {
-        val result = cli().test("prepare-migration --target=node-01 ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} prepare-migration --target=node-01")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("--shards"), result.output)
@@ -115,7 +115,7 @@ class ButcherCliTest {
 
     @Test
     fun testShardOutOfRangeIsReported() {
-        val result = cli().test("prepare-migration --target=node-01 --shards=0,9999 ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} prepare-migration --target=node-01 --shards=0,9999")
 
         assertEquals(1, result.statusCode, result.output)
         // ShardId.of() would have folded 9999 into a valid shard, so the range is checked where the
@@ -126,7 +126,7 @@ class ButcherCliTest {
 
     @Test
     fun testNonNumericShardIsReported() {
-        val result = cli().test("prepare-migration --target=node-01 --shards=zero ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} prepare-migration --target=node-01 --shards=zero")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("--shards"), result.output)
@@ -134,7 +134,7 @@ class ButcherCliTest {
 
     @Test
     fun testUnknownCheckNameIsReported() {
-        val result = cli().test("check-cluster --checks=whatever ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} check-cluster --checks=whatever")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("--checks"), result.output)
@@ -144,7 +144,7 @@ class ButcherCliTest {
     fun testMutatingCommandRefusesToGuessWithoutATerminal() {
         // No --yes and nothing to read an answer from: a tool that moves production data must not take
         // silence for consent, and must not hang waiting for it either
-        val result = cli().test("finalize-migration ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} finalize-migration")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("no terminal"), result.output)
@@ -176,7 +176,7 @@ class ButcherCliTest {
     @Test
     fun testShardsPerRoundOutOfRangeIsReported() {
         listOf("0", "-5", "2000").forEach { value ->
-            val result = cli().test("rebalance-cluster --shards-per-round=$value ${config().absolutePath}")
+            val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=$value")
 
             assertEquals(1, result.statusCode, result.output)
             assertTrue(result.output.contains("shards per round"), "$value:\n${result.output}")
@@ -185,7 +185,7 @@ class ButcherCliTest {
 
     @Test
     fun testMissingNodesToDrainAreReported() {
-        val result = cli().test("drain-nodes --shards-per-round=10 ${config().absolutePath}")
+        val result = cli().test("-c ${config().absolutePath} drain-nodes --shards-per-round=10")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("--nodes"), result.output)
@@ -199,7 +199,7 @@ class ButcherCliTest {
             writeText("line-1  host=127.0.0.1 port=9 dbname=orders\n")
         }
 
-        val result = cli().test("check-cluster ${deadNode.absolutePath}")
+        val result = cli().test("-c ${deadNode.absolutePath} check-cluster")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("Can't connect to 1 of 1"), result.output)
@@ -208,8 +208,24 @@ class ButcherCliTest {
     }
 
     @Test
+    fun testSeveralConfigFilesAreMerged() {
+        // Every -c is read: the nodes of both files are asked whether they are there
+        val first = File(tempDir, "first.conf").apply {
+            writeText("line-1  host=127.0.0.1 port=9 dbname=orders\n")
+        }
+        val second = File(tempDir, "second.conf").apply {
+            writeText("line-2  host=127.0.0.1 port=9 dbname=orders\n")
+        }
+
+        val result = cli().test("-c ${first.absolutePath} --config ${second.absolutePath} check-cluster")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Can't connect to 2 of 2"), result.output)
+    }
+
+    @Test
     fun testMissingConfigFileIsReported() {
-        val result = cli().test("finalize-migration /no/such/cluster.conf")
+        val result = cli().test("-c /no/such/cluster.conf finalize-migration")
 
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("does not exist"), result.output)
@@ -217,10 +233,37 @@ class ButcherCliTest {
 
     @Test
     fun testConfigFileIsRequired() {
+        // finalize-migration asks before it does anything. Without a config it must not get that far
         val result = cli().test("finalize-migration")
 
         assertEquals(1, result.statusCode, result.output)
-        assertTrue(result.output.contains("config-file"), result.output)
+        assertTrue(result.output.contains("missing option --config"), result.output)
+        assertTrue(!result.output.contains("no terminal"), result.output)
+    }
+
+    @Test
+    fun testBadConfigFileIsReportedBeforeTheQuestion() {
+        val noHost = File(tempDir, "no-host.conf").apply {
+            writeText("node-01  dbname=orders\n")
+        }
+
+        val result = cli().test("-c ${noHost.absolutePath} finalize-migration")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("host"), result.output)
+        assertTrue(!result.output.contains("no terminal"), result.output)
+    }
+
+    @Test
+    fun testHelpShowsTheConfig() {
+        val root = cli().test("--help")
+        assertTrue(root.output.contains("-c, --config=<file>"), root.output)
+
+        // Clikt doesn't show the options of butcher itself in a command's help, so the command says where -c goes
+        val command = cli().test("check-cluster --help")
+        // The help is wrapped to the terminal width, and a line may break inside the example
+        val text = command.output.replace(Regex("\\s+"), " ")
+        assertTrue(text.contains("-c cluster.conf check-cluster"), command.output)
     }
 
     private fun cli() = ButcherCli().subcommands(

@@ -4,8 +4,8 @@
   normal run says nothing. Raise it when a connection problem needs looking at - logback reads the name
   below from the environment and from the system properties alike:
 
-      BUTCHER_LOG_LEVEL=debug butcher check-cluster cluster.conf
-      java -DBUTCHER_LOG_LEVEL=debug -jar butcher.jar check-cluster cluster.conf
+      BUTCHER_LOG_LEVEL=debug butcher -c cluster.conf check-cluster
+      java -DBUTCHER_LOG_LEVEL=debug -jar butcher.jar -c cluster.conf check-cluster
 
   Anything beyond a level - a file, another format, one logger at a time - is an ordinary logback config:
 

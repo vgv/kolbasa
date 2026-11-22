@@ -97,7 +97,7 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
 
     private fun run(options: String = "", answer: String? = null): CliktCommandTestResult =
         ButcherCli().subcommands(CreateOrRepairShardMap()).test(
-            "create-or-repair-shard-map $options ${config().absolutePath}",
+            "-c ${config().absolutePath} create-or-repair-shard-map $options",
             stdin = answer.orEmpty(),
             width = 200,
             inputInteractive = answer != null

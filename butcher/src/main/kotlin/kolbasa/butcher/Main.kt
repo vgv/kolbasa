@@ -1,10 +1,17 @@
 package kolbasa.butcher
 
-import com.github.ajalt.clikt.core.NoOpCliktCommand
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.obj
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.multiple
+import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
+import com.github.ajalt.clikt.parameters.types.file
 import kolbasa.butcher.command.CheckCluster
 import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
@@ -12,6 +19,9 @@ import kolbasa.butcher.command.FinalizeMigration
 import kolbasa.butcher.command.MoveData
 import kolbasa.butcher.command.PrepareMigration
 import kolbasa.butcher.command.RebalanceCluster
+import kolbasa.butcher.config.ClusterConfig
+import kolbasa.butcher.config.ConfigHelper
+import kolbasa.butcher.config.InvalidConfigurationException
 import java.lang.invoke.MethodHandles
 
 fun main(args: Array<String>) = ButcherCli()
@@ -27,9 +37,22 @@ fun main(args: Array<String>) = ButcherCli()
     .main(args)
 
 /**
- * The `butcher` command itself, which does nothing but hold the real commands
+ * How butcher is named in its help and its messages
  */
-internal class ButcherCli : NoOpCliktCommand(name = "java -jar butcher.jar") {
+internal const val PROGRAM_NAME = "java -jar butcher.jar"
+
+/**
+ * The `butcher` command itself: it reads the cluster config and holds the real commands
+ */
+internal class ButcherCli : CliktCommand(name = PROGRAM_NAME) {
+
+    private val configFiles by option("-c", "--config", metavar = "<file>")
+        .file(mustExist = true, canBeDir = false, mustBeReadable = true)
+        .multiple(required = true)
+        .help("Cluster config file. Repeat it to merge several files by node id")
+
+    // A bare 'butcher' is a question: it prints the help and exits 0, instead of "missing option --config"
+    override val printHelpOnEmptyArgs = true
 
     init {
         versionOption(butcherVersion(), message = { it })
@@ -39,13 +62,36 @@ internal class ButcherCli : NoOpCliktCommand(name = "java -jar butcher.jar") {
         }
     }
 
-    override fun help(context: com.github.ajalt.clikt.core.Context) =
+    override fun help(context: Context) =
         "Inspect and manage a kolbasa cluster."
 
-    override fun helpEpilog(context: com.github.ajalt.clikt.core.Context) = COMMAND_LEVELS_HELP
+    override fun helpEpilog(context: Context) = ROOT_HELP_EPILOG
+
+    override fun run() {
+        val endpoints = try {
+            ConfigHelper.endpoints(configFiles)
+        } catch (e: InvalidConfigurationException) {
+            // A bad config file is bad input, so it gets the usage treatment rather than a bare error
+            throw UsageError(e.message)
+        }
+
+        // Read once, here. Every command works on this cluster, see ClusterCommand
+        currentContext.obj = ClusterConfig(endpoints)
+    }
 }
 
-private val COMMAND_LEVELS_HELP = """
+private val ROOT_HELP_EPILOG = """
+    The cluster comes from -c, given before the command: `$PROGRAM_NAME -c cluster.conf check-cluster`.
+    Several -c are merged by node id, which is how a topology file and a secrets file can be kept apart.
+
+    A config file holds one node per line: the node id, then libpq-style keys -
+    `node-01  host=db01.internal port=5432 user=app dbname=orders schema=public`. Supported keys are host,
+    port, user, password, dbname and schema; unknown keys are ignored, values may be single-quoted, and
+    lines starting with '#' are skipped.
+
+    The node id is the node's own id, kept in its q__node table. A node that has none yet gets the one
+    from its line.
+
     A high-level command is built from the low-level ones and nothing else: it works out the same
     shard-balance plan that 'check-cluster' reports, then prepares, moves and finalizes a batch of shards
     at a time until nothing is left to move. The low-level commands stay yours to drive directly - for

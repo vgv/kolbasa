@@ -41,7 +41,7 @@ exactly as they would for a local jar. The full invocation — mount the current
 
 ```sh
 docker run --rm -v "$(pwd)":/work -w /work \
-  ghcr.io/vgv/butcher:latest check-cluster cluster.conf
+  ghcr.io/vgv/butcher:latest -c cluster.conf check-cluster
 ```
 
 For **migrations** (anything that writes — prepare, move, finalize), pin a version instead of `:latest`. A
@@ -51,7 +51,7 @@ it's exactly the "it worked yesterday" failure mode you don't want mid-migration
 
 ```sh
 docker run --rm -v "$(pwd)":/work -w /work \
-  ghcr.io/vgv/butcher:1.2.3 prepare-migration --target=node-03 --shards=0,1,2 cluster.conf
+  ghcr.io/vgv/butcher:1.2.3 -c cluster.conf prepare-migration --target=node-03 --shards=0,1,2
 ```
 
 That `docker run …` prefix is a lot to type every time, so wrap it in a small script on your `PATH` that
@@ -69,7 +69,7 @@ exec docker run --rm -v "$(pwd)":/work -w /work \
 chmod +x /usr/local/bin/butcher
 ```
 
-After that, `butcher check-cluster cluster.conf` and friends just work — exactly the form used everywhere in
+After that, `butcher -c cluster.conf check-cluster` and friends just work — exactly the form used everywhere in
 this guide.
 
 ### Fat jar (no Docker)
@@ -78,7 +78,7 @@ Download `butcher.jar` from the [latest release](https://github.com/vgv/kolbasa/
 with a JRE 17+:
 
 ```sh
-java -jar butcher.jar check-cluster cluster.conf
+java -jar butcher.jar -c cluster.conf check-cluster
 ```
 
 Everywhere this guide writes `butcher <command>`, the jar equivalent is `java -jar butcher.jar <command>`.
@@ -97,8 +97,9 @@ This prints the build version, so you can confirm which butcher you're running b
 
 ## The cluster config file
 
-Every command takes one or more **config files** describing the cluster's nodes. The format is a plain text
-file, one node per line:
+Every command needs one or more **config files** describing the cluster's nodes. Each is given with `-c` (or
+`--config`), **before** the command: `butcher -c cluster.conf check-cluster`. The format is a plain text file,
+one node per line:
 
 ```
 <node-id>  host=<host> port=<port> user=<user> password=<pwd> dbname=<db> [schema=<schema>]
@@ -150,8 +151,8 @@ run `check-cluster` with any ids and read the error.
 
 ### Multiple files merge by node id
 
-You can pass several config files; butcher **merges them by node id** (union of keys, and on a key collision
-the later file wins). The intended use is splitting **topology** from **secrets**:
+You can pass several config files, each with its own `-c`; butcher **merges them by node id** (union of keys,
+and on a key collision the later file wins). The intended use is splitting **topology** from **secrets**:
 
 `topology.conf` (commit to your repo):
 
@@ -168,7 +169,14 @@ node-02  user=app password=s3cr3t-02
 ```
 
 ```sh
-butcher check-cluster topology.conf secrets.conf
+butcher -c topology.conf -c secrets.conf check-cluster
+```
+
+A shell alias saves typing them every time:
+
+```sh
+alias orders-butcher='butcher -c topology.conf -c secrets.conf'
+orders-butcher check-cluster
 ```
 
 ## The commands
@@ -230,8 +238,8 @@ yourself, restricting which tables move (`move-data --include-tables`), stopping
 or finishing a migration somebody else started.
 
 Run `butcher <command> --help` to see that command's built-in help, or `butcher --help` for the list of
-commands, grouped the same three ways. `butcher` with no arguments prints that list and exits `0`: it is a
-question, not a failure.
+commands, grouped the same three ways, and for `-c` and the config file format. Neither needs `-c`. `butcher`
+with no arguments prints that list and exits `0`: it is a question, not a failure.
 
 > **Confirmation.** Every command that writes anything asks before it does, describing what is about to
 > happen. `--yes` (or `-y`) skips the question. With no terminal to read an answer from — a pipe, a CI job —
@@ -251,7 +259,7 @@ question, not a failure.
 ### `check-cluster`
 
 ```
-butcher check-cluster [--checks=<check,check,...>] <config-file>...
+butcher -c <file> check-cluster [--checks=<check,check,...>]
 ```
 
 Inspection of the cluster. Safe to run at any time. It changes nothing, except that a node with no id yet gets
@@ -287,7 +295,7 @@ reading the output, shown under [Worked examples](#worked-examples).
 ### `rebalance-cluster`
 
 ```
-butcher rebalance-cluster [--shards-per-round=<n>] [--yes] <config-file>...
+butcher -c <file> rebalance-cluster [--shards-per-round=<n>] [--yes]
 ```
 
 Carries out the `shard-balance` plan. While the plan has anything in it: prepare a batch of at most
@@ -323,7 +331,7 @@ carry very different amounts of data, look at the real numbers first and choose 
 ### `drain-nodes`
 
 ```
-butcher drain-nodes --nodes=<node-id,node-id,...> [--shards-per-round=<n>] [--yes] <config-file>...
+butcher -c <file> drain-nodes --nodes=<node-id,node-id,...> [--shards-per-round=<n>] [--yes]
 ```
 
 Moves everything the listed nodes own onto the other nodes, in rounds, until they own nothing. That is the
@@ -354,7 +362,7 @@ procedure, which is yours rather than butcher's.
 ### `prepare-migration`
 
 ```
-butcher prepare-migration --target=<node-id> --shards=<0,1,2,...> [--yes] <config-file>...
+butcher -c <file> prepare-migration --target=<node-id> --shards=<0,1,2,...> [--yes]
 ```
 
 Marks the listed shards for migration to `--target`. Both flags are required. `--shards` is a comma-separated
@@ -381,7 +389,7 @@ butcher refuses two nonsensical requests up front:
 ### `move-data`
 
 ```
-butcher move-data [--include-tables=<t1,t2,...>] [--exclude-tables=<t1,t2,...>] [--yes] <config-file>...
+butcher -c <file> move-data [--include-tables=<t1,t2,...>] [--exclude-tables=<t1,t2,...>] [--yes]
 ```
 
 Moves the rows of every shard currently in the migrating state from their source nodes to the target. This is
@@ -405,9 +413,9 @@ skip such tables and move only the queues that actually matter:
 
 ```sh
 # Move only the live queues …
-butcher move-data --include-tables=q_orders,q_payments cluster.conf
+butcher -c cluster.conf move-data --include-tables=q_orders,q_payments
 # … or move everything except a scratch/abandoned table.
-butcher move-data --exclude-tables=q_experiment_tmp cluster.conf
+butcher -c cluster.conf move-data --exclude-tables=q_experiment_tmp
 ```
 
 `move-data` does not touch `q__shard`. Routing is unchanged by it — production is already going to the target
@@ -416,7 +424,7 @@ butcher move-data --exclude-tables=q_experiment_tmp cluster.conf
 ### `finalize-migration`
 
 ```
-butcher finalize-migration [--yes] <config-file>...
+butcher -c <file> finalize-migration [--yes]
 ```
 
 Returns every migrating shard to a stable state owned by its destination: it sets `consumer_node` to the
@@ -437,7 +445,7 @@ The safe sequence is always: **prepare → move (re-run until it reports zero) �
 ### `create-or-repair-shard-map`
 
 ```
-butcher create-or-repair-shard-map [--yes] <config-file>...
+butcher -c <file> create-or-repair-shard-map [--yes]
 ```
 
 Every node keeps a copy of the shard map, see
@@ -488,7 +496,7 @@ nodes. Output is shown as butcher prints it, minus the ANSI colours.
 Run all checks against a healthy two-node cluster:
 
 ```sh
-butcher check-cluster cluster.conf
+butcher -c cluster.conf check-cluster
 ```
 
 ```
@@ -516,8 +524,8 @@ is green all the way down.
 One check, or a few:
 
 ```sh
-butcher check-cluster --checks=schema-consistency cluster.conf
-butcher check-cluster --checks=shard-balance,migration-state cluster.conf
+butcher -c cluster.conf check-cluster --checks=schema-consistency
+butcher -c cluster.conf check-cluster --checks=shard-balance,migration-state
 ```
 
 ### A new cluster, before the first application
@@ -540,7 +548,7 @@ Goal: three empty databases become a cluster, and its shard map exists before an
 2. Create the map:
 
    ```sh
-   butcher create-or-repair-shard-map cluster.conf
+   butcher -c cluster.conf create-or-repair-shard-map
    ```
 
    ```
@@ -583,14 +591,14 @@ The shard-balance proposal is **advice**, not an action: the check changes nothi
 act on it. Hand it to `rebalance-cluster`, which walks the whole plan in rounds of the size you name:
 
 ```sh
-butcher rebalance-cluster --shards-per-round=5 cluster.conf
+butcher -c cluster.conf rebalance-cluster --shards-per-round=5
 ```
 
 Or carry it out yourself: the last line is printed as the flags themselves, so the first step is a copy and
 a paste:
 
 ```sh
-butcher prepare-migration --target=node-03 --shards=0,1,2,3, ... ,340 cluster.conf
+butcher -c cluster.conf prepare-migration --target=node-03 --shards=0,1,2,3, ... ,340
 ```
 
 > **The plan is a target state, not a single operation.** Those 341 shards do not have to move in one go.
@@ -697,14 +705,14 @@ Goal: add a third node, `node-03`, to a two-node cluster and move a third of the
 2. Ask for a balanced plan and pick the shards to move:
 
    ```sh
-   butcher check-cluster --checks=shard-balance cluster.conf
+   butcher -c cluster.conf check-cluster --checks=shard-balance
    # → proposes moving shards 0..340 to node-03
    ```
 
 3. Carry the plan out. In one command, in rounds of five shards:
 
    ```sh
-   butcher rebalance-cluster --shards-per-round=5 cluster.conf
+   butcher -c cluster.conf rebalance-cluster --shards-per-round=5
    ```
 
    ```
@@ -754,7 +762,7 @@ also how to do an expansion where you pick the shards yourself:
 3. Prepare those shards for `node-03`:
 
    ```sh
-   butcher prepare-migration --target=node-03 --shards=0,1,2, ... ,340 cluster.conf
+   butcher -c cluster.conf prepare-migration --target=node-03 --shards=0,1,2, ... ,340
    ```
 
    ```
@@ -770,7 +778,7 @@ also how to do an expansion where you pick the shards yourself:
 4. Move the data (re-run until it reports zero moved):
 
    ```sh
-   butcher move-data cluster.conf
+   butcher -c cluster.conf move-data
    ```
 
    ```
@@ -782,7 +790,7 @@ also how to do an expansion where you pick the shards yourself:
 5. Finalize:
 
    ```sh
-   butcher finalize-migration cluster.conf
+   butcher -c cluster.conf finalize-migration
    ```
 
    ```
@@ -804,7 +812,7 @@ the migration part is one command.
 1. Empty the node, in rounds of fifty shards:
 
    ```sh
-   butcher drain-nodes --nodes=node-03 --shards-per-round=5 cluster.conf
+   butcher -c cluster.conf drain-nodes --nodes=node-03 --shards-per-round=5
    ```
 
    ```
@@ -852,15 +860,15 @@ the migration part is one command.
    rebalance even things out, or split them yourself:
 
    ```sh
-   butcher prepare-migration --target=node-01 --shards=<node-03's shards> cluster.conf
-   butcher move-data cluster.conf            # re-run until zero
-   butcher finalize-migration cluster.conf
+   butcher -c cluster.conf prepare-migration --target=node-01 --shards=<node-03's shards>
+   butcher -c cluster.conf move-data            # re-run until zero
+   butcher -c cluster.conf finalize-migration
    ```
 
 2. Confirm `node-03` is empty:
 
    ```sh
-   butcher check-cluster --checks=shard-balance cluster.conf   # node-03 → 0 shards
+   butcher -c cluster.conf check-cluster --checks=shard-balance   # node-03 → 0 shards
    ```
 
 3. Remove that node's `node-03` line from butcher's config file and decommission its database.
@@ -876,12 +884,12 @@ The smallest possible migration — useful for rehearsing the three steps in sta
 current owner to `node-02`:
 
 ```sh
-butcher prepare-migration --target=node-02 --shards=5 cluster.conf
-butcher move-data cluster.conf
-butcher finalize-migration cluster.conf
+butcher -c cluster.conf prepare-migration --target=node-02 --shards=5
+butcher -c cluster.conf move-data
+butcher -c cluster.conf finalize-migration
 ```
 
-Between prepare and finalize, `butcher check-cluster --checks=migration-state cluster.conf` shows shard 5 in flight:
+Between prepare and finalize, `butcher -c cluster.conf check-cluster --checks=migration-state` shows shard 5 in flight:
 
 ```
 Migration state: 1 shard(s) in migration
@@ -900,7 +908,7 @@ whether butcher also prints the command's usage:
 
 | Kind | What it looks like | What it means / how to fix |
 |---|---|---|
-| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, an invalid node id (other characters than `[a-zA-Z0-9_.-]`, or longer than 100), or a duplicate node id in one file. The message names the specific problem; fix it and re-run. |
+| bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given (no `-c`), `-c` after the command instead of before it, a file that does not exist, a node missing `host`/`dbname`, a bad port, an invalid node id (other characters than `[a-zA-Z0-9_.-]`, or longer than 100), or a duplicate node id in one file. The message names the specific problem; fix it and re-run. |
 | runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **node ids don't match** (see [below](#node-ids-dont-match)). A rarer one is `Can't read or update q__shard on node …`, with the database error under it: a query on the shard table of that node fails. Fix the node and run the command again. After a failed `prepare-migration` or `finalize-migration` the message also says whether the other nodes have the change. If they have, it is in effect, and running the command again doesn't bring it to the failed node: once that node is back, run `create-or-repair-shard-map`, or wait for an application to do it. |
 
 Seven migration-specific refusals are worth knowing by name, because the message states the rule rather than

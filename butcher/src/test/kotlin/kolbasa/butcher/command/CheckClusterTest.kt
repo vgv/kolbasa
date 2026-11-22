@@ -23,7 +23,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testNewCluster_NodesGetTheirIdsAndNothingElse() {
-        val result = ButcherCli().subcommands(CheckCluster()).test("check-cluster ${config().absolutePath}")
+        val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster")
 
         assertEquals(0, result.statusCode, result.output)
         assertTrue(result.output.contains("Initialized node node-01"), result.output)
@@ -43,7 +43,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         val (first, second, third) = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).map { nodeIdOf(it) }
 
         val result = ButcherCli().subcommands(CheckCluster())
-            .test("check-cluster --checks=shard-map ${config(first, second, third).absolutePath}")
+            .test("-c ${config(first, second, third).absolutePath} check-cluster --checks=shard-map")
 
         assertEquals(0, result.statusCode, result.output)
         assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
