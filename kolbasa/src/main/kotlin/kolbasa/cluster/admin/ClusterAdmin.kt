@@ -4,6 +4,7 @@ import kolbasa.cluster.admin.check.MigrationState
 import kolbasa.cluster.admin.check.OrphanTables
 import kolbasa.cluster.admin.check.SchemaConsistency
 import kolbasa.cluster.admin.check.ShardBalance
+import kolbasa.cluster.admin.check.ShardMapState
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
@@ -81,6 +82,13 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      * Reports shards that are still mid-migration, which is what an interrupted move leaves behind
      */
     fun checkMigrationState(): MigrationStateResult = MigrationState.check(nodes)
+
+    /**
+     * Reports how the copies of the shard map on the nodes differ, and the rows that can't be right
+     *
+     * Changes nothing, and works on a cluster that has no shard map yet.
+     */
+    fun checkShardMap(): ShardMapResult = ShardMapState.check(nodes)
 
     /**
      * Marks [shards] as migrating to [target], the first of the three migration steps

@@ -93,6 +93,17 @@ internal object ShardCopies {
     }
 
     /**
+     * The shard numbers that don't exist, for every copy of [shardMap]. Reading the map skips such rows
+     */
+    fun readInvalidShards(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap): Map<Node, List<Int>> {
+        return shardMap.copies.keys.associateWith { node ->
+            onShardTable(node) {
+                ShardSchema.readInvalidShards(nodes.getValue(node))
+            }
+        }
+    }
+
+    /**
      * Writes to every node the rows of the merged map that its copy lacks, or holds an older or another version of.
      * If copies hold different rows with the same revision, all of them get the row of the merged map.
      *

@@ -33,6 +33,15 @@ internal object MoveHelpers {
     }
 
     /**
+     * The rows of the shard tables with a shard number that doesn't exist, see [ShardCopies.readInvalidShards]
+     */
+    fun readInvalidShards(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap): Map<Node, List<Int>> {
+        return reportFailure {
+            ShardCopies.readInvalidShards(nodes, shardMap)
+        }
+    }
+
+    /**
      * Reads the shard map the same way an application does, see [ShardCopies.read]. It creates what is missing
      */
     fun readOrCreateShards(nodes: SortedMap<Node, DataSource>): ShardMap {

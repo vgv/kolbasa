@@ -7,5 +7,6 @@ data class CheckResult(
     val shardBalance: ShardBalanceResult? = null,
     val schemaConsistency: SchemaConsistencyResult? = null,
     val orphanTables: OrphanTablesResult? = null,
-    val migrationState: MigrationStateResult? = null
+    val migrationState: MigrationStateResult? = null,
+    val shardMap: ShardMapResult? = null
 )

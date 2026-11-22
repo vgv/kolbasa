@@ -3,6 +3,7 @@ package kolbasa.butcher.command
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import kolbasa.butcher.ButcherCli
+import kolbasa.cluster.Cluster
 import kolbasa.test.AbstractPostgreSQLTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,7 +14,7 @@ import java.io.File
 import javax.sql.DataSource
 
 /**
- * `check-cluster` on a cluster where no application has started yet
+ * `check-cluster` with a real config file, on a cluster where no application has started yet and on one where it has
  */
 class CheckClusterTest : AbstractPostgreSQLTest() {
 
@@ -27,12 +28,36 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         assertEquals(0, result.statusCode, result.output)
         assertTrue(result.output.contains("Initialized node node-01"), result.output)
         assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
+        assertTrue(result.output.contains("no shard map on any node yet"), result.output)
 
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertTrue(hasTable(node, "q__node"))
             assertFalse(hasTable(node, "q__shard"))
         }
     }
+
+    @Test
+    fun testShardMapCheckAlone() {
+        Cluster(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema), emptyList()).updateTopology()
+        val (first, second, third) = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).map { nodeIdOf(it) }
+
+        val result = ButcherCli().subcommands(CheckCluster())
+            .test("check-cluster --checks=shard-map ${config(first, second, third).absolutePath}")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
+        assertFalse(result.output.contains("Shard balance"), result.output)
+    }
+
+    private fun nodeIdOf(dataSource: DataSource): String =
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("select id from q__node").use { resultSet ->
+                    resultSet.next()
+                    resultSet.getString(1)
+                }
+            }
+        }
 
     private fun hasTable(dataSource: DataSource, table: String): Boolean =
         dataSource.connection.use { connection ->
@@ -43,12 +68,12 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
             }
         }
 
-    private fun config(): File {
+    private fun config(publicId: String = "node-01", firstId: String = "node-02", secondId: String = "node-03"): File {
         val file = File(tempDir, "cluster.conf")
         file.writeText(
-            configLine("node-01", "public") +
-                configLine("node-02", FIRST_SCHEMA_NAME) +
-                configLine("node-03", SECOND_SCHEMA_NAME)
+            configLine(publicId, "public") +
+                configLine(firstId, FIRST_SCHEMA_NAME) +
+                configLine(secondId, SECOND_SCHEMA_NAME)
         )
         return file
     }

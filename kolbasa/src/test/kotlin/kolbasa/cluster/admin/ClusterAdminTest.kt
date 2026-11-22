@@ -1,13 +1,16 @@
 package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
+import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -78,6 +81,52 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
         runEveryCheck(admin, nodes.keys.first().id)
+    }
+
+    @Test
+    fun testCheckShardMap() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (firstNode, secondNode, thirdNode) = nodes.keys.map { it.id }
+        val (first, second, _) = nodes.values.toList()
+        val admin = ClusterAdmin(dataSources)
+
+        // No map yet
+        assertTrue(admin.checkShardMap().isMissing)
+
+        // An application has started: the same map on every node
+        Cluster(dataSources, emptyList()).updateTopology()
+        assertTrue(admin.checkShardMap().isClean, "${admin.checkShardMap()}")
+
+        // The second copy lacks a shard and has a row of a shard that doesn't exist, the third node has lost its table, and
+        // a shard is given by hand to a node that isn't in the cluster. No application has repaired anything yet
+        second.useStatement { statement ->
+            statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} = 3")
+            statement.execute(
+                "insert into ${ShardSchema.SHARD_TABLE_NAME}" +
+                    "(${ShardSchema.SHARD_COLUMN_NAME}, ${ShardSchema.PRODUCER_NODE_COLUMN_NAME}, " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME}) values (5000, 'node-x', 'node-x')"
+            )
+        }
+        nodes.values.last().useStatement { it.execute("drop table ${ShardSchema.SHARD_TABLE_NAME}") }
+        first.useStatement { statement ->
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-gone', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-gone' where ${ShardSchema.SHARD_COLUMN_NAME} = 17"
+            )
+        }
+
+        val result = admin.checkShardMap()
+
+        assertTrue(result.copies.getValue(firstNode).isUpToDate, "$result")
+        assertEquals(
+            ShardCopyResult(missing = listOf(ShardId.of(3)), outdated = listOf(ShardId.of(17)), conflicting = emptyList()),
+            result.copies[secondNode]
+        )
+        assertEquals(setOf(thirdNode), result.nodesWithoutTable)
+        assertTrue(result.shardsWithoutRow.isEmpty())
+        assertEquals(mapOf(secondNode to listOf(5000)), result.invalidShards)
+        assertEquals(mapOf(NodeId("node-gone") to listOf(ShardId.of(17))), result.unknownOwners)
     }
 
     @Test
@@ -198,6 +247,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         admin.checkSchemaConsistency()
         admin.findOrphanTables()
         admin.checkMigrationState()
+        admin.checkShardMap()
         admin.planNodesDrain(setOf(node))
     }
 

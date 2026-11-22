@@ -15,6 +15,7 @@ import kolbasa.cluster.admin.MigrationStateResult
 import kolbasa.cluster.admin.OrphanTablesResult
 import kolbasa.cluster.admin.SchemaConsistencyResult
 import kolbasa.cluster.admin.ShardBalanceResult
+import kolbasa.cluster.admin.ShardMapResult
 
 internal class CheckCluster : ClusterCommand(name = "check-cluster") {
 
@@ -37,6 +38,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
         var schemaConsistency: SchemaConsistencyResult? = null
         var orphanTables: OrphanTablesResult? = null
         var migrationState: MigrationStateResult? = null
+        var shardMap: ShardMapResult? = null
 
         // Which checks exist and how they are named on the command line is a property of the CLI, so the
         // mapping lives here and not in the library: every check is callable on its own
@@ -46,6 +48,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
                 AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> schemaConsistency = butcher.checkSchemaConsistency()
                 AvailableCheck.FIND_ORPHAN_TABLES -> orphanTables = butcher.findOrphanTables()
                 AvailableCheck.CHECK_MIGRATION_STATE -> migrationState = butcher.checkMigrationState()
+                AvailableCheck.CHECK_SHARD_MAP -> shardMap = butcher.checkShardMap()
             }
         }
 
@@ -53,7 +56,8 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
             shardBalance = shardBalance,
             schemaConsistency = schemaConsistency,
             orphanTables = orphanTables,
-            migrationState = migrationState
+            migrationState = migrationState,
+            shardMap = shardMap
         ).render()
     }
 }

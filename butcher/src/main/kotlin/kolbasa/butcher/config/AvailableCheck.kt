@@ -25,7 +25,12 @@ internal enum class AvailableCheck(val checkName: String) {
     /**
      * Find shards stuck in migration state (consumerNode == null, nextConsumerNode != null)
      */
-    CHECK_MIGRATION_STATE(checkName = "migration-state");
+    CHECK_MIGRATION_STATE(checkName = "migration-state"),
+
+    /**
+     * Compare the copies of the shard map on the nodes, find the rows that can't be right
+     */
+    CHECK_SHARD_MAP(checkName = "shard-map");
 
     companion object {
         init {

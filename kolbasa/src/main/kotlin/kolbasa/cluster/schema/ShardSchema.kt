@@ -9,6 +9,7 @@ import kolbasa.schema.NodeId
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
 import kolbasa.utils.JdbcHelpers.readBoolean
+import kolbasa.utils.JdbcHelpers.readIntList
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -79,6 +80,17 @@ internal object ShardSchema {
         order by
             $SHARD_COLUMN_NAME
     """.trimIndent()
+
+    private const val READ_INVALID_SHARDS_STATEMENT = """
+        select
+            $SHARD_COLUMN_NAME
+        from
+            $SHARD_TABLE_NAME
+        where
+            $SHARD_COLUMN_NAME not between ${ShardId.MIN_SHARD} and ${ShardId.MAX_SHARD}
+        order by
+            $SHARD_COLUMN_NAME
+    """
 
     // The md5 of the rows that READ_SHARD_TABLE_STATEMENT reads: one line per shard, in shard order, the revision in
     // microseconds. fingerprint() builds the same text in Kotlin, change both together
@@ -293,6 +305,13 @@ internal object ShardSchema {
         }
 
         return shards
+    }
+
+    /**
+     * The shard numbers of the rows that [readShards] skips: there are no such shards
+     */
+    fun readInvalidShards(dataSource: DataSource): List<Int> {
+        return dataSource.readIntList(READ_INVALID_SHARDS_STATEMENT)
     }
 
     /**

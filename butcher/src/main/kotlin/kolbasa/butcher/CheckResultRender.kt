@@ -15,7 +15,8 @@ internal fun CheckResult.render(): Widget = verticalLayout {
         shardBalance?.render(),
         schemaConsistency?.render(),
         orphanTables?.render(),
-        migrationState?.render()
+        migrationState?.render(),
+        shardMap?.render()
     )
 
     sections.forEachIndexed { index, section ->
