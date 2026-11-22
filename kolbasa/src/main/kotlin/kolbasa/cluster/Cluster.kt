@@ -118,7 +118,7 @@ class Cluster(
      * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
      * creates or updates them on every node. Every node keeps a copy of the map, and for every shard the newest row of
      * all the copies wins. A shard that no node has gets a random node, on the node with the smallest id: that is how
-     * a fresh cluster is initialized.
+     * a fresh cluster is initialized. At the end, every node gets the rows its copy lacks.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -133,7 +133,8 @@ class Cluster(
      * statements go through.
      *
      * Other failures throw, a node that is down for example, or a shard map that can't be read. Then the old topology
-     * stays.
+     * stays. The one exception is a node that can't take the rows of the shard map: that is the last step, so the new
+     * topology is already in use when the method throws, and the next update tries again.
      */
     @Synchronized
     fun updateTopology(): ClusterSchemaResult {
@@ -144,13 +145,16 @@ class Cluster(
         val queues = queuesProvider.get()
 
         val nodes = initNodes(dataSources)
-        val shards = readShardMap(nodes)
+        val shardMap = readShardMap(nodes)
         val schemaResult = updateSchema(nodes, queues)
 
-        val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
+        val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shardMap.mergedShards)
         if (newTopology != topology) {
             topology = newTopology
         }
+
+        // Last: a node that can't take the rows must not keep the new topology out
+        repairShardTables(nodes, shardMap)
 
         return schemaResult
     }
@@ -206,13 +210,13 @@ class Cluster(
         return remappedAtLeastOnce
     }
 
-    private fun readShardMap(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
+    private fun readShardMap(nodes: SortedMap<Node, DataSource>): ShardMap {
         // The map we already have, and its md5
         val knownShards = topology?.shards ?: emptyMap()
         val knownFingerprint = topology?.shardsFingerprint
 
         // What every node holds. A node with our md5 holds exactly our map, the others are read
-        val copies = nodes.map { (node, dataSource) ->
+        val copies = nodes.mapValues { (node, dataSource) ->
             onShardTable(node) {
                 // A new node gets an empty table here
                 ShardSchema.createOrUpdateShardTable(dataSource)
@@ -226,20 +230,56 @@ class Cluster(
         }
 
         // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
-        val mergedShards = ShardSchema.mergeShards(copies)
+        val mergedShards = ShardSchema.mergeShards(copies.values)
 
         // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
         // smallest id, and the initial revision, so a real row that turns up later wins over them
         val missingShards = ShardId.SHARDS_RANGE.filter { shard -> ShardId.of(shard) !in mergedShards }
         if (missingShards.isEmpty()) {
-            return mergedShards
+            return ShardMap(mergedShards, copies)
         }
 
         val (smallestNode, smallestDataSource) = nodes.entries.first()
-        return onShardTable(smallestNode) {
+        val smallestCopy = onShardTable(smallestNode) {
             ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
             // Another client may have filled them at the same moment: its rows are the ones in the table now
-            ShardSchema.mergeShards(listOf(mergedShards, ShardSchema.readShards(smallestDataSource)))
+            ShardSchema.readShards(smallestDataSource)
+        }
+
+        return ShardMap(ShardSchema.mergeShards(listOf(mergedShards, smallestCopy)), copies + (smallestNode to smallestCopy))
+    }
+
+    /**
+     * Every node gets the rows of the merged map its copy lacks, or holds an older or another version of.
+     *
+     * A node that can't take them doesn't stop the others. The first failure is thrown at the end, the others are
+     * added to it as suppressed
+     */
+    private fun repairShardTables(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap) {
+        var failure: Exception? = null
+
+        for ((node, dataSource) in nodes) {
+            val copy = shardMap.copies.getValue(node)
+            val rowsToWrite = shardMap.mergedShards.values.filter { shard -> copy[shard.shard] != shard }
+            if (rowsToWrite.isEmpty()) {
+                continue
+            }
+
+            try {
+                onShardTable(node) {
+                    ShardSchema.writeShards(dataSource, rowsToWrite)
+                }
+            } catch (e: Exception) {
+                if (failure == null) {
+                    failure = e
+                } else {
+                    failure.addSuppressed(e)
+                }
+            }
+        }
+
+        if (failure != null) {
+            throw failure
         }
     }
 
@@ -281,4 +321,7 @@ class Cluster(
 
     // What the schema was generated for
     private data class SchemaKey(val nodes: Set<NodeId>, val queues: Set<Queue<*>>)
+
+    // The merged shard map, and what the shard table of every node holds
+    private class ShardMap(val mergedShards: Map<ShardId, Shard>, val copies: Map<Node, Map<ShardId, Shard>>)
 }

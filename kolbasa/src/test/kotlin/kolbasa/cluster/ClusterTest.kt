@@ -84,18 +84,17 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val countingNodes = dataSources.associateWith { CountingDataSource(it) }
         val cluster = Cluster(countingNodes.values.toList(), emptyList())
 
-        // The map is seeded on the node with the smallest id
-        val shardTableNode = ClusterHelper.readNodes(dataSources).values.first()
-        val counting = countingNodes.getValue(shardTableNode)
+        // The map is seeded, and every node gets a copy
         cluster.updateTopology()
-        val readsAfterSeeding = counting.shardTableReads.get()
+        val readsAfterSeeding = countingNodes.values.sumOf { it.shardTableReads.get() }
 
-        // The map hasn't changed: only its md5 is read
+        // The map hasn't changed: no node is read, only their md5
         cluster.updateTopology()
-        assertEquals(readsAfterSeeding, counting.shardTableReads.get())
+        assertEquals(readsAfterSeeding, countingNodes.values.sumOf { it.shardTableReads.get() })
 
-        // A hand edit changes the md5, so the rows are read again
-        shardTableNode.useStatement { statement: Statement ->
+        // A hand edit on one node changes its md5, so only that node is read
+        val editedNode = ClusterHelper.readNodes(dataSources).values.last()
+        editedNode.useStatement { statement: Statement ->
             statement.execute(
                 """
                 update ${ShardSchema.SHARD_TABLE_NAME}
@@ -105,7 +104,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
             )
         }
         cluster.updateTopology()
-        assertEquals(readsAfterSeeding + 1, counting.shardTableReads.get())
+        assertEquals(readsAfterSeeding + 1, countingNodes.values.sumOf { it.shardTableReads.get() })
         assertEquals(NodeId("node-x"), cluster.getTopology().shards[ShardId.of(5)]?.producerNode)
     }
 
@@ -188,24 +187,18 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
-        // Every node got a table
-        val nodes = ClusterHelper.readNodes(dataSources)
-        nodes.forEach { (node, dataSource) ->
-            assertTrue(ShardSchema.shardTableExists(dataSource), "Node ${node.id.id}")
-        }
-
-        // The map was seeded on the node with the smallest id, every row with the initial revision
+        // A seeded map, every row with the initial revision, and every node holds a copy of it
         val shards = cluster.getTopology().shards
         assertEquals(ShardId.SHARD_COUNT, shards.size)
-        assertEquals(ShardSchema.readShards(nodes.values.first()), shards)
         assertTrue(shards.values.all { it.revision == Instant.EPOCH })
+        assertEveryNodeHolds(dataSources, shards)
     }
 
     @Test
     fun testUpdateTopology_ShardsNoNodeHas_FilledOnTheSmallestNode() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        val (first, second, _) = nodes.values.toList()
+        val second = nodes.values.toList()[1]
 
         // An incomplete map on the second node, no map anywhere else
         ShardSchema.createOrUpdateShardTable(second)
@@ -218,14 +211,12 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val shards = cluster.getTopology().shards
         assertEquals(ShardId.SHARD_COUNT, shards.size)
 
-        // The shards that were there kept their nodes
+        // The shards that were there kept their nodes: only the missing ones were filled
         assertEquals(before - deleted, shards - deleted)
 
-        // The missing ones went to the node with the smallest id, with the initial revision, and only them
-        val filled = ShardSchema.readShards(first)
-        assertEquals(deleted, filled.keys)
-        assertEquals(filled, shards.filterKeys { it in deleted })
-        assertTrue(filled.values.all { it.revision == Instant.EPOCH })
+        // The missing ones got the initial revision, and every node holds the whole map
+        assertTrue(shards.filterKeys { it in deleted }.values.all { it.revision == Instant.EPOCH })
+        assertEveryNodeHolds(dataSources, shards)
     }
 
     @Test
@@ -251,6 +242,128 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val expected = ShardSchema.mergeShards(listOf(ShardSchema.readShards(first), ShardSchema.readShards(second)))
         assertEquals(expected, oneClient.getTopology().shards)
         assertEquals(expected, anotherClient.getTopology().shards)
+    }
+
+    @Test
+    fun testUpdateTopology_MapOnOneNode_EveryNodeGetsACopy() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val second = nodes.values.toList()[1]
+
+        // The map on one node only, as kolbasa kept it before every node had a copy
+        ShardSchema.createOrUpdateShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        val map = ShardSchema.readShards(second)
+
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+
+        // The same rows, with the same revisions, on every node
+        assertEquals(map, cluster.getTopology().shards)
+        assertEveryNodeHolds(dataSources, map)
+    }
+
+    @Test
+    fun testUpdateTopology_HandEditOnAnyNode_EveryNodeGetsIt() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+
+        // An operator edits the copy on the last node
+        val lastNode = ClusterHelper.readNodes(dataSources).values.last()
+        lastNode.useStatement { statement: Statement ->
+            statement.execute(
+                """
+                update ${ShardSchema.SHARD_TABLE_NAME}
+                set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-x', ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-x'
+                where ${ShardSchema.SHARD_COLUMN_NAME} = 17
+                """.trimIndent()
+            )
+        }
+        val editedRow = requireNotNull(ShardSchema.readShards(lastNode)[ShardId.of(17)])
+
+        cluster.updateTopology()
+
+        // The client uses the edit, and every node has it, with the revision the trigger gave it
+        assertEquals(editedRow, cluster.getTopology().shards[ShardId.of(17)])
+        assertEveryNodeHolds(dataSources, cluster.getTopology().shards)
+    }
+
+    @Test
+    fun testUpdateTopology_LaggingCopies_CatchUp() {
+        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val (first, second, third) = nodes.values.toList()
+
+        // A cluster of two nodes for now, with an edit of shard 5 that both of them got
+        val dataSources = mutableListOf(first, second)
+        val cluster = Cluster({ dataSources.toList() }, { emptyList() })
+        cluster.updateTopology()
+        first.useStatement { statement: Statement ->
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-y', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-y' where ${ShardSchema.SHARD_COLUMN_NAME} = 5"
+            )
+        }
+        cluster.updateTopology()
+        val shard5 = requireNotNull(cluster.getTopology().shards[ShardId.of(5)])
+
+        // The second node lags: the version of shard 5 from before the edit, as after a restore from a backup, and no
+        // shard 7 at all
+        second.useStatement { statement: Statement ->
+            statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} in (5, 7)")
+        }
+        ShardSchema.writeShards(second, listOf(Shard(shard5.shard, NodeId("node-x"), NodeId("node-x"), null, Instant.EPOCH)))
+        // ...and a new node joins, with no copy yet
+        dataSources += third
+
+        cluster.updateTopology()
+
+        // The newer row and the deleted one are back, the new node has the whole map
+        assertEquals(shard5, cluster.getTopology().shards[ShardId.of(5)])
+        assertEveryNodeHolds(listOf(first, second, third), cluster.getTopology().shards)
+    }
+
+    @Test
+    fun testUpdateTopology_NodeRejectsRows_NewTopologyInUseAndOtherNodesRepaired() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, middle, last) = nodes.values.toList()
+        val middleNode = nodes.keys.toList()[1]
+
+        val cluster = Cluster(dataSources, emptyList())
+        cluster.updateTopology()
+
+        // The middle node can't take any row, a node in read-only mode for example
+        middle.useStatement { statement: Statement ->
+            statement.execute(
+                """
+                create function reject_rows() returns trigger language plpgsql as ${'$'}${'$'}
+                begin raise exception 'The node takes no rows'; end ${'$'}${'$'}
+                """.trimIndent()
+            )
+            statement.execute(
+                "create trigger reject_rows before insert or update on ${ShardSchema.SHARD_TABLE_NAME} " +
+                    "for each row execute procedure reject_rows()"
+            )
+        }
+
+        // An edit on the first node
+        first.useStatement { statement: Statement ->
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-x', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-x' where ${ShardSchema.SHARD_COLUMN_NAME} = 17"
+            )
+        }
+
+        val exception = assertThrows<IllegalStateException> {
+            cluster.updateTopology()
+        }
+        assertTrue(middleNode.id.id in exception.message.orEmpty(), exception.message)
+
+        // The new topology is in use anyway, and the node after the failed one got the edit
+        val editedRow = requireNotNull(ShardSchema.readShards(first)[ShardId.of(17)])
+        assertEquals(editedRow, cluster.getTopology().shards[ShardId.of(17)])
+        assertEquals(editedRow, ShardSchema.readShards(last)[ShardId.of(17)])
     }
 
     @Test
@@ -377,6 +490,14 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // Now the schema is done, and an update with the same nodes and queues doesn't run it
         assertTrue(cluster.updateTopology().nodes.isEmpty())
+    }
+
+    // Every node holds exactly these rows, with these revisions
+    private fun assertEveryNodeHolds(dataSources: List<DataSource>, shards: Map<ShardId, Shard>) {
+        dataSources.forEach { dataSource ->
+            assertEquals(shards, ShardSchema.readShards(dataSource))
+            assertEquals(ShardSchema.fingerprint(shards.values), ShardSchema.readFingerprint(dataSource))
+        }
     }
 
     // Deletes from 50 to 150 random shards, and returns them

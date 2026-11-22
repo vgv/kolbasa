@@ -109,7 +109,7 @@ class ClusterTopologyUpdater @JvmOverloads constructor(
                 // The new topology is in use, and the next update runs the schema again
                 if (schemaResult.failedStatements == 0) null else TopologyUpdateError.SchemaFailed(schemaResult)
             } catch (e: Exception) {
-                // The old topology stays until the next update
+                // The topology in use stays until the next update
                 TopologyUpdateError.UpdateFailed(e)
             }
 

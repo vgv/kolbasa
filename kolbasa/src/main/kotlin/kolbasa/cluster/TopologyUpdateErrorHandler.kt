@@ -46,7 +46,7 @@ fun interface TopologyUpdateErrorHandler {
         val SYSTEM_LOG = TopologyUpdateErrorHandler { error ->
             when (error) {
                 is TopologyUpdateError.UpdateFailed -> {
-                    val message = "Can't update the cluster topology, the old one stays until the next update"
+                    val message = "Can't update the cluster topology, the one in use stays until the next update"
                     TopologyUpdateErrorLogSupport.logger.log(System.Logger.Level.WARNING, message, error.cause)
                 }
 

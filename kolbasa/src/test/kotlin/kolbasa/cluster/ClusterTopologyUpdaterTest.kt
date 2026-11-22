@@ -278,12 +278,8 @@ class ClusterTopologyUpdaterTest : AbstractPostgreSQLTest() {
         val oldNode = requireNotNull(topology.shards[shard]).producerNode
         val newNode = (topology.nodes.keys - oldNode).random()
 
-        // The shard table lives on one node only
-        val shardTableNode: DataSource = dataSources.single { dataSource ->
-            runCatching { ShardSchema.readShards(dataSource).size == ShardId.SHARD_COUNT }.getOrDefault(false)
-        }
-
-        shardTableNode.useStatement { statement ->
+        // Every node holds a copy of the map, and a hand edit on any of them is picked up
+        dataSources.random().useStatement { statement ->
             statement.execute(
                 """
                 update ${ShardSchema.SHARD_TABLE_NAME}

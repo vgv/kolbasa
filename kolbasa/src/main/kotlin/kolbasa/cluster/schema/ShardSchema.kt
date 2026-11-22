@@ -9,12 +9,14 @@ import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
 import java.sql.Statement
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 import javax.sql.DataSource
@@ -333,6 +335,45 @@ internal object ShardSchema {
         }
 
         return shards
+    }
+
+    /**
+     * Writes [shards] to the shard table of a node, each row only if the table has no row of that shard, or an older
+     * one. Many clients may write the same rows to the same node at the same moment, the result is the same.
+     *
+     * The trigger keeps the revisions written here: an insert brings its own revision, an update brings a newer one
+     */
+    fun writeShards(dataSource: DataSource, shards: Collection<Shard>) {
+        // In shard order, so that two clients writing the same rows lock them in the same order, without a deadlock
+        val sortedShards = shards.sortedBy { it.shard }
+        val values = sortedShards.joinToString(", ") { "(?, ?, ?, ?, ?)" }
+
+        val sql = """
+            insert into $SHARD_TABLE_NAME
+                ($SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $NEXT_CONSUMER_NODE_COLUMN_NAME,
+                $REVISION_COLUMN_NAME)
+            values
+                $values
+            on conflict ($SHARD_COLUMN_NAME) do update set
+                $PRODUCER_NODE_COLUMN_NAME = excluded.$PRODUCER_NODE_COLUMN_NAME,
+                $CONSUMER_NODE_COLUMN_NAME = excluded.$CONSUMER_NODE_COLUMN_NAME,
+                $NEXT_CONSUMER_NODE_COLUMN_NAME = excluded.$NEXT_CONSUMER_NODE_COLUMN_NAME,
+                $REVISION_COLUMN_NAME = excluded.$REVISION_COLUMN_NAME
+            where
+                $SHARD_TABLE_NAME.$REVISION_COLUMN_NAME < excluded.$REVISION_COLUMN_NAME
+        """.trimIndent()
+
+        dataSource.usePreparedStatement(sql) { preparedStatement ->
+            var index = 1
+            for (shard in sortedShards) {
+                preparedStatement.setInt(index++, shard.shard.id)
+                preparedStatement.setString(index++, shard.producerNode.id)
+                preparedStatement.setString(index++, shard.consumerNode?.id)
+                preparedStatement.setString(index++, shard.nextConsumerNode?.id)
+                preparedStatement.setObject(index++, OffsetDateTime.ofInstant(shard.revision, ZoneOffset.UTC))
+            }
+            preparedStatement.executeUpdate()
+        }
     }
 
     /**
