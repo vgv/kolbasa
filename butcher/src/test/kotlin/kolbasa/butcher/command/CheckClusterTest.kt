@@ -25,11 +25,14 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
     fun testNewCluster_NodesGetTheirIdsAndNothingElse() {
         val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster")
 
-        assertEquals(0, result.statusCode, result.output)
+        // The checks ran, and two of them found something: no shard map yet
+        assertEquals(2, result.statusCode, result.output)
         assertTrue(result.output.contains("Initialized node node-01"), result.output)
         assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
         assertTrue(result.output.contains("no shard map on any node yet"), result.output)
         assertTrue(result.output.contains("'create-or-repair-shard-map'"), result.output)
+        assertTrue(result.output.contains("2 of 5 check(s) found something: shard-balance, shard-map."), result.output)
+        assertFalse(result.output.contains("Completed successfully"), result.output)
 
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertTrue(hasTable(node, "q__node"))
@@ -48,6 +51,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         assertEquals(0, result.statusCode, result.output)
         assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
         assertFalse(result.output.contains("Shard balance"), result.output)
+        assertTrue(result.output.trimEnd().endsWith("All checks passed."), result.output)
     }
 
     private fun nodeIdOf(dataSource: DataSource): String =

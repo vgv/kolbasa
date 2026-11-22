@@ -159,7 +159,8 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
         val result = cli().test("-c ${config.absolutePath} check-cluster")
 
-        assertEquals(0, result.statusCode, result.output)
+        // The new node owns no shards and has no copy of the shard map yet, so the checks find something
+        assertEquals(2, result.statusCode, result.output)
         assertTrue(result.output.contains("Initialized node node-four"), result.output)
         assertEquals("node-four", dataSourceFor("node_four").use { nodeIdOf(it) })
     }

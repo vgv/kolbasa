@@ -33,6 +33,13 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
 
     private val cluster by requireObject<ClusterConfig>()
 
+    /**
+     * Whether a successful run starts its output with "Completed successfully."
+     *
+     * [CheckCluster] ends with a line of its own instead: a check can run and still find something.
+     */
+    protected open val reportsCompletion: Boolean = true
+
     override fun helpEpilog(context: Context) =
         "The cluster is given with -c, before the command: $PROGRAM_NAME -c cluster.conf $commandName. " +
             "See '$PROGRAM_NAME --help' for -c and the config file format."
@@ -46,7 +53,9 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
             throw CliktError(e.message)
         }
 
-        echo(TextColors.green("Completed successfully."))
+        if (reportsCompletion) {
+            echo(TextColors.green("Completed successfully."))
+        }
         output?.let { terminal.println(it) }
     }
 

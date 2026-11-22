@@ -252,7 +252,8 @@ with no arguments prints that list and exits `0`: it is a question, not a failur
 > **Outcome and exit code.** Success ends with a green **"Completed successfully."** and exit `0`. Any
 > failure prints `Error: <what went wrong>` (a usage error also prints the command's usage) and exits `1`.
 > That holds for every failure, including the migration-specific ones — nothing reports itself as a stack
-> trace.
+> trace. `check-cluster` has a third outcome: it ran and found something. It ends with a summary line of its
+> own and exits `2` then, see [`check-cluster`](#check-cluster).
 
 ## Command reference
 
@@ -283,6 +284,20 @@ The available checks:
 | `shard-map` | How the copies of the shard map on the nodes differ from the newest rows: rows a copy lacks, older rows, rows with the same revision and other nodes, a node with no `q__shard` at all. Also shards that have no row on any node, rows of shard numbers outside `0..1023`, and shards given to a node that is not in the config. |
 
 Omitting `--checks` runs all of them, which is the default.
+
+The report ends with one line that sums it up: `All checks passed.` in green, or, in yellow, the checks that
+found something: `2 of 5 check(s) found something: shard-balance, shard-map.` The exit code says the same, so a
+cron job or a CI step can act on it without reading the text:
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Every check passed. |
+| `1` | The checks could not run: bad input, a node that can't be reached, ids that don't match. |
+| `2` | The checks ran, and at least one found something. |
+
+A check finds something whenever its first line is yellow. That includes states that are normal for a while:
+copies of the shard map right after a change, shards in the middle of a migration, a new node that owns nothing
+yet. To watch only what matters to you, name the checks: `check-cluster --checks=schema-consistency,orphan-tables`.
 
 A cluster that no application has started yet has no shard map. `check-cluster` still runs: it gives the
 nodes their ids and reports that there is no map. `create-or-repair-shard-map` creates it, and so does the
@@ -500,7 +515,6 @@ butcher -c cluster.conf check-cluster
 ```
 
 ```
-Completed successfully.
 Shard balance: 1024 shard(s) evenly spread across 2 node(s)
 ┌─────────┬────────┐
 │ Node    │ Shards │
@@ -516,10 +530,11 @@ Orphan tables: no orphan queue tables
 Migration state: no shards in migration
 ────────────────────────────────────────────────────────────────────────────────
 Shard map: all 2 copies are the same
+All checks passed.
 ```
 
 Each section's first line is green when there is nothing to do and yellow when there is, so a clean cluster
-is green all the way down.
+is green all the way down. The last line sums it up, and the command exits `0`.
 
 One check, or a few:
 
@@ -543,6 +558,7 @@ Goal: three empty databases become a cluster, and its shard map exists before an
    Shard map: no shard map on any node yet
    An application creates it when it starts, and so does 'create-or-repair-shard-map'.
    If applications already work with this cluster, check that the config points at the right databases.
+   2 of 5 check(s) found something: shard-balance, shard-map.
    ```
 
 2. Create the map:
@@ -565,6 +581,8 @@ same.
 ### What trouble looks like
 
 The checks above all came back clean. Here is what each one reports when something is actually wrong.
+Whenever a check finds something, the report ends with a yellow summary line that names it, and `check-cluster`
+exits `2`.
 
 **An unbalanced cluster** — e.g. just after adding `node-03`, which owns no shards yet. `shard-balance` shows
 the skew and proposes a minimum-movement rebalance:

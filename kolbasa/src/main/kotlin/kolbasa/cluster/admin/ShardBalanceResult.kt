@@ -33,6 +33,14 @@ data class ShardBalanceResult(
     val isBalanced: Boolean = totalMoves == 0
 
     /**
+     * True when the balance report has nothing to show: the nodes of the cluster own shards, and none needs to move
+     *
+     * Unlike [isBalanced], false when no shard belongs to a node of the cluster. Then nothing can move, but that is a
+     * problem of its own.
+     */
+    val isClean: Boolean = isBalanced && currentDistribution.values.any { shards -> shards.isNotEmpty() }
+
+    /**
      * Node -> how many shards it gains or loses if [proposedMoves] is applied
      *
      * Positive means the node takes shards over, negative means it hands them away, and zero means the plan

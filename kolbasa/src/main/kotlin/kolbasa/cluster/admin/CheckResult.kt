@@ -9,4 +9,16 @@ data class CheckResult(
     val orphanTables: OrphanTablesResult? = null,
     val migrationState: MigrationStateResult? = null,
     val shardMap: ShardMapResult? = null
-)
+) {
+
+    /**
+     * True when none of the checks that were asked for found anything
+     */
+    val isClean: Boolean = listOfNotNull(
+        shardBalance?.isClean,
+        schemaConsistency?.isClean,
+        orphanTables?.isClean,
+        migrationState?.isClean,
+        shardMap?.isClean
+    ).all { clean -> clean }
+}

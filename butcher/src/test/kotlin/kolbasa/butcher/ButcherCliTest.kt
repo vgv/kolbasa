@@ -161,6 +161,15 @@ class ButcherCliTest {
     }
 
     @Test
+    fun testCheckClusterHelpNamesItsExitCodes() {
+        val result = cli().test("check-cluster --help")
+
+        assertEquals(0, result.statusCode, result.output)
+        val text = result.output.replace(Regex("\\s+"), " ")
+        assertTrue(text.contains("Exits 0 when every check passed, 2 when a check found something"), result.output)
+    }
+
+    @Test
     fun testMutatingCommandsOfferYes() {
         listOf(
             "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration",
