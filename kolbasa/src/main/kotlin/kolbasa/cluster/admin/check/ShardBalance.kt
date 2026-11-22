@@ -172,7 +172,7 @@ internal class ShardBalance(
     companion object {
         fun check(dataSources: List<DataSource>, drainedNodes: Set<NodeId> = emptySet()): ShardBalanceResult {
             val nodes = ClusterHelper.readNodes(dataSources)
-            val (_, shards) = MoveHelpers.readShards(nodes)
+            val shards = MoveHelpers.readShards(nodes).mergedShards
             val knownNodes = nodes.keys.map { it.id }.toSet()
 
             // An operator types the node to drain by hand, so a typo gets a message rather than the

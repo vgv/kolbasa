@@ -6,11 +6,10 @@ import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
-import kolbasa.schema.SchemaExtractor
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
-import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.readString
+import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
 import java.sql.Statement
@@ -18,7 +17,6 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
-import java.util.*
 import javax.sql.DataSource
 
 internal object ShardSchema {
@@ -262,55 +260,6 @@ internal object ShardSchema {
         }
     }
 
-    /**
-     * Whether `q__shard` exists. The catalog answers it, so a failed read is never taken for a missing table
-     */
-    fun shardTableExists(dataSource: DataSource): Boolean {
-        return SchemaExtractor.extractRawSchema(dataSource, setOf(SHARD_TABLE_NAME)).containsKey(SHARD_TABLE_NAME)
-    }
-
-    /**
-     * Looks for the shard table on [nodes], in node order, and stops at the first one that has every shard.
-     *
-     * [readNode] reads the shard table of one node. The search calls it only for a node that has the table.
-     *
-     * A node whose check or read fails stops the search with an exception that names the node. A failed read is
-     * not a missing table.
-     */
-    fun findShardTable(
-        nodes: SortedMap<Node, DataSource>,
-        readNode: (DataSource) -> Map<ShardId, Shard>
-    ): ShardTableSearch {
-        var firstIncomplete: ShardTableSearch.Incomplete? = null
-
-        for ((node, dataSource) in nodes) {
-            val shards = try {
-                if (shardTableExists(dataSource))
-                    readNode(dataSource)
-                else
-                    null
-            } catch (e: Exception) {
-                throw IllegalStateException("Can't read $SHARD_TABLE_NAME on node ${node.id.id}", e)
-            }
-
-            if (shards == null) {
-                continue
-            }
-
-            if (shards.size == ShardId.SHARD_COUNT) {
-                return ShardTableSearch.Complete(node, dataSource, shards)
-            }
-
-            // A complete table on a later node still wins, so go on
-            if (firstIncomplete == null) {
-                firstIncomplete = ShardTableSearch.Incomplete(node, dataSource, shards.size)
-            }
-        }
-
-        // If there isn’t a single incomplete shard table - there is no shard table at all
-        return firstIncomplete ?: ShardTableSearch.Missing
-    }
-
     fun readShards(dataSource: DataSource): Map<ShardId, Shard> {
         val shards = hashMapOf<ShardId, Shard>()
 
@@ -335,6 +284,18 @@ internal object ShardSchema {
         }
 
         return shards
+    }
+
+    /**
+     * The revision for a change of the shard map that kolbasa makes itself: a simple kind of hybrid logical clock, the
+     * same as in the trigger. It is the current time, or the newest revision of [shards] plus one microsecond,
+     * whichever is later. In whole microseconds, as PostgreSQL keeps it
+     */
+    fun nextRevision(shards: Collection<Shard>, now: Instant = Instant.now()): Instant {
+        val currentTime = now.truncatedTo(ChronoUnit.MICROS)
+        val newestRevision = shards.maxOfOrNull { it.revision } ?: return currentTime
+
+        return maxOf(currentTime, newestRevision.plus(1, ChronoUnit.MICROS))
     }
 
     /**

@@ -8,6 +8,7 @@ import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -18,27 +19,43 @@ import kotlin.IllegalStateException
 class MoveHelpersTest : AbstractPostgreSQLTest() {
 
     @Test
-    fun testReadShards_Success() {
-        // Create shard table on the second node
+    fun testReadShards_MergesTheCopiesOfEveryNode() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
-        ShardSchema.createOrUpdateShardTable(dataSourceFirstSchema)
-        ShardSchema.fillShardTable(dataSourceFirstSchema, nodes.keys.toList())
-        val expectedShardTable = ShardSchema.readShards(dataSourceFirstSchema)
+        val (first, second, third) = nodes.values.toList()
 
-        // Check that we've found exactly the same shard table
-        val shardInfo = MoveHelpers.readShards(nodes)
-        assertEquals(expectedShardTable, shardInfo.shards)
-        assertEquals(dataSourceFirstSchema, shardInfo.shardDataSource)
+        // The same map on two nodes, the third one has no table yet
+        ShardSchema.createOrUpdateShardTable(first)
+        ShardSchema.fillShardTable(first, nodes.keys.toList())
+        ShardSchema.createOrUpdateShardTable(second)
+        ShardSchema.writeShards(second, ShardSchema.readShards(first).values)
+
+        // An operator edits the copy of the second node, and no application has spread the edit yet
+        second.useStatement { statement: Statement ->
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-x', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-x' where ${ShardSchema.SHARD_COLUMN_NAME} = 17"
+            )
+        }
+
+        val shardMap = MoveHelpers.readShards(nodes)
+
+        // The second copy has the newest row of every shard
+        assertEquals(ShardSchema.readShards(second), shardMap.mergedShards)
+        assertEquals(NodeId("node-x"), shardMap.mergedShards[ShardId.of(17)]?.producerNode)
+
+        // Reading doesn't repair: the first node still has its old row, the third one only got an empty table
+        assertNotEquals(NodeId("node-x"), ShardSchema.readShards(first)[ShardId.of(17)]?.producerNode)
+        assertTrue(ShardSchema.readShards(third).isEmpty())
     }
 
     @Test
-    fun testReadShards_Failure() {
+    fun testReadShards_NewCluster_MapSeeded() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
-        // Without shard table we expect an exception
-        assertThrows<ClusterOperationException.ExecutionException> {
-            MoveHelpers.readShards(nodes)
-        }
+        val shards = MoveHelpers.readShards(nodes).mergedShards
+
+        assertEquals(ShardId.SHARD_COUNT, shards.size)
+        assertTrue(shards.values.all { it.revision == Instant.EPOCH })
     }
 
     @Test
@@ -56,8 +73,8 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         val exception = assertThrows<ClusterOperationException.ExecutionException> {
             MoveHelpers.readShards(nodes)
         }
-        // A failed read must not look like a missing table: that one says "not found" instead
-        assertTrue("Can't read ${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}" in exception.message, exception.message)
+        // A failed read must not look like a missing table, that one gets a new map
+        assertTrue("${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}" in exception.message, exception.message)
     }
 
     @Test

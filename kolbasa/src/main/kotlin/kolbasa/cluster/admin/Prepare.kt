@@ -1,10 +1,10 @@
 package kolbasa.cluster.admin
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
-import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import javax.sql.DataSource
 
 internal fun prepare(
@@ -14,7 +14,8 @@ internal fun prepare(
     progressCallback: ProgressCallback
 ) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val (shardDataSource, initialShards) = MoveHelpers.readShards(nodes)
+    val shardMap = MoveHelpers.readShards(nodes)
+    val initialShards = shardMap.mergedShards
 
     // Check that target node exists
     if (nodes.none { (node, _) -> node.id == target }) {
@@ -31,25 +32,27 @@ internal fun prepare(
             }
         }
 
-    // Ok, everything looks fine, prepare shard table to migration
-    val query = """
-            update ${ShardSchema.SHARD_TABLE_NAME}
-            set
-                ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = ?,
-                ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = null,
-                ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME} = ?
-            where
-                ${ShardSchema.SHARD_COLUMN_NAME} in (${shards.joinToString(",") { it.id.toString() }})
-        """.trimIndent()
+    // Ok, everything looks fine, prepare the shards to migration
+    val revision = ShardSchema.nextRevision(initialShards.values)
+    val newRows = mutableListOf<Shard>()
+    for (shardId in shards) {
+        val newRow = Shard(
+            shard = shardId,
+            producerNode = target,
+            consumerNode = null,
+            nextConsumerNode = target,
+            revision = revision
+        )
 
-    shardDataSource.usePreparedStatement(query) { ps ->
-        ps.setString(1, target.id)
-        ps.setString(2, target.id)
-        ps.executeUpdate()
+        // The shard may be migrating to this node already
+        if (!newRow.equalsIgnoreRevision(initialShards.getValue(shardId))) {
+            newRows += newRow
+        }
     }
+    MoveHelpers.writeShards(nodes, shardMap, newRows)
 
     // Calculate difference between initial and updated shards and notify
-    val updatedShards = ShardSchema.readShards(shardDataSource)
+    val updatedShards = MoveHelpers.readShards(nodes).mergedShards
     progressCallback.prepareSuccessful(
         shards = shards,
         targetNode = target,

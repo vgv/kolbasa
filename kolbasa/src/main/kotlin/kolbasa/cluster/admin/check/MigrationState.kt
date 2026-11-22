@@ -25,7 +25,7 @@ internal class MigrationState(private val shards: Collection<Shard>) {
     companion object {
         fun check(dataSources: List<DataSource>): MigrationStateResult {
             val nodes = ClusterHelper.readNodes(dataSources)
-            val (_, shards) = MoveHelpers.readShards(nodes)
+            val shards = MoveHelpers.readShards(nodes).mergedShards
             return MigrationState(shards.values).compute()
         }
     }

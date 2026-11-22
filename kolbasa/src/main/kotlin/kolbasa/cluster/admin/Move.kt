@@ -61,7 +61,7 @@ internal fun move(
 }
 
 private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<ShardId>> {
-    val (_, shards) = MoveHelpers.readShards(nodes)
+    val shards = MoveHelpers.readShards(nodes).mergedShards
 
     val targetsToShards = mutableMapOf<NodeId, MutableList<ShardId>>()
     shards.values.forEach { shard ->

@@ -1,7 +1,6 @@
 package kolbasa.cluster
 
-import kolbasa.cluster.schema.ShardSchema
-import kolbasa.producer.ShardId
+import kolbasa.cluster.schema.ShardCopies
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
@@ -145,7 +144,8 @@ class Cluster(
         val queues = queuesProvider.get()
 
         val nodes = initNodes(dataSources)
-        val shardMap = readShardMap(nodes)
+        // A node that holds exactly our map isn't read, only its md5
+        val shardMap = ShardCopies.read(nodes, topology?.shards ?: emptyMap(), topology?.shardsFingerprint)
         val schemaResult = updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shardMap.mergedShards)
@@ -154,7 +154,7 @@ class Cluster(
         }
 
         // Last: a node that can't take the rows must not keep the new topology out
-        repairShardTables(nodes, shardMap)
+        ShardCopies.repair(nodes, shardMap)
 
         return schemaResult
     }
@@ -210,88 +210,6 @@ class Cluster(
         return remappedAtLeastOnce
     }
 
-    private fun readShardMap(nodes: SortedMap<Node, DataSource>): ShardMap {
-        // The map we already have, and its md5
-        val knownShards = topology?.shards ?: emptyMap()
-        val knownFingerprint = topology?.shardsFingerprint
-
-        // What every node holds. A node with our md5 holds exactly our map, the others are read
-        val copies = nodes.mapValues { (node, dataSource) ->
-            onShardTable(node) {
-                // A new node gets an empty table here
-                ShardSchema.createOrUpdateShardTable(dataSource)
-
-                if (ShardSchema.readFingerprint(dataSource) == knownFingerprint) {
-                    knownShards
-                } else {
-                    ShardSchema.readShards(dataSource)
-                }
-            }
-        }
-
-        // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
-        val mergedShards = ShardSchema.mergeShards(copies.values)
-
-        // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
-        // smallest id, and the initial revision, so a real row that turns up later wins over them
-        val missingShards = ShardId.SHARDS_RANGE.filter { shard -> ShardId.of(shard) !in mergedShards }
-        if (missingShards.isEmpty()) {
-            return ShardMap(mergedShards, copies)
-        }
-
-        val (smallestNode, smallestDataSource) = nodes.entries.first()
-        val smallestCopy = onShardTable(smallestNode) {
-            ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
-            // Another client may have filled them at the same moment: its rows are the ones in the table now
-            ShardSchema.readShards(smallestDataSource)
-        }
-
-        return ShardMap(ShardSchema.mergeShards(listOf(mergedShards, smallestCopy)), copies + (smallestNode to smallestCopy))
-    }
-
-    /**
-     * Every node gets the rows of the merged map its copy lacks, or holds an older or another version of.
-     *
-     * A node that can't take them doesn't stop the others. The first failure is thrown at the end, the others are
-     * added to it as suppressed
-     */
-    private fun repairShardTables(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap) {
-        var failure: Exception? = null
-
-        for ((node, dataSource) in nodes) {
-            val copy = shardMap.copies.getValue(node)
-            val rowsToWrite = shardMap.mergedShards.values.filter { shard -> copy[shard.shard] != shard }
-            if (rowsToWrite.isEmpty()) {
-                continue
-            }
-
-            try {
-                onShardTable(node) {
-                    ShardSchema.writeShards(dataSource, rowsToWrite)
-                }
-            } catch (e: Exception) {
-                if (failure == null) {
-                    failure = e
-                } else {
-                    failure.addSuppressed(e)
-                }
-            }
-        }
-
-        if (failure != null) {
-            throw failure
-        }
-    }
-
-    // Names the node in any error of its shard table
-    private fun <T> onShardTable(node: Node, block: () -> T): T {
-        try {
-            return block()
-        } catch (e: Exception) {
-            throw IllegalStateException("Can't read or update ${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}", e)
-        }
-    }
-
     private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): ClusterSchemaResult {
         // No queues: the schema is the user's job, nothing here touches it
         if (queues.isEmpty()) {
@@ -321,7 +239,4 @@ class Cluster(
 
     // What the schema was generated for
     private data class SchemaKey(val nodes: Set<NodeId>, val queues: Set<Queue<*>>)
-
-    // The merged shard map, and what the shard table of every node holds
-    private class ShardMap(val mergedShards: Map<ShardId, Shard>, val copies: Map<Node, Map<ShardId, Shard>>)
 }

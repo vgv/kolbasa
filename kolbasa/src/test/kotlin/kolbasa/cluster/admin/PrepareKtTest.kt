@@ -1,16 +1,21 @@
 package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
+import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
+import javax.sql.DataSource
 import kotlin.random.Random
 
 class PrepareKtTest : AbstractPostgreSQLTest() {
@@ -122,5 +127,124 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         assertInstanceOf<ClusterOperationException.MoveToTheSameShardException>(exception)
         assertEquals(shardsToMove.first(), exception.shard)
         assertEquals(targetNode.id, exception.targetNode)
+    }
+
+    @Test
+    fun testPrepareAndFinalize_EveryNodeGetsTheSameRows() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, _) = nodes.values.toList()
+        val targetNode = nodes.keys.last().id
+
+        // The first node has the map, the second one lags: only the first 100 shards. The third one has no table at all
+        ShardSchema.createOrUpdateShardTable(first)
+        ShardSchema.fillShardTable(first, nodes.keys.toList())
+        ShardSchema.createOrUpdateShardTable(second)
+        ShardSchema.writeShards(second, ShardSchema.readShards(first).values.filter { it.shard.id < 100 })
+
+        // An edit with a revision far ahead of every clock
+        val newestRevision = Instant.parse("2100-01-01T00:00:00Z")
+        moveByHand(first, shard = 500, node = nodes.keys.first().id, revision = "2100-01-01 00:00:00+00")
+
+        val shardsToMove = ShardSchema.readShards(first).values
+            .filter { it.consumerNode != targetNode && it.shard.id != 500 }
+            .map { it.shard }
+            .sorted()
+            .take(10)
+
+        // PREPARE
+        prepare(dataSources, targetNode, shardsToMove, ProgressCallback.Ignore)
+        val prepared = ShardSchema.readShards(first)
+        assertEveryNodeHolds(dataSources, prepared)
+        shardsToMove.forEach { shard ->
+            val expected = Shard(shard, targetNode, null, targetNode, newestRevision.plusNanos(1000))
+            assertEquals(expected, prepared[shard])
+        }
+
+        // FINALIZE
+        finalize(dataSources, ProgressCallback.Ignore)
+        val finalized = ShardSchema.readShards(first)
+        assertEveryNodeHolds(dataSources, finalized)
+        shardsToMove.forEach { shard ->
+            val expected = Shard(shard, targetNode, targetNode, null, newestRevision.plusNanos(2000))
+            assertEquals(expected, finalized[shard])
+        }
+
+        // The other shards are as they were
+        assertEquals(prepared - shardsToMove.toSet(), finalized - shardsToMove.toSet())
+    }
+
+    @Test
+    fun testPrepare_HandEditOnAnotherNode_IsSeen() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, _, third) = nodes.values.toList()
+        val targetNode = nodes.keys.last().id
+        Cluster(dataSources, emptyList()).updateTopology()
+
+        // A shard of another node is given to the target by hand, on one node only
+        val shard = requireNotNull(ShardSchema.readShards(first).values.find { it.consumerNode != targetNode }).shard
+        moveByHand(third, shard = shard.id, node = targetNode)
+
+        // The first node doesn't have the edit, but butcher knows that the shard is on the target already
+        val exception = assertThrows<ClusterOperationException.MoveToTheSameShardException> {
+            prepare(dataSources, targetNode, listOf(shard), ProgressCallback.Ignore)
+        }
+        assertEquals(shard, exception.shard)
+    }
+
+    @Test
+    fun testPrepare_NodeRejectsRows_OtherNodesGetThem() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, middle, last) = nodes.values.toList()
+        val middleNode = nodes.keys.toList()[1]
+        val targetNode = nodes.keys.last().id
+        Cluster(dataSources, emptyList()).updateTopology()
+
+        // The middle node can't take any row
+        middle.useStatement { statement ->
+            statement.execute(
+                """
+                create function reject_rows() returns trigger language plpgsql as ${'$'}${'$'}
+                begin raise exception 'The node takes no rows'; end ${'$'}${'$'}
+                """.trimIndent()
+            )
+            statement.execute(
+                "create trigger reject_rows before insert or update on ${ShardSchema.SHARD_TABLE_NAME} " +
+                    "for each row execute procedure reject_rows()"
+            )
+        }
+
+        val shard = requireNotNull(ShardSchema.readShards(first).values.find { it.consumerNode != targetNode }).shard
+        val exception = assertThrows<ClusterOperationException.ExecutionException> {
+            prepare(dataSources, targetNode, listOf(shard), ProgressCallback.Ignore)
+        }
+        assertTrue("on node ${middleNode.id.id}" in exception.message, exception.message)
+        assertTrue("The node takes no rows" in exception.message, exception.message)
+
+        // The nodes before and after the failed one have the change
+        val prepared = requireNotNull(ShardSchema.readShards(first)[shard])
+        assertEquals(targetNode, prepared.nextConsumerNode)
+        assertEquals(prepared, ShardSchema.readShards(last)[shard])
+    }
+
+    private fun assertEveryNodeHolds(dataSources: List<DataSource>, shards: Map<ShardId, Shard>) {
+        dataSources.forEach { dataSource ->
+            assertEquals(shards, ShardSchema.readShards(dataSource))
+            assertEquals(ShardSchema.fingerprint(shards.values), ShardSchema.readFingerprint(dataSource))
+        }
+    }
+
+    // Gives the shard to another node by hand, with a revision of its own if one is given
+    private fun moveByHand(dataSource: DataSource, shard: Int, node: NodeId, revision: String? = null) {
+        val setRevision = if (revision != null) ", ${ShardSchema.REVISION_COLUMN_NAME} = '$revision'" else ""
+        dataSource.useStatement { statement ->
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${node.id}', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '${node.id}'$setRevision " +
+                    "where ${ShardSchema.SHARD_COLUMN_NAME} = $shard"
+            )
+        }
     }
 }

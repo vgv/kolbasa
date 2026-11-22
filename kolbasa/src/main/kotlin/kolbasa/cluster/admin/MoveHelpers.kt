@@ -1,8 +1,8 @@
 package kolbasa.cluster.admin
 
 import kolbasa.cluster.Shard
-import kolbasa.cluster.schema.ShardSchema
-import kolbasa.cluster.schema.ShardTableSearch
+import kolbasa.cluster.schema.ShardCopies
+import kolbasa.cluster.schema.ShardMap
 import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
@@ -10,11 +10,6 @@ import kolbasa.utils.JdbcHelpers.readString
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
-
-internal data class ShardInfo(
-    val shardDataSource: DataSource,
-    val shards: Map<ShardId, Shard>
-)
 
 internal data class SourceAndTargetNodes(
     val sourceNodes: List<DataSource>,
@@ -28,31 +23,44 @@ internal object MoveHelpers {
      */
     private const val MAX_REPORTED_CAUSES = 3
 
-    fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
-        val search: ShardTableSearch = try {
-            ShardSchema.findShardTable(nodes, ShardSchema::readShards)
+    /**
+     * Reads the shard map the same way an application does: from every node, see [ShardCopies.read]. It doesn't repair
+     * the copies that lag behind, so it works on a cluster with a node that takes no rows
+     */
+    fun readShards(nodes: SortedMap<Node, DataSource>): ShardMap {
+        return reportFailure {
+            ShardCopies.read(nodes, knownShards = emptyMap(), knownFingerprint = null)
+        }
+    }
+
+    /**
+     * Puts [newRows] into the shard map, on every node. The copies that lag behind catch up on the way.
+     *
+     * A node that can't take the rows doesn't stop the others, and the change is in effect once one node has it. Then
+     * this method throws, with the name of the failed node. It is safe to run the operation again
+     */
+    fun writeShards(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap, newRows: List<Shard>) {
+        val mergedShards = shardMap.mergedShards + newRows.associateBy { it.shard }
+
+        reportFailure {
+            ShardCopies.repair(nodes, ShardMap(mergedShards, shardMap.copies))
+        }
+    }
+
+    private fun <T> reportFailure(block: () -> T): T {
+        try {
+            return block()
         } catch (e: Exception) {
             val errorMessage = buildString {
-                appendLine(e.message ?: e.toString())
-                e.causeMessages().forEach { cause ->
-                    appendLine("  Caused by: $cause")
+                // Every failed node: the first one, and the suppressed ones
+                (listOf<Throwable>(e) + e.suppressed).forEach { failure ->
+                    appendLine(failure.message ?: failure.toString())
+                    failure.causeMessages().forEach { cause ->
+                        appendLine("  Caused by: $cause")
+                    }
                 }
             }
             throw ClusterOperationException.ExecutionException(errorMessage)
-        }
-
-        return when (search) {
-            is ShardTableSearch.Complete -> ShardInfo(search.dataSource, search.shards)
-
-            // butcher doesn't fill the table, an application does it on its next topology update
-            is ShardTableSearch.Incomplete -> throw ClusterOperationException.ExecutionException(
-                "Shard table ${ShardSchema.SHARD_TABLE_NAME} on node ${search.node.id.id} has ${search.shardCount} of " +
-                    "${ShardId.SHARD_COUNT} shards. The next topology update of an application fills the missing ones."
-            )
-
-            ShardTableSearch.Missing -> throw ClusterOperationException.ExecutionException(
-                "Initialized shard table ${ShardSchema.SHARD_TABLE_NAME} not found. Is it a Kolbasa cluster?"
-            )
         }
     }
 

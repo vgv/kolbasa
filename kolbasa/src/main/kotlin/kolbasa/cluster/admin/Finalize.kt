@@ -1,30 +1,33 @@
 package kolbasa.cluster.admin
 
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.utils.JdbcHelpers.useStatement
 import javax.sql.DataSource
 
 internal fun finalize(dataSources: List<DataSource>, progressCallback: ProgressCallback) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val (shardDataSource, initialShards) = MoveHelpers.readShards(nodes)
+    val shardMap = MoveHelpers.readShards(nodes)
+    val initialShards = shardMap.mergedShards
 
-    // Okay, everything looks good, let's switch the shard table to a stable state
-    val query = """
-            update ${ShardSchema.SHARD_TABLE_NAME}
-            set
-                ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME},
-                ${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME} = null
-            where
-                ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} is null
-        """.trimIndent()
-
-    shardDataSource.useStatement { statement ->
-        statement.executeUpdate(query)
+    // Okay, everything looks good, let's switch the migrating shards to a stable state
+    val revision = ShardSchema.nextRevision(initialShards.values)
+    val newRows = mutableListOf<Shard>()
+    for (shard in initialShards.values) {
+        if (shard.consumerNode == null) {
+            newRows += Shard(
+                shard = shard.shard,
+                producerNode = shard.producerNode,
+                consumerNode = shard.nextConsumerNode,
+                nextConsumerNode = null,
+                revision = revision
+            )
+        }
     }
+    MoveHelpers.writeShards(nodes, shardMap, newRows)
 
     // Calculate difference between initial and updated shards and notify
-    val updatedShards = ShardSchema.readShards(shardDataSource)
+    val updatedShards = MoveHelpers.readShards(nodes).mergedShards
     progressCallback.finalizeSuccessful(
         shardsDiff = MoveHelpers.calculateShardsDiff(initialShards, updatedShards)
     )
