@@ -47,7 +47,7 @@ internal refactorings.
 ## Entry format
 
 ```
-## [0.239.0] - 2026-11-22
+## [0.239.0](https://github.com/vgv/kolbasa/compare/v0.238.0...v0.239.0) - 2026-11-22
 
 One sentence on what the release is about ([#177](https://github.com/vgv/kolbasa/pull/177)).
 
@@ -55,6 +55,8 @@ One sentence on what the release is about ([#177](https://github.com/vgv/kolbasa
 
 - ...
 ```
+
+The version in the heading links to the diff from the previous tag to this one.
 
 Groups, in this order, only the non-empty ones: `Breaking changes`, `Schema`, `Added`, `Changed`, `Deprecated`,
 `Fixed`, `Security`.
@@ -73,12 +75,6 @@ Writing:
 - A fix says what the user saw go wrong, then what happens now. Not what changed in the code.
 - No PR links inside items, no commit hashes.
 
-Each entry has a link line at the bottom of the file, newest first:
-
-```
-[0.239.0]: https://github.com/vgv/kolbasa/compare/v0.238.0...v0.239.0
-```
-
 ## Writing the file
 
 1. Show the entry in chat first. Write nothing until the user agrees.
@@ -90,6 +86,6 @@ Each entry has a link line at the bottom of the file, newest first:
    `kolbasa-spring-boot-4-starter`) and `butcher`, newest first. The format follows
    [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). History starts at 0.222.0.
    ```
-3. Put the entry in its place by version, newest first, and its link line in its place at the bottom. If the tag
-   already has an entry, show the old one next to the new one, then replace it.
+3. Put the entry in its place by version, newest first. If the tag already has an entry, show the old one next to
+   the new one, then replace it.
 4. Don't commit.

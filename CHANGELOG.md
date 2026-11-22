@@ -1,6 +1,8 @@
 # Changelog
 
-All notable changes to kolbasa (`io.github.vgv:kolbasa`). Versions are newest first.
+What changed in each release of kolbasa (`io.github.vgv:kolbasa`, `kolbasa-opentelemetry`,
+`kolbasa-spring-boot-4-starter`) and `butcher`, newest first. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.231.0] – 2026-11-08
 
