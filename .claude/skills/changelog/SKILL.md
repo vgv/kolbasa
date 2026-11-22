@@ -1,27 +1,25 @@
 ---
 name: changelog
-description: Write CHANGELOG.md entries for the given release tags, from the diff between each tag and the tag before it.
-argument-hint: <tag>[, <tag>…]
+description: Write the CHANGELOG.md entry for one release tag, from the diff between it and the tag before it.
+argument-hint: <tag>
 disable-model-invocation: true
 allowed-tools: Bash(git tag:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git rev-parse:*)
 ---
 
-# Changelog entries for release tags
+# Changelog entry for a release tag
 
-Write one `CHANGELOG.md` entry for each tag in `$ARGUMENTS`. Every push to `main` is a release with its own tag, so
-an entry describes exactly one merged PR.
+Write the `CHANGELOG.md` entry for the tag in `$ARGUMENTS`. Every push to `main` is a release with its own tag, so the
+entry describes exactly one merged PR.
 
-## Tags
+## Tag
 
-- Tags are separated by commas, spaces or both. The `v` is optional: `v0.239.0, 0.240.0` is fine.
-- No tags given: list the tags newer than the newest version in `CHANGELOG.md`, ask which ones to describe, and stop.
-- A tag that doesn't exist: say so and stop, before writing anything.
-- The previous tag is the one before it in version order (`git tag -l 'v*' --sort=v:refname`), not the one before it
-  in the list.
+- One tag. The `v` is optional: `v0.239.0` and `0.239.0` are the same.
+- No tag, more than one, or a tag that doesn't exist: say so and stop.
+- The previous tag is the one before it in version order (`git tag -l 'v*' --sort=v:refname`).
 
 ## What to read
 
-For each tag `T` with previous tag `P`:
+For the tag `T` and the previous tag `P`:
 
 - `git log -1 --format='%cs%n%B' T` — the release date and the merge commit message, which holds the PR number and
   title.
@@ -83,7 +81,7 @@ Each entry has a link line at the bottom of the file, newest first:
 
 ## Writing the file
 
-1. Show all the entries in chat first. Write nothing until the user agrees.
+1. Show the entry in chat first. Write nothing until the user agrees.
 2. If `CHANGELOG.md` doesn't exist, create it with this header:
    ```
    # Changelog
@@ -92,6 +90,6 @@ Each entry has a link line at the bottom of the file, newest first:
    `kolbasa-spring-boot-4-starter`) and `butcher`, newest first. The format follows
    [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). History starts at 0.222.0.
    ```
-3. Put each entry in its place by version, newest first, and its link line in its place at the bottom. If the tag
+3. Put the entry in its place by version, newest first, and its link line in its place at the bottom. If the tag
    already has an entry, show the old one next to the new one, then replace it.
 4. Don't commit.
