@@ -64,31 +64,4 @@ class ShardTest {
         assertEquals("shard[5,node-02,null,node-02,1970-01-01T00:00:00Z]", migrating.toString())
     }
 
-    @Test
-    fun testCompareTo() {
-        val shard = Shard(ShardId.of(5), NodeId("node-02"), NodeId("node-02"), null, Instant.EPOCH)
-
-        // The same row
-        assertEquals(0, shard.compareTo(Shard(ShardId.of(5), NodeId("node-02"), NodeId("node-02"), null, Instant.EPOCH)))
-
-        // A newer revision is greater, whatever the nodes
-        val newer = Shard(ShardId.of(5), NodeId("node-01"), NodeId("node-01"), null, Instant.EPOCH.plusNanos(1000))
-        assertTrue(newer > shard)
-
-        // The same revision: the producer decides
-        val otherProducer = Shard(ShardId.of(5), NodeId("node-03"), NodeId("node-03"), null, Instant.EPOCH)
-        assertTrue(otherProducer > shard)
-
-        // The same revision and producer: a migrating row has no consumer, so it is less
-        val migrating = Shard(ShardId.of(5), NodeId("node-02"), null, NodeId("node-02"), Instant.EPOCH)
-        assertTrue(migrating < shard)
-
-        // Every client picks the same row, whatever the order
-        assertEquals(maxOf(shard, otherProducer), maxOf(otherProducer, shard))
-
-        // The shard goes first
-        val otherShard = Shard(ShardId.of(4), NodeId("node-03"), NodeId("node-03"), null, Instant.EPOCH.plusNanos(1000))
-        assertTrue(otherShard < shard)
-    }
-
 }

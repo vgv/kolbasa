@@ -11,13 +11,13 @@ import javax.sql.DataSource
  */
 internal class ShardMap(
     /**
-     * For every shard, the newest row of all the copies
+     * For every shard, the newest row of all the copies, see [ShardSchema.mergeShards]
      */
     val mergedShards: Map<ShardId, Shard>,
     /**
      * What every node holds
      */
-    val copies: Map<Node, Map<ShardId, Shard>>
+    val copies: SortedMap<Node, Map<ShardId, Shard>>
 )
 
 /**
@@ -52,10 +52,10 @@ internal object ShardCopies {
                     ShardSchema.readShards(dataSource)
                 }
             }
-        }
+        }.toSortedMap()
 
         // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
-        val mergedShards = ShardSchema.mergeShards(copies.values)
+        val mergedShards = ShardSchema.mergeShards(copies)
 
         // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
         // smallest id, and the initial revision, so a real row that turns up later wins over them
@@ -65,27 +65,29 @@ internal object ShardCopies {
         }
 
         val (smallestNode, smallestDataSource) = nodes.entries.first()
-        val smallestCopy = onShardTable(smallestNode) {
+        copies[smallestNode] = onShardTable(smallestNode) {
             ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
             // Another client may have filled them at the same moment: its rows are the ones in the table now
             ShardSchema.readShards(smallestDataSource)
         }
 
-        return ShardMap(ShardSchema.mergeShards(listOf(mergedShards, smallestCopy)), copies + (smallestNode to smallestCopy))
+        return ShardMap(ShardSchema.mergeShards(copies), copies)
     }
 
     /**
      * Writes to every node the rows of the merged map that its copy lacks, or holds an older or another version of.
+     * If copies hold different rows with the same revision, all of them get the row of the merged map.
      *
      * A node that can't take them doesn't stop the others. The first failure is thrown at the end, the others are
      * added to it as suppressed. An error names the node it came from
      */
     fun repair(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap) {
+        val shards = resolveTies(shardMap)
         var failure: Exception? = null
 
         for ((node, dataSource) in nodes) {
             val copy = shardMap.copies.getValue(node)
-            val rowsToWrite = shardMap.mergedShards.values.filter { shard -> copy[shard.shard] != shard }
+            val rowsToWrite = shards.filter { shard -> copy[shard.shard] != shard }
             if (rowsToWrite.isEmpty()) {
                 continue
             }
@@ -106,6 +108,28 @@ internal object ShardCopies {
         if (failure != null) {
             throw failure
         }
+    }
+
+    // The rows of the merged map. A row that another copy holds with the same revision and other nodes gets a new revision:
+    // a table takes only a row that is newer than its own, so with the old one the copies would stay different forever
+    private fun resolveTies(shardMap: ShardMap): List<Shard> {
+        val newRevision = ShardSchema.nextRevision(shardMap.mergedShards.values)
+        val shards = mutableListOf<Shard>()
+
+        for (shard in shardMap.mergedShards.values) {
+            val tie = shardMap.copies.values.any { copy ->
+                val row = copy[shard.shard]
+                row != null && row.revision == shard.revision && !row.equalsIgnoreRevision(shard)
+            }
+
+            shards += if (tie) {
+                Shard(shard.shard, shard.producerNode, shard.consumerNode, shard.nextConsumerNode, newRevision)
+            } else {
+                shard
+            }
+        }
+
+        return shards
     }
 
     // Names the node in any error of its shard table

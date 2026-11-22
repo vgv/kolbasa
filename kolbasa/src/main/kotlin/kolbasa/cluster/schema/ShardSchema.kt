@@ -17,6 +17,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import java.util.*
 import javax.sql.DataSource
 
 internal object ShardSchema {
@@ -338,16 +339,17 @@ internal object ShardSchema {
     }
 
     /**
-     * One map out of several copies: for every shard, the greatest of its rows, see [Shard.compareTo]. So the newest
-     * row wins, and every client picks the same row, whatever the order of [copies]
+     * One map out of the copies on the nodes: for every shard, the row with the newest revision. If several copies have
+     * that revision, the row of the node with the smallest id
      */
-    fun mergeShards(copies: Collection<Map<ShardId, Shard>>): Map<ShardId, Shard> {
+    fun mergeShards(copies: SortedMap<Node, Map<ShardId, Shard>>): Map<ShardId, Shard> {
         val merged = hashMapOf<ShardId, Shard>()
 
-        for (copy in copies) {
+        // In node order, so the row of the node with the smallest id stays if the revisions are equal
+        for (copy in copies.values) {
             for ((shardId, shard) in copy) {
                 val current = merged[shardId]
-                if (current == null || shard > current) {
+                if (current == null || shard.revision > current.revision) {
                     merged[shardId] = shard
                 }
             }

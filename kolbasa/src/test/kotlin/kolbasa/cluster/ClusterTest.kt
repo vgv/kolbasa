@@ -1,11 +1,13 @@
 package kolbasa.cluster
 
 import kolbasa.test.AbstractPostgreSQLTest
+import kolbasa.cluster.schema.ShardCopies
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
+import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readInt
@@ -220,28 +222,67 @@ class ClusterTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testUpdateTopology_TwoMapsWithTheSameRevision_EveryClientPicksTheSameRows() {
+    fun testUpdateTopology_TwoMapsWithTheSameRevision_BecomeOne() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, _) = nodes.values.toList()
 
-        // Two clients seeded a new cluster at the same moment, each on its own smallest node: two random maps, both
-        // with the initial revision
-        ShardSchema.createOrUpdateShardTable(first)
-        ShardSchema.fillShardTable(first, nodes.keys.toList())
-        ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        // Two random maps on two nodes, every row of both with the initial revision
+        val firstMap = seedRandomMap(first, nodes.keys.toList())
+        val secondMap = seedRandomMap(second, nodes.keys.toList())
+        val ties = firstMap.keys.filter { firstMap[it] != secondMap[it] }
+        assertTrue(ties.isNotEmpty())
 
-        // Two clients with different node lists, in a different order
-        val oneClient = Cluster(dataSources, emptyList())
-        oneClient.updateTopology()
-        val anotherClient = Cluster(listOf(second, first), emptyList())
-        anotherClient.updateTopology()
+        val countingNodes = dataSources.map { CountingDataSource(it) }
+        val cluster = Cluster(countingNodes, emptyList())
+        cluster.updateTopology()
 
-        // Both took the greater row of every shard, see Shard.compareTo
-        val expected = ShardSchema.mergeShards(listOf(ShardSchema.readShards(first), ShardSchema.readShards(second)))
-        assertEquals(expected, oneClient.getTopology().shards)
-        assertEquals(expected, anotherClient.getTopology().shards)
+        // Every node holds the map of the node with the smallest id
+        val map = ShardSchema.readShards(first)
+        assertEveryNodeHolds(dataSources, map)
+        map.forEach { (shardId, shard) ->
+            assertTrue(shard.equalsIgnoreRevision(firstMap.getValue(shardId)), "$shard")
+        }
+
+        // Only the shards that were different got a new revision
+        assertEquals(ties.toSet(), map.values.filter { it.revision > Instant.EPOCH }.map { it.shard }.toSet())
+
+        // The second update takes the new revisions and changes nothing, the third one reads no rows
+        cluster.updateTopology()
+        assertEveryNodeHolds(dataSources, map)
+        assertEquals(map, cluster.getTopology().shards)
+        val reads = countingNodes.sumOf { it.shardTableReads.get() }
+        cluster.updateTopology()
+        assertEquals(reads, countingNodes.sumOf { it.shardTableReads.get() })
+    }
+
+    @Test
+    fun testUpdateTopology_ClientsWithDifferentNodes_ComeToOneMap() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, third) = nodes.values.toList()
+        dataSources.forEach { seedRandomMap(it, nodes.keys.toList()) }
+
+        // Two clients that know different nodes read at the same moment, before any of them writes. So they pick
+        // different rows: one takes the rows of the first node, the other one the rows of the second
+        val nodesOfOne = ClusterHelper.readNodes(listOf(first, second))
+        val nodesOfAnother = ClusterHelper.readNodes(listOf(second, third))
+        val mapOfOne = ShardCopies.read(nodesOfOne, emptyMap(), null)
+        val mapOfAnother = ShardCopies.read(nodesOfAnother, emptyMap(), null)
+        assertNotEquals(mapOfOne.mergedShards, mapOfAnother.mergedShards)
+        ShardCopies.repair(nodesOfOne, mapOfOne)
+        ShardCopies.repair(nodesOfAnother, mapOfAnother)
+
+        // Their next updates bring both to the same map, the second node they share carries it over
+        val one = Cluster(listOf(first, second), emptyList())
+        val another = Cluster(listOf(second, third), emptyList())
+        repeat(2) {
+            one.updateTopology()
+            another.updateTopology()
+        }
+
+        assertEquals(one.getTopology().shards, another.getTopology().shards)
+        assertEveryNodeHolds(dataSources, one.getTopology().shards)
     }
 
     @Test
@@ -490,6 +531,13 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // Now the schema is done, and an update with the same nodes and queues doesn't run it
         assertTrue(cluster.updateTopology().nodes.isEmpty())
+    }
+
+    // A shard table of its own, every shard given to a random node, with the initial revision
+    private fun seedRandomMap(dataSource: DataSource, nodes: List<Node>): Map<ShardId, Shard> {
+        ShardSchema.createOrUpdateShardTable(dataSource)
+        ShardSchema.fillShardTable(dataSource, nodes)
+        return ShardSchema.readShards(dataSource)
     }
 
     // Every node holds exactly these rows, with these revisions

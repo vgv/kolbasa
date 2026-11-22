@@ -12,7 +12,7 @@ internal class Shard(
     val nextConsumerNode: NodeId?,
     // A simple kind of hybrid logical clock: close to the time of the last change, but not exactly it.
     val revision: Instant
-) : Comparable<Shard> {
+) {
 
     init {
         val stableState = (producerNode == consumerNode) && (nextConsumerNode == null)
@@ -21,27 +21,6 @@ internal class Shard(
         check(stableState xor migrationState) {
             "Invalid shard state: producerNode=$producerNode, consumerNode=$consumerNode, nextConsumerNode=$nextConsumerNode"
         }
-    }
-
-    /**
-     * Rows of the same shard: the newer revision is greater. If the revisions are equal, the nodes decide, so that
-     * every client picks the same row. Zero only for equal rows, the same as [equals]
-     */
-    override fun compareTo(other: Shard): Int {
-        var result = shard.compareTo(other.shard)
-        if (result != 0) return result
-
-        result = revision.compareTo(other.revision)
-        if (result != 0) return result
-
-        result = producerNode.compareTo(other.producerNode)
-        if (result != 0) return result
-
-        // null is less than any node
-        result = compareValues(consumerNode, other.consumerNode)
-        if (result != 0) return result
-
-        return compareValues(nextConsumerNode, other.nextConsumerNode)
     }
 
     override fun equals(other: Any?): Boolean {

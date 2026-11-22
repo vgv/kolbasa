@@ -175,6 +175,32 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testPrepare_TwoMapsWithTheSameRevision_BecomeOne() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, _) = nodes.values.toList()
+        val targetNode = nodes.keys.last().id
+
+        // Two random maps on two nodes, every row of both with the initial revision
+        listOf(first, second).forEach { dataSource ->
+            ShardSchema.createOrUpdateShardTable(dataSource)
+            ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+        }
+        val firstMap = ShardSchema.readShards(first)
+
+        val shardToMove = requireNotNull(firstMap.values.find { it.consumerNode != targetNode }).shard
+        prepare(dataSources, targetNode, listOf(shardToMove), ProgressCallback.Ignore)
+
+        // Every node holds the map of the node with the smallest id, with the change in it
+        val map = ShardSchema.readShards(first)
+        assertEveryNodeHolds(dataSources, map)
+        assertEquals(targetNode, map[shardToMove]?.nextConsumerNode)
+        (map - shardToMove).forEach { (shardId, shard) ->
+            assertTrue(shard.equalsIgnoreRevision(firstMap.getValue(shardId)), "$shard")
+        }
+    }
+
+    @Test
     fun testPrepare_HandEditOnAnotherNode_IsSeen() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
