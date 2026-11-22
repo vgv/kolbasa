@@ -1,7 +1,6 @@
 package kolbasa.cluster
 
 import kolbasa.cluster.schema.ShardSchema
-import kolbasa.cluster.schema.ShardTableSearch
 import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -117,9 +116,9 @@ class Cluster(
      * Reads the cluster topology once, right now, and returns when it is done.
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
-     * creates or updates them on every node. If no node has a shard map yet, this method builds one on the node with
-     * the smallest id, which is how a fresh cluster is initialized. If the map lacks some shards, the method adds
-     * them, and the shards that are there keep their nodes.
+     * creates or updates them on every node. Every node keeps a copy of the map, and for every shard the newest row of
+     * all the copies wins. A shard that no node has gets a random node, on the node with the smallest id: that is how
+     * a fresh cluster is initialized.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -145,7 +144,7 @@ class Cluster(
         val queues = queuesProvider.get()
 
         val nodes = initNodes(dataSources)
-        val shards = initShards(nodes)
+        val shards = readShardMap(nodes)
         val schemaResult = updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
@@ -207,43 +206,49 @@ class Cluster(
         return remappedAtLeastOnce
     }
 
-    private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
+    private fun readShardMap(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
         // The map we already have, and its md5
-        val knownShards = topology?.shards
+        val knownShards = topology?.shards ?: emptyMap()
         val knownFingerprint = topology?.shardsFingerprint
 
-        val search = ShardSchema.findShardTable(nodes) { dataSource ->
-            // Read the rows only if they differ from the map we already have
-            if (knownShards != null && ShardSchema.readFingerprint(dataSource) == knownFingerprint) {
-                knownShards
-            } else {
-                ShardSchema.readShards(dataSource)
+        // What every node holds. A node with our md5 holds exactly our map, the others are read
+        val copies = nodes.map { (node, dataSource) ->
+            onShardTable(node) {
+                // A new node gets an empty table here
+                ShardSchema.createOrUpdateShardTable(dataSource)
+
+                if (ShardSchema.readFingerprint(dataSource) == knownFingerprint) {
+                    knownShards
+                } else {
+                    ShardSchema.readShards(dataSource)
+                }
             }
         }
 
-        when (search) {
-            // Shard table found, only its schema may need an update
-            is ShardTableSearch.Complete -> {
-                ShardSchema.createOrUpdateShardTable(search.dataSource)
-                return search.shards
-            }
+        // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
+        val mergedShards = ShardSchema.mergeShards(copies)
 
-            // The table lacks some shards. Add only them, to this same table, and keep the other rows:
-            // the messages of those shards are already stored on the nodes these rows name.
-            // The new rows get the current time as their revision
-            is ShardTableSearch.Incomplete -> {
-                ShardSchema.createOrUpdateShardTable(search.dataSource)
-                ShardSchema.fillShardTable(search.dataSource, nodes.keys.toList())
-                return ShardSchema.readShards(search.dataSource)
-            }
+        // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
+        // smallest id, and the initial revision, so a real row that turns up later wins over them
+        val missingShards = ShardId.SHARDS_RANGE.filter { shard -> ShardId.of(shard) !in mergedShards }
+        if (missingShards.isEmpty()) {
+            return mergedShards
+        }
 
-            // No table anywhere: a new cluster, the map goes to the node with the smallest id
-            ShardTableSearch.Missing -> {
-                val dataSource = nodes.values.first()
-                ShardSchema.createOrUpdateShardTable(dataSource)
-                ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), initialRevision = true)
-                return ShardSchema.readShards(dataSource)
-            }
+        val (smallestNode, smallestDataSource) = nodes.entries.first()
+        return onShardTable(smallestNode) {
+            ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
+            // Another client may have filled them at the same moment: its rows are the ones in the table now
+            ShardSchema.mergeShards(listOf(mergedShards, ShardSchema.readShards(smallestDataSource)))
+        }
+    }
+
+    // Names the node in any error of its shard table
+    private fun <T> onShardTable(node: Node, block: () -> T): T {
+        try {
+            return block()
+        } catch (e: Exception) {
+            throw IllegalStateException("Can't read or update ${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}", e)
         }
     }
 

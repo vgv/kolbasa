@@ -21,6 +21,7 @@ import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Statement
+import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -80,19 +81,20 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_SameFingerprint_RowsNotReadAgain() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = dataSources.map { CountingDataSource(it) }
-        val cluster = Cluster(nodes, emptyList())
+        val countingNodes = dataSources.associateWith { CountingDataSource(it) }
+        val cluster = Cluster(countingNodes.values.toList(), emptyList())
 
-        // No map yet: the rows are read
+        // The map is seeded on the node with the smallest id
+        val shardTableNode = ClusterHelper.readNodes(dataSources).values.first()
+        val counting = countingNodes.getValue(shardTableNode)
         cluster.updateTopology()
-        assertEquals(1, nodes.sumOf { it.shardTableReads.get() })
+        val readsAfterSeeding = counting.shardTableReads.get()
 
         // The map hasn't changed: only its md5 is read
         cluster.updateTopology()
-        assertEquals(1, nodes.sumOf { it.shardTableReads.get() })
+        assertEquals(readsAfterSeeding, counting.shardTableReads.get())
 
         // A hand edit changes the md5, so the rows are read again
-        val shardTableNode = ClusterHelper.readNodes(dataSources).values.first()
         shardTableNode.useStatement { statement: Statement ->
             statement.execute(
                 """
@@ -103,7 +105,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
             )
         }
         cluster.updateTopology()
-        assertEquals(2, nodes.sumOf { it.shardTableReads.get() })
+        assertEquals(readsAfterSeeding + 1, counting.shardTableReads.get())
         assertEquals(NodeId("node-x"), cluster.getTopology().shards[ShardId.of(5)]?.producerNode)
     }
 
@@ -128,11 +130,9 @@ class ClusterTest : AbstractPostgreSQLTest() {
         val newProducerConsumerNode = (firstTopology.nodes.keys - currentProducerConsumerNode).random()
         assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
 
-        val shardTables = findShardTables(dataSources).filter { foundShardTable ->
-            foundShardTable.numberOfTables > 0
-        }
-        assertEquals(1, shardTables.size)
-        shardTables.first().datasource.useStatement { statement: Statement ->
+        // The map is seeded on the node with the smallest id
+        val shardTableNode = ClusterHelper.readNodes(dataSources.values.toList()).values.first()
+        shardTableNode.useStatement { statement: Statement ->
             val sql = """
                 update
                     ${ShardSchema.SHARD_TABLE_NAME}
@@ -183,41 +183,31 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testInitCluster_If_No_Shard_Table_At_All() {
-        val dataSources = mapOf(
-            "public" to dataSource,
-            FIRST_SCHEMA_NAME to dataSourceFirstSchema,
-            SECOND_SCHEMA_NAME to dataSourceSecondSchema
-        )
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
 
-        val cluster = Cluster(dataSources.values.toList(), emptyList())
+        val cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
 
-        // Number of created shard tables
-        val shardTables = findShardTables(dataSources)
-            .filter { foundShardTable ->
-                foundShardTable.numberOfTables > 0
-            }
+        // Every node got a table
+        val nodes = ClusterHelper.readNodes(dataSources)
+        nodes.forEach { (node, dataSource) ->
+            assertTrue(ShardSchema.shardTableExists(dataSource), "Node ${node.id.id}")
+        }
 
-        // Check that only one shard table was created
-        assertEquals(1, shardTables.size)
-
-        // Check that shard table was created on the node with the smallest id
-        val nodeIdWithShardTable = shardTables.first().nodeId
-        val smallestExistingId = dataSources
-            .mapNotNull { (_, dataSource) ->
-                IdSchema.readNodeInfo(dataSource)
-            }
-            .minOf { it }
-        assertEquals(smallestExistingId.id, nodeIdWithShardTable)
+        // The map was seeded on the node with the smallest id, every row with the initial revision
+        val shards = cluster.getTopology().shards
+        assertEquals(ShardId.SHARD_COUNT, shards.size)
+        assertEquals(ShardSchema.readShards(nodes.values.first()), shards)
+        assertTrue(shards.values.all { it.revision == Instant.EPOCH })
     }
 
     @Test
-    fun testUpdateTopology_IncompleteShardTable_FilledInPlace() {
+    fun testUpdateTopology_ShardsNoNodeHas_FilledOnTheSmallestNode() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        val (first, second, third) = nodes.values.toList()
+        val (first, second, _) = nodes.values.toList()
 
-        // An incomplete table on the second node, not on the one with the smallest id
+        // An incomplete map on the second node, no map anywhere else
         ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.fillShardTable(second, nodes.keys.toList())
         val before = ShardSchema.readShards(second)
@@ -225,45 +215,50 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         val cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
-
-        // The table was filled where it is, no new table appeared next to it
-        assertFalse(ShardSchema.shardTableExists(first))
-        assertFalse(ShardSchema.shardTableExists(third))
-        val after = ShardSchema.readShards(second)
-        assertEquals(ShardId.SHARD_COUNT, after.size)
-        assertEquals(after, cluster.getTopology().shards)
+        val shards = cluster.getTopology().shards
+        assertEquals(ShardId.SHARD_COUNT, shards.size)
 
         // The shards that were there kept their nodes
-        assertEquals(before - deleted, after - deleted)
+        assertEquals(before - deleted, shards - deleted)
+
+        // The missing ones went to the node with the smallest id, with the initial revision, and only them
+        val filled = ShardSchema.readShards(first)
+        assertEquals(deleted, filled.keys)
+        assertEquals(filled, shards.filterKeys { it in deleted })
+        assertTrue(filled.values.all { it.revision == Instant.EPOCH })
     }
 
     @Test
-    fun testUpdateTopology_CompleteShardTable_WinsOverIncomplete() {
+    fun testUpdateTopology_TwoMapsWithTheSameRevision_EveryClientPicksTheSameRows() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, _) = nodes.values.toList()
 
-        // An incomplete table on the first node, a complete one on the second
+        // Two clients seeded a new cluster at the same moment, each on its own smallest node: two random maps, both
+        // with the initial revision
         ShardSchema.createOrUpdateShardTable(first)
         ShardSchema.fillShardTable(first, nodes.keys.toList())
-        val deleted = deleteRandomShards(first)
         ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.fillShardTable(second, nodes.keys.toList())
 
-        val cluster = Cluster(dataSources, emptyList())
-        cluster.updateTopology()
+        // Two clients with different node lists, in a different order
+        val oneClient = Cluster(dataSources, emptyList())
+        oneClient.updateTopology()
+        val anotherClient = Cluster(listOf(second, first), emptyList())
+        anotherClient.updateTopology()
 
-        // The complete table is used, the incomplete one is left as it is
-        assertEquals(ShardSchema.readShards(second), cluster.getTopology().shards)
-        assertEquals(ShardId.SHARD_COUNT - deleted.size, ShardSchema.readShards(first).size)
+        // Both took the greater row of every shard, see Shard.compareTo
+        val expected = ShardSchema.mergeShards(listOf(ShardSchema.readShards(first), ShardSchema.readShards(second)))
+        assertEquals(expected, oneClient.getTopology().shards)
+        assertEquals(expected, anotherClient.getTopology().shards)
     }
 
     @Test
     fun testUpdateTopology_ShardTableReadFails_OldTopologyStays() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        val (firstNode, secondNode, _) = nodes.keys.toList()
-        val (first, second, third) = nodes.values.toList()
+        val secondNode = nodes.keys.toList()[1]
+        val second = nodes.getValue(secondNode)
 
         // The map lives on the second node
         ShardSchema.createOrUpdateShardTable(second)
@@ -285,9 +280,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         }
         assertTrue(secondNode.id.id in exception.message.orEmpty(), exception.message)
 
-        // No new map anywhere, and the old topology stays
-        assertFalse(ShardSchema.shardTableExists(first), "Node ${firstNode.id.id}")
-        assertFalse(ShardSchema.shardTableExists(third))
+        // The old topology stays
         assertSame(topology, cluster.getTopology())
     }
 
@@ -412,25 +405,6 @@ class ClusterTest : AbstractPostgreSQLTest() {
         return dataSource.readBoolean("select to_regclass('${queue.dbTableName}') is not null")
     }
 
-    private fun findShardTables(dataSources: Map<String, DataSource>): List<FoundShardTable> {
-        return dataSources
-            .map { (schema, dataSource) ->
-                val sql = """
-                    select
-                        count(*)
-                    from
-                        information_schema.tables
-                    where
-                        table_schema='$schema' and
-                        table_name='${ShardSchema.SHARD_TABLE_NAME}'
-                """.trimIndent()
-
-                val numberOfTables = dataSource.readInt(sql)
-                val thisNodeId = requireNotNull(IdSchema.readNodeInfo(dataSource))
-                FoundShardTable(numberOfTables, thisNodeId.id, schema, dataSource)
-            }
-    }
-
     // A node that counts how many times the rows of q__shard are read from it
     private class CountingDataSource(private val delegate: DataSource) : DataSource by delegate {
 
@@ -451,13 +425,6 @@ class ClusterTest : AbstractPostgreSQLTest() {
             }
         }
     }
-
-    private data class FoundShardTable(
-        val numberOfTables: Int,
-        val nodeId: NodeId,
-        val schema: String,
-        val datasource: DataSource
-    )
 
     private companion object {
         // Creates of q__shard in this database that wait for a lock

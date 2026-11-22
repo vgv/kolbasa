@@ -35,7 +35,8 @@ internal object ShardSchema {
     const val REVISION_COLUMN_NAME = "revision"
 
     /**
-     * The revision of the rows kolbasa seeds into a new shard table
+     * The revision of the rows kolbasa adds itself, with a random node: in a new cluster, or for a shard that no node
+     * has. It is less than any real revision, so such a row loses to any row that was ever changed
      */
     const val INITIAL_REVISION = "1970-01-01 00:00:00+00"
 
@@ -231,33 +232,23 @@ internal object ShardSchema {
     }
 
     /**
-     * Gives every shard that has no row yet a random node of [nodes].
+     * Gives each of [shardsToFill] that has no row yet a random node of [nodes].
      *
-     * With [initialRevision] the new rows get [INITIAL_REVISION]. This is for seeding a new table: a new cluster has
-     * no messages, nothing depends on these rows yet. Otherwise the trigger gives them the current time.
+     * The new rows get [INITIAL_REVISION]: a random node is a guess, and a guess must lose to any real row, wherever
+     * that row turns up later.
      */
-    fun fillShardTable(dataSource: DataSource, nodes: List<Node>, initialRevision: Boolean = false) {
+    fun fillShardTable(dataSource: DataSource, nodes: List<Node>, shardsToFill: Iterable<Int> = ShardId.SHARDS_RANGE) {
         val shardsPerStatement = 100
-        val statements = ShardId.SHARDS_RANGE.chunked(shardsPerStatement).map { shards ->
-            val values = shards.map { shard ->
+        val statements = shardsToFill.chunked(shardsPerStatement).map { chunk ->
+            val values = chunk.map { shard ->
                 val randomNode = nodes.random()
                 val randomNodeStringId: String = randomNode.id.id
-                if (initialRevision) {
-                    "($shard, '$randomNodeStringId', '$randomNodeStringId', '$INITIAL_REVISION')"
-                } else {
-                    "($shard, '$randomNodeStringId', '$randomNodeStringId')"
-                }
-            }
-
-            val columns = if (initialRevision) {
-                "$SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $REVISION_COLUMN_NAME"
-            } else {
-                "$SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME"
+                "($shard, '$randomNodeStringId', '$randomNodeStringId', '$INITIAL_REVISION')"
             }
 
             """
                 insert into $SHARD_TABLE_NAME
-                    ($columns)
+                    ($SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $REVISION_COLUMN_NAME)
                 values
                     ${values.joinToString(",")}
                 on conflict do nothing
@@ -342,6 +333,25 @@ internal object ShardSchema {
         }
 
         return shards
+    }
+
+    /**
+     * One map out of several copies: for every shard, the greatest of its rows, see [Shard.compareTo]. So the newest
+     * row wins, and every client picks the same row, whatever the order of [copies]
+     */
+    fun mergeShards(copies: Collection<Map<ShardId, Shard>>): Map<ShardId, Shard> {
+        val merged = hashMapOf<ShardId, Shard>()
+
+        for (copy in copies) {
+            for ((shardId, shard) in copy) {
+                val current = merged[shardId]
+                if (current == null || shard > current) {
+                    merged[shardId] = shard
+                }
+            }
+        }
+
+        return merged
     }
 
     /**

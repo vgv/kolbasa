@@ -34,27 +34,6 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testIncompleteShardTable_FilledRowsGetCurrentTime() {
-        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
-        val first = nodes.values.first()
-        seedShardTable(first, nodes.keys.toList())
-
-        val deleted = (10..19).toList()
-        first.useStatement { statement ->
-            statement.execute("delete from $SHARD_TABLE_NAME where $SHARD_COLUMN_NAME in (${deleted.joinToString(",")})")
-        }
-
-        Cluster(dataSources, emptyList()).updateTopology()
-
-        // The filled rows got the current time, the others kept the initial revision
-        deleted.forEach { shard ->
-            assertTrue(revisionOf(first, shard) > Instant.EPOCH, "Shard $shard")
-        }
-        assertEquals(deleted.size, countRevisionsOtherThanInitial(first))
-    }
-
-    @Test
     fun testTrigger_HandEdit_GetsRevisionNewerThanAll() {
         val first = seedShardTable()
 
@@ -196,7 +175,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     private fun seedShardTable(dataSource: DataSource, nodes: List<kolbasa.schema.Node>) {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes, initialRevision = true)
+        ShardSchema.fillShardTable(dataSource, nodes)
     }
 
     // Gives the shard to another node by hand, with a revision of its own if one is given

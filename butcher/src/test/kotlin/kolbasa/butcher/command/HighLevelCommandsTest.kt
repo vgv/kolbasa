@@ -241,31 +241,16 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
      *
      * Seeding spreads the shards at random, which is only slightly uneven. A test that counts rounds needs
      * to know exactly how much there was to move. Writing `q__shard` by hand is ordinary operator work,
-     * see docs/Architecture.md.
+     * see docs/Architecture.md. Every node keeps a copy of the shard map, so the update goes to all of them.
      */
     private fun giveEveryShardTo(node: NodeId) {
-        shardTableHolder().connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute(
-                    "update q__shard set producer_node='${node.id}', consumer_node='${node.id}', " +
-                        "next_consumer_node=null"
-                )
-            }
-        }
-    }
-
-    /**
-     * The node the shard table lives on
-     *
-     * There is one shard table per cluster and the library picks which node keeps it, so a test has to
-     * look for it. `to_regclass` resolves through the connection's search path, which here is one node's
-     * own schema.
-     */
-    private fun shardTableHolder(): DataSource = dataSources.first { dataSource ->
-        dataSource.connection.use { connection ->
-            connection.createStatement().use { statement ->
-                statement.executeQuery("select to_regclass('q__shard') is not null").use { resultSet ->
-                    resultSet.next() && resultSet.getBoolean(1)
+        dataSources.forEach { dataSource ->
+            dataSource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute(
+                        "update q__shard set producer_node='${node.id}', consumer_node='${node.id}', " +
+                            "next_consumer_node=null"
+                    )
                 }
             }
         }

@@ -18,7 +18,7 @@ class ShardFingerprintTest : AbstractPostgreSQLTest() {
     fun testFingerprint_SqlEqualsKotlin() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource))
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), initialRevision = true)
+        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
 
         // A new table: every row has the initial revision
         val seeded = assertFingerprintsEqual()
