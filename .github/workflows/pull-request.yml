@@ -5,6 +5,9 @@ on:
     paths-ignore:
       - README.md
       - docs/**
+      - CHANGELOG.md
+      - AGENTS.md
+      - .claude/**
 
 concurrency: on-pull-request
 
