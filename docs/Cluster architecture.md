@@ -20,7 +20,6 @@ CLI), see [Butcher.md](Butcher.md).
 8. [Schema consistency](#schema-consistency)
 9. [Failure modes](#failure-modes)
 10. [Expansion and shrinking](#expansion-and-shrinking)
-11. [References](#references)
 
 ---
 
@@ -254,8 +253,8 @@ rule. The assignment is arbitrary (it starts random) and changes over the cluste
 computed; it has to be written down somewhere every client can read. That record is the one piece of genuinely shared state in a
 cluster.
 
-It is the **shard ownership map**: for each of the 1024 shards, which node produces it and which node consumes it. It lives in a
-single internal table, `q__shard`:
+It is the **shard ownership map**: for each of the 1024 shards, which node produces it and which node consumes it. It lives in an
+internal table, `q__shard`, and every node keeps a copy of it:
 
 ```sql
 create table q__shard(
@@ -278,8 +277,13 @@ Every row also has a **revision**: when its content last changed. It is a simple
 server's clock, but never goes back: a new revision is the current time or the latest revision in the table plus one
 microsecond, whichever is later. So a new revision is always later than every revision already there, even when the server's
 clock is behind. A trigger on the table, `q__shard_set_revision`, sets it, so an `update` made by hand gets one too. An `update`
-that changes nothing keeps the old revision. The rows that kolbasa seeds into a new table have revision
-`1970-01-01 00:00:00+00`.
+that changes nothing keeps the old revision.
+
+The revision is what keeps the copies in agreement: where two copies differ, the row with the later revision is the right one,
+see below.
+
+When kolbasa seeds a new shard map, every row gets the initial revision, `1970-01-01 00:00:00+00`: the very first one, before any
+change. A shard that kolbasa adds later, because no node had a row for it, gets the same initial revision.
 
 **A snapshot, for concreteness.** In a healthy three-node cluster every shard is in the stable state — `producer_node` and
 `consumer_node` are equal and `next_consumer_node` is empty — with the 1024 shards scattered across the nodes:
@@ -306,11 +310,19 @@ Every client process holds a **`Cluster`** object (`kolbasa.cluster.Cluster`) �
 cached snapshot of this table, which all the routing below consults. Three things are worth knowing about how that snapshot is
 managed:
 
-- **It lives on one node, not all of them.** The table is authoritative and unreplicated. When a `Cluster` starts, it scans the
-  nodes for a complete `q__shard` (all 1024 rows) and uses the first one it finds. If no node has the table at all, it creates one
-  on the node with the lowest node id and seeds all 1024 shards, each assigned to a **random** node in a stable state. If the
-  table is there but lacks some shards, it adds just the missing ones, with random nodes, to that same table. The other rows keep
-  their nodes. If a node's `q__shard` can't be read, the refresh fails: a failed read is never taken for a missing table.
+- **Every node keeps a copy, and the newest row wins.** A `Cluster` reads the copies of all nodes and merges them row by row:
+  for every shard, the row with the latest revision. If several copies have that revision but different nodes in it, the row
+  of the node with the smallest id wins. So the choice is always deterministic: every client that reads the same copies picks
+  the same row. The database is the only source: the map a client has in memory never wins over it.
+- **The client brings the copies up to date.** After the merge every node gets the rows its copy lacks, or holds an older or
+  another version of. A node without the table gets one. So a node that was down, restored from an old backup, or added a minute
+  ago catches up by itself. If two copies have different rows with the same revision, the winning row gets a new revision, and
+  every copy takes it.
+- **A new cluster gets its map the same way.** A shard that no node has gets a **random** node, in a stable state, on the node
+  with the smallest id. On a new cluster that is all 1024 shards, and the next step copies them to the other nodes.
+- **A refresh is cheap when nothing has changed.** It takes an md5 of every copy, computed by the node, and reads the rows only
+  of a node whose md5 differs from the map it already has. If a node's `q__shard` can't be read, the refresh fails: a failed
+  read is never taken for a missing table.
 - **Clients discover the topology by polling.** That cached snapshot is refreshed on a timer — every
   `ClusterTopologyUpdaterOptions.interval` (default **1 minute**). There is no push or live subscription. The practical
   consequence: after an operator changes ownership (a migration step), it takes up to one refresh interval for every client to
@@ -319,12 +331,35 @@ managed:
   [buckets](Message%20IDs.md) and runs [schema generation](#schema-consistency) on every node, so all nodes share one
   identity scheme and one schema before traffic flows.
 
-> **If the node holding `q__shard` is down.** Because the map is *cached* in every client, routing keeps working off the last
-> snapshot — a brief outage of that node does not by itself stall producers or consumers. What stops is the *refresh*: each
-> refresh reads from **all** nodes (it reconciles identity and schema too), so if any node is unreachable, the whole refresh fails
-> and the cached map is simply kept as-is. A failed refresh does not stop the updates: the `ClusterTopologyUpdater` schedules the
-> next one anyway, and the map catches up as soon as every node answers again. The practical guidance: keep every node available,
-> the one that hosts `q__shard` above all. While any node is down, no client sees a migration.
+**Editing the map by hand.** The usual way to change the map is [butcher](Butcher.md), the cluster operator CLI, or the same
+operations from code through `kolbasa.cluster.admin.ClusterAdmin` (see
+[Butcher.md → The same thing from code](Butcher.md#the-same-thing-from-code)). In an emergency the map can also be edited by
+hand, on any node. Run an `update` on its `q__shard`, for example to give shard 17 to node B:
+
+```sql
+update q__shard set producer_node = 'B', consumer_node = 'B', next_consumer_node = null where shard = 17;
+```
+
+The trigger gives the row a new revision, so the clients take it on their next refresh and copy it to the other nodes. There is
+nothing else to run. Two things to keep in mind:
+
+- **Change rows with `update` only.** A row deleted on one node comes back from the other copies, and a row deleted on all of
+  them gets a random node. A row of a shard outside 0..1023 is never read.
+- **An edit changes routing, not data.** The messages of shard 17 stay where they are. To move a shard that has messages, use the
+  migration protocol, see [Shard migration](#shard-migration).
+
+`butcher check-cluster --checks=shard-map` shows how the copies differ, see [Butcher.md](Butcher.md).
+
+> **If a node is down.** Because the map is *cached* in every client, routing keeps working off the last snapshot — a brief
+> outage of a node does not by itself stall producers or consumers. What stops is the *refresh*: each refresh reads from **all**
+> nodes (it reconciles identity and schema too), so if any node is unreachable, the whole refresh fails and the cached map is
+> simply kept as-is. A failed refresh does not stop the updates: the `ClusterTopologyUpdater` schedules the next one anyway, and
+> the map catches up as soon as every node answers again. No node is special: every one of them has the map. While any node is
+> down, no client sees a migration.
+>
+> **If a node takes no writes**, a read-only one for example, the refresh still reads the map and the clients use it. Only the
+> copy of that node can't be brought up to date. Once it lags behind, after any change, the refresh ends with an error, a warning
+> in the log by default, and every next refresh tries again.
 
 ## Message routing
 
@@ -548,6 +583,18 @@ Return the shard to a stable state on the destination: set `consumer_node = next
 `next_consumer_node = null`. Now `producer_node = consumer_node = B` — the shard is fully owned by B, and consumption of it
 resumes there.
 
+### Where prepare and finalize write
+
+Both of them change rows of `q__shard`, and they write the new rows to the copy of **every** node, all with one revision, newer
+than any revision already there. Only those rows: the rest of a copy stays as it is, even if it lags behind.
+
+They need a complete map: every node must have the table, and every shard must have a row in at least one copy. Otherwise they
+refuse before changing anything. A copy that lags behind is fine, the newest rows are known from the other copies.
+
+If a node doesn't take the rows, the other nodes do, and the change is in effect: the clients merge the copies, and the new rows
+are the newest. The copy of that node catches up with the next refresh of an application, or with
+`butcher create-or-repair-shard-map`.
+
 ### Multi-shard migrations
 
 Each shard migrates independently — its row in `q__shard` is flipped on its own. An operator can therefore have many shards
@@ -599,6 +646,8 @@ schema-consistency check is the right place to catch it early.
 | A node is **unreachable during consume** | Each `receive()` picks one consumer node from the map at random, without checking reachability first; if that node happens to be down, that call fails. A subsequent `receive()` re-rolls and may land on a healthy node. Messages on the down node are not lost — they wait until it returns. |
 | A node is **unreachable during `move`** | The move can't drain that node's rows; re-run it once the node is back. Because move is re-runnable, an interruption is harmless. |
 | A node is **unreachable during a topology refresh** | The whole refresh fails, and the client keeps its old map until the next refresh. The error goes to the `TopologyUpdateErrorHandler`, a warning in the log by default. The first refresh, at startup, throws instead: without a map the cluster can't work. |
+| A node **takes no writes** (read-only, disk full) | The refresh reads the map and the new topology is in use. Bringing that node's copy of the map up to date fails, so the refresh ends with an error — a warning in the log by default — and every next refresh tries again. `prepare` and `finalize` write the other nodes and report the failed one. |
+| **Copies of the shard map differ** | Normal for up to one refresh after a change by hand or by butcher. The clients use the newest rows of all copies and bring the copies up to date. With no application running, `butcher create-or-repair-shard-map` does the same. |
 | A **schema statement fails** on a node | The refresh goes on: the new map is in use. The failure goes to the `TopologyUpdateErrorHandler`, a warning in the log by default, also on the first refresh at startup. Every next refresh runs the schema again until it goes through. A direct `cluster.updateTopology()` returns them in its `ClusterSchemaResult` instead. |
 | **Stale cluster topology** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
 | **Schema divergence** between nodes | Detected by the schema-consistency check; `move` fails fast rather than copying mismatched tables. Fix by re-running schema generation (or restoring the missing objects) on the lagging node. |
@@ -612,7 +661,7 @@ here is the architectural shape.)
 **Expansion — add a node.**
 
 1. Stand up a new PostgreSQL database and add it to the cluster's node list. It joins with its own identity and bucket; it owns no
-   shards yet.
+   shards yet. Its copy of the shard map appears with the first refresh of a `Cluster` that knows the node.
 2. Create the kolbasa schema (all your queue tables) on the new node, so it can hold data once shards migrate in. Any of three
    ways works — pick whichever fits how your application is wired:
    - **Do nothing — let the `Cluster` do it.** The easiest option *if you supplied the node list as a dynamic supplier*
@@ -649,15 +698,6 @@ here is the architectural shape.)
 
 There is no automatic rebalancer: the operator chooses which shards move where. A balance check can *propose* a
 minimum-movement redistribution, but applying it is a deliberate, operator-driven sequence of migrations.
-
-## References
-
-| Type | Source | Role |
-|---|---|---|
-| `Cluster` | `kolbasa/cluster/Cluster.kt` | Holds the nodes' `DataSource`s and the cached topology; reads the topology on `updateTopology()`. |
-| `ClusterTopologyUpdater` | `kolbasa/cluster/ClusterTopologyUpdater.kt` | Calls `updateTopology()` on a schedule. |
-| `ShardStrategy` | `kolbasa/cluster/ShardStrategy.kt` | Picks a message's shard at send time. |
-| `ClusterProducer` / `ClusterConsumer` / `ClusterMutator` / `ClusterInspector` | `kolbasa/cluster/Cluster*.kt` | Cluster-aware roles. |
 
 ---
 

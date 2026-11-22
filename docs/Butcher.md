@@ -173,9 +173,11 @@ butcher check-cluster topology.conf secrets.conf
 
 ## The commands
 
-butcher has six commands. One reads the cluster and reports; it changes nothing but a new node's id. The
-other five sit on two levels. Three are the single steps of the migration protocol, run in order. Two are
-**high-level**: those same three steps in a loop, over a plan butcher works out itself.
+butcher has seven commands. One reads the cluster and reports; it changes nothing but a new node's id. Five
+move shards, on two levels. Three are the single steps of the migration protocol, run in order. Two are
+**high-level**: those same three steps in a loop, over a plan butcher works out itself. The seventh,
+`create-or-repair-shard-map`, moves nothing: it creates the shard map of a new cluster, or brings the copies of
+the map on the nodes up to date.
 
 ```
                         ┌────────────────┐
@@ -206,6 +208,13 @@ other five sit on two levels. Three are the single steps of the migration protoc
 | `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration driven by hand |
 | `move-data` | yes (source + target rows) | yes — `INSERT ... ON CONFLICT DO NOTHING`, deletes only rows it just copied | minutes to hours | after prepare, before finalize |
 | `finalize-migration` | yes (only `q__shard`) | yes | seconds | once the data is fully moved |
+| `create-or-repair-shard-map` | yes (only `q__shard`) | yes — it writes only what is still missing | seconds | a new cluster before the first application starts, or copies of the map that differ |
+
+**The five commands that move shards need a complete shard map.** Every node must have its `q__shard`
+table, and every shard must have a row in at least one of them. Otherwise they refuse before they change
+anything, with `The shard map is not complete …`. A copy that lags behind the others is fine: the newest rows
+are known from the other copies, see
+[Cluster architecture.md](Cluster%20architecture.md#cluster-topology).
 
 **A high-level command can do nothing the low-level ones cannot.** It works out the same plan that
 `check-cluster --checks=shard-balance` reports. Then it takes a batch of shards off the plan and runs 
@@ -263,8 +272,13 @@ The available checks:
 | `schema-consistency` | Whether every kolbasa table exists on every node with the same shape (columns + indexes + identity *presence*). The per-node identity *value range* is meant to differ, so it is not compared. |
 | `find-orphans` | Companion `_dlq` / `_arc` tables whose main queue table is missing on the same node. |
 | `migration-state` | Which shards are currently mid-migration (between `prepare` and `finalize`), grouped by destination node. |
+| `shard-map` | How the copies of the shard map on the nodes differ from the newest rows: rows a copy lacks, older rows, rows with the same revision and other nodes, a node with no `q__shard` at all. Also shards that have no row on any node, rows of shard numbers outside `0..1023`, and shards given to a node that is not in the config. |
 
 Omitting `--checks` runs all of them, which is the default.
+
+A cluster that no application has started yet has no shard map. `check-cluster` still runs: it gives the
+nodes their ids and reports that there is no map. `create-or-repair-shard-map` creates it, and so does the
+first application that starts.
 
 The concepts behind each check — what "balanced" means, why schemas must match, what an orphan is — are
 explained in [Cluster architecture.md](Cluster%20architecture.md#schema-consistency). This guide focuses on
@@ -420,6 +434,49 @@ Two things to internalize about finalize:
 
 The safe sequence is always: **prepare → move (re-run until it reports zero) → finalize.**
 
+### `create-or-repair-shard-map`
+
+```
+butcher create-or-repair-shard-map [--yes] <config-file>...
+```
+
+Every node keeps a copy of the shard map, see
+[Cluster architecture.md](Cluster%20architecture.md#cluster-topology). Applications bring the copies up to date
+on every topology update, so while they run this command is rarely needed. It is for the times they don't:
+
+- a new cluster, before the first application starts;
+- copies that differ while no application runs, a node restored from a backup during maintenance for example;
+- a `prepare-migration` or `finalize-migration` that a node did not take.
+
+It does what an application does on a topology update:
+
+- a node with no `q__shard` gets one;
+- a shard that has no row on any node gets a random node. On a new cluster that is every shard, and that is how a
+  new shard map is made;
+- every copy gets the newest row of every shard. If copies hold different rows with the same revision, the row
+  of the node with the smallest id wins, with a new revision.
+
+Before the question it prints the same report as `check-cluster --checks=shard-map`, and the question says what
+is about to happen:
+
+```
+There is no shard map on any node. A new one will be created on 3 node(s), and every shard will get a random node.
+If applications already work with this cluster, check that the config points at the right databases. Continue?
+```
+
+```
+12 shard(s) have no row on any node, each will get a random node. 1 of 3 copies will be brought up to date. Continue?
+```
+
+If the copies are all the same already, it says so and asks nothing. Afterwards it prints how many rows changed
+on every node, and the report read back.
+
+Two things it leaves alone, because only you know what they should be: rows of shard numbers outside
+`0..1023`, and shards given to a node that is not in the config. `check-cluster --checks=shard-map` lists both.
+
+A node that takes no rows doesn't stop the others. The command then fails with the name of that node. Run it
+again once the node is back: it writes only what is still missing.
+
 ## Worked examples
 
 The cluster in these examples is the `orders` cluster from
@@ -449,6 +506,8 @@ Schema consistency: all tables consistent across cluster
 Orphan tables: no orphan queue tables
 ────────────────────────────────────────────────────────────────────────────────
 Migration state: no shards in migration
+────────────────────────────────────────────────────────────────────────────────
+Shard map: all 2 copies are the same
 ```
 
 Each section's first line is green when there is nothing to do and yellow when there is, so a clean cluster
@@ -460,6 +519,40 @@ One check, or a few:
 butcher check-cluster --checks=schema-consistency cluster.conf
 butcher check-cluster --checks=shard-balance,migration-state cluster.conf
 ```
+
+### A new cluster, before the first application
+
+Goal: three empty databases become a cluster, and its shard map exists before any application starts.
+
+1. Write the config file with three lines, `node-01` to `node-03`, and run `check-cluster`. It gives every
+   node its id and reports that there is no shard map:
+
+   ```
+   Initialized node node-01
+   Initialized node node-02
+   Initialized node node-03
+   ...
+   Shard map: no shard map on any node yet
+   An application creates it when it starts, and so does 'create-or-repair-shard-map'.
+   If applications already work with this cluster, check that the config points at the right databases.
+   ```
+
+2. Create the map:
+
+   ```sh
+   butcher create-or-repair-shard-map cluster.conf
+   ```
+
+   ```
+   Completed successfully.
+   node-01: 1024 row(s) changed
+   node-02: 1024 row(s) changed
+   node-03: 1024 row(s) changed
+   Shard map: all 3 copies are the same
+   ```
+
+Every shard got a random node. Skipping step 2 is fine as well: the first application that starts does the
+same.
 
 ### What trouble looks like
 
@@ -556,6 +649,32 @@ The `+`/`-` are read relative to the **reference** shape (the one most nodes agr
 node has a column the reference lacks, `-column` means it's missing one the reference has. A node missing the
 table entirely shows simply `missing`.
 
+**Copies of the shard map that differ** — here `node-03` was restored from yesterday's backup while the
+applications were stopped, so its copy lacks today's changes, and `node-02` has a row of shard 5000 that
+somebody inserted by hand:
+
+```
+Shard map: 1 of 3 copies differ, 1 row(s) of shards that don't exist
+┌─────────┬─────────┬──────────┬─────────────┐
+│ Node    │ Missing │ Outdated │ Conflicting │
+├─────────┼─────────┼──────────┼─────────────┤
+│ node-01 │       0 │        0 │           0 │
+│ node-02 │       0 │        0 │           0 │
+│ node-03 │       0 │       14 │           0 │
+└─────────┴─────────┴──────────┴─────────────┘
+Applications repair it on their next topology update. With no application running, use
+'create-or-repair-shard-map'.
+node-02: rows out of 0..1023: 5000
+```
+
+`Outdated` are rows older than the newest copy has. Once the applications start, they bring `node-03` up to
+date by themselves; with them still stopped, `create-or-repair-shard-map` does it now. The row of shard 5000 is
+read by nobody: delete it by hand.
+
+Right after a change, by hand or by butcher, some copies lag behind for up to one topology refresh of the
+applications. That is normal. A copy that stays behind is on a node that takes no writes, or no application is
+running.
+
 **An orphan** — a `_dlq` companion left behind on a node whose main `q_orders` table is gone (a half-dropped
 or half-created queue):
 
@@ -572,7 +691,7 @@ Goal: add a third node, `node-03`, to a two-node cluster and move a third of the
 1. Bring the new node's database up and add a `node-03` line to the config file. Run `check-cluster`: it
    gives the node its id and prints `Initialized node node-03`. Only then add the node to the application's
    `Cluster`, see [Node ids](#node-ids) for why the order matters. A fresh node joins owning no shards, and
-   its schema is created when the application's `Cluster` next starts. Run
+   its schema and its copy of the shard map are created when the application's `Cluster` next starts. Run
    `check-cluster --checks=schema-consistency` to confirm it matches before migrating onto it.
 
 2. Ask for a balanced plan and pick the shards to move:
@@ -782,9 +901,9 @@ whether butcher also prints the command's usage:
 | Kind | What it looks like | What it means / how to fix |
 |---|---|---|
 | bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given, a file that does not exist, a node missing `host`/`dbname`, a bad port, an invalid node id (other characters than `[a-zA-Z0-9_.-]`, or longer than 100), or a duplicate node id in one file. The message names the specific problem; fix it and re-run. |
-| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **node ids don't match** (see [below](#node-ids-dont-match)). A rarer one is `Can't read or update q__shard on node …`, with the database error under it: a query on the shard table of that node fails. Fix the node and run the command again. After a failed `prepare-migration` or `finalize-migration` the other nodes may already have the change, and it is in effect. Running the command again is safe. |
+| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **node ids don't match** (see [below](#node-ids-dont-match)). A rarer one is `Can't read or update q__shard on node …`, with the database error under it: a query on the shard table of that node fails. Fix the node and run the command again. After a failed `prepare-migration` or `finalize-migration` the message also says whether the other nodes have the change. If they have, it is in effect, and running the command again doesn't bring it to the failed node: once that node is back, run `create-or-repair-shard-map`, or wait for an application to do it. |
 
-Six migration-specific refusals are worth knowing by name, because the message states the rule rather than
+Seven migration-specific refusals are worth knowing by name, because the message states the rule rather than
 the fix:
 
 | Refusal | Cause | Fix |
@@ -793,6 +912,7 @@ the fix:
 | target is not a node of this cluster | `--target` isn't the id of any node in the cluster. | Re-run `check-cluster --checks=shard-balance` and copy the exact node id from the `--target=…` line it prints. |
 | table schemas differ between nodes | `move-data` found a table whose shape differs between nodes. | Resolve the drift first — run `check-cluster --checks=schema-consistency` to see exactly what differs, then re-run schema generation (start a `Cluster` against the lagging node) or restore the missing objects. Then re-run `move-data`. |
 | shards are already migrating | `rebalance-cluster` or `drain-nodes` on a cluster where something is mid-migration: an interrupted run of either, or a hand-driven migration in progress. The message counts the shards and names the nodes they are going to. | Finish that migration: `move-data` until it reports zero, then `finalize-migration`. Then run the command again; it picks up from the distribution it finds. `check-cluster --checks=migration-state` is the same information in advance. |
+| the shard map is not complete | A command that moves shards, on a cluster where a node has no `q__shard` or some shard has no row on any node: a new cluster no application has started yet, a new node no application has seen yet, or a table dropped by hand. The message names the nodes and counts the shards. | Run `create-or-repair-shard-map`, or start an application, and run the command again. `check-cluster --checks=shard-map` shows the same in advance. |
 | node is not a member of this cluster | `drain-nodes --nodes=X` where X is not a node id of the cluster. The message lists the ids that do exist. | Use an id from the config file. |
 | draining would leave the cluster without a node | `drain-nodes` naming every node of the cluster. Their shards would have nowhere to go. | Add a node and let it join first, or drop the queues instead of draining them. |
 
@@ -831,8 +951,8 @@ bucket can give two nodes the same ids.
 
 - **The node holds no data yet.** Drop `q__node` and run again. The node gets the id from its line, like any
   new node.
-- **The node holds data.** Put the old row back by hand. The old id is in `q__shard`, on the node that holds
-  it: `select distinct producer_node from q__shard` lists every node that owns shards, and the old id is the
+- **The node holds data.** Put the old row back by hand. The old id is in `q__shard`, on any node:
+  `select distinct producer_node from q__shard` lists every node that owns shards, and the old id is the
   one no other node has. The old bucket is in any queue's id sequence on this node:
 
   ```sql
@@ -843,7 +963,7 @@ bucket can give two nodes the same ids.
 
 ## The same thing from code
 
-Every check, every migration step and both high-level commands are methods on
+Every check, every migration step, both high-level commands and the shard map repair are methods on
 `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand. The
 CLI is a frontend over this class and `ClusterAdminHelpers`, and uses nothing they do not offer — `butcher`
 is the name of the tool, not of the API.
@@ -890,11 +1010,11 @@ the one you named it by. Without it, the first `ClusterAdmin` call that reads su
 id.
 
 The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
-`migrationState.isClean`, `schemaConsistency.divergencesByTable` — so a program decides on the numbers
-rather than on parsed text. Progress during a long `moveData` is reported through `ProgressCallback`; pass
-`ProgressCallback.Ignore` when nobody is watching. A `rebalance` or a `drainNodes` reports every round
-through the same callback (`rebalanceRoundStart`, `rebalanceFinished`), and the three steps of each round
-report themselves as usual.
+`migrationState.isClean`, `schemaConsistency.divergencesByTable`, `shardMap.isComplete` — so a program
+decides on the numbers rather than on parsed text. Progress during a long `moveData` is reported through
+`ProgressCallback`; pass `ProgressCallback.Ignore` when nobody is watching. A `rebalance` or a `drainNodes`
+reports every round through the same callback (`rebalanceRoundStart`, `rebalanceFinished`), and the three
+steps of each round report themselves as usual.
 
 ## Limitations
 
