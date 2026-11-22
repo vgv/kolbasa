@@ -278,7 +278,7 @@ The available checks:
 |---|---|
 | `shard-balance` | How the 1024 shards are spread across nodes, and a **proposed** minimum-movement rebalance if they are uneven. "Uneven" means by shard **count**: butcher does not look at how much data or traffic a shard carries. Proposes only — it does not move anything. |
 | `schema-consistency` | Whether every kolbasa table exists on every node with the same shape (columns + indexes + identity *presence*). The per-node identity *value range* is meant to differ, so it is not compared. |
-| `find-orphans` | Companion `_dlq` / `_arc` tables whose main queue table is missing on the same node. |
+| `orphan-tables` | Companion `_dlq` / `_arc` tables whose main queue table is missing on the same node. |
 | `migration-state` | Which shards are currently mid-migration (between `prepare` and `finalize`), grouped by destination node. |
 | `shard-map` | How the copies of the shard map on the nodes differ from the newest rows: rows a copy lacks, older rows, rows with the same revision and other nodes, a node with no `q__shard` at all. Also shards that have no row on any node, rows of shard numbers outside `0..1023`, and shards given to a node that is not in the config. |
 

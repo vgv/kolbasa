@@ -76,7 +76,7 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
     /**
      * Reports DLQ and archive tables left behind on a node whose main queue table is gone
      */
-    fun findOrphanTables(): OrphanTablesResult = OrphanTables.check(nodes)
+    fun checkOrphanTables(): OrphanTablesResult = OrphanTables.check(nodes)
 
     /**
      * Reports shards that are still mid-migration, which is what an interrupted move leaves behind

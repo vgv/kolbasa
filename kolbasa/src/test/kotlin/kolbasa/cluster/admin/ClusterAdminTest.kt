@@ -380,7 +380,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     private fun runEveryCheck(admin: ClusterAdmin, node: NodeId) {
         admin.checkShardBalance()
         admin.checkSchemaConsistency()
-        admin.findOrphanTables()
+        admin.checkOrphanTables()
         admin.checkMigrationState()
         admin.checkShardMap()
         admin.planNodesDrain(setOf(node))

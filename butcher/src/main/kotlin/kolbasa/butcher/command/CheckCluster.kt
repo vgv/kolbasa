@@ -46,7 +46,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
             when (check) {
                 AvailableCheck.CHECK_SHARD_BALANCE -> shardBalance = butcher.checkShardBalance()
                 AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> schemaConsistency = butcher.checkSchemaConsistency()
-                AvailableCheck.FIND_ORPHAN_TABLES -> orphanTables = butcher.findOrphanTables()
+                AvailableCheck.CHECK_ORPHAN_TABLES -> orphanTables = butcher.checkOrphanTables()
                 AvailableCheck.CHECK_MIGRATION_STATE -> migrationState = butcher.checkMigrationState()
                 AvailableCheck.CHECK_SHARD_MAP -> shardMap = butcher.checkShardMap()
             }

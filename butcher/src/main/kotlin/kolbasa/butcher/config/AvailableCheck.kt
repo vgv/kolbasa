@@ -3,7 +3,7 @@ package kolbasa.butcher.config
 /**
  * Available cluster checks that can be run independently or all at once.
  *
- * @param checkName short CLI name used in `check-cluster <subcheck> <config-file>`
+ * @param checkName short CLI name used in `check-cluster --checks=<name>`
  */
 internal enum class AvailableCheck(val checkName: String) {
 
@@ -20,7 +20,7 @@ internal enum class AvailableCheck(val checkName: String) {
     /**
      * Find orphan companion tables (DLQ and Archive) on some nodes but not others
      */
-    FIND_ORPHAN_TABLES(checkName = "find-orphans"),
+    CHECK_ORPHAN_TABLES(checkName = "orphan-tables"),
 
     /**
      * Find shards stuck in migration state (consumerNode == null, nextConsumerNode != null)
