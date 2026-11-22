@@ -39,6 +39,7 @@ Only what a user of kolbasa notices:
 - dependencies a user gets: runtime dependencies of the published modules, and minimum supported versions (JVM,
   PostgreSQL, Micrometer, OpenTelemetry, Spring Boot);
 - `butcher` (`butcher/src/main`): commands, options, output. Start such an item with `butcher:`;
+- the Spring Boot starter: name it "the Spring Boot starter" in the item, not just "the starter";
 - a new page in `docs/`.
 
 Leave out tests, `test-support`, `performance`, `examples`, build logic, CI, the Gradle wrapper, KDoc-only changes and
@@ -47,14 +48,27 @@ internal refactorings.
 ## Entry format
 
 ```
-## [0.239.0](https://github.com/vgv/kolbasa/compare/v0.238.0...v0.239.0) - 2026-11-22
+## [0.239.0](https://github.com/vgv/kolbasa/compare/v0.238.0...v0.239.0) - 2026-11-21
 
-One sentence on what the release is about ([#177](https://github.com/vgv/kolbasa/pull/177)).
+The most important change, in a few words ([#177](https://github.com/vgv/kolbasa/pull/177)).
 
 ### Breaking changes
 
 - ...
 ```
+
+The line under the heading is the summary: the most important change of the release, in a few words, with the PR
+link. If the release has two or more important changes, list them instead:
+
+```
+Highlights ([#146](https://github.com/vgv/kolbasa/pull/146)):
+
+- Queue pipes
+- `QueueProcessor` moved to `kolbasa.worker.processor`
+```
+
+Important means a breaking change, a schema change the user must act on, or a big new feature, not every item.
+Write each one in a few words, not a sentence.
 
 The version in the heading links to the diff from the previous tag to this one.
 
@@ -64,12 +78,17 @@ Groups, in this order, only the non-empty ones: `Breaking changes`, `Schema`, `A
 - `Breaking changes`: anything that makes existing code fail to compile, or makes it behave differently in a way the
   user must react to. Removed and renamed API goes here, so there is no `Removed` group.
 - `Schema`: every change to queue tables. If it needs anything from the user, add a line to `Breaking changes` too.
-- A release with nothing a user notices gets the heading and the sentence, nothing else.
+- A release with nothing a user notices gets the heading and the summary, nothing else.
 
 Writing:
 
 - English. Short, plain sentences.
 - One item, one change. Name the API exactly, in backticks.
+- Say each thing once. When new API is what fixes a bug, the `Fixed` item tells what went wrong and what happens
+  now, and the `Added` item only names the API and what it is for.
+- Keep one feature in one item, even if it touches several groups: the same option for two modes is one item.
+- `Added`: one item per feature, naming its main classes and what it is for. Don't list options and defaults: KDoc
+  has them.
 - A breaking change says what to write instead. Add a short Kotlin snippet when the new code isn't obvious. Add a
   Java snippet only where Java is written differently (`INSTANCE`, a builder), with a line before it.
 - A fix says what the user saw go wrong, then what happens now. Not what changed in the code.
@@ -78,14 +97,7 @@ Writing:
 ## Writing the file
 
 1. Show the entry in chat first. Write nothing until the user agrees.
-2. If `CHANGELOG.md` doesn't exist, create it with this header:
-   ```
-   # Changelog
-
-   What changed in each release of kolbasa (`io.github.vgv:kolbasa`, `kolbasa-opentelemetry`,
-   `kolbasa-spring-boot-4-starter`) and `butcher`, newest first. The format follows
-   [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). History starts at 0.222.0.
-   ```
+2. If `CHANGELOG.md` doesn't exist, create it with the line `# Changelog`.
 3. Put the entry in its place by version, newest first. If the tag already has an entry, show the old one next to
    the new one, then replace it.
 4. Don't commit.
