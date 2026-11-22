@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.schema.ShardSchema
 import kolbasa.consumer.datasource.Consumer
 import kolbasa.inspector.datasource.Inspector
 import kolbasa.mutator.datasource.Mutator
@@ -14,6 +15,12 @@ internal data class ClusterTopology(
     val nodes: Map<NodeId, DataSource>,
     val shards: Map<ShardId, Shard>
 ) {
+
+    // -------------------------------------------------------------------------------------------------
+    // Shard map fingerprint, the same one a node computes, see ShardSchema.fingerprint
+    val shardsFingerprint: String by lazy {
+        ShardSchema.fingerprint(shards.values)
+    }
 
     // -------------------------------------------------------------------------------------------------
     // DataSources available to store data if some shard producer is not available

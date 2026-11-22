@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
 
 class ShardBalanceTest {
 
@@ -344,10 +345,22 @@ class ShardBalanceTest {
         currentDistribution.flatMap { (node, shards) -> shards.map { it to node } }.toMap()
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
-        Shard(shard = ShardId.of(shardNum), producerNode = node, consumerNode = node, nextConsumerNode = null)
+        Shard(
+            shard = ShardId.of(shardNum),
+            producerNode = node,
+            consumerNode = node,
+            nextConsumerNode = null,
+            revision = Instant.EPOCH
+        )
 
     private fun migratingShard(shardNum: Int, target: NodeId): Shard =
-        Shard(shard = ShardId.of(shardNum), producerNode = target, consumerNode = null, nextConsumerNode = target)
+        Shard(
+            shard = ShardId.of(shardNum),
+            producerNode = target,
+            consumerNode = null,
+            nextConsumerNode = target,
+            revision = Instant.EPOCH
+        )
 
     /**
      * Build [counts.values.sum()] distinct stable shards distributed per the given counts.

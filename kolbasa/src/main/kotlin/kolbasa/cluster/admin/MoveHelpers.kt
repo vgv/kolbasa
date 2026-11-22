@@ -30,7 +30,7 @@ internal object MoveHelpers {
 
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
         val search: ShardTableSearch = try {
-            ShardSchema.findShardTable(nodes)
+            ShardSchema.findShardTable(nodes, ShardSchema::readShards)
         } catch (e: Exception) {
             val errorMessage = buildString {
                 appendLine(e.message ?: e.toString())
@@ -80,7 +80,8 @@ internal object MoveHelpers {
         initialShards.forEach { (shardId, initialShard) ->
             val updatedShard = updatedShards[shardId] ?: throw IllegalStateException("Can't find updated shard ${shardId.id}")
 
-            if (initialShard != updatedShard) {
+            // A row whose revision alone has changed is not a difference
+            if (!initialShard.equalsIgnoreRevision(updatedShard)) {
                 difference += ShardDiff(initialShard.toOwnership(), updatedShard.toOwnership())
             }
         }

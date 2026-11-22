@@ -2,7 +2,6 @@ package kolbasa.cluster
 
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
-import kolbasa.cluster.schema.ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.REVISION_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.SHARD_COLUMN_NAME
@@ -31,26 +30,6 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
         assertRevisionSchema(first)
         assertEquals(ShardId.SHARD_COUNT, first.readInt("select count(*) from $SHARD_TABLE_NAME"))
-        assertEquals(0, countRevisionsOtherThanInitial(first))
-    }
-
-    @Test
-    fun testOldShardTable_Migrated() {
-        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
-        val first = nodes.values.first()
-
-        // A shard table from before revisions
-        first.useStatement { statement -> statement.execute(OLD_CREATE_SHARD_TABLE_STATEMENT) }
-        ShardSchema.fillShardTable(first, nodes.keys.toList())
-        val before = ShardSchema.readShards(first)
-
-        val cluster = Cluster(dataSources, emptyList())
-        cluster.updateTopology()
-
-        // The map is the same, the rows that were there got the initial revision
-        assertEquals(before, cluster.getTopology().shards)
-        assertRevisionSchema(first)
         assertEquals(0, countRevisionsOtherThanInitial(first))
     }
 
@@ -157,12 +136,12 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testCreateOrUpdateShardTable_ChangedAtTheSameMoment_SecondTryFinishes() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
-        val first = nodes.values.first()
-        first.useStatement { statement -> statement.execute(OLD_CREATE_SHARD_TABLE_STATEMENT) }
-        ShardSchema.fillShardTable(first, nodes.keys.toList())
+        val first = seedShardTable()
+        first.useStatement { statement ->
+            statement.execute("drop trigger ${ShardSchema.SET_REVISION_FUNCTION_NAME} on $SHARD_TABLE_NAME")
+        }
 
-        // Another client is updating the table right now and hasn't committed yet
+        // Another client is restoring the trigger right now and hasn't committed yet
         first.connection.use { otherClient ->
             otherClient.autoCommit = false
             ShardSchema.createOrUpdateShardTable(otherClient)
@@ -170,7 +149,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
             val update = CompletableFuture.runAsync { ShardSchema.createOrUpdateShardTable(first) }
 
             // Our update waits for the other one, then loses on 'create trigger' once it commits
-            waitUntil { dataSource.readInt(WAITING_SHARD_TABLE_ALTERS) > 0 }
+            waitUntil { dataSource.readInt(WAITING_TRIGGER_CREATES) > 0 }
             otherClient.commit()
 
             update.get(30, TimeUnit.SECONDS)
@@ -282,28 +261,14 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
     }
 
     private companion object {
-        // q__shard as it was before revisions
-        val OLD_CREATE_SHARD_TABLE_STATEMENT = """
-            create table $SHARD_TABLE_NAME(
-                $SHARD_COLUMN_NAME int not null primary key,
-                $PRODUCER_NODE_COLUMN_NAME varchar(100) not null,
-                $CONSUMER_NODE_COLUMN_NAME varchar(100),
-                $NEXT_CONSUMER_NODE_COLUMN_NAME varchar(100),
-                check (
-                    ($PRODUCER_NODE_COLUMN_NAME=$CONSUMER_NODE_COLUMN_NAME and $NEXT_CONSUMER_NODE_COLUMN_NAME is null) or
-                    ($PRODUCER_NODE_COLUMN_NAME=$NEXT_CONSUMER_NODE_COLUMN_NAME and $CONSUMER_NODE_COLUMN_NAME is null)
-                )
-            )
-        """.trimIndent()
-
-        // Changes of q__shard in this database that wait for a lock
-        val WAITING_SHARD_TABLE_ALTERS = """
+        // Creates of the revision trigger in this database that wait for a lock
+        val WAITING_TRIGGER_CREATES = """
             select count(*)
             from pg_stat_activity
             where
                 datname = current_database() and
                 wait_event_type = 'Lock' and
-                position('alter table $SHARD_TABLE_NAME' in query) > 0
+                position('create trigger ${ShardSchema.SET_REVISION_FUNCTION_NAME}' in query) > 0
         """.trimIndent()
     }
 

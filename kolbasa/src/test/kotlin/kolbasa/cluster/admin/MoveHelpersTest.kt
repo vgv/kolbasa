@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Statement
+import java.time.Instant
 import kotlin.IllegalStateException
 
 class MoveHelpersTest : AbstractPostgreSQLTest() {
@@ -86,9 +87,9 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     @Test
     fun testCalculateShardsDiff_SameShards() {
         val shards = mapOf(
-            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null),
-            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null),
-            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null),
+            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null, Instant.EPOCH),
+            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null, Instant.EPOCH),
+            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null, Instant.EPOCH),
         )
 
         val updatedShards = buildMap { putAll(shards) } // to create the copy of the map
@@ -98,13 +99,27 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testCalculateShardsDiff_OnlyRevisionChanged() {
+        val shards = mapOf(
+            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null, Instant.EPOCH),
+            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null, Instant.EPOCH),
+        )
+
+        // The same owners with a newer revision
+        val updatedShards = shards.mapValues { (_, shard) -> shard.copy(revision = Instant.now()) }
+
+        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
+        assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
+    }
+
+    @Test
     fun testCalculateShardsDiff_DifferentShards() {
         val shards = mapOf(
-            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null),
-            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null),
-            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null),
-            ShardId.of(4) to Shard(ShardId.of(4), NodeId("node4"), NodeId("node4"), null),
-            ShardId.of(5) to Shard(ShardId.of(5), NodeId("node5"), NodeId("node5"), null),
+            ShardId.of(1) to Shard(ShardId.of(1), NodeId("node1"), NodeId("node1"), null, Instant.EPOCH),
+            ShardId.of(2) to Shard(ShardId.of(2), NodeId("node2"), NodeId("node2"), null, Instant.EPOCH),
+            ShardId.of(3) to Shard(ShardId.of(3), NodeId("node3"), NodeId("node3"), null, Instant.EPOCH),
+            ShardId.of(4) to Shard(ShardId.of(4), NodeId("node4"), NodeId("node4"), null, Instant.EPOCH),
+            ShardId.of(5) to Shard(ShardId.of(5), NodeId("node5"), NodeId("node5"), null, Instant.EPOCH),
         )
 
         val randomShardToChange = shards.keys.random()

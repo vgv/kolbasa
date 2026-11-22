@@ -9,9 +9,13 @@ import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.useStatement
 import java.sql.Connection
 import java.sql.Statement
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 import javax.sql.DataSource
 
@@ -31,8 +35,7 @@ internal object ShardSchema {
     const val REVISION_COLUMN_NAME = "revision"
 
     /**
-     * The revision of the rows kolbasa seeds into a new shard table, and of the rows that were there before revisions
-     * existed
+     * The revision of the rows kolbasa seeds into a new shard table
      */
     const val INITIAL_REVISION = "1970-01-01 00:00:00+00"
 
@@ -59,16 +62,38 @@ internal object ShardSchema {
         )
     """
 
-    private const val READ_SHARD_TABLE_STATEMENT = """
+    val READ_SHARD_TABLE_STATEMENT = """
         select
-            $SHARD_COLUMN_NAME, $PRODUCER_NODE_COLUMN_NAME, $CONSUMER_NODE_COLUMN_NAME, $NEXT_CONSUMER_NODE_COLUMN_NAME
+            $SHARD_COLUMN_NAME,
+            $PRODUCER_NODE_COLUMN_NAME,
+            $CONSUMER_NODE_COLUMN_NAME,
+            $NEXT_CONSUMER_NODE_COLUMN_NAME,
+            $REVISION_COLUMN_NAME
         from
             $SHARD_TABLE_NAME
         where
             $SHARD_COLUMN_NAME between ${ShardId.MIN_SHARD} and ${ShardId.MAX_SHARD}
         order by
             $SHARD_COLUMN_NAME
-    """
+    """.trimIndent()
+
+    // The md5 of the rows that READ_SHARD_TABLE_STATEMENT reads: one line per shard, in shard order, the revision in
+    // microseconds. fingerprint() builds the same text in Kotlin, change both together
+    private val READ_SHARD_TABLE_FINGERPRINT_STATEMENT = """
+        select
+            md5(coalesce(string_agg(
+                $SHARD_COLUMN_NAME || ',' ||
+                $PRODUCER_NODE_COLUMN_NAME || ',' ||
+                coalesce($CONSUMER_NODE_COLUMN_NAME, '') || ',' ||
+                coalesce($NEXT_CONSUMER_NODE_COLUMN_NAME, '') || ',' ||
+                (extract(epoch from $REVISION_COLUMN_NAME) * 1000000)::bigint,
+                E'\n' order by $SHARD_COLUMN_NAME
+            ), ''))
+        from
+            $SHARD_TABLE_NAME
+        where
+            $SHARD_COLUMN_NAME between ${ShardId.MIN_SHARD} and ${ShardId.MAX_SHARD}
+    """.trimIndent()
 
     private val CREATE_SET_REVISION_FUNCTION_STATEMENT = """
         create or replace function $SET_REVISION_FUNCTION_NAME() returns trigger
@@ -131,15 +156,10 @@ internal object ShardSchema {
         for each row execute procedure $SET_REVISION_FUNCTION_NAME()
     """.trimIndent()
 
-    // What the catalog has: the table, its revision column (null if there is none), the function's COMMENT, the trigger
+    // What the catalog has: the table, the function's COMMENT, the trigger
     private val READ_SHARD_TABLE_STATE_STATEMENT = """
         select
             to_regclass('$SHARD_TABLE_NAME') is not null as table_exists,
-            (
-                select attnotnull
-                from pg_attribute
-                where attrelid = to_regclass('$SHARD_TABLE_NAME') and attname = '$REVISION_COLUMN_NAME' and not attisdropped
-            ) as revision_not_null,
             obj_description(to_regprocedure('$SET_REVISION_FUNCTION_NAME()'), 'pg_proc') as function_comment,
             exists (
                 select 1
@@ -149,8 +169,8 @@ internal object ShardSchema {
     """.trimIndent()
 
     /**
-     * Creates `q__shard` with its revision trigger, or brings an existing table up to date: adds the revision column to
-     * a table from before revisions, replaces a changed trigger function, restores a missing trigger.
+     * Creates `q__shard` with its revision trigger, or brings an existing table up to date: replaces a changed trigger
+     * function, restores a missing trigger.
      *
      * It checks the catalog first and runs only what is missing, so on an up-to-date table it is one query. All the
      * changes run in one transaction.
@@ -167,7 +187,7 @@ internal object ShardSchema {
     }
 
     private fun createOrUpdateShardTableOnce(dataSource: DataSource) {
-        // One transaction: the 'alter table' lock keeps the other clients out until the trigger is there
+        // One transaction: no other client sees a new table without its trigger
         dataSource.inTransaction { connection ->
             createOrUpdateShardTable(connection)
         }
@@ -182,22 +202,11 @@ internal object ShardSchema {
         connection.useStatement(READ_SHARD_TABLE_STATE_STATEMENT) { resultSet ->
             resultSet.next()
             val tableExists = resultSet.getBoolean("table_exists")
-            val revisionNotNull = resultSet.getBoolean("revision_not_null").takeUnless { resultSet.wasNull() }
             val functionComment = resultSet.getString("function_comment")
             val triggerExists = resultSet.getBoolean("trigger_exists")
 
             if (!tableExists) {
                 statements += CREATE_SHARD_TABLE_STATEMENT
-            } else {
-                // A table from before revisions: add the column and give the existing rows the initial revision
-                if (revisionNotNull == null) {
-                    statements += "alter table $SHARD_TABLE_NAME add column if not exists $REVISION_COLUMN_NAME timestamptz"
-                }
-                if (revisionNotNull != true) {
-                    statements += "update $SHARD_TABLE_NAME set $REVISION_COLUMN_NAME = '$INITIAL_REVISION' " +
-                        "where $REVISION_COLUMN_NAME is null"
-                    statements += "alter table $SHARD_TABLE_NAME alter column $REVISION_COLUMN_NAME set not null"
-                }
             }
 
             if (functionComment != SET_REVISION_FUNCTION_COMMENT_PREFIX + SET_REVISION_FUNCTION_HASH) {
@@ -205,7 +214,7 @@ internal object ShardSchema {
                 statements += COMMENT_SET_REVISION_FUNCTION_STATEMENT
             }
 
-            // The trigger goes last. Before the update above, it would turn the initial revisions back into nulls
+            // The trigger goes last: it needs the table and the function
             if (!triggerExists) {
                 statements += CREATE_SET_REVISION_TRIGGER_STATEMENT
             }
@@ -270,16 +279,21 @@ internal object ShardSchema {
     /**
      * Looks for the shard table on [nodes], in node order, and stops at the first one that has every shard.
      *
+     * [readNode] reads the shard table of one node. The search calls it only for a node that has the table.
+     *
      * A node whose check or read fails stops the search with an exception that names the node. A failed read is
      * not a missing table.
      */
-    fun findShardTable(nodes: SortedMap<Node, DataSource>): ShardTableSearch {
+    fun findShardTable(
+        nodes: SortedMap<Node, DataSource>,
+        readNode: (DataSource) -> Map<ShardId, Shard>
+    ): ShardTableSearch {
         var firstIncomplete: ShardTableSearch.Incomplete? = null
 
         for ((node, dataSource) in nodes) {
             val shards = try {
                 if (shardTableExists(dataSource))
-                    readShards(dataSource)
+                    readNode(dataSource)
                 else
                     null
             } catch (e: Exception) {
@@ -314,18 +328,48 @@ internal object ShardSchema {
                     val producerNode = NodeId(resultSet.getString(PRODUCER_NODE_COLUMN_NAME))
                     val consumerNode = resultSet.getString(CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }
                     val nextConsumerNode = resultSet.getString(NEXT_CONSUMER_NODE_COLUMN_NAME)?.let { NodeId(it) }
+                    val revision = resultSet.getObject(REVISION_COLUMN_NAME, OffsetDateTime::class.java).toInstant()
 
                     shards[shard] = Shard(
                         shard = shard,
                         producerNode = producerNode,
                         consumerNode = consumerNode,
-                        nextConsumerNode = nextConsumerNode
+                        nextConsumerNode = nextConsumerNode,
+                        revision = revision
                     )
                 }
             }
         }
 
         return shards
+    }
+
+    /**
+     * The md5 of the shard table, computed by the node. Equal to [fingerprint] of the rows that [readShards] returns,
+     * so a client can tell whether its map is still up to date without reading the rows
+     */
+    fun readFingerprint(dataSource: DataSource): String {
+        return dataSource.readString(READ_SHARD_TABLE_FINGERPRINT_STATEMENT)
+    }
+
+    /**
+     * The md5 that READ_SHARD_TABLE_FINGERPRINT_STATEMENT computes on a node that holds these rows.
+     * Change both together
+     */
+    fun fingerprint(shards: Collection<Shard>): String {
+        val lines = mutableListOf<String>()
+
+        shards.sortedBy { it.shard.id }.forEach { shard ->
+            val shardId = shard.shard.id
+            val producerNode = shard.producerNode.id
+            val consumerNode = shard.consumerNode?.id ?: ""
+            val nextConsumerNode = shard.nextConsumerNode?.id ?: ""
+            val revision = ChronoUnit.MICROS.between(Instant.EPOCH, shard.revision)
+
+            lines += "$shardId,$producerNode,$consumerNode,$nextConsumerNode,$revision"
+        }
+
+        return Helpers.md5Hash(lines.joinToString("\n"))
     }
 
 }

@@ -18,9 +18,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.Statement
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.sql.DataSource
 import kotlin.random.Random
 
@@ -72,6 +75,36 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         assertSame(firstTopology, secondTopology)
         assertTrue(firstTopology.nodes.isNotEmpty(), "Topology: $firstTopology")
+    }
+
+    @Test
+    fun testUpdateTopology_SameFingerprint_RowsNotReadAgain() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = dataSources.map { CountingDataSource(it) }
+        val cluster = Cluster(nodes, emptyList())
+
+        // No map yet: the rows are read
+        cluster.updateTopology()
+        assertEquals(1, nodes.sumOf { it.shardTableReads.get() })
+
+        // The map hasn't changed: only its md5 is read
+        cluster.updateTopology()
+        assertEquals(1, nodes.sumOf { it.shardTableReads.get() })
+
+        // A hand edit changes the md5, so the rows are read again
+        val shardTableNode = ClusterHelper.readNodes(dataSources).values.first()
+        shardTableNode.useStatement { statement: Statement ->
+            statement.execute(
+                """
+                update ${ShardSchema.SHARD_TABLE_NAME}
+                set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-x', ${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-x'
+                where ${ShardSchema.SHARD_COLUMN_NAME} = 5
+                """.trimIndent()
+            )
+        }
+        cluster.updateTopology()
+        assertEquals(2, nodes.sumOf { it.shardTableReads.get() })
+        assertEquals(NodeId("node-x"), cluster.getTopology().shards[ShardId.of(5)]?.producerNode)
     }
 
     @Test
@@ -396,6 +429,27 @@ class ClusterTest : AbstractPostgreSQLTest() {
                 val thisNodeId = requireNotNull(IdSchema.readNodeInfo(dataSource))
                 FoundShardTable(numberOfTables, thisNodeId.id, schema, dataSource)
             }
+    }
+
+    // A node that counts how many times the rows of q__shard are read from it
+    private class CountingDataSource(private val delegate: DataSource) : DataSource by delegate {
+
+        val shardTableReads = AtomicInteger()
+
+        override fun getConnection(): Connection = CountingConnection(delegate.connection)
+
+        private inner class CountingConnection(private val connection: Connection) : Connection by connection {
+            override fun createStatement(): Statement = CountingStatement(connection.createStatement())
+        }
+
+        private inner class CountingStatement(private val statement: Statement) : Statement by statement {
+            override fun executeQuery(sql: String): ResultSet {
+                if (sql == ShardSchema.READ_SHARD_TABLE_STATEMENT) {
+                    shardTableReads.incrementAndGet()
+                }
+                return statement.executeQuery(sql)
+            }
+        }
     }
 
     private data class FoundShardTable(

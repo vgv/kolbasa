@@ -278,8 +278,8 @@ Every row also has a **revision**: when its content last changed. It is a simple
 server's clock, but never goes back: a new revision is the current time or the latest revision in the table plus one
 microsecond, whichever is later. So a new revision is always later than every revision already there, even when the server's
 clock is behind. A trigger on the table, `q__shard_set_revision`, sets it, so an `update` made by hand gets one too. An `update`
-that changes nothing keeps the old revision. The rows that kolbasa seeds into a new table, and the rows that were there before
-the column existed, have revision `1970-01-01 00:00:00+00`.
+that changes nothing keeps the old revision. The rows that kolbasa seeds into a new table have revision
+`1970-01-01 00:00:00+00`.
 
 **A snapshot, for concreteness.** In a healthy three-node cluster every shard is in the stable state — `producer_node` and
 `consumer_node` are equal and `next_consumer_node` is empty — with the 1024 shards scattered across the nodes:

@@ -3,10 +3,9 @@ package kolbasa.cluster.admin.check
 import kolbasa.cluster.Shard
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 class MigrationStateTest {
 
@@ -79,8 +78,20 @@ class MigrationStateTest {
     // ---------- helpers ----------
 
     private fun stableShard(shardNum: Int, node: NodeId): Shard =
-        Shard(shard = ShardId.of(shardNum), producerNode = node, consumerNode = node, nextConsumerNode = null)
+        Shard(
+            shard = ShardId.of(shardNum),
+            producerNode = node,
+            consumerNode = node,
+            nextConsumerNode = null,
+            revision = Instant.EPOCH
+        )
 
     private fun migratingShard(shardNum: Int, target: NodeId): Shard =
-        Shard(shard = ShardId.of(shardNum), producerNode = target, consumerNode = null, nextConsumerNode = target)
+        Shard(
+            shard = ShardId.of(shardNum),
+            producerNode = target,
+            consumerNode = null,
+            nextConsumerNode = target,
+            revision = Instant.EPOCH
+        )
 }

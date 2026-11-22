@@ -208,7 +208,20 @@ class Cluster(
     }
 
     private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
-        when (val search = ShardSchema.findShardTable(nodes)) {
+        // The map we already have, and its md5
+        val knownShards = topology?.shards
+        val knownFingerprint = topology?.shardsFingerprint
+
+        val search = ShardSchema.findShardTable(nodes) { dataSource ->
+            // Read the rows only if they differ from the map we already have
+            if (knownShards != null && ShardSchema.readFingerprint(dataSource) == knownFingerprint) {
+                knownShards
+            } else {
+                ShardSchema.readShards(dataSource)
+            }
+        }
+
+        when (search) {
             // Shard table found, only its schema may need an update
             is ShardTableSearch.Complete -> {
                 ShardSchema.createOrUpdateShardTable(search.dataSource)
