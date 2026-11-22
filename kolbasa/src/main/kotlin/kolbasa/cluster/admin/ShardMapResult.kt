@@ -50,6 +50,11 @@ data class ShardMapResult(
     val isMissing: Boolean = shardsWithoutRow.size == ShardId.SHARD_COUNT
 
     /**
+     * How many nodes don't have the newest row of every shard, the nodes without a shard table among them
+     */
+    val differentCopies: Int = copies.values.count { !it.isUpToDate } + nodesWithoutTable.size
+
+    /**
      * True when every node has a shard table and every shard has a row
      */
     val isComplete: Boolean = nodesWithoutTable.isEmpty() && shardsWithoutRow.isEmpty()
@@ -58,7 +63,7 @@ data class ShardMapResult(
      * True when the map is complete, all its copies are the same, and nothing else is wrong with it
      */
     val isClean: Boolean = isComplete &&
-        copies.values.all { it.isUpToDate } &&
+        differentCopies == 0 &&
         invalidShards.isEmpty() &&
         unknownOwners.isEmpty()
 }

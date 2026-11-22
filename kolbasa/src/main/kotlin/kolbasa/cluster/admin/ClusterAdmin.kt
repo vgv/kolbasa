@@ -91,6 +91,22 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
     fun checkShardMap(): ShardMapResult = ShardMapState.check(nodes)
 
     /**
+     * Creates the shard map, or brings its copies up to date – what an application does on every topology update
+     *
+     * A node without a shard table gets one. Every copy gets the newest row of every shard, and a shard that no node has
+     * gets a random node. On a cluster without a shard map that is every shard, so this is how a new map is created.
+     *
+     * A node that takes no rows doesn't stop the others. Then this throws, with the name of that node. Call it again once
+     * the node is back: it does only what is still missing.
+     *
+     * Rows of shards that don't exist, and shards of nodes that are not in the cluster, stay as they are: see
+     * [checkShardMap].
+     *
+     * @return how many rows have changed on every node, zero for a copy that was up to date already
+     */
+    fun createOrRepairShardMap(): Map<NodeId, Int> = createOrRepairShardMap(nodes)
+
+    /**
      * Marks [shards] as migrating to [target], the first of the three migration steps
      *
      * After this the shards are still consumed from where their data is, but new messages are produced to

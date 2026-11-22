@@ -29,6 +29,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         assertTrue(result.output.contains("Initialized node node-01"), result.output)
         assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
         assertTrue(result.output.contains("no shard map on any node yet"), result.output)
+        assertTrue(result.output.contains("'create-or-repair-shard-map'"), result.output)
 
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertTrue(hasTable(node, "q__node"))

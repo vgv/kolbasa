@@ -3,6 +3,7 @@ package kolbasa.butcher
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import kolbasa.butcher.command.CheckCluster
+import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
 import kolbasa.butcher.command.MoveData
@@ -32,7 +33,8 @@ class ButcherCliTest {
 
         assertEquals(0, result.statusCode, result.output)
         listOf(
-            "check-cluster", "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration"
+            "check-cluster", "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration",
+            "create-or-repair-shard-map"
         ).forEach {
             assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}")
         }
@@ -67,6 +69,7 @@ class ButcherCliTest {
             "prepare-migration" to "Low-level commands:",
             "move-data" to "Low-level commands:",
             "finalize-migration" to "Low-level commands:",
+            "create-or-repair-shard-map" to "Low-level commands:",
         ).forEach { (command, section) ->
             // The section a command is listed under is the last one printed before it
             val sectionsBefore = listOf("Diagnostics:", "High-level commands:", "Low-level commands:")
@@ -159,7 +162,10 @@ class ButcherCliTest {
 
     @Test
     fun testMutatingCommandsOfferYes() {
-        listOf("rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration").forEach { command ->
+        listOf(
+            "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration",
+            "create-or-repair-shard-map"
+        ).forEach { command ->
             val result = cli().test("$command --help")
 
             assertEquals(0, result.statusCode, result.output)
@@ -224,6 +230,7 @@ class ButcherCliTest {
         PrepareMigration(),
         MoveData(),
         FinalizeMigration(),
+        CreateOrRepairShardMap(),
     )
 
     private fun config(): File = File(tempDir, "cluster.conf").apply {

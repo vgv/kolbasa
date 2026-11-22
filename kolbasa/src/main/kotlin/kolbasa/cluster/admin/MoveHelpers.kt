@@ -51,6 +51,15 @@ internal object MoveHelpers {
     }
 
     /**
+     * Brings the copies on every node up to date, see [ShardCopies.repair]
+     */
+    fun repairShards(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap) {
+        reportFailure {
+            ShardCopies.repair(nodes, shardMap)
+        }
+    }
+
+    /**
      * Puts [newRows] into the shard map, on every node. The copies that lag behind catch up on the way.
      *
      * A node that can't take the rows doesn't stop the others, and the change is in effect once one node has it. Then

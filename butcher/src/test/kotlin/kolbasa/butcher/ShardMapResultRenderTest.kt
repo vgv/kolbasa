@@ -31,7 +31,7 @@ class ShardMapResultRenderTest {
         ).render().renderToText()
 
         assertTrue(text.contains("Shard map: no shard map on any node yet"), text)
-        assertTrue(text.contains("An application creates it when it starts"), text)
+        assertTrue(text.contains("An application creates it when it starts, and so does 'create-or-repair-shard-map'"), text)
         // 1024 numbers would say nothing more
         assertTrue(!text.contains("1023"), text)
     }
@@ -47,7 +47,21 @@ class ShardMapResultRenderTest {
         assertEquals(listOf("node-01", "0", "0", "0"), rowOf("node-01", text))
         assertEquals(listOf("node-02", "2", "3", "1"), rowOf("node-02", text))
         assertEquals(listOf("node-03", "no table"), rowOf("node-03", text))
-        assertTrue(text.contains("Applications bring the copies up to date"), text)
+        assertTrue(text.contains("Applications repair it on their next topology update"), text)
+        assertTrue(text.contains("'create-or-repair-shard-map'"), text)
+    }
+
+    @Test
+    fun testNoAdvice() {
+        // The command that is about to repair the map doesn't advise to run itself
+        val missing = result(emptyMap(), setOf(n1, n2, n3), ShardId.SHARDS_RANGE.map { ShardId.of(it) }.toSet())
+        val different = result(mapOf(n1 to upToDate, n2 to upToDate), nodesWithoutTable = setOf(n3))
+
+        listOf(missing, different).forEach { result ->
+            val text = result.render(advice = false).renderToText()
+            assertTrue(!text.contains("create-or-repair-shard-map"), text)
+            assertTrue(!text.contains("pplication"), text)
+        }
     }
 
     @Test

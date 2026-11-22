@@ -12,9 +12,8 @@ import com.github.ajalt.mordant.terminal.YesNoPrompt
 /**
  * A command that changes the cluster, and therefore asks before it does
  *
- * The three migration steps are the only commands that write anything, and each of them is hard to undo in
- * a hurry, so none of them runs without a yes. [confirm] states what is about to happen in terms of the
- * cluster the operator just pointed at, not in terms of flags.
+ * What these commands write is hard to undo in a hurry, so none of them runs without a yes. [confirm] states
+ * what is about to happen in terms of the cluster the operator just pointed at, not in terms of flags.
  */
 internal abstract class MutatingClusterCommand(name: String) : ClusterCommand(name) {
 

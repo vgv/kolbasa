@@ -3,6 +3,7 @@ package kolbasa.cluster.admin
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.postgresql.ds.PGSimpleDataSource
 import java.sql.Connection
+import java.time.Instant
 import javax.sql.DataSource
 
 class ClusterAdminTest : AbstractPostgreSQLTest() {
@@ -127,6 +129,90 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         assertTrue(result.shardsWithoutRow.isEmpty())
         assertEquals(mapOf(secondNode to listOf(5000)), result.invalidShards)
         assertEquals(mapOf(NodeId("node-gone") to listOf(ShardId.of(17))), result.unknownOwners)
+    }
+
+    @Test
+    fun testCreateOrRepairShardMap_NewCluster() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+        val admin = ClusterAdmin(dataSources)
+
+        assertEquals(nodes.associateWith { ShardId.SHARD_COUNT }, admin.createOrRepairShardMap())
+
+        assertTrue(admin.checkShardMap().isClean, "${admin.checkShardMap()}")
+        assertTrue(ShardSchema.readShards(dataSource).values.all { it.revision == Instant.EPOCH })
+
+        // Nothing is left to do
+        assertEquals(nodes.associateWith { 0 }, admin.createOrRepairShardMap())
+    }
+
+    @Test
+    fun testCreateOrRepairShardMap_CopiesDiffer() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, third) = nodes.values.toList()
+        val admin = ClusterAdmin(dataSources)
+        Cluster(dataSources, emptyList()).updateTopology()
+
+        // The first node has an edit by hand. The second copy has an older row, a row with the same revision and other nodes,
+        // and no shard 7. No node has shard 8. The third node has lost its table
+        val shard9 = requireNotNull(ShardSchema.readShards(first)[ShardId.of(9)])
+        first.useStatement { statement ->
+            statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} = 8")
+            statement.execute(
+                "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = 'node-x', " +
+                    "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = 'node-x' where ${ShardSchema.SHARD_COLUMN_NAME} = 5"
+            )
+        }
+        second.useStatement { statement ->
+            statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} in (7, 8, 9)")
+        }
+        ShardSchema.writeShards(second, listOf(Shard(ShardId.of(9), NodeId("node-y"), NodeId("node-y"), null, Instant.EPOCH)))
+        third.useStatement { it.execute("drop table ${ShardSchema.SHARD_TABLE_NAME}") }
+
+        val changedRows = admin.createOrRepairShardMap()
+
+        assertEquals(listOf(2, 4, ShardId.SHARD_COUNT), nodes.keys.map { changedRows.getValue(it.id) })
+        val shards = ShardSchema.readShards(first)
+        dataSources.forEach { assertEquals(shards, ShardSchema.readShards(it)) }
+        assertEquals(ShardId.SHARD_COUNT, shards.size)
+        assertEquals(NodeId("node-x"), shards[ShardId.of(5)]?.producerNode)
+        // The row of the node with the smallest id won, with a new revision
+        assertTrue(shards.getValue(ShardId.of(9)).equalsIgnoreRevision(shard9))
+        assertTrue(shards.getValue(ShardId.of(9)).revision > Instant.EPOCH)
+    }
+
+    @Test
+    fun testCreateOrRepairShardMap_NodeRejectsRows_OtherNodesRepaired() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (_, middle, last) = nodes.values.toList()
+        val middleNode = nodes.keys.toList()[1].id
+        val admin = ClusterAdmin(dataSources)
+        Cluster(dataSources, emptyList()).updateTopology()
+
+        listOf(middle, last).forEach { node ->
+            node.useStatement { statement ->
+                statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} < 10")
+            }
+        }
+        middle.useStatement { statement ->
+            statement.execute(
+                "create function reject_rows() returns trigger language plpgsql as " +
+                    "'begin raise exception ''The node takes no rows''; end'"
+            )
+            statement.execute(
+                "create trigger reject_rows before insert or update on ${ShardSchema.SHARD_TABLE_NAME} " +
+                    "for each row execute procedure reject_rows()"
+            )
+        }
+
+        val exception = assertThrows<ClusterOperationException.ExecutionException> {
+            admin.createOrRepairShardMap()
+        }
+
+        assertTrue("on node ${middleNode.id}" in exception.message, exception.message)
+        assertEquals(ShardId.SHARD_COUNT, ShardSchema.readShards(last).size)
     }
 
     @Test

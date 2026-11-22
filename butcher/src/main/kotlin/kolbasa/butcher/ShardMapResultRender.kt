@@ -11,9 +11,11 @@ import kolbasa.producer.ShardId
 /**
  * Renders a [ShardMapResult] the way butcher shows it
  *
+ * With [advice] the report also says what brings the copies up to date. The command that is about to do that leaves it out.
+ *
  * Presentation only: it belongs to the CLI, and nothing except console output may depend on it.
  */
-internal fun ShardMapResult.render(): Widget = verticalLayout {
+internal fun ShardMapResult.render(advice: Boolean = true): Widget = verticalLayout {
     if (isClean) {
         cell(TextColors.green("Shard map: all ${copies.size} copies are the same"))
         return@verticalLayout
@@ -21,14 +23,19 @@ internal fun ShardMapResult.render(): Widget = verticalLayout {
 
     if (isMissing) {
         cell(TextColors.yellow("Shard map: no shard map on any node yet"))
-        cell("An application creates it when it starts. If applications already work with this cluster, check that the config")
-        cell("points at the right databases.")
+        if (advice) {
+            cell("An application creates it when it starts, and so does 'create-or-repair-shard-map'.")
+            cell("If applications already work with this cluster, check that the config points at the right databases.")
+        }
     } else {
         cell(TextColors.yellow("Shard map: ${problems().joinToString(", ")}"))
 
-        if (differentCopies() > 0) {
+        if (differentCopies > 0) {
             cell(copiesTable())
-            cell("Applications bring the copies up to date on their next topology update.")
+        }
+        if (advice && (differentCopies > 0 || !isComplete)) {
+            cell("Applications repair it on their next topology update. With no application running, use")
+            cell("'create-or-repair-shard-map'.")
         }
 
         // Out of the table, as in the migration state report: a long list of shards leaves no room for the other columns
@@ -49,8 +56,8 @@ internal fun ShardMapResult.render(): Widget = verticalLayout {
 private fun ShardMapResult.problems(): List<String> {
     val problems = mutableListOf<String>()
 
-    if (differentCopies() > 0) {
-        problems += "${differentCopies()} of ${copies.size + nodesWithoutTable.size} copies differ"
+    if (differentCopies > 0) {
+        problems += "$differentCopies of ${copies.size + nodesWithoutTable.size} copies differ"
     }
     if (shardsWithoutRow.isNotEmpty()) {
         problems += "${shardsWithoutRow.size} shard(s) have no row on any node"
@@ -64,9 +71,6 @@ private fun ShardMapResult.problems(): List<String> {
 
     return problems
 }
-
-private fun ShardMapResult.differentCopies(): Int =
-    copies.values.count { !it.isUpToDate } + nodesWithoutTable.size
 
 private fun ShardMapResult.copiesTable(): Widget = table {
     header { row("Node", "Missing", "Outdated", "Conflicting") }
