@@ -1,7 +1,7 @@
 package kolbasa.mutator
 
-import kolbasa.telemetry.prometheus.PrometheusConfig
-import java.util.concurrent.ExecutorService
+import kolbasa.telemetry.metrics.MetricsConfig
+import java.util.concurrent.Executor
 
 /**
  * Configuration options for a [Mutator][kolbasa.mutator.datasource.Mutator] instance.
@@ -48,18 +48,18 @@ data class MutatorOptions(
      * Executor used to mutate messages asynchronously in [mutateAsync()][kolbasa.mutator.datasource.Mutator.mutateAsync]  methods.
      *
      * If you need to customize the executor for a specific [Mutator][kolbasa.mutator.datasource.Mutator], you can
-     * provide your own [ExecutorService]. If you don't provide a custom executor, mutator will use the global,
+     * provide your own [Executor]. If you don't provide a custom executor, mutator will use the global,
      * default executor defined in [Kolbasa.asyncExecutor][kolbasa.Kolbasa.asyncExecutor]
      */
-    val asyncExecutor: ExecutorService? = null,
+    val asyncExecutor: Executor? = null,
 
     /**
-     * Prometheus metrics for this mutator. By default, the value is unspecified (null), meaning that global
-     * [Kolbasa.prometheusConfig][kolbasa.Kolbasa.prometheusConfig] will be used.
+     * Metrics for this mutator. By default, the value is unspecified (null), meaning that global
+     * [Kolbasa.metricsConfig][kolbasa.Kolbasa.metricsConfig] will be used.
      *
-     * [PrometheusConfig.None] switches the metrics off for this mutator only.
+     * [MetricsConfig.None] switches the metrics off for this mutator only.
      */
-    val prometheusConfig: PrometheusConfig? = null,
+    val metricsConfig: MetricsConfig? = null,
 ) {
 
     /**
@@ -67,8 +67,8 @@ data class MutatorOptions(
      */
     class Builder {
         private var maxMutatedMessagesKeepInMemory: Int = DEFAULT_MAX_MUTATED_MESSAGES_KEEP_IN_MEMORY
-        private var asyncExecutor: ExecutorService? = null
-        private var prometheusConfig: PrometheusConfig? = null
+        private var asyncExecutor: Executor? = null
+        private var metricsConfig: MetricsConfig? = null
 
         /**
          * Sets [MutatorOptions.maxMutatedMessagesKeepInMemory] – how many mutated messages a result may carry.
@@ -80,15 +80,15 @@ data class MutatorOptions(
         /**
          * Sets [MutatorOptions.asyncExecutor] – the executor used by the mutator's mutateAsync() methods.
          */
-        fun asyncExecutor(value: ExecutorService?) = apply {
+        fun asyncExecutor(value: Executor?) = apply {
             this.asyncExecutor = value
         }
 
         /**
-         * Sets [MutatorOptions.prometheusConfig] – the metrics of this mutator, used instead of the global ones.
+         * Sets [MutatorOptions.metricsConfig] – the metrics of this mutator, used instead of the global ones.
          */
-        fun prometheusConfig(value: PrometheusConfig) = apply {
-            this.prometheusConfig = value
+        fun metricsConfig(value: MetricsConfig) = apply {
+            this.metricsConfig = value
         }
 
         /**
@@ -98,7 +98,7 @@ data class MutatorOptions(
             return MutatorOptions(
                 maxMutatedMessagesKeepInMemory = maxMutatedMessagesKeepInMemory,
                 asyncExecutor = asyncExecutor,
-                prometheusConfig = prometheusConfig
+                metricsConfig = metricsConfig
             )
         }
     }

@@ -1,15 +1,16 @@
 package kolbasa.cluster
 
 import kolbasa.queue.Checks
+import kolbasa.utils.Threads
 import java.time.Duration
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 /**
  * Options of a [ClusterTopologyUpdater].
  *
  * The defaults fit most applications: the topology is read every minute, on one background thread shared by all
- * updaters in the JVM, and a failed read goes to the log.
+ * updaters in the JVM, and an update that goes wrong goes to the log: a node that is down, or a failed statement of the
+ * schema.
  *
  * ## Usage Example
  *
@@ -49,7 +50,8 @@ data class ClusterTopologyUpdaterOptions(
     val executor: ScheduledExecutorService = DEFAULT_EXECUTOR,
 
     /**
-     * What to do when a scheduled update fails. By default, [TopologyUpdateErrorHandler.SYSTEM_LOG].
+     * What to do when an update goes wrong, see [TopologyUpdateErrorHandler]. By default,
+     * [TopologyUpdateErrorHandler.SYSTEM_LOG].
      */
     val errorHandler: TopologyUpdateErrorHandler = TopologyUpdateErrorHandler.SYSTEM_LOG
 ) {
@@ -81,7 +83,7 @@ data class ClusterTopologyUpdaterOptions(
         }
 
         /**
-         * Sets [ClusterTopologyUpdaterOptions.errorHandler] – what to do when a scheduled update fails.
+         * Sets [ClusterTopologyUpdaterOptions.errorHandler] – what to do when an update goes wrong.
          */
         fun errorHandler(errorHandler: TopologyUpdateErrorHandler) = apply {
             this.errorHandler = errorHandler
@@ -118,10 +120,7 @@ data class ClusterTopologyUpdaterOptions(
         val MAX_INTERVAL: Duration = Duration.ofMinutes(15)
 
         // One executor for every updater in the JVM. Its thread starts with the first scheduled update
-        private val DEFAULT_EXECUTOR: ScheduledExecutorService =
-            Executors.newSingleThreadScheduledExecutor { runnable ->
-                Thread(runnable, "kolbasa-cluster-topology-updater").apply { isDaemon = true }
-            }
+        private val DEFAULT_EXECUTOR: ScheduledExecutorService = Threads.newClusterTopologyUpdaterExecutor()
 
         /**
          * Default options: the topology is read every minute, on the shared thread, errors go to the log.

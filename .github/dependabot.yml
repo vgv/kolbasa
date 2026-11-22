@@ -9,6 +9,32 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
+    ignore:
+      # `micrometer` in gradle/libs.versions.toml is the oldest Micrometer the library supports, on purpose: take only
+      # its patches. Micrometer is compileOnly, so its version never reaches an application
+      - dependency-name: "io.micrometer:*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # ========================================================================================================================
+      # `opentelemetry` is the oldest OpenTelemetry we support. Our POM asks for `opentelemetry-api`, and Gradle takes
+      # the highest version it sees. But an application has the SDK too, and the API and the SDK must be of one
+      # version: a newer API from us, even a patch, would break that pair. No updates at all
+      - dependency-name: "io.opentelemetry:*"
+      # ========================================================================================================================
+      # `spring-boot` is the oldest Spring Boot 4 we support. Our POM asks for `spring-boot-autoconfigure`, and all the
+      # Spring Boot modules of an application must be of one version: a newer one from us, even a patch, would mix them.
+      # No updates at all
+      - dependency-name: "org.springframework.boot:*"
+      # ========================================================================================================================
+      # `postgresql` goes into the POM of kolbasa too, but the driver is one jar: nothing in an application has to be of
+      # its version. So a newer driver does no harm, and its patches and minors fix bugs and vulnerabilities. Take them,
+      # only a new major waits for a decision
+      - dependency-name: "org.postgresql:postgresql"
+        update-types: ["version-update:semver-major"]
+      # ========================================================================================================================
+      # `kotlin` is the compiler, for our build only. A new minor can deprecate or reject `kotlin-language`, so raise
+      # both by hand, together. Take only the patches
+      - dependency-name: "org.jetbrains.kotlin.jvm"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

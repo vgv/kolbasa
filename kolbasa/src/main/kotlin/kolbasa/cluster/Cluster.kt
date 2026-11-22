@@ -1,6 +1,7 @@
 package kolbasa.cluster
 
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.cluster.schema.ShardTableSearch
 import kolbasa.producer.ShardId
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -116,8 +117,9 @@ class Cluster(
      * Reads the cluster topology once, right now, and returns when it is done.
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
-     * creates or updates them on every node. If no node has a complete shard map yet, this method builds one and
-     * stores it, which is how a fresh cluster is initialized.
+     * creates or updates them on every node. If no node has a shard map yet, this method builds one on the node with
+     * the smallest id, which is how a fresh cluster is initialized. If the map lacks some shards, the method adds
+     * them, and the shards that are there keep their nodes.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the
@@ -125,9 +127,17 @@ class Cluster(
      *
      * The method is synchronized, so calls from several threads run one after another. It talks to every node, so it
      * is not cheap – do not call it per message.
+     *
+     * It returns what the schema update did on every node, see [ClusterSchemaResult]. READ IT: a statement that fails
+     * doesn't throw, the same as in [SchemaHelpers.createOrUpdateQueues]. The short check is `failedStatements == 0`.
+     * After a failure the new topology is in use anyway, and every next update runs the schema again, until all
+     * statements go through.
+     *
+     * Other failures throw, a node that is down for example, or a shard map that can't be read. Then the old topology
+     * stays.
      */
     @Synchronized
-    fun updateTopology() {
+    fun updateTopology(): ClusterSchemaResult {
         val dataSources = dataSourcesProvider.get()
         check(dataSources.isNotEmpty()) {
             "Data sources list is empty"
@@ -136,12 +146,14 @@ class Cluster(
 
         val nodes = initNodes(dataSources)
         val shards = initShards(nodes)
-        updateSchema(nodes, queues)
+        val schemaResult = updateSchema(nodes, queues)
 
         val newTopology = ClusterTopology(nodes.mapKeys { it.key.id }, shards)
         if (newTopology != topology) {
             topology = newTopology
         }
+
+        return schemaResult
     }
 
     /**
@@ -196,47 +208,57 @@ class Cluster(
     }
 
     private fun initShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
-        // First, try to find a node with a 100% initialized shard table, if found, return it
-        for ((_, dataSource) in nodes) {
-            val shards = try {
-                ShardSchema.readShards(dataSource)
-            } catch (_: Exception) {
-                // Shard table doesn't exist
-                emptyMap()
+        when (val search = ShardSchema.findShardTable(nodes)) {
+            // Shard table found, only its schema may need an update
+            is ShardTableSearch.Complete -> {
+                ShardSchema.createOrUpdateShardTable(search.dataSource)
+                return search.shards
             }
 
-            // Shard table is 100% initialized, return it
-            if (shards.size == ShardId.SHARD_COUNT) {
-                return shards
+            // The table lacks some shards. Add only them, to this same table, and keep the other rows:
+            // the messages of those shards are already stored on the nodes these rows name.
+            // The new rows get the current time as their revision
+            is ShardTableSearch.Incomplete -> {
+                ShardSchema.createOrUpdateShardTable(search.dataSource)
+                ShardSchema.fillShardTable(search.dataSource, nodes.keys.toList())
+                return ShardSchema.readShards(search.dataSource)
+            }
+
+            // No table anywhere: a new cluster, the map goes to the node with the smallest id
+            ShardTableSearch.Missing -> {
+                val dataSource = nodes.values.first()
+                ShardSchema.createOrUpdateShardTable(dataSource)
+                ShardSchema.fillShardTable(dataSource, nodes.keys.toList(), initialRevision = true)
+                return ShardSchema.readShards(dataSource)
             }
         }
-
-        // No fully initialized shard table found, let's create a
-        // fully initialized shard table on the node with the smallest id
-        val (_, dataSource) = nodes.entries.first()
-        ShardSchema.createShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
-        return ShardSchema.readShards(dataSource)
     }
 
-    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>) {
+    private fun updateSchema(nodes: SortedMap<Node, DataSource>, queues: List<Queue<*>>): ClusterSchemaResult {
         // No queues: the schema is the user's job, nothing here touches it
         if (queues.isEmpty()) {
-            return
+            return ClusterSchemaResult(emptyMap())
         }
 
         val schemaKey = SchemaKey(nodes.keys.map { it.id }.toSet(), queues.toSet())
         if (schemaKey == schemaGeneratedFor) {
-            return
+            return ClusterSchemaResult(emptyMap())
         }
 
-        // Something has changed: the whole schema, on every node. If a node fails, the key stays old, and the next
-        // update tries again
-        nodes.values.forEach { dataSource ->
-            SchemaHelpers.createOrUpdateQueues(dataSource, queues)
+        // Something has changed: the whole schema, on every node
+        val result = ClusterSchemaResult(
+            nodes.entries.associate { (node, dataSource) ->
+                node.id to SchemaHelpers.createOrUpdateQueues(dataSource, queues)
+            }
+        )
+
+        // Remember the key only when every statement went through. Otherwise the next update runs the schema again,
+        // and executes only what is still missing. A node that throws skips this line too
+        if (result.failedStatements == 0) {
+            schemaGeneratedFor = schemaKey
         }
 
-        schemaGeneratedFor = schemaKey
+        return result
     }
 
     // What the schema was generated for

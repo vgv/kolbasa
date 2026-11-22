@@ -22,22 +22,32 @@ dependencies {
     implementation(libs.postgresql)
 
     // Metrics
-    compileOnly(libs.prometheus.metrics.core)
+    compileOnly(libs.micrometer.core)
 
     // Test
     // Which PostgreSQL versions we test against, shared with the examples and the benchmarks
     // It also brings JUnit, Testcontainers and the AbstractPostgreSQLTest base class
     testImplementation(project(":test-support"))
-    // Prometheus is compileOnly above, so the metrics tests need it on their own classpath
-    testImplementation(libs.prometheus.metrics.core)
+    // Micrometer is compileOnly above, so the metrics tests need it on their own classpath. The Prometheus registry is
+    // there to check the names Prometheus sees
+    testImplementation(libs.micrometer.core)
+    testImplementation(libs.micrometer.registry.prometheus)
 }
 
 // Kotlin settings
 kotlin {
-    jvmToolchain(17)
+    // The oldest Kotlin we support, `kotlin-language` in gradle/libs.versions.toml
+    val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
+
+    // The oldest Java we support, `java` in gradle/libs.versions.toml
+    jvmToolchain(libs.versions.java.get().toInt())
+    // The standard library in our POM: the oldest we support, too. Without this line it is the compiler's version.
+    // Gradle would raise an application's standard library to it, and an application on an older Kotlin would stop
+    // compiling: its compiler reads a standard library at most one version newer
+    coreLibrariesVersion = "${language.version}.0"
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = language
+        languageVersion = language
         // We need JVM default methods for interfaces, but don't need the compatibility bridges
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
         freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")

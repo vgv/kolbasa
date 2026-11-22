@@ -22,6 +22,9 @@ class ConnectionAwareDatabaseProducer internal constructor(
     override val options: ProducerOptions
 ) : ConnectionAwareProducer {
 
+    // The insert SQL is the same for the same queue and call options, so it is made once
+    private val sendQueryCache = LruCache<CacheKey, String>(capacity = 1000)
+
     /**
      * Creates a producer that works inside a transaction you manage.
      *
@@ -61,7 +64,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
         request: SendRequest<Data>,
         traceContext: Map<String, String>
     ): SendResult<Data> {
-        val queueMetrics = (options.prometheusConfig ?: Kolbasa.prometheusConfig).queueMetrics(queue)
+        val queueMetrics = (options.metricsConfig ?: Kolbasa.metricsConfig).queueMetrics(queue)
         val bytesCounter = queueMetrics.bytesCounter()
         val partialInsert = ProducerSchemaHelpers.calculatePartialInsert(options, request.options)
 
@@ -81,7 +84,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
             }
         }
 
-        // Prometheus
+        // Metrics
         queueMetrics.producerSendMetrics(
             nodeId,
             partialInsert,
@@ -203,7 +206,7 @@ class ConnectionAwareDatabaseProducer internal constructor(
     ): List<MessageResult<Data>> {
         val deduplicationMode = ProducerSchemaHelpers.calculateDeduplicationMode(options, request.options)
 
-        val cacheKey = CacheKey(queue, options, deduplicationMode, request.options)
+        val cacheKey = CacheKey(queue, deduplicationMode, request.options)
         val query = sendQueryCache.getOrPut(cacheKey) {
             ProducerSchemaHelpers.generateInsertPreparedQuery(
                 queue = queue,
@@ -266,14 +269,10 @@ class ConnectionAwareDatabaseProducer internal constructor(
         return result
     }
 
-    private companion object {
-        data class CacheKey(
-            val queue: Queue<*>,
-            val producerOptions: ProducerOptions,
-            val deduplicationMode: DeduplicationMode,
-            val sendOptions: SendOptions
-        )
-
-        val sendQueryCache = LruCache<CacheKey, String>(capacity = 1000)
-    }
+    // Everything the insert SQL depends on, besides the options of this producer
+    private data class CacheKey(
+        val queue: Queue<*>,
+        val deduplicationMode: DeduplicationMode,
+        val sendOptions: SendOptions
+    )
 }

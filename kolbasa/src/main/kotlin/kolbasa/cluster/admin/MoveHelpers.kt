@@ -2,6 +2,7 @@ package kolbasa.cluster.admin
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
+import kolbasa.cluster.schema.ShardTableSearch
 import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
@@ -28,22 +29,31 @@ internal object MoveHelpers {
     private const val MAX_REPORTED_CAUSES = 3
 
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardInfo {
-        // Try to find a node with a 100% initialized shard table, if found, return it
-        for ((_, dataSource) in nodes) {
-            val shards = try {
-                ShardSchema.readShards(dataSource)
-            } catch (_: Exception) {
-                // Shard table doesn't exist
-                emptyMap()
+        val search: ShardTableSearch = try {
+            ShardSchema.findShardTable(nodes)
+        } catch (e: Exception) {
+            val errorMessage = buildString {
+                appendLine(e.message ?: e.toString())
+                e.causeMessages().forEach { cause ->
+                    appendLine("  Caused by: $cause")
+                }
             }
-
-            // Shard table is 100% initialized, return it
-            if (shards.size == ShardId.SHARD_COUNT) {
-                return ShardInfo(dataSource, shards)
-            }
+            throw ClusterOperationException.ExecutionException(errorMessage)
         }
 
-        throw ClusterOperationException.ExecutionException("Initialized shard table ${ShardSchema.SHARD_TABLE_NAME} not found. Is it a Kolbasa cluster?")
+        return when (search) {
+            is ShardTableSearch.Complete -> ShardInfo(search.dataSource, search.shards)
+
+            // butcher doesn't fill the table, an application does it on its next topology update
+            is ShardTableSearch.Incomplete -> throw ClusterOperationException.ExecutionException(
+                "Shard table ${ShardSchema.SHARD_TABLE_NAME} on node ${search.node.id.id} has ${search.shardCount} of " +
+                    "${ShardId.SHARD_COUNT} shards. The next topology update of an application fills the missing ones."
+            )
+
+            ShardTableSearch.Missing -> throw ClusterOperationException.ExecutionException(
+                "Initialized shard table ${ShardSchema.SHARD_TABLE_NAME} not found. Is it a Kolbasa cluster?"
+            )
+        }
     }
 
     fun splitNodes(nodes: SortedMap<Node, DataSource>, targetNodeId: NodeId): SourceAndTargetNodes {

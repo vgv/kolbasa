@@ -170,4 +170,62 @@ class QueueTest {
         assertNull(queue.archiveQueue)
     }
 
+    @Test
+    fun testWithName_KeepsTheRest() {
+        val options = QueueOptions(defaultAttempts = 42, dlqOptions = DlqOptions.DEFAULT)
+        val queue = Queue("orders", PredefinedDataTypes.String, options, Metadata.of(USER_ID, NAME))
+
+        val renamed = queue.withName("orders_outbox")
+
+        assertEquals(Queue("orders_outbox", PredefinedDataTypes.String, options, Metadata.of(USER_ID, NAME)), renamed)
+        assertEquals("orders_outbox${Const.DLQ_TABLE_NAME_SUFFIX}", renamed.deadLetterQueue?.name)
+
+        // The original stays as it was
+        assertEquals("orders", queue.name)
+    }
+
+    @Test
+    fun testWithOptions_ReplacesAllOptions() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String,
+            options = QueueOptions(defaultDelay = Duration.ofSeconds(10), defaultAttempts = 42),
+            metadata = Metadata.of(USER_ID, NAME)
+        )
+
+        val newOptions = QueueOptions(defaultAttempts = 10_000)
+        val changed = queue.withOptions(newOptions)
+
+        // Not merged: the delay of the original is gone
+        assertEquals(Queue("orders", PredefinedDataTypes.String, newOptions, Metadata.of(USER_ID, NAME)), changed)
+
+        // The original stays as it was
+        assertEquals(42, queue.options.defaultAttempts)
+    }
+
+    @Test
+    fun testWithName_ChecksTheName() {
+        val queue = Queue.of("orders", PredefinedDataTypes.String)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            queue.withName("orders${Const.DLQ_TABLE_NAME_SUFFIX}")
+        }
+    }
+
+    @Test
+    fun testCompanionQueue_CannotBeCopied() {
+        val queue = Queue(
+            name = "orders",
+            databaseDataType = PredefinedDataTypes.String,
+            options = QueueOptions(dlqOptions = DlqOptions.DEFAULT)
+        )
+        val dlq = requireNotNull(queue.deadLetterQueue)
+
+        assertThrows(IllegalStateException::class.java) {
+            dlq.withName("other${Const.DLQ_TABLE_NAME_SUFFIX}")
+        }
+        assertThrows(IllegalStateException::class.java) {
+            dlq.withOptions(QueueOptions.DEFAULT)
+        }
+    }
 }

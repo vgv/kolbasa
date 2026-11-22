@@ -7,8 +7,8 @@ import kolbasa.inspector.connection.ConnectionAwareInspector
 import kolbasa.queue.Queue
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId
-import kolbasa.telemetry.prometheus.PrometheusConfig
-import kolbasa.telemetry.prometheus.QueueMetrics
+import kolbasa.telemetry.metrics.MetricsConfig
+import kolbasa.telemetry.metrics.QueueMetrics
 import kolbasa.telemetry.sql.SqlDumpHelper
 import kolbasa.telemetry.sql.StatementKind
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -71,24 +71,24 @@ object SweepHelper {
      *
      * Sweep tries to remove the maximum value from [SweepConfig.maxMessages] or `limit`, whichever is greater.
      *
-     * Its metrics go to the global [Kolbasa.prometheusConfig].
+     * Its metrics go to the global [Kolbasa.metricsConfig].
      *
      * @return how many expired messages were removed
      */
     @JvmStatic
     fun sweep(connection: Connection, queue: Queue<*>, limit: Int): Int {
-        return sweep(connection, queue, limit, Kolbasa.prometheusConfig)
+        return sweep(connection, queue, limit, Kolbasa.metricsConfig)
     }
 
     /**
      * Runs a sweep for a particular queue, like `sweep(connection, queue, limit)`, but its metrics go to
-     * [prometheusConfig] instead of the global [Kolbasa.prometheusConfig]. [PrometheusConfig.None] switches them off.
+     * [metricsConfig] instead of the global [Kolbasa.metricsConfig]. [MetricsConfig.None] switches them off.
      *
      * @return how many expired messages were removed
      */
     @JvmStatic
-    fun sweep(connection: Connection, queue: Queue<*>, limit: Int, prometheusConfig: PrometheusConfig): Int {
-        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit, prometheusConfig.queueMetrics(queue))
+    fun sweep(connection: Connection, queue: Queue<*>, limit: Int, metricsConfig: MetricsConfig): Int {
+        return sweep(connection, queue, NodeId.EMPTY_NODE_ID, limit, metricsConfig.queueMetrics(queue))
     }
 
     internal fun sweep(
@@ -151,7 +151,7 @@ object SweepHelper {
         // SQL Dump
         SqlDumpHelper.dumpQuery(queue, nodeId, statementKind, sweepQuery, execution, removedMessages)
 
-        // Prometheus
+        // Metrics
         queueMetrics.sweepMetrics(
             nodeId = nodeId,
             removedMessages = removedMessages,

@@ -47,10 +47,14 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    // The oldest Kotlin we support, `kotlin-language` in gradle/libs.versions.toml
+    val language = KotlinVersion.fromVersion(libs.versions.kotlin.language.get())
+
+    // The oldest Java we support, `java` in gradle/libs.versions.toml
+    jvmToolchain(libs.versions.java.get().toInt())
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = language
+        languageVersion = language
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }
@@ -89,7 +93,7 @@ tasks.register<Jar>("butcherJar") {
     from(sourceSets.main.get().output)
 
     // Everything butcher needs at runtime, unpacked: the library, the driver and clikt. The library's own
-    // compileOnly dependency (prometheus) is not on this classpath, so it stays out
+    // compileOnly dependency (Micrometer) is not on this classpath, so it stays out
     dependsOn(configurations.runtimeClasspath)
     from({
         configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }

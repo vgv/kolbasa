@@ -263,6 +263,7 @@ create table q__shard(
     producer_node      varchar(100) not null,             -- node new messages are written to
     consumer_node      varchar(100),                      -- node read from for this shard (null while migrating)
     next_consumer_node varchar(100),                      -- migration destination (null while stable)
+    revision           timestamptz not null,              -- hybrid logical clock: when the content last changed
     check (
         (producer_node = consumer_node      and next_consumer_node is null) or  -- stable
         (producer_node = next_consumer_node and consumer_node      is null)      -- migrating
@@ -273,18 +274,28 @@ create table q__shard(
 The `check` constraint encodes the only two legal states a shard can be in; it is impossible to store an illegal one. We come
 back to those two states in [Shard migration](#shard-migration).
 
+Every row also has a **revision**: when its content last changed. It is a simple kind of hybrid logical clock. It follows the
+server's clock, but never goes back: a new revision is the current time or the latest revision in the table plus one
+microsecond, whichever is later. So a new revision is always later than every revision already there, even when the server's
+clock is behind. A trigger on the table, `q__shard_set_revision`, sets it, so an `update` made by hand gets one too. An `update`
+that changes nothing keeps the old revision. The rows that kolbasa seeds into a new table, and the rows that were there before
+the column existed, have revision `1970-01-01 00:00:00+00`.
+
 **A snapshot, for concreteness.** In a healthy three-node cluster every shard is in the stable state — `producer_node` and
 `consumer_node` are equal and `next_consumer_node` is empty — with the 1024 shards scattered across the nodes:
 
 ```
- shard | producer_node | consumer_node | next_consumer_node
--------+---------------+---------------+--------------------
-     0 | node A        | node A        | (null)
-     1 | node C        | node C        | (null)
-     2 | node A        | node A        | (null)
-   ... | ...           | ...           | ...
-  1023 | node B        | node B        | (null)
+ shard | producer_node | consumer_node | next_consumer_node | revision
+-------+---------------+---------------+--------------------+-------------------------------
+     0 | node A        | node A        | (null)             | 1970-01-01 00:00:00+00
+     1 | node C        | node C        | (null)             | 2026-11-21 14:05:12.483021+00
+     2 | node A        | node A        | (null)             | 1970-01-01 00:00:00+00
+   ... | ...           | ...           | ...                | ...
+  1023 | node B        | node B        | (null)             | 1970-01-01 00:00:00+00
 ```
+
+Shard 1 was moved to node C after kolbasa seeded the table, so its revision is the time of that move. The other rows still have
+the revision they were seeded with.
 
 (The `*_node` values shown are friendly labels; the real column holds each node's **node id**, kept in its `q__node` table. A
 node that butcher sets up gets the id from its config line (see [Butcher.md → Node ids](Butcher.md#node-ids)); a node that a
@@ -296,8 +307,10 @@ cached snapshot of this table, which all the routing below consults. Three thing
 managed:
 
 - **It lives on one node, not all of them.** The table is authoritative and unreplicated. When a `Cluster` starts, it scans the
-  nodes for a fully-initialized `q__shard` (all 1024 rows); if none exists yet, it creates one on the node with the lowest node id and
-  seeds all 1024 shards, each assigned to a **random** node in a stable state.
+  nodes for a complete `q__shard` (all 1024 rows) and uses the first one it finds. If no node has the table at all, it creates one
+  on the node with the lowest node id and seeds all 1024 shards, each assigned to a **random** node in a stable state. If the
+  table is there but lacks some shards, it adds just the missing ones, with random nodes, to that same table. The other rows keep
+  their nodes. If a node's `q__shard` can't be read, the refresh fails: a failed read is never taken for a missing table.
 - **Clients discover the topology by polling.** That cached snapshot is refreshed on a timer — every
   `ClusterTopologyUpdaterOptions.interval` (default **1 minute**). There is no push or live subscription. The practical
   consequence: after an operator changes ownership (a migration step), it takes up to one refresh interval for every client to
@@ -558,6 +571,12 @@ kolbasa keeps schemas aligned for you: when a `Cluster` starts up, it runs the n
 everywhere with the same shape. Divergence generally arises only from out-of-band changes (a node restored from an old backup, a
 manual `ALTER`, a node that missed a deploy).
 
+A statement of that schema can fail on a node: say, the node already has a table with the queue's name that isn't a queue
+table, or the database user lacks a permission. That doesn't stop the topology update. The new map is in use anyway, and
+`Cluster.updateTopology()` returns a `ClusterSchemaResult` with what the schema did on every node. The next update runs the schema
+again, until every statement goes through, so once you fix the cause, the tables appear on their own. A
+`ClusterTopologyUpdater` reports every such failure to its `TopologyUpdateErrorHandler`, a warning in the log by default.
+
 Two consistency notions matter operationally, both surfaced by [`butcher`](Butcher.md)'s checks:
 
 - **Cross-node schema divergence.** Every kolbasa table that exists anywhere should exist on every node with the same shape. The
@@ -580,6 +599,7 @@ schema-consistency check is the right place to catch it early.
 | A node is **unreachable during consume** | Each `receive()` picks one consumer node from the map at random, without checking reachability first; if that node happens to be down, that call fails. A subsequent `receive()` re-rolls and may land on a healthy node. Messages on the down node are not lost — they wait until it returns. |
 | A node is **unreachable during `move`** | The move can't drain that node's rows; re-run it once the node is back. Because move is re-runnable, an interruption is harmless. |
 | A node is **unreachable during a topology refresh** | The whole refresh fails, and the client keeps its old map until the next refresh. The error goes to the `TopologyUpdateErrorHandler`, a warning in the log by default. The first refresh, at startup, throws instead: without a map the cluster can't work. |
+| A **schema statement fails** on a node | The refresh goes on: the new map is in use. The failure goes to the `TopologyUpdateErrorHandler`, a warning in the log by default, also on the first refresh at startup. Every next refresh runs the schema again until it goes through. A direct `cluster.updateTopology()` returns them in its `ClusterSchemaResult` instead. |
 | **Stale cluster topology** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
 | **Schema divergence** between nodes | Detected by the schema-consistency check; `move` fails fast rather than copying mismatched tables. Fix by re-running schema generation (or restoring the missing objects) on the lagging node. |
 | Shard **left in migrating state** too long | Its messages on the source node are not consumed until finalize. Not data loss, but a growing backlog — finish the migration. |

@@ -20,7 +20,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         val shards = ShardSchema.readShards(dataSource)
 
@@ -75,7 +75,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
@@ -99,7 +99,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        ShardSchema.createShardTable(dataSource)
+        ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
         val shards = ShardSchema.readShards(dataSource)
 

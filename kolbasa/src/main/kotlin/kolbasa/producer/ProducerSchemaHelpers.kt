@@ -10,7 +10,7 @@ import kolbasa.utils.Helpers
 import org.postgresql.util.PGobject
 import java.sql.PreparedStatement
 import java.sql.Types
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 
 internal object ProducerSchemaHelpers {
 
@@ -77,7 +77,7 @@ internal object ProducerSchemaHelpers {
         }
 
         // Trace context - scalar parameter, null if there is no context
-        insertColumns += Const.OPENTELEMETRY_COLUMN_NAME
+        insertColumns += Const.TRACE_CONTEXT_COLUMN_NAME
         selectExprs += "?::varchar[]"
 
         // deduplication - uc derived from ordinality
@@ -234,10 +234,10 @@ internal object ProducerSchemaHelpers {
     }
 
     fun calculateAsyncExecutor(
-        callExecutor: ExecutorService?,
-        producerExecutor: ExecutorService?,
-        defaultExecutor: ExecutorService
-    ): ExecutorService {
+        callExecutor: Executor?,
+        producerExecutor: Executor?,
+        defaultExecutor: Executor
+    ): Executor {
         if (callExecutor != null) {
             return callExecutor
         }
