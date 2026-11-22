@@ -5,11 +5,14 @@ import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readInt
+import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.postgresql.ds.PGSimpleDataSource
+import java.sql.Connection
 import javax.sql.DataSource
 
 class ClusterAdminTest : AbstractPostgreSQLTest() {
@@ -42,6 +45,39 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         // Constructing is fine, an unreachable node only becomes a problem when the cluster is asked
         assertDoesNotThrow { ClusterAdmin(listOf(unreachable)) }
+    }
+
+    @Test
+    fun testChecksWriteNothing_NewCluster() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        // Only the node ids exist, as after the first check-cluster
+        val nodes = ClusterHelper.readNodes(dataSources)
+
+        // A write would fail: the transactions of these nodes are read only
+        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+        runEveryCheck(admin, nodes.keys.first().id)
+
+        dataSources.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
+    }
+
+    @Test
+    fun testChecksWriteNothing_CopiesDiffer() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val (first, second, _) = nodes.values.toList()
+
+        // The first copy has not all the shards, the second one has other rows, and the third node has no table. The trigger
+        // function of the first node is of another kolbasa version
+        ShardSchema.createOrUpdateShardTable(first)
+        ShardSchema.fillShardTable(first, nodes.keys.toList(), shardsToFill = 0..999)
+        ShardSchema.createOrUpdateShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList(), shardsToFill = 0..499)
+        first.useStatement { statement ->
+            statement.execute("comment on function ${ShardSchema.SET_REVISION_FUNCTION_NAME}() is 'kolbasa-shard-revision:other'")
+        }
+
+        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+        runEveryCheck(admin, nodes.keys.first().id)
     }
 
     @Test
@@ -155,6 +191,21 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+    }
+
+    private fun runEveryCheck(admin: ClusterAdmin, node: NodeId) {
+        admin.checkShardBalance()
+        admin.checkSchemaConsistency()
+        admin.findOrphanTables()
+        admin.checkMigrationState()
+        admin.planNodesDrain(setOf(node))
+    }
+
+    // Every transaction of this node is read only
+    private class ReadOnlyDataSource(private val delegate: DataSource) : DataSource by delegate {
+        override fun getConnection(): Connection {
+            return delegate.connection.also { it.isReadOnly = true }
+        }
     }
 
     private fun publicTables(): Int {

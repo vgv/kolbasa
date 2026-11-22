@@ -15,7 +15,7 @@ internal class ShardMap(
      */
     val mergedShards: Map<ShardId, Shard>,
     /**
-     * What every node holds
+     * What every node holds. After [ShardCopies.readOnly], only the nodes that have a shard table
      */
     val copies: SortedMap<Node, Map<ShardId, Shard>>
 )
@@ -69,6 +69,24 @@ internal object ShardCopies {
             ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
             // Another client may have filled them at the same moment: its rows are the ones in the table now
             ShardSchema.readShards(smallestDataSource)
+        }
+
+        return ShardMap(ShardSchema.mergeShards(copies), copies)
+    }
+
+    /**
+     * Reads the copies on all [nodes] and merges them, and changes nothing: no table is created, and a shard that no node
+     * has is missing from the merged map. An error names the node it came from
+     */
+    fun readOnly(nodes: SortedMap<Node, DataSource>): ShardMap {
+        val copies = sortedMapOf<Node, Map<ShardId, Shard>>()
+
+        for ((node, dataSource) in nodes) {
+            onShardTable(node) {
+                if (ShardSchema.shardTableExists(dataSource)) {
+                    copies[node] = ShardSchema.readShards(dataSource)
+                }
+            }
         }
 
         return ShardMap(ShardSchema.mergeShards(copies), copies)

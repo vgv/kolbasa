@@ -24,10 +24,18 @@ internal object MoveHelpers {
     private const val MAX_REPORTED_CAUSES = 3
 
     /**
-     * Reads the shard map the same way an application does: from every node, see [ShardCopies.read]. It doesn't repair
-     * the copies that lag behind, so it works on a cluster with a node that takes no rows
+     * Reads the shard map from every node and changes nothing, see [ShardCopies.readOnly]
      */
     fun readShards(nodes: SortedMap<Node, DataSource>): ShardMap {
+        return reportFailure {
+            ShardCopies.readOnly(nodes)
+        }
+    }
+
+    /**
+     * Reads the shard map the same way an application does, see [ShardCopies.read]. It creates what is missing
+     */
+    fun readOrCreateShards(nodes: SortedMap<Node, DataSource>): ShardMap {
         return reportFailure {
             ShardCopies.read(nodes, knownShards = emptyMap(), knownFingerprint = null)
         }

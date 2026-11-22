@@ -8,6 +8,7 @@ import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.utils.Helpers
 import kolbasa.utils.JdbcHelpers.inTransaction
+import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readString
 import kolbasa.utils.JdbcHelpers.usePreparedStatement
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -259,6 +260,13 @@ internal object ShardSchema {
         dataSource.useStatement { statement ->
             statements.forEach { statement.execute(it) }
         }
+    }
+
+    /**
+     * Whether the node has a shard table
+     */
+    fun shardTableExists(dataSource: DataSource): Boolean {
+        return dataSource.readBoolean("select to_regclass('$SHARD_TABLE_NAME') is not null")
     }
 
     fun readShards(dataSource: DataSource): Map<ShardId, Shard> {

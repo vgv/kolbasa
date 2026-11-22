@@ -30,6 +30,19 @@ class ShardBalanceResultRenderTest {
     }
 
     @Test
+    fun testNoShards() {
+        // No shard map yet
+        val result = ShardBalanceResult(
+            currentDistribution = mapOf(NodeId("n1") to emptyList(), NodeId("n2") to emptyList()),
+            proposedMoves = emptyMap(),
+        )
+
+        val text = result.render().renderToText()
+        assertTrue(text.contains("no shard belongs to a node of this cluster"), text)
+        assertTrue(!text.contains("evenly spread"), text)
+    }
+
+    @Test
     fun testWithMoves() {
         val n1 = NodeId("n1")
         val n2 = NodeId("n2")

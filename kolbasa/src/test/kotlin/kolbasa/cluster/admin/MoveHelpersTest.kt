@@ -8,6 +8,7 @@ import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -43,19 +44,34 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         assertEquals(ShardSchema.readShards(second), shardMap.mergedShards)
         assertEquals(NodeId("node-x"), shardMap.mergedShards[ShardId.of(17)]?.producerNode)
 
-        // Reading doesn't repair: the first node still has its old row, the third one only got an empty table
+        // Reading changes nothing: the first node still has its old row, the third one still has no table
         assertNotEquals(NodeId("node-x"), ShardSchema.readShards(first)[ShardId.of(17)]?.producerNode)
-        assertTrue(ShardSchema.readShards(third).isEmpty())
+        assertFalse(ShardSchema.shardTableExists(third))
+        assertEquals(nodes.keys.toList().take(2), shardMap.copies.keys.toList())
     }
 
     @Test
-    fun testReadShards_NewCluster_MapSeeded() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+    fun testReadShards_NewCluster_NothingCreated() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
 
-        val shards = MoveHelpers.readShards(nodes).mergedShards
+        val shardMap = MoveHelpers.readShards(nodes)
 
-        assertEquals(ShardId.SHARD_COUNT, shards.size)
-        assertTrue(shards.values.all { it.revision == Instant.EPOCH })
+        assertTrue(shardMap.mergedShards.isEmpty())
+        assertTrue(shardMap.copies.isEmpty())
+        dataSources.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
+    }
+
+    @Test
+    fun testReadShards_ShardsNoNodeHas_NotFilled() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources)
+        val second = nodes.values.toList()[1]
+        ShardSchema.createOrUpdateShardTable(second)
+        ShardSchema.fillShardTable(second, nodes.keys.toList(), shardsToFill = 0..999)
+
+        assertEquals(1000, MoveHelpers.readShards(nodes).mergedShards.size)
+        assertEquals(1000, ShardSchema.readShards(second).size)
     }
 
     @Test

@@ -14,7 +14,7 @@ internal fun prepare(
     progressCallback: ProgressCallback
 ) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val shardMap = MoveHelpers.readShards(nodes)
+    val shardMap = MoveHelpers.readOrCreateShards(nodes)
     val initialShards = shardMap.mergedShards
 
     // Check that target node exists

@@ -20,7 +20,8 @@ import kolbasa.schema.NodeId
 internal fun ShardBalanceResult.render(): Widget = verticalLayout {
     val totalShards = currentDistribution.values.sumOf { it.size }
 
-    if (currentDistribution.isEmpty()) {
+    // No shard map yet, or every shard is given to a node that isn't in the config
+    if (totalShards == 0) {
         cell(TextColors.yellow("Shard balance: no shard belongs to a node of this cluster"))
         return@verticalLayout
     }

@@ -7,7 +7,7 @@ import javax.sql.DataSource
 
 internal fun finalize(dataSources: List<DataSource>, progressCallback: ProgressCallback) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val shardMap = MoveHelpers.readShards(nodes)
+    val shardMap = MoveHelpers.readOrCreateShards(nodes)
     val initialShards = shardMap.mergedShards
 
     // Okay, everything looks good, let's switch the migrating shards to a stable state
