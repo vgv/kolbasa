@@ -60,16 +60,39 @@ internal object MoveHelpers {
     }
 
     /**
-     * Puts [newRows] into the shard map, on every node. The copies that lag behind catch up on the way.
+     * Reads the shard map from every node, and changes nothing. Throws if the map is not complete: every node must have a
+     * shard table, and every shard must have a row. Copies may differ: the newest rows are the right ones
+     */
+    fun readCompleteShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
+        val shardMap = readShards(nodes)
+
+        val nodesWithoutTable = nodes.keys.filter { it !in shardMap.copies }.map { it.id }.toSet()
+        val shardsWithoutRow = shardMap.shardsWithoutRow().toSet()
+        if (nodesWithoutTable.isNotEmpty() || shardsWithoutRow.isNotEmpty()) {
+            throw ClusterOperationException.IncompleteShardMapException(nodesWithoutTable, shardsWithoutRow)
+        }
+
+        return shardMap.mergedShards
+    }
+
+    /**
+     * Writes [newRows] to every node, see [ShardCopies.write].
      *
      * A node that can't take the rows doesn't stop the others, and the change is in effect once one node has it. Then
-     * this method throws, with the name of the failed node. It is safe to run the operation again
+     * this method throws, with the name of the failed node
      */
-    fun writeShards(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap, newRows: List<Shard>) {
-        val mergedShards = shardMap.mergedShards + newRows.associateBy { it.shard }
-
-        reportFailure {
-            ShardCopies.repair(nodes, ShardMap(mergedShards, shardMap.copies))
+    fun writeShards(nodes: SortedMap<Node, DataSource>, newRows: List<Shard>) {
+        try {
+            ShardCopies.write(nodes, newRows)
+        } catch (e: Exception) {
+            val failedNodes = 1 + e.suppressed.size
+            val outcome = if (failedNodes < nodes.size) {
+                "The other nodes have the change, so it is in effect. Once the failed nodes are back, repair the shard map, " +
+                    "or wait for an application to do it"
+            } else {
+                "No node has the change, so nothing has changed"
+            }
+            throw ClusterOperationException.ExecutionException(describeFailure(e) + outcome)
         }
     }
 
@@ -77,16 +100,19 @@ internal object MoveHelpers {
         try {
             return block()
         } catch (e: Exception) {
-            val errorMessage = buildString {
-                // Every failed node: the first one, and the suppressed ones
-                (listOf<Throwable>(e) + e.suppressed).forEach { failure ->
-                    appendLine(failure.message ?: failure.toString())
-                    failure.causeMessages().forEach { cause ->
-                        appendLine("  Caused by: $cause")
-                    }
+            throw ClusterOperationException.ExecutionException(describeFailure(e))
+        }
+    }
+
+    // Every failed node: the first one, and the suppressed ones
+    private fun describeFailure(e: Exception): String {
+        return buildString {
+            (listOf<Throwable>(e) + e.suppressed).forEach { failure ->
+                appendLine(failure.message ?: failure.toString())
+                failure.causeMessages().forEach { cause ->
+                    appendLine("  Caused by: $cause")
                 }
             }
-            throw ClusterOperationException.ExecutionException(errorMessage)
         }
     }
 

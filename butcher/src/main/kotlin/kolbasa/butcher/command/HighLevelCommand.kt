@@ -28,6 +28,23 @@ internal abstract class HighLevelCommand(name: String) : MutatingClusterCommand(
         }
 
     /**
+     * Refuses to go on with a shard map that is not complete
+     *
+     * The library makes the same refusal, but only after the question. Nobody should be asked to agree to a
+     * plan that can't be carried out.
+     */
+    protected fun refuseIfIncomplete(butcher: ClusterAdmin) {
+        val shardMap = butcher.checkShardMap()
+
+        if (!shardMap.isComplete) {
+            throw ClusterOperationException.IncompleteShardMapException(
+                shardMap.nodesWithoutTable,
+                shardMap.shardsWithoutRow
+            )
+        }
+    }
+
+    /**
      * Refuses to go on while any shard is migrating
      *
      * The loop in the library makes the same refusal, but only once it has found something to move. Asked

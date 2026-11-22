@@ -111,6 +111,9 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      *
      * After this the shards are still consumed from where their data is, but new messages are produced to
      * [target]. No data is moved yet – that is [moveData].
+     *
+     * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
+     * [createOrRepairShardMap]
      */
     @JvmOverloads
     fun prepareMigration(
@@ -125,6 +128,9 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      * Copies the rows of every migrating shard to the node that is taking it over, the second migration step
      *
      * Safe to re-run after an interruption: rows already copied are skipped rather than duplicated.
+     *
+     * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
+     * [createOrRepairShardMap]
      */
     @JvmOverloads
     fun moveData(
@@ -153,6 +159,8 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      * to start while any shard is migrating: it finalizes every migrating shard, not only its own, and it
      * will not adopt a migration it did not start.
      *
+     * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
+     * [createOrRepairShardMap]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
      */
     @JvmOverloads
@@ -175,6 +183,8 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      * of this cluster
      * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
      * cluster
+     * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
+     * [createOrRepairShardMap]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
      */
     @JvmOverloads
@@ -192,6 +202,9 @@ class ClusterAdmin(private val nodes: List<DataSource>) {
      *
      * Only call it once [moveData] has nothing left to copy: it stops consuming the shards from their old
      * node, and any rows still there would stay unread.
+     *
+     * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
+     * [createOrRepairShardMap]
      */
     @JvmOverloads
     fun finalizeMigration(progress: ProgressCallback = ProgressCallback.Ignore) {

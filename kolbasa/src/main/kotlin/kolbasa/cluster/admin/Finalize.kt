@@ -7,8 +7,7 @@ import javax.sql.DataSource
 
 internal fun finalize(dataSources: List<DataSource>, progressCallback: ProgressCallback) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val shardMap = MoveHelpers.readOrCreateShards(nodes)
-    val initialShards = shardMap.mergedShards
+    val initialShards = MoveHelpers.readCompleteShards(nodes)
 
     // Okay, everything looks good, let's switch the migrating shards to a stable state
     val revision = ShardSchema.nextRevision(initialShards.values)
@@ -24,7 +23,7 @@ internal fun finalize(dataSources: List<DataSource>, progressCallback: ProgressC
             )
         }
     }
-    MoveHelpers.writeShards(nodes, shardMap, newRows)
+    MoveHelpers.writeShards(nodes, newRows)
 
     // Calculate difference between initial and updated shards and notify
     val updatedShards = MoveHelpers.readShards(nodes).mergedShards

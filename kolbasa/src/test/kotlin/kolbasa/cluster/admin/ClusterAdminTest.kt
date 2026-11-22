@@ -216,6 +216,35 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testOperationsNeedACompleteShardMap_NewCluster() {
+        val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
+        val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+
+        assertEveryOperationRefuses(dataSources, nodes.toSet(), ShardId.SHARDS_RANGE.map { ShardId.of(it) }.toSet())
+    }
+
+    @Test
+    fun testOperationsNeedACompleteShardMap_NodeWithoutTable() {
+        val dataSources = seededCluster()
+        val (lastNode, last) = ClusterHelper.readNodes(dataSources).entries.last()
+        last.useStatement { it.execute("drop table ${ShardSchema.SHARD_TABLE_NAME}") }
+
+        assertEveryOperationRefuses(dataSources, setOf(lastNode.id), emptySet())
+    }
+
+    @Test
+    fun testOperationsNeedACompleteShardMap_ShardsNoNodeHas() {
+        val dataSources = seededCluster()
+        dataSources.forEach { node ->
+            node.useStatement { statement ->
+                statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} in (5, 6)")
+            }
+        }
+
+        assertEveryOperationRefuses(dataSources, emptySet(), setOf(ShardId.of(5), ShardId.of(6)))
+    }
+
+    @Test
     fun testPlanNodesDrainProposesEverythingTheNodeHolds() {
         val dataSources = seededCluster()
         val admin = ClusterAdmin(dataSources)
@@ -273,7 +302,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testRebalanceEvensTheClusterOut() {
-        // fillShardTable hands every shard to a random node, so the cluster starts out uneven
+        // A new map hands every shard to a random node, so the cluster starts out uneven
         val dataSources = seededCluster()
 
         ClusterAdmin(dataSources).rebalance(shardsPerRound = 400)
@@ -323,9 +352,29 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     private fun seedShardTable(dataSources: List<DataSource>) {
-        val nodes = ClusterHelper.readNodes(dataSources)
-        ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes.keys.toList())
+        ClusterAdmin(dataSources).createOrRepairShardMap()
+    }
+
+    private fun assertEveryOperationRefuses(
+        dataSources: List<DataSource>,
+        nodesWithoutTable: Set<NodeId>,
+        shardsWithoutRow: Set<ShardId>
+    ) {
+        val node = ClusterHelper.readNodes(dataSources).keys.first().id
+        // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
+        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+
+        listOf<() -> Unit>(
+            { admin.prepareMigration(node, listOf(ShardId.of(1))) },
+            { admin.moveData() },
+            { admin.finalizeMigration() },
+            { admin.rebalance(shardsPerRound = 100) },
+            { admin.drainNodes(setOf(node), shardsPerRound = 100) },
+        ).forEach { operation ->
+            val exception = assertThrows<ClusterOperationException.IncompleteShardMapException> { operation() }
+            assertEquals(nodesWithoutTable, exception.nodesWithoutTable)
+            assertEquals(shardsWithoutRow, exception.shardsWithoutRow)
+        }
     }
 
     private fun runEveryCheck(admin: ClusterAdmin, node: NodeId) {

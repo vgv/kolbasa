@@ -40,6 +40,20 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
             "move the data, then finalize – and run the rebalance again"
     )
 
+    class IncompleteShardMapException(
+        val nodesWithoutTable: Set<NodeId>,
+        val shardsWithoutRow: Set<ShardId>
+    ) : ClusterOperationException(
+        "The shard map is not complete. " +
+            (if (nodesWithoutTable.isEmpty()) {
+                ""
+            } else {
+                "Node(s) without a shard table: ${nodesWithoutTable.sorted().joinToString(separator = ", ") { it.id }}. "
+            }) +
+            (if (shardsWithoutRow.isEmpty()) "" else "Shards without a row on any node: ${shardsWithoutRow.size}. ") +
+            "Create or repair the shard map first, or start an application: it does the same"
+    )
+
     class DrainUnknownNodeException(
         val knownNodes: List<NodeId>,
         val nodes: List<NodeId>

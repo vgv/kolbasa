@@ -14,8 +14,7 @@ internal fun prepare(
     progressCallback: ProgressCallback
 ) {
     val nodes = ClusterHelper.readNodes(dataSources)
-    val shardMap = MoveHelpers.readOrCreateShards(nodes)
-    val initialShards = shardMap.mergedShards
+    val initialShards = MoveHelpers.readCompleteShards(nodes)
 
     // Check that target node exists
     if (nodes.none { (node, _) -> node.id == target }) {
@@ -35,7 +34,8 @@ internal fun prepare(
     // Ok, everything looks fine, prepare the shards to migration
     val revision = ShardSchema.nextRevision(initialShards.values)
     val newRows = mutableListOf<Shard>()
-    for (shardId in shards) {
+    // distinct(), since the user might enter the same shard multiple times
+    for (shardId in shards.distinct()) {
         val newRow = Shard(
             shard = shardId,
             producerNode = target,
@@ -49,7 +49,7 @@ internal fun prepare(
             newRows += newRow
         }
     }
-    MoveHelpers.writeShards(nodes, shardMap, newRows)
+    MoveHelpers.writeShards(nodes, newRows)
 
     // Calculate difference between initial and updated shards and notify
     val updatedShards = MoveHelpers.readShards(nodes).mergedShards

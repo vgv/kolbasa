@@ -13,6 +13,7 @@ internal class RebalanceCluster : HighLevelCommand(name = "rebalance-cluster") {
 
     override fun execute(): Widget {
         val butcher = butcher()
+        refuseIfIncomplete(butcher)
         refuseIfMigrating(butcher)
 
         val plan = butcher.checkShardBalance()

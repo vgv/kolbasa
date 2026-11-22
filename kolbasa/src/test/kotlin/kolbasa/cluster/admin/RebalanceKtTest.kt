@@ -179,6 +179,8 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     private fun seedShardTable(nodes: List<Node>) {
         ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
+        // Every node of a cluster has a copy
+        createOrRepairShardMap(clusterDataSources())
     }
 
     private fun assertShardsPerNode(expected: List<Int>) {

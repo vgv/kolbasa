@@ -26,6 +26,7 @@ internal class DrainNodes : HighLevelCommand(name = "drain-nodes") {
     override fun execute(): Widget {
         val drainedNodes = nodes.toSet()
         val butcher = butcher()
+        refuseIfIncomplete(butcher)
         refuseIfMigrating(butcher)
 
         val plan = butcher.planNodesDrain(drainedNodes)

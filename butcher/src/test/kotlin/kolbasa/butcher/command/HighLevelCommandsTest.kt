@@ -76,6 +76,23 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testIncompleteShardMapIsRefusedBeforeTheQuestion() {
+        val drainedNode = nodeIds().first()
+        dataSourceSecondSchema.connection.use { connection ->
+            connection.createStatement().use { it.execute("drop table q__shard") }
+        }
+
+        // No --yes and no terminal: a question would fail with "no terminal"
+        listOf("rebalance-cluster", "drain-nodes --nodes=${drainedNode.id}").forEach { command ->
+            val result = cli().test("$command ${config().absolutePath}")
+
+            assertEquals(1, result.statusCode, result.output)
+            assertTrue(result.output.contains("The shard map is not complete"), result.output)
+            assertTrue(result.output.contains(nodeIdOf(dataSourceSecondSchema)), result.output)
+        }
+    }
+
+    @Test
     fun testDrainNodesEmptiesTheNodeItIsPointedAt() {
         val drainedNode = nodeIds().first()
 

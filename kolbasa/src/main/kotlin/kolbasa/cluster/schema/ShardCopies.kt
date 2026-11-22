@@ -18,7 +18,15 @@ internal class ShardMap(
      * What every node holds. After [ShardCopies.readOnly], only the nodes that have a shard table
      */
     val copies: SortedMap<Node, Map<ShardId, Shard>>
-)
+) {
+
+    /**
+     * The shards that have no row on any node
+     */
+    fun shardsWithoutRow(): List<ShardId> {
+        return ShardId.SHARDS_RANGE.map { ShardId.of(it) }.filter { it !in mergedShards }
+    }
+}
 
 /**
  * The copies of the shard map: every node of a cluster keeps one in its `q__shard` table, and for every shard the newest
@@ -55,18 +63,18 @@ internal object ShardCopies {
         }.toSortedMap()
 
         // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
-        val mergedShards = ShardSchema.mergeShards(copies)
+        val shardMap = ShardMap(ShardSchema.mergeShards(copies), copies)
 
         // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
         // smallest id, and the initial revision, so a real row that turns up later wins over them
-        val missingShards = ShardId.SHARDS_RANGE.filter { shard -> ShardId.of(shard) !in mergedShards }
-        if (missingShards.isEmpty()) {
-            return ShardMap(mergedShards, copies)
+        val shardsToFill = shardMap.shardsWithoutRow().map { it.id }
+        if (shardsToFill.isEmpty()) {
+            return shardMap
         }
 
         val (smallestNode, smallestDataSource) = nodes.entries.first()
         copies[smallestNode] = onShardTable(smallestNode) {
-            ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), missingShards)
+            ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), shardsToFill)
             // Another client may have filled them at the same moment: its rows are the ones in the table now
             ShardSchema.readShards(smallestDataSource)
         }
@@ -112,18 +120,34 @@ internal object ShardCopies {
      */
     fun repair(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap) {
         val shards = resolveTies(shardMap)
+
+        writeToEveryNode(nodes) { node ->
+            val copy = shardMap.copies.getValue(node)
+            shards.filter { shard -> copy[shard.shard] != shard }
+        }
+    }
+
+    /**
+     * Writes [shards] to every node, and nothing else: the other rows of the copies stay as they are.
+     *
+     * A node that can't take them doesn't stop the others, the same as in [repair]
+     */
+    fun write(nodes: SortedMap<Node, DataSource>, shards: List<Shard>) {
+        writeToEveryNode(nodes) { shards }
+    }
+
+    private fun writeToEveryNode(nodes: SortedMap<Node, DataSource>, rowsToWrite: (Node) -> List<Shard>) {
         var failure: Exception? = null
 
         for ((node, dataSource) in nodes) {
-            val copy = shardMap.copies.getValue(node)
-            val rowsToWrite = shards.filter { shard -> copy[shard.shard] != shard }
-            if (rowsToWrite.isEmpty()) {
+            val rows = rowsToWrite(node)
+            if (rows.isEmpty()) {
                 continue
             }
 
             try {
                 onShardTable(node) {
-                    ShardSchema.writeShards(dataSource, rowsToWrite)
+                    ShardSchema.writeShards(dataSource, rows)
                 }
             } catch (e: Exception) {
                 if (failure == null) {
