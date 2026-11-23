@@ -14,7 +14,7 @@ kotlin = "2.3.21"
 # Keep it the lowest version the compiler accepts without a warning: the lower it is, the more applications can use
 # kolbasa. A compiler accepts only a few recent versions, so this one goes up together with `kotlin`
 kotlin-language = "2.1"
-nebula = "20.2.0"
+nebula = "21.2.0"
 vanniktech = "0.37.0"
 
 # The oldest Micrometer the library supports: it is built and tested against it
