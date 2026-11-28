@@ -92,6 +92,6 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
         val nodes: List<NodeId>
     ) : ClusterOperationException(
         "Node(s) ${nodes.sorted().joinToString(separator = ", ") { it.id }} have no id yet: there is no " +
-            "${IdSchema.NODE_TABLE_NAME} table on them. Give them their ids first, see ClusterAdminHelpers.checkNodeIds"
+            "${IdSchema.NODE_TABLE_NAME} table on them. Initialize the nodes first"
     )
 }

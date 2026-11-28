@@ -70,7 +70,8 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
      * Opening the data sources happens here and not in the constructor, so that `--help` never touches a
      * database.
      *
-     * Every node must also be the node its line names. A node with no id yet gets the one from its line.
+     * Every node must also have the id on its config line. [ClusterAdmin] checks that on every call. Only
+     * [InitNodes] works on a node that has no id yet.
      */
     protected fun butcher(): ClusterAdmin {
         val endpoints = cluster.endpoints
@@ -79,13 +80,7 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
         // driver connection: a pool would wait out its timeout and then blame itself
         ClusterAdminHelpers.checkNodesAvailable(endpoints.map(PgEndpoint::driverDataSource))
 
-        // Then every node must be the node its line names. A node with no id yet gets the one from its line
-        val nodes = endpoints.associate { endpoint -> endpoint.id to endpoint.pooledDataSource() }
-        ClusterAdminHelpers.checkNodeIds(nodes).forEach { nodeId ->
-            echo("Initialized node ${nodeId.id}")
-        }
-
-        return ClusterAdmin(nodes)
+        return ClusterAdmin(endpoints.associate { endpoint -> endpoint.id to endpoint.pooledDataSource() })
     }
 }
 

@@ -26,11 +26,10 @@ import javax.sql.DataSource
  * [Cluster][kolbasa.cluster.Cluster], which does initialize what it needs when it starts, and is therefore
  * the wrong thing to diagnose a cluster with.
  *
- * Nor does it give a node an id. Every node must already have the id it is listed under in [nodes], and every
- * method checks that before anything else. A node without an id fails with
+ * Nor does it give a node an id, except in [initNodes]. Every node must already have the id it is listed under in
+ * [nodes], and every other method checks that before anything else. A node without an id fails with
  * [ClusterOperationException.NodesNotInitializedException], a node with another id with
- * [ClusterOperationException.NodeIdMismatchException]. [ClusterAdminHelpers.checkNodeIds] gives the new nodes
- * their ids.
+ * [ClusterOperationException.NodeIdMismatchException].
  *
  * Nothing here holds a connection open, so one instance can be kept for as long as its [nodes] are valid,
  * and all of its methods may be called from several threads at once.
@@ -45,6 +44,35 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
             "Cluster node list must not be empty"
         }
     }
+
+    /**
+     * Reports which nodes [initNodes] would give an id, and with which bucket. Changes nothing
+     *
+     * Unlike every other method here, it works on nodes without an id: they are what it reports.
+     *
+     * A new node that holds messages is not refused. It is in [InitNodesPlan.unsafeNodes] when the cluster has other
+     * nodes as well.
+     *
+     * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
+     * its row
+     */
+    fun planInitNodes(): InitNodesPlan = planInitNodes(nodes)
+
+    /**
+     * Gives every node without an id the one it is listed under in [nodes], and a bucket of its own
+     *
+     * A new node gets the lowest bucket no other node uses, the nodes in the order of their ids. If a node has another
+     * id, or a `q__node` table without its row, no node gets an id: a wrong id means the node list is wrong, and a wrong
+     * list must not set up anything.
+     *
+     * This doesn't look at [planInitNodes], and gives an unsafe node its id as well: read the plan first. Call this
+     * before a [Cluster][kolbasa.cluster.Cluster] sees the new nodes. A Cluster gives a node without an id a random one.
+     *
+     * @return the nodes this call gave an id to. A node that another process set up at the same moment is not among them
+     * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
+     * its row
+     */
+    fun initNodes(): List<NodeId> = initNodes(nodes)
 
     /**
      * Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven

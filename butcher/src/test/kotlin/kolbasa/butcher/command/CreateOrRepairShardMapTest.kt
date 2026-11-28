@@ -8,6 +8,7 @@ import kolbasa.test.AbstractPostgreSQLTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -20,6 +21,13 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
 
     @TempDir
     lateinit var tempDir: File
+
+    @BeforeEach
+    fun before() {
+        // The nodes get their ids first: every command but init-nodes refuses a node without one
+        val initialized = ButcherCli().subcommands(InitNodes()).test("-c ${config().absolutePath} init-nodes --yes")
+        assertEquals(0, initialized.statusCode, initialized.output)
+    }
 
     @Test
     fun testNewCluster() {

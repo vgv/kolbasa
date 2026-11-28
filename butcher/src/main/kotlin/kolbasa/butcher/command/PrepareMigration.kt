@@ -34,7 +34,7 @@ internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migrati
             shards.all { it in ShardId.SHARDS_RANGE }
         }
 
-    override val helpSection = HelpSection.LOW_LEVEL
+    override val helpSection = HelpSection.MOVING_SHARDS_STEP_BY_STEP
 
     override fun help(context: Context) =
         "Mark shards for migration. Updates shard metadata only. Consumers stop reading these shards, " +

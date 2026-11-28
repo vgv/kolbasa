@@ -22,12 +22,29 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
     lateinit var tempDir: File
 
     @Test
-    fun testNewCluster_NodesGetTheirIdsAndNothingElse() {
+    fun testNewCluster_RefusedAndNothingWritten() {
+        val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster")
+
+        // check-cluster gives no ids, it says that the nodes need them first
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Node(s) node-01, node-02, node-03 have no id yet"), result.output)
+        assertTrue(result.output.contains("Initialize the nodes first"), result.output)
+
+        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
+            assertFalse(hasTable(node, "q__node"))
+            assertFalse(hasTable(node, "q__shard"))
+        }
+    }
+
+    @Test
+    fun testNewCluster_AfterInitNodes() {
+        val initialized = ButcherCli().subcommands(InitNodes()).test("-c ${config().absolutePath} init-nodes --yes")
+        assertEquals(0, initialized.statusCode, initialized.output)
+
         val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster")
 
         // The checks ran, and two of them found something: no shard map yet
         assertEquals(2, result.statusCode, result.output)
-        assertTrue(result.output.contains("Initialized node node-01"), result.output)
         assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
         assertTrue(result.output.contains("no shard map on any node yet"), result.output)
         assertTrue(result.output.contains("'create-or-repair-shard-map'"), result.output)

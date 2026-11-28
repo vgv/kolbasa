@@ -12,6 +12,7 @@ import kolbasa.queue.Queue
 import kolbasa.schema.NodeId
 import kolbasa.test.AbstractPostgreSQLTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -150,19 +151,29 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testCheckClusterInitializesANewNode() {
+    fun testInitNodesGivesANewNodeItsId() {
         // A node just added to the cluster: an empty schema nothing has started against yet
         dataSources.first().connection.use { connection ->
             connection.createStatement().use { statement -> statement.execute("create schema node_four") }
         }
         val config = config().apply { appendText(configLine("node-four", "node_four")) }
 
-        val result = cli().test("-c ${config.absolutePath} check-cluster")
+        // Every other command refuses the new node, and gives it no id
+        val refused = cli().test("-c ${config.absolutePath} check-cluster")
+        assertEquals(1, refused.statusCode, refused.output)
+        assertTrue(refused.output.contains("Node(s) node-four have no id yet"), refused.output)
+        assertFalse(dataSourceFor("node_four").use { hasNodeTable(it) })
+
+        // The three nodes of the cluster have buckets 0 to 2
+        val initialized = cli().test("-c ${config.absolutePath} init-nodes --yes")
+        assertEquals(0, initialized.statusCode, initialized.output)
+        assertTrue(initialized.output.contains("node-four: gets its id, with bucket 3"), initialized.output)
+        assertTrue(initialized.output.contains("Initialized node node-four"), initialized.output)
+        assertEquals("node-four", dataSourceFor("node_four").use { nodeIdOf(it) })
 
         // The new node owns no shards and has no copy of the shard map yet, so the checks find something
-        assertEquals(2, result.statusCode, result.output)
-        assertTrue(result.output.contains("Initialized node node-four"), result.output)
-        assertEquals("node-four", dataSourceFor("node_four").use { nodeIdOf(it) })
+        val checked = cli().test("-c ${config.absolutePath} check-cluster")
+        assertEquals(2, checked.statusCode, checked.output)
     }
 
     @Test
@@ -326,8 +337,21 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
             }
         }
 
+    /**
+     * Whether this node has a `q__node` table, that is, an id
+     */
+    private fun hasNodeTable(dataSource: DataSource): Boolean =
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("select to_regclass('q__node') is not null").use { resultSet ->
+                    resultSet.next() && resultSet.getBoolean(1)
+                }
+            }
+        }
+
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
+        InitNodes(),
         RebalanceCluster(),
         DrainNodes(),
         PrepareMigration(),

@@ -98,6 +98,9 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
             assertEquals(listOf(NEW_NODE), exception.nodes)
         }
 
+        // planInitNodes is the one check that works on such a node, and it writes nothing either
+        assertEquals(listOf(NEW_NODE), admin.planInitNodes().newNodes.map { node -> node.id })
+
         // The node is not given an id, and no shard map is created anywhere
         assertFalse(IdSchema.nodeTableExists(dataSourceSecondSchema))
         nodes.values.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
@@ -112,7 +115,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         // The wrong id wins: with a wrong node list it doesn't matter which nodes have no id yet
         val admin = ClusterAdmin(nodes.mapValues { (_, node) -> ReadOnlyDataSource(node) })
-        everyMethod(admin, nodes.keys.first()).forEach { method ->
+        (everyMethod(admin, nodes.keys.first()) + initMethods(admin)).forEach { method ->
             val exception = assertThrows<ClusterOperationException.NodeIdMismatchException> { method() }
             assertEquals(mapOf(WRONG_ID to renamedNode), exception.mismatches)
             assertEquals(emptyList<NodeId>(), exception.nodesWithEmptyTable)
@@ -126,7 +129,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         emptyTable.useStatement { it.execute("delete from ${IdSchema.NODE_TABLE_NAME}") }
 
         val admin = ClusterAdmin(nodes.mapValues { (_, node) -> ReadOnlyDataSource(node) })
-        everyMethod(admin, nodes.keys.first()).forEach { method ->
+        (everyMethod(admin, nodes.keys.first()) + initMethods(admin)).forEach { method ->
             val exception = assertThrows<ClusterOperationException.NodeIdMismatchException> { method() }
             assertEquals(emptyMap<NodeId, NodeId>(), exception.mismatches)
             assertEquals(listOf(emptyNode), exception.nodesWithEmptyTable)
@@ -426,7 +429,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     /**
-     * Every public method of [admin], with [node] wherever one needs a node
+     * Every public method of [admin] that needs every node to have its id, with [node] wherever one needs a node
      */
     private fun everyMethod(admin: ClusterAdmin, node: NodeId): List<() -> Unit> = listOf(
         { admin.checkShardBalance() },
@@ -441,6 +444,14 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         { admin.rebalance(shardsPerRound = 100) },
         { admin.drainNodes(setOf(node), shardsPerRound = 100) },
         { admin.finalizeMigration() },
+    )
+
+    /**
+     * The two methods of [admin] that work on nodes without an id. A wrong id stops them as well
+     */
+    private fun initMethods(admin: ClusterAdmin): List<() -> Unit> = listOf(
+        { admin.planInitNodes() },
+        { admin.initNodes() },
     )
 
     private fun runEveryCheck(admin: ClusterAdmin, node: NodeId) {

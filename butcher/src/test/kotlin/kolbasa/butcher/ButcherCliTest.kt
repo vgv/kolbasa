@@ -6,6 +6,7 @@ import kolbasa.butcher.command.CheckCluster
 import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.InitNodes
 import kolbasa.butcher.command.MoveData
 import kolbasa.butcher.command.PrepareMigration
 import kolbasa.butcher.command.RebalanceCluster
@@ -33,8 +34,8 @@ class ButcherCliTest {
 
         assertEquals(0, result.statusCode, result.output)
         listOf(
-            "check-cluster", "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration",
-            "create-or-repair-shard-map"
+            "check-cluster", "init-nodes", "create-or-repair-shard-map", "rebalance-cluster", "drain-nodes",
+            "prepare-migration", "move-data", "finalize-migration"
         ).forEach {
             assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}")
         }
@@ -45,8 +46,8 @@ class ButcherCliTest {
         val result = cli().test("--help")
 
         assertEquals(0, result.statusCode, result.output)
-        // Two levels of command, which one flat list would hide
-        val sections = listOf("Diagnostics:", "High-level commands:", "Low-level commands:")
+        // What the commands are for, which one flat list would hide
+        val sections = SECTIONS
         sections.forEach { assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}") }
         // In this order, which is the order they are reached for in
         assertEquals(
@@ -64,15 +65,16 @@ class ButcherCliTest {
 
         mapOf(
             "check-cluster" to "Diagnostics:",
-            "rebalance-cluster" to "High-level commands:",
-            "drain-nodes" to "High-level commands:",
-            "prepare-migration" to "Low-level commands:",
-            "move-data" to "Low-level commands:",
-            "finalize-migration" to "Low-level commands:",
-            "create-or-repair-shard-map" to "Low-level commands:",
+            "init-nodes" to "Setup:",
+            "create-or-repair-shard-map" to "Setup:",
+            "rebalance-cluster" to "Moving shards:",
+            "drain-nodes" to "Moving shards:",
+            "prepare-migration" to "Moving shards, step by step:",
+            "move-data" to "Moving shards, step by step:",
+            "finalize-migration" to "Moving shards, step by step:",
         ).forEach { (command, section) ->
             // The section a command is listed under is the last one printed before it
-            val sectionsBefore = listOf("Diagnostics:", "High-level commands:", "Low-level commands:")
+            val sectionsBefore = SECTIONS
                 .filter { output.indexOf(it) in 0 until output.indexOf("  $command")  }
             assertEquals(section, sectionsBefore.lastOrNull(), "$command:\n$output")
         }
@@ -172,8 +174,8 @@ class ButcherCliTest {
     @Test
     fun testMutatingCommandsOfferYes() {
         listOf(
-            "rebalance-cluster", "drain-nodes", "prepare-migration", "move-data", "finalize-migration",
-            "create-or-repair-shard-map"
+            "init-nodes", "create-or-repair-shard-map", "rebalance-cluster", "drain-nodes", "prepare-migration",
+            "move-data", "finalize-migration"
         ).forEach { command ->
             val result = cli().test("$command --help")
 
@@ -277,16 +279,24 @@ class ButcherCliTest {
 
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
+        InitNodes(),
+        CreateOrRepairShardMap(),
         RebalanceCluster(),
         DrainNodes(),
         PrepareMigration(),
         MoveData(),
         FinalizeMigration(),
-        CreateOrRepairShardMap(),
     )
 
     private fun config(): File = File(tempDir, "cluster.conf").apply {
         writeText("node-01  host=localhost port=5432 dbname=orders\n")
+    }
+
+    private companion object {
+        /**
+         * The sections of `--help`, in the order they are printed
+         */
+        val SECTIONS = listOf("Diagnostics:", "Setup:", "Moving shards:", "Moving shards, step by step:")
     }
 
 }

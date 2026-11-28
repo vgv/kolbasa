@@ -19,7 +19,7 @@ internal class MoveData : MutatingClusterCommand(name = "move-data") {
         .split(",")
         .help("Queue tables not to migrate, comma-separated. None by default")
 
-    override val helpSection = HelpSection.LOW_LEVEL
+    override val helpSection = HelpSection.MOVING_SHARDS_STEP_BY_STEP
 
     override fun help(context: Context) =
         "Transfer data to target nodes for every shard in migration state. Safe to re-run if it crashed"

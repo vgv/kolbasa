@@ -34,8 +34,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
     override val reportsCompletion = false
 
     override fun help(context: Context) =
-        "Inspect cluster state (schema consistency, shards distribution etc.). Changes nothing but the id of a " +
-            "new node, safe at any time"
+        "Inspect cluster state (schema consistency, shards distribution etc.). Changes nothing, safe at any time"
 
     override fun helpEpilog(context: Context) =
         "Exits 0 when every check passed, 2 when a check found something, and 1 when the checks could not run.\n\n" +

@@ -11,7 +11,7 @@ import kolbasa.schema.NodeId
 
 internal class CreateOrRepairShardMap : MutatingClusterCommand(name = "create-or-repair-shard-map") {
 
-    override val helpSection = HelpSection.LOW_LEVEL
+    override val helpSection = HelpSection.SETUP
 
     override fun help(context: Context) =
         "Create the shard map of a new cluster, or bring its copies on the nodes up to date. Applications do the same on " +

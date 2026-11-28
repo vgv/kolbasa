@@ -137,11 +137,12 @@ Other rules:
 Every node has an id of its own. kolbasa keeps it in the node's `q__node` table, and it never changes. The id
 on a line must be that id.
 
-Every command checks this before it does anything else. If a line names a node wrongly, the command stops and
-changes nothing. The error shows the node's real id next to each wrong line.
+Every command checks this before it does anything else. If a node has another id than its line, the command
+stops and changes nothing. The error shows the node's real id next to each wrong line.
 
-A node with no id yet gets the one from its line. That is how a new node joins: add its line, then run
-`check-cluster`. It prints `Initialized node <id>`.
+[`init-nodes`](#init-nodes) gives a node with no id yet the one from its line. That is how a new node joins:
+add its line, then run `init-nodes`. It prints `Initialized node <id>`. Every other command refuses a node
+without an id.
 
 Do this **before** the application's `Cluster` sees the new node. `Cluster` gives a node with no id a random
 one, and then the line no longer matches.
@@ -181,11 +182,39 @@ orders-butcher check-cluster
 
 ## The commands
 
-butcher has seven commands. One reads the cluster and reports; it changes nothing but a new node's id. Five
-move shards, on two levels. Three are the single steps of the migration protocol, run in order. Two are
-**high-level**: those same three steps in a loop, over a plan butcher works out itself. The seventh,
-`create-or-repair-shard-map`, moves nothing: it creates the shard map of a new cluster, or brings the copies of
-the map on the nodes up to date.
+butcher has eight commands. `butcher --help` lists them in four groups, and so does this guide:
+
+- **Diagnostics.** `check-cluster` reads the cluster and reports. It changes nothing.
+- **Setup.** `init-nodes` gives the new nodes their ids. `create-or-repair-shard-map` creates the shard map of a
+  new cluster, or brings the copies of the map on the nodes up to date. Neither moves anything.
+- **Moving shards.** `rebalance-cluster` evens the shards out, `drain-nodes` empties nodes before they leave.
+  These are the **high-level** commands: a loop over the three below, over a plan butcher works out itself.
+- **Moving shards, step by step.** `prepare-migration`, `move-data` and `finalize-migration`: the single steps
+  of a migration, run in order. These are the **low-level** commands.
+
+| Command | Writes? | Safe to re-run? | Typical duration | When |
+|---|---|---|---|---|
+| `check-cluster` | no | yes | seconds | anytime — diagnostics |
+| `init-nodes` | yes (only `q__node` of a new node) | yes — a node with an id is left alone | seconds | a new node, before the application's `Cluster` sees it |
+| `create-or-repair-shard-map` | yes (only `q__shard`) | yes — it writes only what is still missing | seconds | a new cluster before the first application starts, or copies of the map that differ |
+| `rebalance-cluster` | yes (whole rounds) | yes — it reads the plan again and does what is left | minutes to hours | to even out a cluster |
+| `drain-nodes` | yes (whole rounds) | yes — same | minutes to hours | to take nodes out of a cluster |
+| `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration driven by hand |
+| `move-data` | yes (source + target rows) | yes — `INSERT ... ON CONFLICT DO NOTHING`, deletes only rows it just copied | minutes to hours | after prepare, before finalize |
+| `finalize-migration` | yes (only `q__shard`) | yes | seconds | once the data is fully moved |
+
+**The five commands that move shards need a complete shard map.** Every node must have its `q__shard`
+table, and every shard must have a row in at least one of them. Otherwise they refuse before they change
+anything, with `The shard map is not complete …`. A copy that lags behind the others is fine: the newest rows
+are known from the other copies, see
+[Cluster architecture.md](Cluster%20architecture.md#cluster-topology).
+
+**A high-level command can do nothing the low-level ones cannot.** It works out the same plan that
+`check-cluster --checks=shard-balance` reports. Then it takes a batch of shards off the plan and runs 
+prepare → move → finalize on them. Then it works the plan out again and takes the next batch, until there is nothing 
+left to move. That is all of it: no new operation on the data, no state of its own, nothing to clean up afterwards.
+
+How the high-level commands are built:
 
 ```
                         ┌────────────────┐
@@ -208,37 +237,16 @@ the map on the nodes up to date.
                                safe to re-run      point of no return
 ```
 
-| Command | Writes? | Safe to re-run? | Typical duration | When |
-|---|---|---|---|---|
-| `check-cluster` | only a new node's id | yes | seconds | anytime — diagnostics |
-| `rebalance-cluster` | yes (whole rounds) | yes — it reads the plan again and does what is left | minutes to hours | to even out a cluster |
-| `drain-nodes` | yes (whole rounds) | yes — same | minutes to hours | to take nodes out of a cluster |
-| `prepare-migration` | yes (only `q__shard`) | yes — re-run is a no-op if state is already set | seconds | start of a migration driven by hand |
-| `move-data` | yes (source + target rows) | yes — `INSERT ... ON CONFLICT DO NOTHING`, deletes only rows it just copied | minutes to hours | after prepare, before finalize |
-| `finalize-migration` | yes (only `q__shard`) | yes | seconds | once the data is fully moved |
-| `create-or-repair-shard-map` | yes (only `q__shard`) | yes — it writes only what is still missing | seconds | a new cluster before the first application starts, or copies of the map that differ |
-
-**The five commands that move shards need a complete shard map.** Every node must have its `q__shard`
-table, and every shard must have a row in at least one of them. Otherwise they refuse before they change
-anything, with `The shard map is not complete …`. A copy that lags behind the others is fine: the newest rows
-are known from the other copies, see
-[Cluster architecture.md](Cluster%20architecture.md#cluster-topology).
-
-**A high-level command can do nothing the low-level ones cannot.** It works out the same plan that
-`check-cluster --checks=shard-balance` reports. Then it takes a batch of shards off the plan and runs 
-prepare → move → finalize on them. Then it works the plan out again and takes the next batch, until there is nothing 
-left to move. That is all of it: no new operation on the data, no state of its own, nothing to clean up afterwards.
-
-Two things make it worth using anyway. The plan for a big cluster is hundreds of shards long, which is a
-long evening of copying flags by hand. And every round reads the plan afresh, so the loop never works from
-a stale picture of the cluster.
+Two things make a high-level command worth using anyway. The plan for a big cluster is hundreds of shards
+long, which is a long evening of copying flags by hand. And every round reads the plan afresh, so the loop never
+works from a stale picture of the cluster.
 
 Use the low-level commands for what the high-level ones deliberately do not do: choosing the shards
 yourself, restricting which tables move (`move-data --include-tables`), stopping between rounds for hours,
 or finishing a migration somebody else started.
 
 Run `butcher <command> --help` to see that command's built-in help, or `butcher --help` for the list of
-commands, grouped the same three ways, and for `-c` and the config file format. Neither needs `-c`. `butcher`
+commands, grouped by what they are for, and for `-c` and the config file format. Neither needs `-c`. `butcher`
 with no arguments prints that list and exits `0`: it is a question, not a failure.
 
 > **Confirmation.** Every command that writes anything asks before it does, describing what is about to
@@ -263,15 +271,14 @@ with no arguments prints that list and exits `0`: it is a question, not a failur
 butcher -c <file> check-cluster [--checks=<check,check,...>]
 ```
 
-Inspection of the cluster. Safe to run at any time. It changes nothing, except that a node with no id yet gets
-the one from its line (see [Node ids](#node-ids)). It is the one command that has no `--yes` to forget. If
-`--checks` is omitted, every check runs; name several to run just those.
+Inspection of the cluster. Safe to run at any time, it changes nothing. It is the one command that has no
+`--yes` to forget. If `--checks` is omitted, every check runs; name several to run just those.
 
 Like every command, it starts by confirming it can connect to **every** node in the config: one `select 1`
 per node, before anything else happens. If any node is unreachable it stops and tells you which ones, and
 what the driver said about each.
 
-Then, again like every command, it checks that every node is the node its line names.
+Then, again like every command, it checks that every node has the id on its line (see [Node ids](#node-ids)).
 
 The available checks:
 
@@ -292,16 +299,16 @@ cron job or a CI step can act on it without reading the text:
 | Exit code | Meaning |
 |---|---|
 | `0` | Every check passed. |
-| `1` | The checks could not run: bad input, a node that can't be reached, ids that don't match. |
+| `1` | The checks could not run: bad input, a node that can't be reached, ids that don't match, a node without an id. |
 | `2` | The checks ran, and at least one found something. |
 
 A check finds something whenever its first line is yellow. That includes states that are normal for a while:
 copies of the shard map right after a change, shards in the middle of a migration, a new node that owns nothing
 yet. To watch only what matters to you, name the checks: `check-cluster --checks=schema-consistency,orphan-tables`.
 
-A cluster that no application has started yet has no shard map. `check-cluster` still runs: it gives the
-nodes their ids and reports that there is no map. `create-or-repair-shard-map` creates it, and so does the
-first application that starts.
+A new cluster has neither node ids nor a shard map. `check-cluster` refuses it until `init-nodes` has given
+the nodes their ids. Then it runs, and reports that there is no map. `create-or-repair-shard-map` creates it,
+and so does the first application that starts.
 
 The concepts behind each check — what "balanced" means, why schemas must match, what an orphan is — are
 explained in [Cluster architecture.md](Cluster%20architecture.md#schema-consistency). This guide focuses on
@@ -457,6 +464,48 @@ Two things to internalize about finalize:
 
 The safe sequence is always: **prepare → move (re-run until it reports zero) → finalize.**
 
+### `init-nodes`
+
+```
+butcher -c <file> init-nodes [--yes]
+```
+
+Gives every node that has no id yet the id from its line, see [Node ids](#node-ids). Run it for a new node,
+before the application's `Cluster` sees it. A node that has its id already is left alone, so the command is safe
+to run again.
+
+A new node also gets its bucket: the lowest one no other node uses. The bucket is the top bits of every message
+id the node creates, so that no two nodes create the same id, see [Message IDs.md](Message%20IDs.md).
+
+Before the question it prints what will happen:
+
+```
+node-03: gets its id, with bucket 2
+node-01: has its id already
+node-02: has its id already
+1 node(s) will get an id. Continue? [y/N]: y
+Completed successfully.
+Initialized node node-03
+```
+
+If every node has its id already, it says so and asks nothing.
+
+A node that holds messages but has no id gets a warning before the question:
+
+```
+node-03 has messages but no id yet. Initializing it together with other nodes is unsafe: its message ids can
+collide with another node's, and its messages of shards that go to other nodes stay unread. To grow a standalone
+node into a cluster, init it alone first, see Butcher.md.
+```
+
+Such a node was used without a cluster, or has lost its `q__node`. Its message ids come from a bucket the other
+nodes know nothing about. Its messages of shards that other nodes own are never read: consumers read a shard on
+the node that owns it. Alone, with a config of one line, the node becomes a cluster of one node, and that is
+safe. The warning is not a refusal: answer no to stop.
+
+If a node has another id than its line, or a `q__node` table without its row, no node gets an id, see
+[Node ids don't match](#node-ids-dont-match).
+
 ### `create-or-repair-shard-map`
 
 ```
@@ -547,13 +596,26 @@ butcher -c cluster.conf check-cluster --checks=shard-balance,migration-state
 
 Goal: three empty databases become a cluster, and its shard map exists before any application starts.
 
-1. Write the config file with three lines, `node-01` to `node-03`, and run `check-cluster`. It gives every
-   node its id and reports that there is no shard map:
+1. Write the config file with three lines, `node-01` to `node-03`, and give the nodes their ids:
+
+   ```sh
+   butcher -c cluster.conf init-nodes
+   ```
 
    ```
+   node-01: gets its id, with bucket 0
+   node-02: gets its id, with bucket 1
+   node-03: gets its id, with bucket 2
+   3 node(s) will get an id. Continue? [y/N]: y
+   Completed successfully.
    Initialized node node-01
    Initialized node node-02
    Initialized node node-03
+   ```
+
+2. Run `check-cluster`. It reports that there is no shard map:
+
+   ```
    ...
    Shard map: no shard map on any node yet
    An application creates it when it starts, and so does 'create-or-repair-shard-map'.
@@ -561,7 +623,7 @@ Goal: three empty databases become a cluster, and its shard map exists before an
    2 of 5 check(s) found something: shard-balance, shard-map.
    ```
 
-2. Create the map:
+3. Create the map:
 
    ```sh
    butcher -c cluster.conf create-or-repair-shard-map
@@ -575,7 +637,7 @@ Goal: three empty databases become a cluster, and its shard map exists before an
    Shard map: all 3 copies are the same
    ```
 
-Every shard got a random node. Skipping step 2 is fine as well: the first application that starts does the
+Every shard got a random node. Skipping step 3 is fine as well: the first application that starts does the
 same.
 
 ### What trouble looks like
@@ -714,7 +776,7 @@ Orphan tables: 1 orphan queue(s) across 1 node(s)
 
 Goal: add a third node, `node-03`, to a two-node cluster and move a third of the shards onto it.
 
-1. Bring the new node's database up and add a `node-03` line to the config file. Run `check-cluster`: it
+1. Bring the new node's database up and add a `node-03` line to the config file. Run `init-nodes`: it
    gives the node its id and prints `Initialized node node-03`. Only then add the node to the application's
    `Cluster`, see [Node ids](#node-ids) for why the order matters. A fresh node joins owning no shards, and
    its schema and its copy of the shard map are created when the application's `Cluster` next starts. Run
@@ -927,7 +989,7 @@ whether butcher also prints the command's usage:
 | Kind | What it looks like | What it means / how to fix |
 |---|---|---|
 | bad input | usage, then `Error: …` | Malformed command line or config file: a missing required option (`--target` / `--shards` / `--nodes`), an unknown option, a shard number outside `0..1023`, a `--shards-per-round` outside `1..1024`, no config file given (no `-c`), `-c` after the command instead of before it, a file that does not exist, a node missing `host`/`dbname`, a bad port, an invalid node id (other characters than `[a-zA-Z0-9_.-]`, or longer than 100), or a duplicate node id in one file. The message names the specific problem; fix it and re-run. |
-| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The two you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), or **node ids don't match** (see [below](#node-ids-dont-match)). A rarer one is `Can't read or update q__shard on node …`, with the database error under it: a query on the shard table of that node fails. Fix the node and run the command again. After a failed `prepare-migration` or `finalize-migration` the message also says whether the other nodes have the change. If they have, it is in effect, and running the command again doesn't bring it to the failed node: once that node is back, run `create-or-repair-shard-map`, or wait for an application to do it. |
+| runtime | `Error: …` alone | Something went wrong reaching or operating the cluster. The three you'll actually hit: **a node is unreachable** (the message lists which nodes and the connection error), **a node has no id yet** (run `init-nodes`, see [Node ids](#node-ids)), or **node ids don't match** (see [below](#node-ids-dont-match)). A rarer one is `Can't read or update q__shard on node …`, with the database error under it: a query on the shard table of that node fails. Fix the node and run the command again. After a failed `prepare-migration` or `finalize-migration` the message also says whether the other nodes have the change. If they have, it is in effect, and running the command again doesn't bring it to the failed node: once that node is back, run `create-or-repair-shard-map`, or wait for an application to do it. |
 
 Seven migration-specific refusals are worth knowing by name, because the message states the rule rather than
 the fix:
@@ -958,8 +1020,8 @@ Three questions that come up often:
 
 ### Node ids don't match
 
-Every command checks that each node is the node its line names (see [Node ids](#node-ids)). If one is not,
-the command stops before it changes anything:
+Every command checks that each node has the id on its line (see [Node ids](#node-ids)). If a node has another
+id, or a `q__node` without its row, the command stops before it changes anything:
 
 ```
 Error: Node ids don't match:
@@ -967,7 +1029,7 @@ Error: Node ids don't match:
   node-03: q__node has no active row. If the node holds no data yet, drop q__node and run again. Otherwise, restore the row by hand
 ```
 
-**"this node's id is …"** means the line names the wrong node. Either the id on the line is wrong, or the
+**"this node's id is …"** means the line and the node don't match. Either the id on the line is wrong, or the
 connection keys point at another node's database. Fix the line and run again. This is also how to find the
 ids of a cluster whose file has none yet: every wrong line gets the real id.
 
@@ -975,8 +1037,8 @@ ids of a cluster whose file has none yet: every wrong line gets the real id.
 the row in by itself. The row holds the node's bucket, and the bucket decides the node's message ids. A wrong
 bucket can give two nodes the same ids.
 
-- **The node holds no data yet.** Drop `q__node` and run again. The node gets the id from its line, like any
-  new node.
+- **The node holds no data yet.** Drop `q__node` and run `init-nodes`. The node gets the id from its line, like
+  any new node.
 - **The node holds data.** Put the old row back by hand. The old id is in `q__shard`, on any node:
   `select distinct producer_node from q__shard` lists every node that owns shards, and the old id is the
   one no other node has. The old bucket is in any queue's id sequence on this node:
@@ -989,9 +1051,9 @@ bucket can give two nodes the same ids.
 
 ## The same thing from code
 
-Every check, every migration step, both high-level commands and the shard map repair are methods on
-`kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand. The
-CLI is a frontend over this class and `ClusterAdminHelpers`, and uses nothing they do not offer — `butcher`
+Every check, every migration step, both high-level commands, the node setup and the shard map repair are
+methods on `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand.
+The CLI is a frontend over this class and `ClusterAdminHelpers`, and uses nothing they do not offer — `butcher`
 is the name of the tool, not of the API.
 
 ```kotlin
@@ -999,9 +1061,13 @@ val nodes = mapOf(NodeId("node-01") to node01, NodeId("node-02") to node02, Node
 
 // What butcher does before every command
 ClusterAdminHelpers.checkNodesAvailable(nodes.values.toList())
-ClusterAdminHelpers.checkNodeIds(nodes)
 
 val admin = ClusterAdmin(nodes)   // the same DataSources a Cluster is given, by node id
+
+// What init-nodes is: the plan first, then the ids
+if (admin.planInitNodes().unsafeNodes.isEmpty()) {
+    admin.initNodes()
+}
 
 // What the two high-level commands are, as one call each
 admin.rebalance(shardsPerRound = 50)
@@ -1029,12 +1095,12 @@ when a cluster is already in a bad state, and a tool that repaired the schema or
 its way in would destroy the evidence it was asked to look at. (`Cluster` does initialize what it needs when
 it starts, which is why it is the wrong thing to diagnose a cluster with.)
 
-The two checks butcher runs first are not part of `ClusterAdmin`. They live in `ClusterAdminHelpers`, and you
-call them before creating it. `checkNodesAvailable` fails with one clear error if a node can't be reached.
-`checkNodeIds` is the [node id check](#node-ids). It is the one call here that writes: a node with no id gets
-the one you named it by. `ClusterAdmin` checks the ids as well, before every call, but gives no ids: a node
-without one fails with `NodesNotInitializedException`, and a node with another id with
-`NodeIdMismatchException`.
+The check butcher runs first is not part of `ClusterAdmin`. It lives in `ClusterAdminHelpers`, and you call it
+before creating one: `checkNodesAvailable` fails with one clear error if a node can't be reached. The
+[node id check](#node-ids) is part of `ClusterAdmin`, and every call makes it first. A node with another id
+fails with `NodeIdMismatchException`. A node without an id fails with `NodesNotInitializedException`, in every
+call but `planInitNodes()` and `initNodes()`. `initNodes()` gives such a node the id you listed it under, and
+`planInitNodes()` tells first which nodes get one, and which of them hold messages.
 
 The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
 `migrationState.isClean`, `schemaConsistency.divergencesByTable`, `shardMap.isComplete` — so a program

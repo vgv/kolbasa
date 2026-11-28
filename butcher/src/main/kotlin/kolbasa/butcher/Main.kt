@@ -16,6 +16,7 @@ import kolbasa.butcher.command.CheckCluster
 import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.InitNodes
 import kolbasa.butcher.command.MoveData
 import kolbasa.butcher.command.PrepareMigration
 import kolbasa.butcher.command.RebalanceCluster
@@ -27,12 +28,13 @@ import java.lang.invoke.MethodHandles
 fun main(args: Array<String>) = ButcherCli()
     .subcommands(
         CheckCluster(),
+        InitNodes(),
+        CreateOrRepairShardMap(),
         RebalanceCluster(),
         DrainNodes(),
         PrepareMigration(),
         MoveData(),
         FinalizeMigration(),
-        CreateOrRepairShardMap(),
     )
     .main(args)
 
@@ -89,14 +91,14 @@ private val ROOT_HELP_EPILOG = """
     port, user, password, dbname and schema; unknown keys are ignored, values may be single-quoted, and
     lines starting with '#' are skipped.
 
-    The node id is the node's own id, kept in its q__node table. A node that has none yet gets the one
-    from its line.
+    The node id is the node's own id, kept in its q__node table. 'init-nodes' gives a node that has none
+    yet the one from its line, and every other command refuses such a node.
 
-    A high-level command is built from the low-level ones and nothing else: it works out the same
-    shard-balance plan that 'check-cluster' reports, then prepares, moves and finalizes a batch of shards
-    at a time until nothing is left to move. The low-level commands stay yours to drive directly - for
-    choosing the shards yourself, for moving only some tables, or for finishing a migration a high-level
-    command refuses to touch.
+    A command of 'Moving shards' is built from the step-by-step ones and nothing else: it works out the
+    same shard-balance plan that 'check-cluster' reports, then prepares, moves and finalizes a batch of
+    shards at a time until nothing is left to move. The step-by-step commands stay yours to drive
+    directly - for choosing the shards yourself, for moving only some tables, or for finishing a migration
+    that 'rebalance-cluster' or 'drain-nodes' refuses to touch.
 
     See https://github.com/vgv/kolbasa/blob/main/docs/Butcher.md for the full description.
 """.trimIndent()

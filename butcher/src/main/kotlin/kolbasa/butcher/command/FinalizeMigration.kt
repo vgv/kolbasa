@@ -8,7 +8,7 @@ import kolbasa.butcher.HelpSection
 
 internal class FinalizeMigration : MutatingClusterCommand(name = "finalize-migration") {
 
-    override val helpSection = HelpSection.LOW_LEVEL
+    override val helpSection = HelpSection.MOVING_SHARDS_STEP_BY_STEP
 
     override fun help(context: Context) =
         "Finish a migration. Migrated shards switch to their new node, and consumers read them there"

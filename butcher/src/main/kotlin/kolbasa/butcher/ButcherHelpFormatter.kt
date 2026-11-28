@@ -36,7 +36,7 @@ internal class ButcherHelpFormatter(context: Context) : MordantHelpFormatter(con
 
     /**
      * Hides the section tag. Clikt prints every tag at the end of a command's help line. Without this,
-     * each command would end with `(butcher-help-section: LOW_LEVEL)`.
+     * each command would end with `(butcher-help-section: MOVING_SHARDS)`.
      */
     override fun shouldShowTag(tag: String, value: String): Boolean =
         !HelpSection.isSectionTag(tag) && super.shouldShowTag(tag, value)

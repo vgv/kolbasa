@@ -11,13 +11,13 @@ import kolbasa.cluster.admin.ClusterOperationException
 import kolbasa.producer.ShardId
 
 /**
- * A command that carries a whole plan out, as a loop of the low-level steps
+ * A command that carries a whole plan out, as a loop of the three migration steps
  *
  * What the two of them share: how big a round is, and the refusal to start on top of a migration.
  */
 internal abstract class HighLevelCommand(name: String) : MutatingClusterCommand(name) {
 
-    final override val helpSection = HelpSection.HIGH_LEVEL
+    final override val helpSection = HelpSection.MOVING_SHARDS
 
     protected val shardsPerRound: Int by option("--shards-per-round", metavar = "<n>")
         .int()
