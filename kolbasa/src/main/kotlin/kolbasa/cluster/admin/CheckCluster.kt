@@ -13,8 +13,8 @@ import javax.sql.DataSource
  */
 internal fun checkCluster(dataSources: Map<NodeId, DataSource>, checks: Set<ClusterCheck>): CheckResult {
     // A cluster without a shard map is not set up yet, whichever checks are asked for
-    val nodes = MoveHelpers.readNodes(dataSources)
-    if (MoveHelpers.readShards(nodes).mergedShards.isEmpty()) {
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    if (ClusterHelpers.readShards(nodes).mergedShards.isEmpty()) {
         throw ClusterOperationException.ShardsNotInitializedException()
     }
 

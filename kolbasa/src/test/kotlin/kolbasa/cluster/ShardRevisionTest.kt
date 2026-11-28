@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.PRODUCER_NODE_COLUMN_NAME
@@ -26,7 +27,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
     fun testNewCluster_RevisionColumnAndTrigger() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         Cluster(dataSources, emptyList()).updateTopology()
-        val first = ClusterHelper.readNodes(dataSources).values.first()
+        val first = ClusterHelpers.readOrCreateNodes(dataSources).values.first()
 
         assertRevisionSchema(first)
         assertEquals(ShardId.SHARD_COUNT, first.readInt("select count(*) from $SHARD_TABLE_NAME"))
@@ -162,14 +163,14 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     // A new shard table on the node with the smallest id, seeded: every row has the initial revision
     private fun seedShardTable(): DataSource {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val first = nodes.values.first()
         seedShardTable(first, nodes.keys.toList())
         return first
     }
 
     private fun seedShardTable(dataSource: DataSource) {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource))
         seedShardTable(dataSource, nodes.keys.toList())
     }
 

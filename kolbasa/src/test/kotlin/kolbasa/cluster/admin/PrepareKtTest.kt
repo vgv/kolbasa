@@ -2,7 +2,6 @@ package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.Cluster
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
@@ -24,7 +23,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     fun testPrepare_Success() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         ClusterAdmin(nodesById(dataSources)).initShards()
         val shards = ShardSchema.readShards(dataSource)
 
@@ -78,7 +77,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     fun testPrepare_TargetNodeDoesNotExist() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         ClusterAdmin(nodesById(dataSources)).initShards()
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
@@ -101,7 +100,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     fun testPrepare_MoveShardToTheSameNode() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         ClusterAdmin(nodesById(dataSources)).initShards()
         val shards = ShardSchema.readShards(dataSource)
 
@@ -129,7 +128,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testPrepareAndFinalize_WriteTheirRowsToEveryNode_AndNothingElse() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         val targetNode = nodes.keys.last().id
         ClusterAdmin(nodesById(dataSources)).initShards()
@@ -175,7 +174,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testPrepare_HandEditOnAnotherNode_IsSeen() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, _, third) = nodes.values.toList()
         val targetNode = nodes.keys.last().id
         Cluster(dataSources, emptyList()).updateTopology()
@@ -194,7 +193,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testPrepare_NodeRejectsRows_OtherNodesGetThem() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, middle, last) = nodes.values.toList()
         val middleNode = nodes.keys.toList()[1]
         val targetNode = nodes.keys.last().id
@@ -221,7 +220,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testPrepare_NoNodeTakesRows_NothingChanged() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val targetNode = nodes.keys.last().id
         ClusterAdmin(nodesById(dataSources)).initShards()
         val map = ShardSchema.readShards(dataSource)

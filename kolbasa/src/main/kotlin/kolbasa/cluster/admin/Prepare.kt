@@ -12,8 +12,8 @@ internal fun prepare(
     shards: List<ShardId>,
     progressCallback: ProgressCallback
 ) {
-    val nodes = MoveHelpers.readNodes(dataSources)
-    val initialShards = MoveHelpers.readCompleteShards(nodes)
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    val initialShards = ClusterHelpers.readCompleteShards(nodes)
 
     // Check that target node exists
     if (nodes.none { (node, _) -> node.id == target }) {
@@ -48,13 +48,13 @@ internal fun prepare(
             newRows += newRow
         }
     }
-    MoveHelpers.writeShards(nodes, newRows)
+    ClusterHelpers.writeShards(nodes, newRows)
 
     // Calculate difference between initial and updated shards and notify
-    val updatedShards = MoveHelpers.readShards(nodes).mergedShards
+    val updatedShards = ClusterHelpers.readShards(nodes).mergedShards
     progressCallback.prepareSuccessful(
         shards = shards,
         targetNode = target,
-        shardsDiff = MoveHelpers.calculateShardsDiff(initialShards, updatedShards)
+        shardsDiff = ClusterHelpers.calculateShardsDiff(initialShards, updatedShards)
     )
 }

@@ -1,7 +1,6 @@
 package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
@@ -120,7 +119,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testDrainEmptiesTheNodeAndLeavesTheClusterWorking() {
         val dataSources = clusterDataSources()
-        val nodes = ClusterHelper.readNodes(dataSources).keys.toList()
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources).keys.toList()
         seedShardTable(nodes)
         val drainedNode = nodes.first().id
         val progress = RecordingProgress()
@@ -175,12 +174,12 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     /**
      * The node behind [dataSource]
      *
-     * Node ids are random strings and [ClusterHelper.readNodes] sorts by them, so the order of that map
+     * Node ids are random strings and [ClusterHelpers.readOrCreateNodes] sorts by them, so the order of that map
      * says nothing about the order of the data sources. A test that puts the shards and the rows on the
      * same node has to ask for it by its data source.
      */
     private fun nodeOf(dataSource: DataSource): Node =
-        ClusterHelper.readNodes(clusterDataSources()).entries.first { it.value == dataSource }.key
+        ClusterHelpers.readOrCreateNodes(clusterDataSources()).entries.first { it.value == dataSource }.key
 
     /**
      * Hands all 1024 shards to [nodes], which is one node when a skewed cluster is what the test needs

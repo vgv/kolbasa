@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.schema.ShardCopies
 import kolbasa.cluster.schema.ShardSchema
@@ -95,7 +96,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertEquals(readsAfterSeeding, countingNodes.values.sumOf { it.shardTableReads.get() })
 
         // A hand edit on one node changes its md5, so only that node is read
-        val editedNode = ClusterHelper.readNodes(dataSources).values.last()
+        val editedNode = ClusterHelpers.readOrCreateNodes(dataSources).values.last()
         editedNode.useStatement { statement: Statement ->
             statement.execute(
                 """
@@ -132,7 +133,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         assertNotEquals(currentProducerConsumerNode, newProducerConsumerNode)
 
         // The map is seeded on the node with the smallest id
-        val shardTableNode = ClusterHelper.readNodes(dataSources.values.toList()).values.first()
+        val shardTableNode = ClusterHelpers.readOrCreateNodes(dataSources.values.toList()).values.first()
         shardTableNode.useStatement { statement: Statement ->
             val sql = """
                 update
@@ -199,7 +200,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_ShardsNoNodeHas_FilledOnTheSmallestNode() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val second = nodes.values.toList()[1]
 
         // An incomplete map on the second node, no map anywhere else
@@ -224,7 +225,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_TwoMapsWithTheSameRevision_BecomeOne() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, second, _) = nodes.values.toList()
 
         // Two random maps on two nodes, every row of both with the initial revision
@@ -259,14 +260,14 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_ClientsWithDifferentNodes_ComeToOneMap() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         dataSources.forEach { seedRandomMap(it, nodes.keys.toList()) }
 
         // Two clients that know different nodes read at the same moment, before any of them writes. So they pick
         // different rows: one takes the rows of the first node, the other one the rows of the second
-        val nodesOfOne = ClusterHelper.readNodes(listOf(first, second))
-        val nodesOfAnother = ClusterHelper.readNodes(listOf(second, third))
+        val nodesOfOne = ClusterHelpers.readOrCreateNodes(listOf(first, second))
+        val nodesOfAnother = ClusterHelpers.readOrCreateNodes(listOf(second, third))
         val mapOfOne = ShardCopies.read(nodesOfOne, emptyMap(), null)
         val mapOfAnother = ShardCopies.read(nodesOfAnother, emptyMap(), null)
         assertNotEquals(mapOfOne.mergedShards, mapOfAnother.mergedShards)
@@ -288,7 +289,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_MapOnOneNode_EveryNodeGetsACopy() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val second = nodes.values.toList()[1]
 
         // The map on one node only, as kolbasa kept it before every node had a copy
@@ -311,7 +312,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
         cluster.updateTopology()
 
         // An operator edits the copy on the last node
-        val lastNode = ClusterHelper.readNodes(dataSources).values.last()
+        val lastNode = ClusterHelpers.readOrCreateNodes(dataSources).values.last()
         lastNode.useStatement { statement: Statement ->
             statement.execute(
                 """
@@ -332,7 +333,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testUpdateTopology_LaggingCopies_CatchUp() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val (first, second, third) = nodes.values.toList()
 
         // A cluster of two nodes for now, with an edit of shard 5 that both of them got
@@ -367,7 +368,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_NodeRejectsRows_NewTopologyInUseAndOtherNodesRepaired() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, middle, last) = nodes.values.toList()
         val middleNode = nodes.keys.toList()[1]
 
@@ -410,7 +411,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_ShardTableReadFails_OldTopologyStays() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val secondNode = nodes.keys.toList()[1]
         val second = nodes.getValue(secondNode)
 
@@ -441,7 +442,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     @Test
     fun testUpdateTopology_ShardTableCreatedAtTheSameMoment_SecondTryFindsIt() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val first = nodes.values.first()
 
         // Another client is creating the table on the first node right now and hasn't committed yet

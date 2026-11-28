@@ -7,19 +7,19 @@ import javax.sql.DataSource
  * See [ClusterAdmin.syncShards]. Returns how many rows of the shard table have changed on every node
  */
 internal fun syncShards(dataSources: Map<NodeId, DataSource>): Map<NodeId, Int> {
-    val nodes = MoveHelpers.readNodes(dataSources)
-    val copiesBefore = MoveHelpers.readShards(nodes)
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    val copiesBefore = ClusterHelpers.readShards(nodes)
     // Nothing to copy. Which node gets a shard is a decision, and that is what initShards is for
     if (copiesBefore.mergedShards.isEmpty()) {
         throw ClusterOperationException.ShardsNotInitializedException()
     }
 
-    MoveHelpers.createShardTables(nodes)
+    ClusterHelpers.createShardTables(nodes)
     // Read again: a node that had no table has one now, and the repair needs the copy of every node
-    val shardMap = MoveHelpers.readShards(nodes)
-    MoveHelpers.repairShards(nodes, shardMap)
+    val shardMap = ClusterHelpers.readShards(nodes)
+    ClusterHelpers.repairShards(nodes, shardMap)
 
-    val copiesAfter = MoveHelpers.readShards(nodes).copies
+    val copiesAfter = ClusterHelpers.readShards(nodes).copies
     val changedRows = sortedMapOf<NodeId, Int>()
     for (node in nodes.keys) {
         val before = copiesBefore.copies[node] ?: emptyMap()

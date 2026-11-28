@@ -1,7 +1,6 @@
 package kolbasa.cluster.admin
 
 import kolbasa.cluster.Cluster
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
@@ -20,7 +19,7 @@ class SyncShardsKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testSyncShards_CopiesDiffer() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         val admin = ClusterAdmin(nodesById(dataSources))
         Cluster(dataSources, emptyList()).updateTopology()
@@ -61,7 +60,7 @@ class SyncShardsKtTest : AbstractPostgreSQLTest() {
     @Test
     fun testSyncShards_NodeRejectsRows_OtherNodesSynced() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (_, middle, last) = nodes.values.toList()
         val middleNode = nodes.keys.toList()[1].id
         val admin = ClusterAdmin(nodesById(dataSources))

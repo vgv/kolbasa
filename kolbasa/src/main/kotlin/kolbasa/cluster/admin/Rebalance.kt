@@ -29,7 +29,7 @@ internal fun rebalance(
     }
 
     // Even with nothing to move: an empty plan of an incomplete map says nothing about the cluster
-    MoveHelpers.readCompleteShards(MoveHelpers.readNodes(dataSources))
+    ClusterHelpers.readCompleteShards(ClusterHelpers.readNodes(dataSources))
 
     // move() and finalize() act on every migrating shard, not only on the ones prepared here. A migration
     // somebody else left in flight cannot be avoided, so it is refused instead
@@ -44,7 +44,7 @@ internal fun rebalance(
 
     while (true) {
         // A run can take hours, and a node that went down since the last round gets one clear error
-        MoveHelpers.checkReachable(dataSources)
+        ClusterHelpers.checkReachable(dataSources)
 
         val plan = ShardBalance.check(dataSources, drainedNodes)
         if (plan.isBalanced) {

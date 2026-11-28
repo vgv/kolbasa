@@ -1,11 +1,11 @@
 package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
+import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.useStatement
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,11 +18,49 @@ import java.sql.Statement
 import java.time.Instant
 import kotlin.IllegalStateException
 
-class MoveHelpersTest : AbstractPostgreSQLTest() {
+class ClusterHelpersTest : AbstractPostgreSQLTest() {
+
+    @Test
+    fun testReadOrCreateNodes_IfSuccess() {
+        val nodes = ClusterHelpers
+            .readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+            .keys
+            .toList()
+
+        val expected = sortedSetOf(
+            requireNotNull(IdSchema.readNodeInfo(dataSource)),  // first
+            requireNotNull(IdSchema.readNodeInfo(dataSourceFirstSchema)), // second
+            requireNotNull(IdSchema.readNodeInfo(dataSourceSecondSchema)) // third
+        ).toList()
+
+        // Check that all nodes are read correctly
+        assertEquals(expected.size, nodes.size)
+        expected.forEachIndexed { index, expectedNode ->
+            assertEquals(expectedNode, nodes[index])
+        }
+    }
+
+    @Test
+    fun testReadOrCreateNodes_If_Duplicate_Node_Id() {
+        // Check that all nodes have unique node ids
+        ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+
+        // Make one of the nodes have the same nodeId as another node
+        val first = requireNotNull(IdSchema.readNodeInfo(dataSource))
+        val stringId: String = first.id.id
+        dataSourceFirstSchema.useStatement() { statement ->
+            statement.executeUpdate("update ${IdSchema.NODE_TABLE_NAME} set ${IdSchema.ID_COLUMN_NAME} = '$stringId'")
+        }
+
+        // Check again, expect an exception
+        assertThrows<IllegalStateException> {
+            ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        }
+    }
 
     @Test
     fun testReadShards_MergesTheCopiesOfEveryNode() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val (first, second, third) = nodes.values.toList()
 
         // The same map on two nodes, the third one has no table yet
@@ -39,7 +77,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
             )
         }
 
-        val shardMap = MoveHelpers.readShards(nodes)
+        val shardMap = ClusterHelpers.readShards(nodes)
 
         // The second copy has the newest row of every shard
         assertEquals(ShardSchema.readShards(second), shardMap.mergedShards)
@@ -54,9 +92,9 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     @Test
     fun testReadShards_NewCluster_NothingCreated() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
 
-        val shardMap = MoveHelpers.readShards(nodes)
+        val shardMap = ClusterHelpers.readShards(nodes)
 
         assertTrue(shardMap.mergedShards.isEmpty())
         assertTrue(shardMap.copies.isEmpty())
@@ -66,18 +104,18 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
     @Test
     fun testReadShards_ShardsNoNodeHas_NotFilled() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val second = nodes.values.toList()[1]
         ShardSchema.createOrUpdateShardTable(second)
         fillShardTableEvenly(second, nodes.keys.toList(), shardsToFill = 0..999)
 
-        assertEquals(1000, MoveHelpers.readShards(nodes).mergedShards.size)
+        assertEquals(1000, ClusterHelpers.readShards(nodes).mergedShards.size)
         assertEquals(1000, ShardSchema.readShards(second).size)
     }
 
     @Test
     fun testReadShards_ReadFails() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val (node, nodeDataSource) = nodes.entries.first { it.value == dataSourceFirstSchema }
         ShardSchema.createOrUpdateShardTable(nodeDataSource)
         fillShardTableEvenly(nodeDataSource, nodes.keys.toList())
@@ -88,7 +126,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         }
 
         val exception = assertThrows<ClusterOperationException.ExecutionException> {
-            MoveHelpers.readShards(nodes)
+            ClusterHelpers.readShards(nodes)
         }
         // A failed read must not look like a missing table, that one gets a new map
         assertTrue("${ShardSchema.SHARD_TABLE_NAME} on node ${node.id.id}" in exception.message, exception.message)
@@ -96,7 +134,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testSplitNodes_Success() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         // Choose any node as a target node
         val targetNode = nodes.keys.random()
         val dataSourcesWithoutTargetNode = nodes
@@ -104,17 +142,17 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
             .values
             .toList()
 
-        val splitResult = MoveHelpers.splitNodes(nodes, targetNode.id)
+        val splitResult = ClusterHelpers.splitNodes(nodes, targetNode.id)
         assertEquals(dataSourcesWithoutTargetNode, splitResult.sourceNodes)
         assertEquals(nodes[targetNode], splitResult.targetNode)
     }
 
     @Test
     fun testSplitNodes_Failure() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
 
         assertThrows<IllegalStateException> {
-            MoveHelpers.splitNodes(nodes, NodeId("bugaga-non-existing-target-id-${System.nanoTime()}"))
+            ClusterHelpers.splitNodes(nodes, NodeId("bugaga-non-existing-target-id-${System.nanoTime()}"))
         }
     }
 
@@ -128,7 +166,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
 
         val updatedShards = buildMap { putAll(shards) } // to create the copy of the map
 
-        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
+        val diff = ClusterHelpers.calculateShardsDiff(shards, updatedShards)
         assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
     }
 
@@ -144,7 +182,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
             Shard(shard.shard, shard.producerNode, shard.consumerNode, shard.nextConsumerNode, Instant.now())
         }
 
-        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
+        val diff = ClusterHelpers.calculateShardsDiff(shards, updatedShards)
         assertTrue(diff.isEmpty(), "Diff is not empty: $diff")
     }
 
@@ -176,7 +214,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         val updatedShard = updatedShards[randomShardToChange]
 
 
-        val diff = MoveHelpers.calculateShardsDiff(shards, updatedShards)
+        val diff = ClusterHelpers.calculateShardsDiff(shards, updatedShards)
         assertEquals(1, diff.size)
         assertEquals(originalShard?.toOwnership(), diff.first().originalShard)
         assertEquals(updatedShard?.toOwnership(), diff.first().updatedShard)

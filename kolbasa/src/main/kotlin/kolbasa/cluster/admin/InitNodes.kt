@@ -10,12 +10,12 @@ import javax.sql.DataSource
  * See [ClusterAdmin.planInitNodes]
  */
 internal fun planInitNodes(dataSources: Map<NodeId, DataSource>): InitNodesPlan {
-    val tables = MoveHelpers.readNodeTables(dataSources)
-    MoveHelpers.throwIfIdsMismatched(tables)
+    val tables = ClusterHelpers.readNodeTables(dataSources)
+    ClusterHelpers.throwIfIdsMismatched(tables)
 
     val newNodes = mutableListOf<NewNode>()
     for ((nodeId, bucket) in bucketsOfNewNodes(tables)) {
-        newNodes += NewNode(nodeId, bucket, MoveHelpers.hasMessages(dataSources.getValue(nodeId)))
+        newNodes += NewNode(nodeId, bucket, ClusterHelpers.hasMessages(dataSources.getValue(nodeId)))
     }
 
     // Alone, a node with messages is a standalone database that becomes a cluster, and that is safe
@@ -32,9 +32,9 @@ internal fun planInitNodes(dataSources: Map<NodeId, DataSource>): InitNodesPlan 
  * See [ClusterAdmin.initNodes]
  */
 internal fun initNodes(dataSources: Map<NodeId, DataSource>): List<NodeId> {
-    val tables = MoveHelpers.readNodeTables(dataSources)
+    val tables = ClusterHelpers.readNodeTables(dataSources)
     // A wrong id means the node list is wrong, and a wrong list must not set up anything
-    MoveHelpers.throwIfIdsMismatched(tables)
+    ClusterHelpers.throwIfIdsMismatched(tables)
 
     val buckets = bucketsOfNewNodes(tables)
     val initialized = mutableListOf<NodeId>()
@@ -47,7 +47,7 @@ internal fun initNodes(dataSources: Map<NodeId, DataSource>): List<NodeId> {
     // Read the new nodes again. Another process may have set one up at the same moment, or two ids may point at the
     // same database
     val newNodes = dataSources.filterKeys { nodeId -> nodeId in buckets }
-    MoveHelpers.throwIfIdsMismatched(MoveHelpers.readNodeTables(newNodes))
+    ClusterHelpers.throwIfIdsMismatched(ClusterHelpers.readNodeTables(newNodes))
 
     return initialized
 }

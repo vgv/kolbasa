@@ -6,8 +6,8 @@ import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 internal fun finalize(dataSources: Map<NodeId, DataSource>, progressCallback: ProgressCallback) {
-    val nodes = MoveHelpers.readNodes(dataSources)
-    val initialShards = MoveHelpers.readCompleteShards(nodes)
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    val initialShards = ClusterHelpers.readCompleteShards(nodes)
 
     // Okay, everything looks good, let's switch the migrating shards to a stable state
     val revision = ShardSchema.nextRevision(initialShards.values)
@@ -23,11 +23,11 @@ internal fun finalize(dataSources: Map<NodeId, DataSource>, progressCallback: Pr
             )
         }
     }
-    MoveHelpers.writeShards(nodes, newRows)
+    ClusterHelpers.writeShards(nodes, newRows)
 
     // Calculate difference between initial and updated shards and notify
-    val updatedShards = MoveHelpers.readShards(nodes).mergedShards
+    val updatedShards = ClusterHelpers.readShards(nodes).mergedShards
     progressCallback.finalizeSuccessful(
-        shardsDiff = MoveHelpers.calculateShardsDiff(initialShards, updatedShards)
+        shardsDiff = ClusterHelpers.calculateShardsDiff(initialShards, updatedShards)
     )
 }

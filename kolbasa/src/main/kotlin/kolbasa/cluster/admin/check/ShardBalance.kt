@@ -2,7 +2,7 @@ package kolbasa.cluster.admin.check
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.admin.ClusterOperationException
-import kolbasa.cluster.admin.MoveHelpers
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.cluster.admin.ShardBalanceResult
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
@@ -170,8 +170,8 @@ internal class ShardBalance(
 
     companion object {
         fun check(dataSources: Map<NodeId, DataSource>, drainedNodes: Set<NodeId> = emptySet()): ShardBalanceResult {
-            val nodes = MoveHelpers.readNodes(dataSources)
-            val shards = MoveHelpers.readShards(nodes).mergedShards
+            val nodes = ClusterHelpers.readNodes(dataSources)
+            val shards = ClusterHelpers.readShards(nodes).mergedShards
             val knownNodes = nodes.keys.map { it.id }.toSet()
 
             // An operator types the node to drain by hand, so a typo gets a message rather than the

@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.cluster.schema.ShardCopies
 import kolbasa.queue.Queue
 import kolbasa.schema.IdSchema
@@ -175,10 +176,10 @@ class Cluster(
     }
 
     private fun initNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
-        var nodes = ClusterHelper.readNodes(dataSources)
+        var nodes = ClusterHelpers.readOrCreateNodes(dataSources)
 
         while (remapBucketIdentifiers(nodes)) {
-            nodes = ClusterHelper.readNodes(dataSources)
+            nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         }
 
         return nodes

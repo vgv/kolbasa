@@ -2,7 +2,7 @@ package kolbasa.cluster.admin.check
 
 import kolbasa.cluster.Shard
 import kolbasa.cluster.admin.MigrationStateResult
-import kolbasa.cluster.admin.MoveHelpers
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
@@ -24,8 +24,8 @@ internal class MigrationState(private val shards: Collection<Shard>) {
 
     companion object {
         fun check(dataSources: Map<NodeId, DataSource>): MigrationStateResult {
-            val nodes = MoveHelpers.readNodes(dataSources)
-            val shards = MoveHelpers.readShards(nodes).mergedShards
+            val nodes = ClusterHelpers.readNodes(dataSources)
+            val shards = ClusterHelpers.readShards(nodes).mergedShards
             return MigrationState(shards.values).compute()
         }
     }

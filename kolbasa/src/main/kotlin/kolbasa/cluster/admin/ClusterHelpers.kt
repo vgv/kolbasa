@@ -38,7 +38,7 @@ internal class NodeTables(
     val withoutTable: List<NodeId>
 )
 
-internal object MoveHelpers {
+internal object ClusterHelpers {
 
     /**
      * A cause chain is usually two or three deep; a longer one is noise in an error message
@@ -46,10 +46,41 @@ internal object MoveHelpers {
     private const val MAX_REPORTED_CAUSES = 3
 
     /**
+     * Reads every node of [dataSources] the way a [Cluster][kolbasa.cluster.Cluster] does: a node without `q__node` gets
+     * one, with a random id and the bucket of its place in the list. Throws if two nodes have the same id
+     */
+    fun readOrCreateNodes(dataSources: List<DataSource>): SortedMap<Node, DataSource> {
+        val allNodes = dataSources.mapIndexed { index, dataSource ->
+            IdSchema.createAndInitIdTable(dataSource, identifierBucket = Node.MIN_BUCKET + index)
+            val node = requireNotNull(IdSchema.readNodeInfo(dataSource)) {
+                "Node info is not found, dataSource: $dataSource"
+            }
+            node to dataSource
+        }
+
+        // check uniqueness of nodeId
+        checkNonUniqueNodeIds(allNodes.map { it.first.id })
+
+        return allNodes.associateTo(sortedMapOf()) { it }
+    }
+
+    private fun checkNonUniqueNodeIds(nodeIds: List<NodeId>) {
+        // Check nodeId uniqueness, maybe later I will add some kind of auto-fixing, but not now
+        val nonUniqueNodeIds = nodeIds
+            .groupBy { it }
+            .filterValues { it.size > 1 }
+            .keys
+
+        check(nonUniqueNodeIds.isEmpty()) {
+            "NodeId isn't unique, duplicated nodeIds: $nonUniqueNodeIds"
+        }
+    }
+
+    /**
      * Reads every node of [nodes] and checks that it is the node it is listed as. Changes nothing
      *
-     * A node without an id is not given one. That is what sets it apart from
-     * [ClusterHelper.readNodes][kolbasa.cluster.ClusterHelper.readNodes], which a [Cluster][kolbasa.cluster.Cluster] uses.
+     * A node without an id is not given one. That is what sets it apart from [readOrCreateNodes], which a
+     * [Cluster][kolbasa.cluster.Cluster] uses.
      *
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table
      * without its row

@@ -13,7 +13,7 @@ internal fun planInitCluster(dataSources: Map<NodeId, DataSource>): InitClusterP
 
     // The nodes as they will be once the new ones have their ids: the id each is listed under, and the bucket of the
     // plan. A wrong id has stopped the plan above, so every node is either found or new
-    val tables = MoveHelpers.readNodeTables(dataSources)
+    val tables = ClusterHelpers.readNodeTables(dataSources)
     val nodes = sortedMapOf<Node, DataSource>()
     for ((nodeId, node) in tables.found) {
         nodes[node] = dataSources.getValue(nodeId)
@@ -22,7 +22,7 @@ internal fun planInitCluster(dataSources: Map<NodeId, DataSource>): InitClusterP
         nodes[Node(newNode.id, newNode.bucket)] = dataSources.getValue(newNode.id)
     }
 
-    val shardMap = MoveHelpers.readShards(nodes)
+    val shardMap = ClusterHelpers.readShards(nodes)
     val shardsPlan = planShards(nodes, shardMap, target = null, shards = null)
 
     // The rows of the new shards go to every copy, so only the rows there are now can differ

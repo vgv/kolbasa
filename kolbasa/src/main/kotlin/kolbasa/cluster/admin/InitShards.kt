@@ -16,8 +16,8 @@ internal fun planInitShards(
     target: NodeId?,
     shards: List<ShardId>?
 ): InitShardsPlan {
-    val nodes = MoveHelpers.readNodes(dataSources)
-    return planShards(nodes, MoveHelpers.readShards(nodes), target, shards)
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    return planShards(nodes, ClusterHelpers.readShards(nodes), target, shards)
 }
 
 /**
@@ -37,7 +37,7 @@ internal fun planShards(
     val unsafeNodes = mutableListOf<NodeId>()
     if (nodes.size > 1 && shardMap.mergedShards.isEmpty()) {
         for ((node, dataSource) in nodes) {
-            if (node.id != target && MoveHelpers.hasMessages(dataSource)) {
+            if (node.id != target && ClusterHelpers.hasMessages(dataSource)) {
                 unsafeNodes += node.id
             }
         }
@@ -54,19 +54,19 @@ internal fun initShards(
     target: NodeId?,
     shards: List<ShardId>?
 ): Map<ShardId, NodeId> {
-    val nodes = MoveHelpers.readNodes(dataSources)
-    val owners = newOwners(nodes, MoveHelpers.readShards(nodes), target, shards)
+    val nodes = ClusterHelpers.readNodes(dataSources)
+    val owners = newOwners(nodes, ClusterHelpers.readShards(nodes), target, shards)
     if (owners.isEmpty()) {
         return owners
     }
 
     // Every node gets the new rows, so the map is complete as soon as this is done. A shard that has a row on a node
     // already keeps it there
-    MoveHelpers.createShardTables(nodes)
-    MoveHelpers.fillShards(nodes, owners)
+    ClusterHelpers.createShardTables(nodes)
+    ClusterHelpers.fillShards(nodes, owners)
 
     // Read back: an application may have given some of the shards a node at the same moment, and its row may have won
-    val mergedShards = MoveHelpers.readShards(nodes).mergedShards
+    val mergedShards = ClusterHelpers.readShards(nodes).mergedShards
     val result = sortedMapOf<ShardId, NodeId>()
     for (shard in owners.keys) {
         result[shard] = mergedShards.getValue(shard).producerNode

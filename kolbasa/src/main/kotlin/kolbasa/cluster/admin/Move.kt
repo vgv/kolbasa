@@ -20,7 +20,7 @@ internal fun move(
     excludeTables: Set<String>?,
     progressCallback: ProgressCallback
 ) {
-    val nodes = MoveHelpers.readNodes(dataSources)
+    val nodes = ClusterHelpers.readNodes(dataSources)
 
     // tablename => schema
     val schemas = findAndCompareAllSchemas(
@@ -38,7 +38,7 @@ internal fun move(
 
     // start move
     targetsToShards.forEach { (targetNode, shards) ->
-        val (sources, target) = MoveHelpers.splitNodes(nodes, targetNode)
+        val (sources, target) = ClusterHelpers.splitNodes(nodes, targetNode)
 
         schemas.forEach { (_, schema) ->
             do {
@@ -60,7 +60,7 @@ internal fun move(
 }
 
 private fun findTargetNodeAndShards(nodes: SortedMap<Node, DataSource>): Map<NodeId, List<ShardId>> {
-    val shards = MoveHelpers.readCompleteShards(nodes)
+    val shards = ClusterHelpers.readCompleteShards(nodes)
 
     val targetsToShards = mutableMapOf<NodeId, MutableList<ShardId>>()
     shards.values.forEach { shard ->

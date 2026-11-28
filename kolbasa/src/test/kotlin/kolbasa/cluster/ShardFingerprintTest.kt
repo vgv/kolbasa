@@ -1,5 +1,6 @@
 package kolbasa.cluster
 
+import kolbasa.cluster.admin.ClusterHelpers
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.cluster.schema.ShardSchema.CONSUMER_NODE_COLUMN_NAME
 import kolbasa.cluster.schema.ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME
@@ -16,7 +17,7 @@ class ShardFingerprintTest : AbstractPostgreSQLTest() {
 
     @Test
     fun testFingerprint_SqlEqualsKotlin() {
-        val nodes = ClusterHelper.readNodes(listOf(dataSource))
+        val nodes = ClusterHelpers.readOrCreateNodes(listOf(dataSource))
         ShardSchema.createOrUpdateShardTable(dataSource)
         fillShardTableEvenly(dataSource, nodes.keys.toList())
 

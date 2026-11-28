@@ -2,7 +2,6 @@ package kolbasa.cluster.admin
 
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.Cluster
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.fillShardTableAtRandom
 import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
@@ -76,7 +75,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     fun testChecksWriteNothing_NewCluster() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         // Only the node ids exist, as after the first check-cluster
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
 
         // A write would fail: the transactions of these nodes are read only
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
@@ -90,7 +89,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testChecksWriteNothing_CopiesDiffer() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (first, second, _) = nodes.values.toList()
 
         // The first copy has not all the shards, the second one has other rows, and the third node has no table. The trigger
@@ -183,7 +182,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testCheckShardMap() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources)
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources)
         val (firstNode, secondNode, thirdNode) = nodes.keys.map { it.id }
         val (first, second, _) = nodes.values.toList()
         val admin = ClusterAdmin(nodesById(dataSources))
@@ -229,7 +228,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testOperationsNeedAShardMap_NewCluster() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val node = ClusterHelper.readNodes(dataSources).keys.first().id
+        val node = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
         // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
 
@@ -243,7 +242,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testOperationsNeedACompleteShardMap_NodeWithoutTable() {
         val dataSources = seededCluster()
-        val (lastNode, last) = ClusterHelper.readNodes(dataSources).entries.last()
+        val (lastNode, last) = ClusterHelpers.readOrCreateNodes(dataSources).entries.last()
         last.useStatement { it.execute("drop table ${ShardSchema.SHARD_TABLE_NAME}") }
 
         assertEveryOperationRefuses(dataSources, setOf(lastNode.id), emptySet())
@@ -265,7 +264,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     fun testPlanDrainNodesProposesEverythingTheNodeHolds() {
         val dataSources = seededCluster()
         val admin = ClusterAdmin(nodesById(dataSources))
-        val drainedNode = ClusterHelper.readNodes(dataSources).keys.first().id
+        val drainedNode = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
 
         val plan = admin.planDrainNodes(setOf(drainedNode))
 
@@ -281,7 +280,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testPlanDrainNodesRefusesANodeThatIsNotInTheCluster() {
         val dataSources = seededCluster()
-        val knownNode = ClusterHelper.readNodes(dataSources).keys.first().id
+        val knownNode = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
 
         val exception = assertThrows<ClusterOperationException.DrainUnknownNodeException> {
             ClusterAdmin(nodesById(dataSources)).planDrainNodes(setOf(NodeId("there-is-no-such-node")))
@@ -295,7 +294,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testPlanDrainNodesRefusesTheOnlyNodeOfACluster() {
         val dataSources = listOf(dataSource)
-        val theOnlyNode = ClusterHelper.readNodes(dataSources).keys.first().id
+        val theOnlyNode = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
         seedShardTable(dataSources)
 
         // Emptying it would leave its shards nowhere to go
@@ -320,7 +319,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testNewShardMapIsEven() {
         val dataSources = seededCluster()
-        val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+        val nodes = ClusterHelpers.readOrCreateNodes(dataSources).keys.map { it.id }
 
         // The nodes take turns in the order of their ids: the first one gets shard 0, and the one shard left over
         assertEquals(mapOf(nodes[0] to 342, nodes[1] to 341, nodes[2] to 341), shardsPerNode())
@@ -333,7 +332,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     fun testRebalanceEvensTheClusterOut() {
         // Every shard on one node
         val dataSources = seededCluster()
-        giveEveryShardTo(ClusterHelper.readNodes(dataSources).keys.first().id, dataSources)
+        giveEveryShardTo(ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id, dataSources)
 
         ClusterAdmin(nodesById(dataSources)).rebalanceCluster(shardsPerRound = 400)
 
@@ -344,7 +343,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testDrainNodesLeavesItOwningNothing() {
         val dataSources = seededCluster()
-        val drainedNode = ClusterHelper.readNodes(dataSources).keys.first().id
+        val drainedNode = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
 
         ClusterAdmin(nodesById(dataSources)).drainNodes(setOf(drainedNode), shardsPerRound = 200)
 
@@ -357,7 +356,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testDrainNodesEmptiesSeveralNodesAtOnce() {
         val dataSources = seededCluster()
-        val (stayingNode, drainedNodes) = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+        val (stayingNode, drainedNodes) = ClusterHelpers.readOrCreateNodes(dataSources).keys.map { it.id }
             .let { it.first() to it.drop(1).toSet() }
 
         ClusterAdmin(nodesById(dataSources)).drainNodes(drainedNodes, shardsPerRound = 200)
@@ -405,7 +404,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         nodesWithoutTable: Set<NodeId>,
         shardsWithoutRow: Set<ShardId>
     ) {
-        val node = ClusterHelper.readNodes(dataSources).keys.first().id
+        val node = ClusterHelpers.readOrCreateNodes(dataSources).keys.first().id
         // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
 
