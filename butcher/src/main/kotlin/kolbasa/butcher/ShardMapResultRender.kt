@@ -11,7 +11,7 @@ import kolbasa.producer.ShardId
 /**
  * Renders a [ShardMapResult] the way butcher shows it
  *
- * With [advice] the report also says what brings the copies up to date. The command that is about to do that leaves it out.
+ * With [advice] the report also says which command fixes what it found. The command that is about to fix it leaves it out.
  *
  * Presentation only: it belongs to the CLI, and nothing except console output may depend on it.
  */
@@ -24,7 +24,7 @@ internal fun ShardMapResult.render(advice: Boolean = true): Widget = verticalLay
     if (isMissing) {
         cell(TextColors.yellow("Shard map: no shard map on any node yet"))
         if (advice) {
-            cell("An application creates it when it starts, and so does 'create-or-repair-shard-map'.")
+            cell("An application creates it when it starts, and so does 'init-shards'.")
             cell("If applications already work with this cluster, check that the config points at the right databases.")
         }
     } else {
@@ -32,15 +32,19 @@ internal fun ShardMapResult.render(advice: Boolean = true): Widget = verticalLay
 
         if (differentCopies > 0) {
             cell(copiesTable())
-        }
-        if (advice && (differentCopies > 0 || !isComplete)) {
-            cell("Applications repair it on their next topology update. With no application running, use")
-            cell("'create-or-repair-shard-map'.")
+            if (advice) {
+                cell("Applications sync the copies on their next topology update. With no application running, use")
+                cell("'sync-shards'.")
+            }
         }
 
         // Out of the table, as in the migration state report: a long list of shards leaves no room for the other columns
         if (shardsWithoutRow.isNotEmpty()) {
             cell("No row on any node: ${shardsWithoutRow.toText()}")
+            if (advice) {
+                cell("Applications give these shards a node on their next topology update. With no application running,")
+                cell("use 'init-shards'.")
+            }
         }
     }
 

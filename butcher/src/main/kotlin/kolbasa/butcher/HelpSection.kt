@@ -12,6 +12,8 @@ internal enum class HelpSection(val title: String) {
 
     SETUP("Setup"),
 
+    MAINTENANCE("Maintenance"),
+
     MOVING_SHARDS("Moving shards"),
 
     MOVING_SHARDS_STEP_BY_STEP("Moving shards, step by step");

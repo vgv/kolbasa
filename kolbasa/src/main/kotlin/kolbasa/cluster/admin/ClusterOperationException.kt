@@ -51,7 +51,9 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
                 "Node(s) without a shard table: ${nodesWithoutTable.sorted().joinToString(separator = ", ") { it.id }}. "
             }) +
             (if (shardsWithoutRow.isEmpty()) "" else "Shards without a row on any node: ${shardsWithoutRow.size}. ") +
-            "Create or repair the shard map first, or start an application: it does the same"
+            // Initializing the shards gives every node a table as well
+            (if (shardsWithoutRow.isEmpty()) "Sync the shards first" else "Initialize the shards first") +
+            ", or start an application: it does the same"
     )
 
     class DrainUnknownNodeException(
@@ -93,5 +95,9 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
     ) : ClusterOperationException(
         "Node(s) ${nodes.sorted().joinToString(separator = ", ") { it.id }} have no id yet: there is no " +
             "${IdSchema.NODE_TABLE_NAME} table on them. Initialize the nodes first"
+    )
+
+    class ShardsNotInitializedException : ClusterOperationException(
+        "There is no shard map on any node, so there is nothing to sync. Initialize the shards first"
     )
 }

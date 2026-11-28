@@ -3,8 +3,6 @@ package kolbasa.cluster.admin
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
-import kolbasa.schema.SchemaExtractor
-import kolbasa.utils.JdbcHelpers.readBoolean
 import java.util.*
 import javax.sql.DataSource
 
@@ -17,7 +15,7 @@ internal fun planInitNodes(dataSources: Map<NodeId, DataSource>): InitNodesPlan 
 
     val newNodes = mutableListOf<NewNode>()
     for ((nodeId, bucket) in bucketsOfNewNodes(tables)) {
-        newNodes += NewNode(nodeId, bucket, hasMessages(dataSources.getValue(nodeId)))
+        newNodes += NewNode(nodeId, bucket, MoveHelpers.hasMessages(dataSources.getValue(nodeId)))
     }
 
     // Alone, a node with messages is a standalone database that becomes a cluster, and that is safe
@@ -68,13 +66,4 @@ private fun bucketsOfNewNodes(tables: NodeTables): SortedMap<NodeId, Int> {
         result[nodeId] = bucket
     }
     return result
-}
-
-/**
- * Whether a queue table of this node has a row: a main queue, a dead letter queue or an archive
- */
-private fun hasMessages(dataSource: DataSource): Boolean {
-    val queueTables = SchemaExtractor.extractRawSchema(dataSource).values.filter { it.isQueueTable() }
-
-    return queueTables.any { table -> dataSource.readBoolean("select exists(select 1 from ${table.name})") }
 }

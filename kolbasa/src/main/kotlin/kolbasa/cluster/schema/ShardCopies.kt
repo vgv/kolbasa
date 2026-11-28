@@ -3,6 +3,7 @@ package kolbasa.cluster.schema
 import kolbasa.cluster.Shard
 import kolbasa.producer.ShardId
 import kolbasa.schema.Node
+import kolbasa.schema.NodeId
 import java.util.*
 import javax.sql.DataSource
 
@@ -139,18 +140,48 @@ internal object ShardCopies {
         writeToEveryNode(nodes) { shards }
     }
 
+    /**
+     * Creates the shard table on every node that has none, and brings the others up to date, see
+     * [ShardSchema.createOrUpdateShardTable]. An error names the node it came from
+     */
+    fun createTables(nodes: SortedMap<Node, DataSource>) {
+        for ((node, dataSource) in nodes) {
+            onShardTable(node) {
+                ShardSchema.createOrUpdateShardTable(dataSource)
+            }
+        }
+    }
+
+    /**
+     * Writes to every node a row for each shard of [owners] that has no row there yet, see [ShardSchema.fillShardTable].
+     * The other rows stay as they are. Every node must have a shard table.
+     *
+     * A node that can't take them doesn't stop the others, the same as in [repair]
+     */
+    fun fill(nodes: SortedMap<Node, DataSource>, owners: Map<ShardId, NodeId>) {
+        onEveryNode(nodes) { _, dataSource ->
+            ShardSchema.fillShardTable(dataSource, owners)
+        }
+    }
+
     private fun writeToEveryNode(nodes: SortedMap<Node, DataSource>, rowsToWrite: (Node) -> List<Shard>) {
+        onEveryNode(nodes) { node, dataSource ->
+            val rows = rowsToWrite(node)
+            if (rows.isNotEmpty()) {
+                ShardSchema.writeShards(dataSource, rows)
+            }
+        }
+    }
+
+    // A node that fails doesn't stop the others. The first failure is thrown at the end, the others are added to it as
+    // suppressed
+    private fun onEveryNode(nodes: SortedMap<Node, DataSource>, block: (Node, DataSource) -> Unit) {
         var failure: Exception? = null
 
         for ((node, dataSource) in nodes) {
-            val rows = rowsToWrite(node)
-            if (rows.isEmpty()) {
-                continue
-            }
-
             try {
                 onShardTable(node) {
-                    ShardSchema.writeShards(dataSource, rows)
+                    block(node, dataSource)
                 }
             } catch (e: Exception) {
                 if (failure == null) {

@@ -15,9 +15,9 @@ import java.io.File
 import javax.sql.DataSource
 
 /**
- * `create-or-repair-shard-map` with a real config file, on a cluster where no application has started yet
+ * `sync-shards` with a real config file, on a cluster where no application has started yet
  */
-class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
+class SyncShardsTest : AbstractPostgreSQLTest() {
 
     @TempDir
     lateinit var tempDir: File
@@ -30,26 +30,20 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testNewCluster() {
-        val created = run("--yes")
+    fun testNoShardMap() {
+        val result = run("--yes")
 
-        assertEquals(0, created.statusCode, created.output)
-        assertTrue(created.output.contains("no shard map on any node yet"), created.output)
-        listOf("node-01", "node-02", "node-03").forEach { node ->
-            assertTrue(created.output.contains("$node: 1024 row(s) changed"), created.output)
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("There is no shard map on any node, so there is nothing to sync"), result.output)
+        assertTrue(result.output.contains("Initialize the shards first"), result.output)
+        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
+            assertFalse(hasTable(node, "q__shard"))
         }
-        assertTrue(created.output.contains("Shard map: all 3 copies are the same"), created.output)
-
-        // Nothing is left to do, so there is nothing to ask about: no --yes and no terminal, and it still succeeds
-        val again = run()
-        assertEquals(0, again.statusCode, again.output)
-        assertTrue(again.output.contains("Shard map: all 3 copies are the same"), again.output)
-        assertFalse(again.output.contains("row(s) changed"), again.output)
     }
 
     @Test
     fun testCopyLagsBehind() {
-        run("--yes")
+        initShards()
         execute(dataSourceFirstSchema, "delete from q__shard where shard < 10")
 
         val result = run("--yes")
@@ -59,26 +53,53 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
         assertTrue(result.output.contains("node-01: up to date"), result.output)
         assertTrue(result.output.contains("node-02: 10 row(s) changed"), result.output)
         assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
+
+        // Nothing is left to do, so there is nothing to ask about: no --yes and no terminal, and it still succeeds
+        val again = run()
+        assertEquals(0, again.statusCode, again.output)
+        assertTrue(again.output.contains("Shard map: all 3 copies are the same"), again.output)
+        assertFalse(again.output.contains("row(s) changed"), again.output)
     }
 
     @Test
-    fun testQuestionSaysWhatWillHappen() {
-        val newCluster = run(answer = "n")
-        assertTrue(newCluster.output.contains("A new one will be created on 3 node(s)"), newCluster.output)
+    fun testNodeWithoutTable() {
+        initShards()
+        execute(dataSourceSecondSchema, "drop table q__shard")
 
-        run("--yes")
+        val result = run("--yes")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("node-03: 1024 row(s) changed"), result.output)
+        assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
+    }
+
+    @Test
+    fun testShardsWithoutRowStayWithoutRow() {
+        initShards()
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             execute(node, "delete from q__shard where shard < 12")
         }
         execute(dataSourceFirstSchema, "delete from q__shard where shard = 500")
 
-        val damaged = run(answer = "n")
-        assertTrue(damaged.output.contains("12 shard(s) have no row on any node"), damaged.output)
-        assertTrue(damaged.output.contains("1 of 3 copies will be brought up to date"), damaged.output)
+        val question = run(answer = "n").output
+        assertTrue(question.contains("12 shard(s) have no row on any node. This command doesn't give them a node"), question)
+        assertTrue(question.contains("1 of 3 copies will be brought up to date"), question)
+
+        val result = run("--yes")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("node-02: 1 row(s) changed"), result.output)
+        // The copies are the same now, and the shards without a row are left for init-shards
+        assertTrue(result.output.contains("Shard map: 12 shard(s) have no row on any node\n"), result.output)
+        assertTrue(result.output.contains("No row on any node: 0,1,2,3,4,5,6,7,8,9,10,11"), result.output)
+        assertTrue(result.output.contains("use 'init-shards'"), result.output)
     }
 
     @Test
     fun testNoIsNo() {
+        initShards()
+        execute(dataSourceFirstSchema, "delete from q__shard where shard < 10")
+
         val answered = run(answer = "n")
         assertEquals(1, answered.statusCode, answered.output)
         assertTrue(answered.output.contains("nothing was changed"), answered.output)
@@ -88,13 +109,14 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
         assertEquals(1, unattended.statusCode, unattended.output)
         assertTrue(unattended.output.contains("no terminal"), unattended.output)
 
-        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
-            assertFalse(hasTable(node, "q__shard"))
-        }
+        assertEquals(1014, rowsOf(dataSourceFirstSchema))
     }
 
     @Test
     fun testYesIsYes() {
+        initShards()
+        execute(dataSourceFirstSchema, "delete from q__shard where shard < 10")
+
         val answered = run(answer = "y")
 
         assertEquals(0, answered.statusCode, answered.output)
@@ -103,9 +125,14 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
 
     // ---------- helpers ----------
 
+    private fun initShards() {
+        val result = ButcherCli().subcommands(InitShards()).test("-c ${config().absolutePath} init-shards --yes")
+        assertEquals(0, result.statusCode, result.output)
+    }
+
     private fun run(options: String = "", answer: String? = null): CliktCommandTestResult =
-        ButcherCli().subcommands(CreateOrRepairShardMap()).test(
-            "-c ${config().absolutePath} create-or-repair-shard-map $options",
+        ButcherCli().subcommands(SyncShards()).test(
+            "-c ${config().absolutePath} sync-shards $options",
             stdin = answer.orEmpty(),
             width = 200,
             inputInteractive = answer != null
@@ -116,6 +143,16 @@ class CreateOrRepairShardMapTest : AbstractPostgreSQLTest() {
             connection.createStatement().use { it.execute(sql) }
         }
     }
+
+    private fun rowsOf(dataSource: DataSource): Int =
+        dataSource.connection.use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("select count(*) from q__shard").use { resultSet ->
+                    resultSet.next()
+                    resultSet.getInt(1)
+                }
+            }
+        }
 
     private fun hasTable(dataSource: DataSource, table: String): Boolean =
         dataSource.connection.use { connection ->

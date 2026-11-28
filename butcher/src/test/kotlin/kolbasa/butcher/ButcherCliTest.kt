@@ -3,13 +3,14 @@ package kolbasa.butcher
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.testing.test
 import kolbasa.butcher.command.CheckCluster
-import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
 import kolbasa.butcher.command.InitNodes
+import kolbasa.butcher.command.InitShards
 import kolbasa.butcher.command.MoveData
 import kolbasa.butcher.command.PrepareMigration
 import kolbasa.butcher.command.RebalanceCluster
+import kolbasa.butcher.command.SyncShards
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -34,7 +35,7 @@ class ButcherCliTest {
 
         assertEquals(0, result.statusCode, result.output)
         listOf(
-            "check-cluster", "init-nodes", "create-or-repair-shard-map", "rebalance-cluster", "drain-nodes",
+            "check-cluster", "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes",
             "prepare-migration", "move-data", "finalize-migration"
         ).forEach {
             assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}")
@@ -66,7 +67,8 @@ class ButcherCliTest {
         mapOf(
             "check-cluster" to "Diagnostics:",
             "init-nodes" to "Setup:",
-            "create-or-repair-shard-map" to "Setup:",
+            "init-shards" to "Setup:",
+            "sync-shards" to "Maintenance:",
             "rebalance-cluster" to "Moving shards:",
             "drain-nodes" to "Moving shards:",
             "prepare-migration" to "Moving shards, step by step:",
@@ -174,7 +176,7 @@ class ButcherCliTest {
     @Test
     fun testMutatingCommandsOfferYes() {
         listOf(
-            "init-nodes", "create-or-repair-shard-map", "rebalance-cluster", "drain-nodes", "prepare-migration",
+            "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes", "prepare-migration",
             "move-data", "finalize-migration"
         ).forEach { command ->
             val result = cli().test("$command --help")
@@ -280,7 +282,8 @@ class ButcherCliTest {
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
         InitNodes(),
-        CreateOrRepairShardMap(),
+        InitShards(),
+        SyncShards(),
         RebalanceCluster(),
         DrainNodes(),
         PrepareMigration(),
@@ -296,7 +299,7 @@ class ButcherCliTest {
         /**
          * The sections of `--help`, in the order they are printed
          */
-        val SECTIONS = listOf("Diagnostics:", "Setup:", "Moving shards:", "Moving shards, step by step:")
+        val SECTIONS = listOf("Diagnostics:", "Setup:", "Maintenance:", "Moving shards:", "Moving shards, step by step:")
     }
 
 }

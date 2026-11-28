@@ -125,11 +125,37 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
     fun checkShardMap(): ShardMapResult = ShardMapState.check(nodes)
 
     /**
-     * Creates the shard map, or brings its copies up to date – what an application does on every topology update
+     * Reports which node [initShards] would give every shard that has no row on any node. Changes nothing
      *
-     * A node without a shard table gets one. Every copy gets the newest row of every shard, and the shards that no node
-     * has go to the nodes with the fewest shards. On a cluster without a shard map that is every shard, spread evenly
-     * over the nodes, so this is how a new map is created.
+     * A node that holds messages is not refused. It is in [InitShardsPlan.unsafeNodes] when the cluster gets its first
+     * shard map and has other nodes as well.
+     */
+    fun planInitShards(): InitShardsPlan = planInitShards(nodes)
+
+    /**
+     * Gives a node to every shard that has no row on any node: the node with the fewest shards at that moment, the
+     * smallest id of them on a tie. On a cluster without a shard map that is every shard, spread evenly over the nodes,
+     * so this is how a new map is created.
+     *
+     * Every node gets a shard table if it has none, and the new rows. They have the initial revision, so a real row wins
+     * over them, even one that turns up later. A shard that has a row on some node stays as it is, and so do copies
+     * that differ: that is [syncShards].
+     *
+     * A node that takes no rows doesn't stop the others. Then this throws, with the name of that node. The new rows are
+     * in effect once one node has them, and [syncShards] brings them to the other nodes once they are back.
+     *
+     * This doesn't look at [planInitShards], and gives the shards out on an unsafe plan as well: read the plan first.
+     *
+     * @return the node this call gave every shard. Empty when every shard has a row already
+     */
+    fun initShards(): Map<ShardId, NodeId> = initShards(nodes)
+
+    /**
+     * Brings the copies of the shard map on the nodes up to date, the way an application does on every topology update
+     *
+     * A node without a shard table gets one, and every copy gets the newest row of every shard. If copies hold different
+     * rows with the same revision, the row of the node with the smallest id wins, with a new revision. A shard that no
+     * node has gets no node here, see [initShards].
      *
      * A node that takes no rows doesn't stop the others. Then this throws, with the name of that node. Call it again once
      * the node is back: it does only what is still missing.
@@ -138,8 +164,9 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * [checkShardMap].
      *
      * @return how many rows have changed on every node, zero for a copy that was up to date already
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node
      */
-    fun createOrRepairShardMap(): Map<NodeId, Int> = createOrRepairShardMap(nodes)
+    fun syncShards(): Map<NodeId, Int> = syncShards(nodes)
 
     /**
      * Marks [shards] as migrating to [target], the first of the three migration steps
@@ -148,7 +175,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * [target]. No data is moved yet – that is [moveData].
      *
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
-     * [createOrRepairShardMap]
+     * [initShards] and [syncShards]
      */
     @JvmOverloads
     fun prepareMigration(
@@ -165,7 +192,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * Safe to re-run after an interruption: rows already copied are skipped rather than duplicated.
      *
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
-     * [createOrRepairShardMap]
+     * [initShards] and [syncShards]
      */
     @JvmOverloads
     fun moveData(
@@ -195,7 +222,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * will not adopt a migration it did not start.
      *
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
-     * [createOrRepairShardMap]
+     * [initShards] and [syncShards]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
      */
     @JvmOverloads
@@ -219,7 +246,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
      * cluster
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
-     * [createOrRepairShardMap]
+     * [initShards] and [syncShards]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
      */
     @JvmOverloads
@@ -239,7 +266,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * node, and any rows still there would stay unread.
      *
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
-     * [createOrRepairShardMap]
+     * [initShards] and [syncShards]
      */
     @JvmOverloads
     fun finalizeMigration(progress: ProgressCallback = ProgressCallback.Ignore) {

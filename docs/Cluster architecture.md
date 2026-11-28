@@ -594,7 +594,7 @@ refuse before changing anything. A copy that lags behind is fine, the newest row
 
 If a node doesn't take the rows, the other nodes do, and the change is in effect: the clients merge the copies, and the new rows
 are the newest. The copy of that node catches up with the next refresh of an application, or with
-`butcher create-or-repair-shard-map`.
+`butcher sync-shards`.
 
 ### Multi-shard migrations
 
@@ -648,7 +648,7 @@ schema-consistency check is the right place to catch it early.
 | A node is **unreachable during `move`** | The move can't drain that node's rows; re-run it once the node is back. Because move is re-runnable, an interruption is harmless. |
 | A node is **unreachable during a topology refresh** | The whole refresh fails, and the client keeps its old map until the next refresh. The error goes to the `TopologyUpdateErrorHandler`, a warning in the log by default. The first refresh, at startup, throws instead: without a map the cluster can't work. |
 | A node **takes no writes** (read-only, disk full) | The refresh reads the map and the new topology is in use. Bringing that node's copy of the map up to date fails, so the refresh ends with an error — a warning in the log by default — and every next refresh tries again. `prepare` and `finalize` write the other nodes and report the failed one. |
-| **Copies of the shard map differ** | Normal for up to one refresh after a change by hand or by butcher. The clients use the newest rows of all copies and bring the copies up to date. With no application running, `butcher create-or-repair-shard-map` does the same. |
+| **Copies of the shard map differ** | Normal for up to one refresh after a change by hand or by butcher. The clients use the newest rows of all copies and bring the copies up to date. With no application running, `butcher sync-shards` does the same. |
 | A **schema statement fails** on a node | The refresh goes on: the new map is in use. The failure goes to the `TopologyUpdateErrorHandler`, a warning in the log by default, also on the first refresh at startup. Every next refresh runs the schema again until it goes through. A direct `cluster.updateTopology()` returns them in its `ClusterSchemaResult` instead. |
 | **Stale cluster topology** (between refreshes) | A client may briefly route by an old map after an operator changes ownership. The protocol tolerates the common cases: produce falls back when the map names a node that no longer exists, `delete()` broadcasts to all nodes for any ids its shard-routing missed, and a migrating shard reads as empty rather than wrong. |
 | **Schema divergence** between nodes | Detected by the schema-consistency check; `move` fails fast rather than copying mismatched tables. Fix by re-running schema generation (or restoring the missing objects) on the lagging node. |

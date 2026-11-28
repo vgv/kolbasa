@@ -7,6 +7,8 @@ import kolbasa.producer.ShardId
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.schema.SchemaExtractor
+import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readString
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -134,11 +136,11 @@ internal object MoveHelpers {
     }
 
     /**
-     * Reads the shard map the same way an application does, see [ShardCopies.read]. It creates what is missing
+     * Creates the shard table on every node that has none, see [ShardCopies.createTables]
      */
-    fun readOrCreateShards(nodes: SortedMap<Node, DataSource>): ShardMap {
-        return reportFailure {
-            ShardCopies.read(nodes, knownShards = emptyMap(), knownFingerprint = null)
+    fun createShardTables(nodes: SortedMap<Node, DataSource>) {
+        reportFailure {
+            ShardCopies.createTables(nodes)
         }
     }
 
@@ -174,12 +176,39 @@ internal object MoveHelpers {
      * this method throws, with the name of the failed node
      */
     fun writeShards(nodes: SortedMap<Node, DataSource>, newRows: List<Shard>) {
-        try {
+        reportPartialFailure(nodes) {
             ShardCopies.write(nodes, newRows)
+        }
+    }
+
+    /**
+     * Gives the shards of [owners] their nodes on every node, see [ShardCopies.fill]. Every node must have a shard table.
+     *
+     * Fails the same way as [writeShards]
+     */
+    fun fillShards(nodes: SortedMap<Node, DataSource>, owners: Map<ShardId, NodeId>) {
+        reportPartialFailure(nodes) {
+            ShardCopies.fill(nodes, owners)
+        }
+    }
+
+    /**
+     * Whether a queue table of this node has a row: a main queue, a dead letter queue or an archive
+     */
+    fun hasMessages(dataSource: DataSource): Boolean {
+        val queueTables = SchemaExtractor.extractRawSchema(dataSource).values.filter { it.isQueueTable() }
+
+        return queueTables.any { table -> dataSource.readBoolean("select exists(select 1 from ${table.name})") }
+    }
+
+    // A write to every node: one that fails doesn't stop the others, and the change is in effect once one node has it
+    private fun reportPartialFailure(nodes: SortedMap<Node, DataSource>, block: () -> Unit) {
+        try {
+            block()
         } catch (e: Exception) {
             val failedNodes = 1 + e.suppressed.size
             val outcome = if (failedNodes < nodes.size) {
-                "The other nodes have the change, so it is in effect. Once the failed nodes are back, repair the shard map, " +
+                "The other nodes have the change, so it is in effect. Once the failed nodes are back, sync the shards, " +
                     "or wait for an application to do it"
             } else {
                 "No node has the change, so nothing has changed"

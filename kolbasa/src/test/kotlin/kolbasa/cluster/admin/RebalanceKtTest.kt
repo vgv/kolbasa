@@ -189,7 +189,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         ShardSchema.createOrUpdateShardTable(dataSource)
         fillShardTableEvenly(dataSource, nodes)
         // Every node of a cluster has a copy
-        createOrRepairShardMap(nodesById(clusterDataSources()))
+        syncShards(nodesById(clusterDataSources()))
     }
 
     private fun assertShardsPerNode(expected: List<Int>) {

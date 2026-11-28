@@ -47,7 +47,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         assertEquals(2, result.statusCode, result.output)
         assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
         assertTrue(result.output.contains("no shard map on any node yet"), result.output)
-        assertTrue(result.output.contains("'create-or-repair-shard-map'"), result.output)
+        assertTrue(result.output.contains("so does 'init-shards'"), result.output)
         assertTrue(result.output.contains("2 of 5 check(s) found something: shard-balance, shard-map."), result.output)
         assertFalse(result.output.contains("Completed successfully"), result.output)
 

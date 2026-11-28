@@ -25,7 +25,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(nodesById(dataSources))
+        initShards(nodesById(dataSources))
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -79,7 +79,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(nodesById(dataSources))
+        initShards(nodesById(dataSources))
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
 
@@ -102,7 +102,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(nodesById(dataSources))
+        initShards(nodesById(dataSources))
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -132,7 +132,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         val targetNode = nodes.keys.last().id
-        createOrRepairShardMap(nodesById(dataSources))
+        initShards(nodesById(dataSources))
 
         // The copies differ: an edit with a revision far ahead of every clock that only the first node has, a shard that the
         // second node lacks, and a row of the third node with the same revision and other nodes
@@ -210,7 +210,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         assertTrue("on node ${middleNode.id.id}" in exception.message, exception.message)
         assertTrue("The node takes no rows" in exception.message, exception.message)
         assertTrue("it is in effect" in exception.message, exception.message)
-        assertTrue("repair the shard map" in exception.message, exception.message)
+        assertTrue("sync the shards" in exception.message, exception.message)
 
         // The nodes before and after the failed one have the change
         val prepared = requireNotNull(ShardSchema.readShards(first)[shard])
@@ -223,7 +223,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val targetNode = nodes.keys.last().id
-        createOrRepairShardMap(nodesById(dataSources))
+        initShards(nodesById(dataSources))
         val map = ShardSchema.readShards(dataSource)
         dataSources.forEach { rejectRows(it) }
 

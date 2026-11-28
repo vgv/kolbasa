@@ -13,13 +13,14 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.file
 import kolbasa.butcher.command.CheckCluster
-import kolbasa.butcher.command.CreateOrRepairShardMap
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
 import kolbasa.butcher.command.InitNodes
+import kolbasa.butcher.command.InitShards
 import kolbasa.butcher.command.MoveData
 import kolbasa.butcher.command.PrepareMigration
 import kolbasa.butcher.command.RebalanceCluster
+import kolbasa.butcher.command.SyncShards
 import kolbasa.butcher.config.ClusterConfig
 import kolbasa.butcher.config.ConfigHelper
 import kolbasa.butcher.config.InvalidConfigurationException
@@ -29,7 +30,8 @@ fun main(args: Array<String>) = ButcherCli()
     .subcommands(
         CheckCluster(),
         InitNodes(),
-        CreateOrRepairShardMap(),
+        InitShards(),
+        SyncShards(),
         RebalanceCluster(),
         DrainNodes(),
         PrepareMigration(),
