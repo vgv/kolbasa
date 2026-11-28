@@ -172,3 +172,7 @@ covers:
   tracing.
 
 The [README](README.md) has a feature overview and walkthroughs of the examples.
+
+[CHANGELOG.md](CHANGELOG.md) lists what changed in each release, from 0.222.0. An entry is written only after the
+release, from its tag, by the `changelog` skill (`.claude/skills/changelog/SKILL.md`). Don't touch CHANGELOG.md while
+working on a feature: its version isn't known until the merge.
