@@ -5,11 +5,18 @@ on:
     branches:
       - main
     paths-ignore:
-      - README.md
-      - docs/**
-      - CHANGELOG.md
-      - AGENTS.md
+      # Modules
+      - examples/**
+      - performance/**
+      - test-support/**
+      # Folders
       - .claude/**
+      - docs/**
+      - '*/src/test/**'
+      # Files
+      - AGENTS.md
+      - CHANGELOG.md
+      - README.md
 
 concurrency: on-push-to-main
 
