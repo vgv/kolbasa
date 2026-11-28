@@ -10,7 +10,6 @@ import kolbasa.schema.Column
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.Table
-import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
 /**
@@ -114,8 +113,8 @@ internal class SchemaConsistency(
         fun check(dataSources: Map<NodeId, DataSource>): SchemaConsistencyResult {
             val nodes = MoveHelpers.readNodes(dataSources)
 
-            val schemasByNode = ConcurrentHashMap<NodeId, Map<String, Table>>()
-            nodes.entries.parallelStream().forEach { (node, dataSource: DataSource) ->
+            val schemasByNode = mutableMapOf<NodeId, Map<String, Table>>()
+            for ((node, dataSource) in nodes) {
                 schemasByNode[node.id] = SchemaExtractor.extractRawSchema(dataSource)
             }
 

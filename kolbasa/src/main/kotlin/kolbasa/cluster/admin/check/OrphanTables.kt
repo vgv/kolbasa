@@ -6,8 +6,6 @@ import kolbasa.cluster.admin.OrphanTablesResult
 import kolbasa.schema.Const
 import kolbasa.schema.NodeId
 import kolbasa.schema.SchemaExtractor
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 import javax.sql.DataSource
 
 /**
@@ -64,9 +62,8 @@ internal class OrphanTables(
         fun check(dataSources: Map<NodeId, DataSource>): OrphanTablesResult {
             val nodes = MoveHelpers.readNodes(dataSources)
 
-            val tablesByNode: ConcurrentMap<NodeId, Set<String>> = ConcurrentHashMap()
-            // Collect all tables from all nodes
-            nodes.entries.parallelStream().forEach { (node, dataSource: DataSource) ->
+            val tablesByNode = mutableMapOf<NodeId, Set<String>>()
+            for ((node, dataSource) in nodes) {
                 tablesByNode[node.id] = SchemaExtractor.extractRawSchema(dataSource).keys.toSet()
             }
 

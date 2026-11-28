@@ -11,7 +11,6 @@ import kolbasa.schema.SchemaExtractor
 import kolbasa.utils.JdbcHelpers.readBoolean
 import kolbasa.utils.JdbcHelpers.readString
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
 internal data class SourceAndTargetNodes(
@@ -275,15 +274,14 @@ internal object MoveHelpers {
     }
 
     /**
-     * Checks that every node of [nodes] can be reached: one `select 1` on each, all at once. Changes nothing
+     * Checks that every node of [nodes] can be reached: one `select 1` on each, one node after another. Changes nothing
      *
      * @throws ClusterOperationException.NodesUnreachableException naming every node that can't be reached, with what
      * the connection said
      */
     fun checkReachable(nodes: Map<NodeId, DataSource>) {
-        val errors = ConcurrentHashMap<NodeId, Exception>()
-
-        nodes.entries.parallelStream().forEach { (nodeId, dataSource) ->
+        val errors = mutableMapOf<NodeId, Exception>()
+        for ((nodeId, dataSource) in nodes) {
             try {
                 // Any fast query will do: the point is to open a connection
                 dataSource.readString("select 1")
