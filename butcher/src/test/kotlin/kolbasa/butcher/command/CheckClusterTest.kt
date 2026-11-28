@@ -28,7 +28,7 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         // check-cluster gives no ids, it says that the nodes need them first
         assertEquals(1, result.statusCode, result.output)
         assertTrue(result.output.contains("Node(s) node-01, node-02, node-03 have no id yet"), result.output)
-        assertTrue(result.output.contains("Initialize the nodes first"), result.output)
+        assertTrue(result.output.contains("Initialize the cluster first"), result.output)
 
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertFalse(hasTable(node, "q__node"))
@@ -41,15 +41,14 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
         val initialized = ButcherCli().subcommands(InitNodes()).test("-c ${config().absolutePath} init-nodes --yes")
         assertEquals(0, initialized.statusCode, initialized.output)
 
-        val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster")
+        // Without a shard map the cluster is not set up yet, whichever checks are asked for: they can't run
+        listOf("", "--checks=schema-consistency").forEach { options ->
+            val result = ButcherCli().subcommands(CheckCluster()).test("-c ${config().absolutePath} check-cluster $options")
 
-        // The checks ran, and two of them found something: no shard map yet
-        assertEquals(2, result.statusCode, result.output)
-        assertTrue(result.output.contains("no shard belongs to a node of this cluster"), result.output)
-        assertTrue(result.output.contains("no shard map on any node yet"), result.output)
-        assertTrue(result.output.contains("so does 'init-shards'"), result.output)
-        assertTrue(result.output.contains("2 of 5 check(s) found something: shard-balance, shard-map."), result.output)
-        assertFalse(result.output.contains("Completed successfully"), result.output)
+            assertEquals(1, result.statusCode, result.output)
+            assertTrue(result.output.contains("There is no shard map on any node. Initialize the cluster first"), result.output)
+            assertFalse(result.output.contains("found something"), result.output)
+        }
 
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertTrue(hasTable(node, "q__node"))

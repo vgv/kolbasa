@@ -31,7 +31,7 @@ class ShardMapResultRenderTest {
         ).render().renderToText()
 
         assertTrue(text.contains("Shard map: no shard map on any node yet"), text)
-        assertTrue(text.contains("An application creates it when it starts, and so does 'init-shards'"), text)
+        assertTrue(text.contains("An application creates it when it starts, and so does 'init-cluster'"), text)
         // 1024 numbers would say nothing more
         assertTrue(!text.contains("1023"), text)
     }

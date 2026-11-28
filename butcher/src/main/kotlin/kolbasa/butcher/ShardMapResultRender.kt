@@ -24,7 +24,7 @@ internal fun ShardMapResult.render(advice: Boolean = true): Widget = verticalLay
     if (isMissing) {
         cell(TextColors.yellow("Shard map: no shard map on any node yet"))
         if (advice) {
-            cell("An application creates it when it starts, and so does 'init-shards'.")
+            cell("An application creates it when it starts, and so does 'init-cluster'.")
             cell("If applications already work with this cluster, check that the config points at the right databases.")
         }
     } else {

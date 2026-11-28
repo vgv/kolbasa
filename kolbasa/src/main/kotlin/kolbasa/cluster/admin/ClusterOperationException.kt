@@ -94,11 +94,11 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
         val nodes: List<NodeId>
     ) : ClusterOperationException(
         "Node(s) ${nodes.sorted().joinToString(separator = ", ") { it.id }} have no id yet: there is no " +
-            "${IdSchema.NODE_TABLE_NAME} table on them. Initialize the nodes first"
+            "${IdSchema.NODE_TABLE_NAME} table on them. Initialize the cluster first"
     )
 
     class ShardsNotInitializedException : ClusterOperationException(
-        "There is no shard map on any node, so there is nothing to sync. Initialize the shards first"
+        "There is no shard map on any node. Initialize the cluster first"
     )
 
     class ShardsAlreadyInitializedException(

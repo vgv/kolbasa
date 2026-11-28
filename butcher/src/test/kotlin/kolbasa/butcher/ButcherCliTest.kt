@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.testing.test
 import kolbasa.butcher.command.CheckCluster
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.InitCluster
 import kolbasa.butcher.command.InitNodes
 import kolbasa.butcher.command.InitShards
 import kolbasa.butcher.command.MoveData
@@ -35,7 +36,7 @@ class ButcherCliTest {
 
         assertEquals(0, result.statusCode, result.output)
         listOf(
-            "check-cluster", "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes",
+            "check-cluster", "init-cluster", "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes",
             "prepare-migration", "move-data", "finalize-migration"
         ).forEach {
             assertTrue(result.output.contains(it), "'$it' missing from:\n${result.output}")
@@ -67,6 +68,7 @@ class ButcherCliTest {
         mapOf(
             "check-cluster" to "Diagnostics:",
             "init-nodes" to "Setup:",
+            "init-cluster" to "Setup:",
             "init-shards" to "Setup:",
             "sync-shards" to "Maintenance:",
             "rebalance-cluster" to "Moving shards:",
@@ -75,9 +77,10 @@ class ButcherCliTest {
             "move-data" to "Moving shards, step by step:",
             "finalize-migration" to "Moving shards, step by step:",
         ).forEach { (command, section) ->
-            // The section a command is listed under is the last one printed before it
+            // The section a command is listed under is the last one printed before it. A help text can name a command
+            // too, but only the list puts it at the start of a line
             val sectionsBefore = SECTIONS
-                .filter { output.indexOf(it) in 0 until output.indexOf("  $command")  }
+                .filter { output.indexOf(it) in 0 until output.indexOf("\n  $command")  }
             assertEquals(section, sectionsBefore.lastOrNull(), "$command:\n$output")
         }
     }
@@ -176,7 +179,7 @@ class ButcherCliTest {
     @Test
     fun testMutatingCommandsOfferYes() {
         listOf(
-            "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes", "prepare-migration",
+            "init-cluster", "init-nodes", "init-shards", "sync-shards", "rebalance-cluster", "drain-nodes", "prepare-migration",
             "move-data", "finalize-migration"
         ).forEach { command ->
             val result = cli().test("$command --help")
@@ -281,6 +284,7 @@ class ButcherCliTest {
 
     private fun cli() = ButcherCli().subcommands(
         CheckCluster(),
+        InitCluster(),
         InitNodes(),
         InitShards(),
         SyncShards(),

@@ -98,8 +98,9 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
             assertEquals(listOf(NEW_NODE), exception.nodes)
         }
 
-        // planInitNodes is the one check that works on such a node, and it writes nothing either
+        // The plans of init-nodes and init-cluster work on such a node, and they write nothing either
         assertEquals(listOf(NEW_NODE), admin.planInitNodes().newNodes.map { node -> node.id })
+        assertEquals(listOf(NEW_NODE), admin.planInitCluster().nodes.newNodes.map { node -> node.id })
 
         // The node is not given an id, and no shard map is created anywhere
         assertFalse(IdSchema.nodeTableExists(dataSourceSecondSchema))
@@ -183,11 +184,17 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testOperationsNeedACompleteShardMap_NewCluster() {
+    fun testOperationsNeedAShardMap_NewCluster() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
-        val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+        val node = ClusterHelper.readNodes(dataSources).keys.first().id
+        // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
+        val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
 
-        assertEveryOperationRefuses(dataSources, nodes.toSet(), ShardId.SHARDS_RANGE.map { ShardId.of(it) }.toSet())
+        // No row on any node is a cluster nobody has set up, not a map with gaps
+        operationsThatMoveShards(admin, node).forEach { operation ->
+            val exception = assertThrows<ClusterOperationException.ShardsNotInitializedException> { operation() }
+            assertTrue("Initialize the cluster first" in exception.message, exception.message)
+        }
     }
 
     @Test
@@ -359,18 +366,23 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
 
-        listOf<() -> Unit>(
-            { admin.prepareMigration(node, listOf(ShardId.of(1))) },
-            { admin.moveData() },
-            { admin.finalizeMigration() },
-            { admin.rebalance(shardsPerRound = 100) },
-            { admin.drainNodes(setOf(node), shardsPerRound = 100) },
-        ).forEach { operation ->
+        operationsThatMoveShards(admin, node).forEach { operation ->
             val exception = assertThrows<ClusterOperationException.IncompleteShardMapException> { operation() }
             assertEquals(nodesWithoutTable, exception.nodesWithoutTable)
             assertEquals(shardsWithoutRow, exception.shardsWithoutRow)
         }
     }
+
+    /**
+     * The methods of [admin] that change who owns a shard, with [node] wherever one needs a node
+     */
+    private fun operationsThatMoveShards(admin: ClusterAdmin, node: NodeId): List<() -> Unit> = listOf(
+        { admin.prepareMigration(node, listOf(ShardId.of(1))) },
+        { admin.moveData() },
+        { admin.finalizeMigration() },
+        { admin.rebalance(shardsPerRound = 100) },
+        { admin.drainNodes(setOf(node), shardsPerRound = 100) },
+    )
 
     /**
      * Every public method of [admin] that needs every node to have its id, with [node] wherever one needs a node
@@ -393,9 +405,11 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     )
 
     /**
-     * The two methods of [admin] that work on nodes without an id. A wrong id stops them as well
+     * The methods of [admin] that work on nodes without an id. A wrong id stops them as well
      */
     private fun initMethods(admin: ClusterAdmin): List<() -> Unit> = listOf(
+        { admin.planInitCluster() },
+        { admin.initCluster() },
         { admin.planInitNodes() },
         { admin.initNodes() },
     )

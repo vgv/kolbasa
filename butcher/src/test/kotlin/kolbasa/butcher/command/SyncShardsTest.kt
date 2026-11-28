@@ -34,8 +34,7 @@ class SyncShardsTest : AbstractPostgreSQLTest() {
         val result = run("--yes")
 
         assertEquals(1, result.statusCode, result.output)
-        assertTrue(result.output.contains("There is no shard map on any node, so there is nothing to sync"), result.output)
-        assertTrue(result.output.contains("Initialize the shards first"), result.output)
+        assertTrue(result.output.contains("There is no shard map on any node. Initialize the cluster first"), result.output)
         listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
             assertFalse(hasTable(node, "q__shard"))
         }

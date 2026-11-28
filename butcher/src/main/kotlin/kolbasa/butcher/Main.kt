@@ -15,6 +15,7 @@ import com.github.ajalt.clikt.parameters.types.file
 import kolbasa.butcher.command.CheckCluster
 import kolbasa.butcher.command.DrainNodes
 import kolbasa.butcher.command.FinalizeMigration
+import kolbasa.butcher.command.InitCluster
 import kolbasa.butcher.command.InitNodes
 import kolbasa.butcher.command.InitShards
 import kolbasa.butcher.command.MoveData
@@ -29,6 +30,7 @@ import java.lang.invoke.MethodHandles
 fun main(args: Array<String>) = ButcherCli()
     .subcommands(
         CheckCluster(),
+        InitCluster(),
         InitNodes(),
         InitShards(),
         SyncShards(),
@@ -93,8 +95,8 @@ private val ROOT_HELP_EPILOG = """
     port, user, password, dbname and schema; unknown keys are ignored, values may be single-quoted, and
     lines starting with '#' are skipped.
 
-    The node id is the node's own id, kept in its q__node table. 'init-nodes' gives a node that has none
-    yet the one from its line, and every other command refuses such a node.
+    The node id is the node's own id, kept in its q__node table. 'init-cluster' and 'init-nodes' give a
+    node that has none yet the one from its line, and every other command refuses such a node.
 
     A command of 'Moving shards' is built from the step-by-step ones and nothing else: it works out the
     same shard-balance plan that 'check-cluster' reports, then prepares, moves and finalizes a batch of

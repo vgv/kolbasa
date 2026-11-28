@@ -14,6 +14,7 @@ import kolbasa.butcher.HelpSection
 import kolbasa.butcher.config.AvailableCheck
 import kolbasa.butcher.render
 import kolbasa.cluster.admin.CheckResult
+import kolbasa.cluster.admin.ClusterOperationException
 import kolbasa.cluster.admin.MigrationStateResult
 import kolbasa.cluster.admin.OrphanTablesResult
 import kolbasa.cluster.admin.SchemaConsistencyResult
@@ -47,6 +48,11 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
      */
     override fun execute(): Widget? {
         val butcher = butcher()
+        // A cluster without a shard map is not set up yet, whichever checks were asked for. The checks could not run,
+        // so this is exit code 1, as for a node without an id
+        if (butcher.checkShardMap().isMissing) {
+            throw ClusterOperationException.ShardsNotInitializedException()
+        }
 
         var shardBalance: ShardBalanceResult? = null
         var schemaConsistency: SchemaConsistencyResult? = null

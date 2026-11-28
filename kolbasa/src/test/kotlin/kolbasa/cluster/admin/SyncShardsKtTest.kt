@@ -102,7 +102,7 @@ class SyncShardsKtTest : AbstractPostgreSQLTest() {
             admin.syncShards()
         }
 
-        assertTrue("Initialize the shards first" in exception.message, exception.message)
+        assertTrue("Initialize the cluster first" in exception.message, exception.message)
         // Nothing is created: the other nodes have no table still
         assertEquals(0, ShardSchema.readShards(dataSource).size)
         assertFalse(ShardSchema.shardTableExists(dataSourceFirstSchema))

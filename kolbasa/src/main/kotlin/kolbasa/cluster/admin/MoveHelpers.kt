@@ -154,11 +154,15 @@ internal object MoveHelpers {
     }
 
     /**
-     * Reads the shard map from every node, and changes nothing. Throws if the map is not complete: every node must have a
-     * shard table, and every shard must have a row. Copies may differ: the newest rows are the right ones
+     * Reads the shard map from every node, and changes nothing. Throws if there is no map, or it is not complete: every
+     * node must have a shard table, and every shard must have a row. Copies may differ: the newest rows are the right ones
      */
     fun readCompleteShards(nodes: SortedMap<Node, DataSource>): Map<ShardId, Shard> {
         val shardMap = readShards(nodes)
+        // No row anywhere is a cluster nobody has set up, not a map with gaps
+        if (shardMap.mergedShards.isEmpty()) {
+            throw ClusterOperationException.ShardsNotInitializedException()
+        }
 
         val nodesWithoutTable = nodes.keys.filter { it !in shardMap.copies }.map { it.id }.toSet()
         val shardsWithoutRow = shardMap.shardsWithoutRow().toSet()

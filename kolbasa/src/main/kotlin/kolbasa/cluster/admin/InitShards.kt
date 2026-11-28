@@ -17,7 +17,19 @@ internal fun planInitShards(
     shards: List<ShardId>?
 ): InitShardsPlan {
     val nodes = MoveHelpers.readNodes(dataSources)
-    val shardMap = MoveHelpers.readShards(nodes)
+    return planShards(nodes, MoveHelpers.readShards(nodes), target, shards)
+}
+
+/**
+ * The plan of [planInitShards] for [nodes] and their [shardMap]. [ClusterAdmin.planInitCluster] makes it for the nodes
+ * as they will be once they have their ids
+ */
+internal fun planShards(
+    nodes: SortedMap<Node, DataSource>,
+    shardMap: ShardMap,
+    target: NodeId?,
+    shards: List<ShardId>?
+): InitShardsPlan {
     val owners = newOwners(nodes, shardMap, target, shards)
 
     // Only a new map decides where the messages already on the nodes belong. In a working cluster that has lost some

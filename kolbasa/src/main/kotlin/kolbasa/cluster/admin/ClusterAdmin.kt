@@ -26,8 +26,8 @@ import javax.sql.DataSource
  * [Cluster][kolbasa.cluster.Cluster], which does initialize what it needs when it starts, and is therefore
  * the wrong thing to diagnose a cluster with.
  *
- * Nor does it give a node an id, except in [initNodes]. Every node must already have the id it is listed under in
- * [nodes], and every other method checks that before anything else. A node without an id fails with
+ * Nor does it give a node an id, except in [initNodes] and [initCluster]. Every node must already have the id it is
+ * listed under in [nodes], and every other method checks that before anything else. A node without an id fails with
  * [ClusterOperationException.NodesNotInitializedException], a node with another id with
  * [ClusterOperationException.NodeIdMismatchException].
  *
@@ -46,9 +46,39 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
     }
 
     /**
+     * Reports what [initCluster] would do: which nodes get an id, which shards get a node, and how many copies of the
+     * shard map get rows from the others. Changes nothing
+     *
+     * Like [planInitNodes], it works on nodes without an id. Their shards are worked out for the ids they are listed
+     * under, which are the ids they get.
+     *
+     * A node that holds messages is not refused. It is in [InitClusterPlan.unsafeNodes] when the cluster has other nodes
+     * as well, and the node gets an id or the cluster gets its first shard map.
+     *
+     * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
+     * its row
+     */
+    fun planInitCluster(): InitClusterPlan = planInitCluster(nodes)
+
+    /**
+     * Sets the cluster up, or brings it up to date: [initNodes], then [initShards], then [syncShards]
+     *
+     * On a new cluster that gives every node its id and creates the shard map on every node. On a cluster with a new
+     * node, it gives that node its id and a copy of the map. On a cluster that is set up already it does nothing, so
+     * it is safe to call again. If a step fails, the steps after it don't run: call it again once the cause is fixed.
+     *
+     * This doesn't look at [planInitCluster], and sets the cluster up on an unsafe plan as well: read the plan first.
+     *
+     * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
+     * its row. Then nothing is written
+     */
+    fun initCluster(): InitClusterResult = initCluster(nodes)
+
+    /**
      * Reports which nodes [initNodes] would give an id, and with which bucket. Changes nothing
      *
-     * Unlike every other method here, it works on nodes without an id: they are what it reports.
+     * Like [planInitCluster], and unlike the other methods here, it works on nodes without an id: they are what it
+     * reports.
      *
      * A new node that holds messages is not refused. It is in [InitNodesPlan.unsafeNodes] when the cluster has other
      * nodes as well.
@@ -209,6 +239,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * After this the shards are still consumed from where their data is, but new messages are produced to
      * [target]. No data is moved yet – that is [moveData].
      *
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
      * [initShards] and [syncShards]
      */
@@ -226,6 +258,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      *
      * Safe to re-run after an interruption: rows already copied are skipped rather than duplicated.
      *
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
      * [initShards] and [syncShards]
      */
@@ -256,6 +290,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * to start while any shard is migrating: it finalizes every migrating shard, not only its own, and it
      * will not adopt a migration it did not start.
      *
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
      * [initShards] and [syncShards]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
@@ -280,6 +316,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * of this cluster
      * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
      * cluster
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
      * [initShards] and [syncShards]
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
@@ -300,6 +338,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * Only call it once [moveData] has nothing left to copy: it stops consuming the shards from their old
      * node, and any rows still there would stay unread.
      *
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
      * @throws ClusterOperationException.IncompleteShardMapException if the shard map is not complete, see
      * [initShards] and [syncShards]
      */
