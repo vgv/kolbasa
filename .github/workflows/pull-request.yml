@@ -3,11 +3,13 @@ name: On pull request
 on:
   pull_request:
     paths-ignore:
-      - README.md
-      - docs/**
-      - CHANGELOG.md
-      - AGENTS.md
+      # Folders
       - .claude/**
+      - docs/**
+      # Files
+      - AGENTS.md
+      - CHANGELOG.md
+      - README.md
 
 concurrency: on-pull-request
 
