@@ -511,7 +511,9 @@ That is how a database used without a cluster grows into one. `init-cluster` wit
 gives it every shard. Then `init-cluster` with the full config gives the other nodes their ids and a copy of the
 map, and `rebalance-cluster` moves shards to them together with their messages. If the node has no id yet, the
 warning adds that its message ids can collide with another node's. A node with messages and no id that joins a
-cluster with a map gets a warning of its own: its messages stay unread, as its shards belong to other nodes.
+cluster with a map gets a warning of its own: its messages stay unread, as its shards belong to other nodes. The
+whole procedure is in
+[Cluster architecture.md](Cluster%20architecture.md#from-a-standalone-database-to-a-cluster).
 
 If a step fails, the steps after it don't run. Fix the cause and run the command again: it does only what is
 still missing.
@@ -553,7 +555,9 @@ node into a cluster, init it alone first, see Butcher.md.
 Such a node was used without a cluster, or has lost its `q__node`. Its message ids come from a bucket the other
 nodes know nothing about. Its messages of shards that other nodes own are never read: consumers read a shard on
 the node that owns it. Alone, with a config of one line, the node becomes a cluster of one node, and that is
-safe. The warning is not a refusal: answer no to stop.
+safe, see
+[Cluster architecture.md](Cluster%20architecture.md#from-a-standalone-database-to-a-cluster). The warning is not
+a refusal: answer no to stop.
 
 If a node has another id than its line, or a `q__node` table without its row, no node gets an id, see
 [Node ids don't match](#node-ids-dont-match).

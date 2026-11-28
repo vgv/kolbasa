@@ -75,7 +75,8 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
         val tableName: String
     ) : ClusterOperationException(
         "Table '$tableName' has different schemas on different nodes of the cluster. Moving data between " +
-            "nodes requires identical schemas, so fix the divergence first – 'check' reports it in detail"
+            "nodes requires identical schemas, so fix the divergence first – the schema consistency check reports it " +
+                "in detail"
     )
 
     class NodeIdMismatchException(

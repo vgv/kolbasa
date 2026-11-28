@@ -661,8 +661,10 @@ here is the architectural shape.)
 
 **Expansion — add a node.**
 
-1. Stand up a new PostgreSQL database and add it to the cluster's node list. It joins with its own identity and bucket; it owns no
-   shards yet. Its copy of the shard map appears with the first refresh of a `Cluster` that knows the node.
+1. Stand up a new PostgreSQL database, add its line to the butcher config and run `butcher init-cluster`: the node gets its id,
+   its bucket and a copy of the shard map, see [Butcher.md](Butcher.md#init-cluster). Then add it to the cluster's node list. It
+   owns no shards yet. (A `Cluster` that sees the node first gives it a random id, and creates its copy of the map with its next
+   refresh.)
 2. Create the kolbasa schema (all your queue tables) on the new node, so it can hold data once shards migrate in. Any of three
    ways works — pick whichever fits how your application is wired:
    - **Do nothing — let the `Cluster` do it.** The easiest option *if you supplied the node list as a dynamic supplier*
@@ -699,6 +701,42 @@ here is the architectural shape.)
 
 There is no automatic rebalancer: the operator chooses which shards move where. A balance check can *propose* a
 minimum-movement redistribution, but applying it is a deliberate, operator-driven sequence of migrations.
+
+### From a standalone database to a cluster
+
+A database that a standalone application has used holds messages already, spread over all 1024 shards: a standalone producer
+writes the `shard` column too. Their ids come from bucket `0`, see [Message IDs.md](Message%20IDs.md). Such a database can become
+the first node of a cluster, and new nodes join it the usual way. The order of the steps keeps every message readable:
+
+1. **Find the database's id.** Run `select id from q__node` on it.
+   - If the table is there, the database has an id already: a standalone application gives it a random one. Put that id on its
+     line of the butcher config. Or rename it first, with `update q__node set id = 'node-01'`: nothing refers to the id while the
+     database has never been part of a cluster.
+   - If there is no table, the database has no id yet. Put any id on its line, and `init-cluster` gives it that id.
+2. **Make it a cluster of one node.** Run `butcher init-cluster` with a config of that one line. The node keeps bucket `0`, the
+   range its messages already use, and gets every shard. Every message it holds is now in a shard it owns.
+3. **Switch every application to `Cluster`**, with this one node. Do it before the first shard moves: a standalone producer
+   writes every shard to this database, and once a shard has moved, consumers read it on the other node only.
+4. **Add the new databases.** Add their lines to the config and run `butcher init-cluster` again. They get their ids, the next
+   free buckets and a copy of the shard map. Then add them to the node list of the applications.
+5. **Move shards to them** with `butcher rebalance-cluster`. A migration moves the messages of a shard together with the shard,
+   see [Shard migration](#shard-migration).
+
+What doesn't work:
+
+- **Setting the database up together with the new nodes in one go.** The shards are spread over all the nodes at once, and its
+  messages of the shards that go to other nodes are never read. If it has no id yet, it can get a bucket other than `0`, and
+  then its old ids can collide with another node's. butcher warns about both before it asks, see
+  [Butcher.md](Butcher.md#init-cluster).
+- **Merging two standalone databases.** Both hold messages in bucket `0`, so their ids collide, see
+  [Message IDs.md](Message%20IDs.md).
+- **Adding a database with messages to a running cluster.** Its shards belong to other nodes, so its messages are never read,
+  and its ids can collide with another node's.
+
+A standalone database without messages is the same as a new one: set it up together with the others.
+
+From code, step 2 is `ClusterAdmin(mapOf(NodeId("node-01") to dataSource)).initCluster()`, and step 4 is the same call with every
+node.
 
 ---
 

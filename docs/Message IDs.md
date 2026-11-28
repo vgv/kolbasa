@@ -78,4 +78,5 @@ remap (if it happens) only changes the sequence for *future* ids — old rows ke
 > isolated counter), so their existing ids collide. Bucket remapping does not relocate old rows, and `move-data`'s
 > `INSERT ... ON CONFLICT DO NOTHING` would silently drop one side's colliding rows during migration. The "grow into a cluster
 > with no id migration" guarantee applies to taking **one** standalone database and adding fresh nodes around it — not to
-> stitching multiple pre-existing standalone deployments together.
+> stitching multiple pre-existing standalone deployments together. The steps of growing one are in
+> [Cluster architecture.md](Cluster%20architecture.md#from-a-standalone-database-to-a-cluster).

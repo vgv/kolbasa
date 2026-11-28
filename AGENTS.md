@@ -64,8 +64,9 @@ published — plus `gradle/build-logic`, an included build holding the shared bu
   queue, usually on another server), `queue`
   (queue/options/meta-fields), `schema` (DDL generation),
   `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
-  creating one in `ClusterAdminHelpers`, the check results, the progress callback, and the internal
-  operations behind them, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `telemetry`
+  creating one in `ClusterAdminHelpers`, the plans and check results, the progress callback, and the internal
+  operations behind them: the setup of nodes and shards, the sync of the shard map, `prepare`/`move`/`finalize`
+  and the `rebalance` loop over them), `telemetry`
   (metrics through Micrometer, SQL dumps, and the `Tracing` hook that a tracing system plugs into).
 - `kolbasa-opentelemetry/src/main/kotlin/kolbasa/opentelemetry/` — OpenTelemetry tracing, published as
   `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`
@@ -94,12 +95,16 @@ published — plus `gradle/build-logic`, an included build holding the shared bu
   ./gradlew performance`; `Env.kt` lists every variable it reads. Like the examples, it depends on `:kolbasa` the way a
   user would, so it measures through the public API only.
 - `butcher/src/main/kotlin/kolbasa/butcher/` — `butcher`, the operator CLI, built with
-  [Clikt](https://ajalt.github.io/clikt/): the six commands, the cluster config-file parser and the
-  renderers that turn a check result into tables. The commands sit on two levels, which is also how
-  `--help` groups them (see `HelpSection`): `check-cluster` reports, `prepare-migration`/`move-data`/
-  `finalize-migration` are one migration step each (**low-level**), and `rebalance-cluster`/`drain-nodes` are
-  **high-level** — the same three steps in a loop over a plan, with the loop itself in the library
-  (`ClusterAdmin.rebalanceCluster`, `drainNodes`) and not here. Like the examples and the benchmarks it depends on
+  [Clikt](https://ajalt.github.io/clikt/): the ten commands, the cluster config-file parser and the
+  renderers that turn a plan or a check result into text. `--help` lists the commands in five sections (see
+  `HelpSection`): **Diagnostics** — `check-cluster`, which changes nothing; **Setup** — `init-cluster`, which is
+  `init-nodes`, `init-shards` and `sync-shards` with one question, `init-nodes` and `init-shards`;
+  **Maintenance** — `sync-shards`; **Moving shards** — `rebalance-cluster` and `drain-nodes`; **Moving shards,
+  step by step** — `prepare-migration`, `move-data` and `finalize-migration`, one migration step each. The docs
+  call the last two sections **high-level** and **low-level**: a high-level command is the three steps in a loop
+  over a plan, with the loop itself in the library and not here. Every command is one `ClusterAdmin` method of
+  the same name in camelCase (`init-cluster` → `initCluster()`, `rebalance-cluster` → `rebalanceCluster()`), with
+  a read-only plan or check in front of the ones that write. Like the examples and the benchmarks it depends on
   `:kolbasa` the way a user would, so it can only use the **public** API — which makes the CLI the proof
   that `kolbasa.cluster.admin` is complete: a missing handle fails to compile here. The name `butcher` lives
   only here — it is what the tool is called, not what the API is called. Not published to Maven; it
