@@ -78,13 +78,20 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
 
     class NodeIdMismatchException(
         val mismatches: Map<NodeId, NodeId>,
-        val nodesWithoutId: List<NodeId>
+        val nodesWithEmptyTable: List<NodeId>
     ) : ClusterOperationException(
         "Node ids don't match:\n" +
             (mismatches.toSortedMap().map { (expected, actual) -> "  ${expected.id}: this node's id is ${actual.id}" } +
-                nodesWithoutId.sorted().map { expected ->
+                nodesWithEmptyTable.sorted().map { expected ->
                     "  ${expected.id}: ${IdSchema.NODE_TABLE_NAME} has no active row. If the node holds no data yet, " +
                         "drop ${IdSchema.NODE_TABLE_NAME} and run again. Otherwise, restore the row by hand"
                 }).joinToString(separator = "\n")
+    )
+
+    class NodesNotInitializedException(
+        val nodes: List<NodeId>
+    ) : ClusterOperationException(
+        "Node(s) ${nodes.sorted().joinToString(separator = ", ") { it.id }} have no id yet: there is no " +
+            "${IdSchema.NODE_TABLE_NAME} table on them. Give them their ids first, see ClusterAdminHelpers.checkNodeIds"
     )
 }

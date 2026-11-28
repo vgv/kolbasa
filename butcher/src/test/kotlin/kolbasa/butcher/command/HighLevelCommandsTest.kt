@@ -59,7 +59,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         assertTrue(result.output.contains("Completed successfully"), result.output)
         // The last word is the distribution it ended up with, read back from the cluster
         assertTrue(result.output.contains("evenly spread across 3 node(s)"), result.output)
-        assertTrue(ClusterAdmin(dataSources).checkShardBalance().isBalanced, result.output)
+        assertTrue(admin().checkShardBalance().isBalanced, result.output)
     }
 
     @Test
@@ -104,7 +104,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         assertTrue(result.output.contains("Draining ${drainedNode.id}"), result.output)
         assertTrue(result.output.contains("Node ${drainedNode.id} owns no shards"), result.output)
         // Not only in the report: the shard table agrees
-        val distribution = ClusterAdmin(dataSources).checkShardBalance().currentDistribution
+        val distribution = admin().checkShardBalance().currentDistribution
         assertEquals(0, distribution.getValue(drainedNode).size, "$distribution")
         assertEquals(1024, distribution.values.sumOf { it.size }, "$distribution")
     }
@@ -122,7 +122,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         val names = drainedNodes.joinToString(", ") { it.id }
         assertTrue(result.output.contains("Nodes $names own no shards"), result.output)
         // Two of the three nodes drained, so the one that stays holds everything
-        val distribution = ClusterAdmin(dataSources).checkShardBalance().currentDistribution
+        val distribution = admin().checkShardBalance().currentDistribution
         assertEquals(1024, distribution.getValue(stayingNode).size, "$distribution")
     }
 
@@ -183,7 +183,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         assertTrue(result.output.contains("already migrating"), result.output)
         assertTrue(result.output.contains(target.id), result.output)
         // And it really did refuse: shard 5 is still the one and only shard in flight
-        assertEquals(1, ClusterAdmin(dataSources).checkMigrationState().totalMigratingShards, result.output)
+        assertEquals(1, admin().checkMigrationState().totalMigratingShards, result.output)
     }
 
     @Test
@@ -195,12 +195,12 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
 
         // One shard from the heaviest node to the lightest keeps every node at floor or ceil, so the
         // balance report still has nothing to propose
-        val distribution = ClusterAdmin(dataSources).checkShardBalance().currentDistribution
+        val distribution = admin().checkShardBalance().currentDistribution
         prepareOneShard(
             from = distribution.maxBy { (_, shards) -> shards.size }.key,
             to = distribution.minBy { (_, shards) -> shards.size }.key
         )
-        assertTrue(ClusterAdmin(dataSources).checkShardBalance().isBalanced, "the cluster must still be even")
+        assertTrue(admin().checkShardBalance().isBalanced, "the cluster must still be even")
 
         val result = cli().test("-c ${config().absolutePath} rebalance-cluster --shards-per-round=10 --yes")
 
@@ -230,7 +230,7 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
      * Prepares one shard of [from] for [to], a migration these tests only need to leave in flight
      */
     private fun prepareOneShard(from: NodeId, to: NodeId) {
-        val shard = ClusterAdmin(dataSources).checkShardBalance().currentDistribution.getValue(from).first()
+        val shard = admin().checkShardBalance().currentDistribution.getValue(from).first()
 
         val prepared = cli().test(
             "-c ${config().absolutePath} prepare-migration --target=${to.id} --shards=${shard.id} --yes"
@@ -245,14 +245,14 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
      * advance. Preparing a shard for the node that already owns it is refused, and rightly so.
      */
     private fun nodeWithout(shard: Int): NodeId {
-        val distribution = ClusterAdmin(dataSources).checkShardBalance().currentDistribution
+        val distribution = admin().checkShardBalance().currentDistribution
         val owner = distribution.entries.first { (_, shards) -> ShardId.of(shard) in shards }.key
 
         return distribution.keys.sorted().first { it != owner }
     }
 
     private fun nodeIds(): List<NodeId> =
-        ClusterAdmin(dataSources).checkShardBalance().currentDistribution.keys.sorted()
+        admin().checkShardBalance().currentDistribution.keys.sorted()
 
     /**
      * Hands every shard to one node, with a plain `update` against the shard table
@@ -307,6 +307,11 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
         "$id  host=${pgContainer.host} port=${pgContainer.firstMappedPort} " +
             "user=${pgContainer.username} password=${pgContainer.password} " +
             "dbname=$databaseName schema=$schema\n"
+
+    /**
+     * The cluster as code sees it, every node by the id the application gave it
+     */
+    private fun admin(): ClusterAdmin = ClusterAdmin(dataSources.associateBy { dataSource -> NodeId(nodeIdOf(dataSource)) })
 
     /**
      * The id the application gave this node when it started

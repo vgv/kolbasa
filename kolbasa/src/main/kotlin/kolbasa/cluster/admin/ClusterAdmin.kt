@@ -26,13 +26,19 @@ import javax.sql.DataSource
  * [Cluster][kolbasa.cluster.Cluster], which does initialize what it needs when it starts, and is therefore
  * the wrong thing to diagnose a cluster with.
  *
+ * Nor does it give a node an id. Every node must already have the id it is listed under in [nodes], and every
+ * method checks that before anything else. A node without an id fails with
+ * [ClusterOperationException.NodesNotInitializedException], a node with another id with
+ * [ClusterOperationException.NodeIdMismatchException]. [ClusterAdminHelpers.checkNodeIds] gives the new nodes
+ * their ids.
+ *
  * Nothing here holds a connection open, so one instance can be kept for as long as its [nodes] are valid,
  * and all of its methods may be called from several threads at once.
  *
- * @param nodes one [DataSource] per cluster node, the same list a [Cluster][kolbasa.cluster.Cluster] would
- * be given
+ * @param nodes every cluster node by its id, the one in its `q__node` table. The [DataSource]s are the ones a
+ * [Cluster][kolbasa.cluster.Cluster] would be given
  */
-class ClusterAdmin(private val nodes: List<DataSource>) {
+class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
 
     init {
         require(nodes.isNotEmpty()) {

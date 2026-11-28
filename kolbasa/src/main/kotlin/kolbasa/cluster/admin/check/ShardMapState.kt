@@ -1,6 +1,5 @@
 package kolbasa.cluster.admin.check
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.admin.MoveHelpers
 import kolbasa.cluster.admin.ShardCopyResult
@@ -62,8 +61,8 @@ internal class ShardMapState(
     }
 
     companion object {
-        fun check(dataSources: List<DataSource>): ShardMapResult {
-            val nodes = ClusterHelper.readNodes(dataSources)
+        fun check(dataSources: Map<NodeId, DataSource>): ShardMapResult {
+            val nodes = MoveHelpers.readNodes(dataSources)
             val shardMap = MoveHelpers.readShards(nodes)
             val invalidShards = MoveHelpers.readInvalidShards(nodes, shardMap)
 

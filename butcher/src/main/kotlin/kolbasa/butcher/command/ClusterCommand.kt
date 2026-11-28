@@ -85,7 +85,7 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
             echo("Initialized node ${nodeId.id}")
         }
 
-        return ClusterAdmin(nodes.values.toList())
+        return ClusterAdmin(nodes)
     }
 }
 

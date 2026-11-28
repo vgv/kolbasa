@@ -1001,7 +1001,7 @@ val nodes = mapOf(NodeId("node-01") to node01, NodeId("node-02") to node02, Node
 ClusterAdminHelpers.checkNodesAvailable(nodes.values.toList())
 ClusterAdminHelpers.checkNodeIds(nodes)
 
-val admin = ClusterAdmin(nodes.values.toList())   // the same DataSource list a Cluster is given
+val admin = ClusterAdmin(nodes)   // the same DataSources a Cluster is given, by node id
 
 // What the two high-level commands are, as one call each
 admin.rebalance(shardsPerRound = 50)
@@ -1032,8 +1032,9 @@ it starts, which is why it is the wrong thing to diagnose a cluster with.)
 The two checks butcher runs first are not part of `ClusterAdmin`. They live in `ClusterAdminHelpers`, and you
 call them before creating it. `checkNodesAvailable` fails with one clear error if a node can't be reached.
 `checkNodeIds` is the [node id check](#node-ids). It is the one call here that writes: a node with no id gets
-the one you named it by. Without it, the first `ClusterAdmin` call that reads such a node gives it a random
-id.
+the one you named it by. `ClusterAdmin` checks the ids as well, before every call, but gives no ids: a node
+without one fails with `NodesNotInitializedException`, and a node with another id with
+`NodeIdMismatchException`.
 
 The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
 `migrationState.isClean`, `schemaConsistency.divergencesByTable`, `shardMap.isComplete` — so a program

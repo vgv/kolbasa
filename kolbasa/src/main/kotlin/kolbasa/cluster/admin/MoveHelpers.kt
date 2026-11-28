@@ -4,6 +4,7 @@ import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardCopies
 import kolbasa.cluster.schema.ShardMap
 import kolbasa.producer.ShardId
+import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readString
@@ -16,12 +17,103 @@ internal data class SourceAndTargetNodes(
     val targetNode: DataSource
 )
 
+/**
+ * What `q__node` holds on every node, by the id the node is listed as
+ */
+internal class NodeTables(
+    /**
+     * The nodes whose `q__node` has its row, with what the row says
+     */
+    val found: Map<NodeId, Node>,
+
+    /**
+     * The nodes whose `q__node` has no active row. Such a node is broken, it is not a new one
+     */
+    val withEmptyTable: List<NodeId>,
+
+    /**
+     * The nodes without `q__node`. They are new and have no id yet
+     */
+    val withoutTable: List<NodeId>
+)
+
 internal object MoveHelpers {
 
     /**
      * A cause chain is usually two or three deep; a longer one is noise in an error message
      */
     private const val MAX_REPORTED_CAUSES = 3
+
+    /**
+     * Reads every node of [nodes] and checks that it is the node it is listed as. Changes nothing
+     *
+     * A node without an id is not given one. That is what sets it apart from
+     * [ClusterHelper.readNodes][kolbasa.cluster.ClusterHelper.readNodes], which a [Cluster][kolbasa.cluster.Cluster] uses.
+     *
+     * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table
+     * without its row
+     * @throws ClusterOperationException.NodesNotInitializedException if a node has no `q__node` table
+     */
+    fun readNodes(nodes: Map<NodeId, DataSource>): SortedMap<Node, DataSource> {
+        val tables = readNodeTables(nodes)
+
+        // A wrong id means a wrong node list, and an empty q__node a broken node. Either way it doesn't matter
+        // which nodes have no id yet
+        throwIfIdsMismatched(tables)
+        if (tables.withoutTable.isNotEmpty()) {
+            throw ClusterOperationException.NodesNotInitializedException(tables.withoutTable)
+        }
+
+        val result = sortedMapOf<Node, DataSource>()
+        for ((nodeId, node) in tables.found) {
+            result[node] = nodes.getValue(nodeId)
+        }
+        return result
+    }
+
+    /**
+     * Reads `q__node` on every node of [nodes]. Changes nothing and checks nothing, see [throwIfIdsMismatched]
+     */
+    fun readNodeTables(nodes: Map<NodeId, DataSource>): NodeTables {
+        val found = mutableMapOf<NodeId, Node>()
+        val withEmptyTable = mutableListOf<NodeId>()
+        val withoutTable = mutableListOf<NodeId>()
+
+        for ((nodeId, dataSource) in nodes) {
+            if (!IdSchema.nodeTableExists(dataSource)) {
+                withoutTable += nodeId
+                continue
+            }
+
+            val node = IdSchema.findNodeInfo(dataSource)
+            if (node != null) {
+                found[nodeId] = node
+            } else {
+                withEmptyTable += nodeId
+            }
+        }
+
+        return NodeTables(found, withEmptyTable, withoutTable)
+    }
+
+    /**
+     * Throws if a node has another id than the one it is listed as, or `q__node` without its row. The nodes without
+     * `q__node` are not checked: they have no id yet
+     */
+    fun throwIfIdsMismatched(tables: NodeTables) {
+        val mismatches = tables.found
+            .mapNotNull { (expected, node) ->
+                if (node.id != expected)
+                    expected to node.id
+                else
+                    null
+            }
+            .toMap()
+
+        if (mismatches.isNotEmpty() || tables.withEmptyTable.isNotEmpty()) {
+            throw ClusterOperationException.NodeIdMismatchException(mismatches, tables.withEmptyTable)
+        }
+    }
 
     /**
      * Reads the shard map from every node and changes nothing, see [ShardCopies.readOnly]

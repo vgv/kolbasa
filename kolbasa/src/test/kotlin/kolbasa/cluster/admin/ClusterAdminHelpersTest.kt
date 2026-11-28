@@ -91,7 +91,7 @@ class ClusterAdminHelpersTest : AbstractPostgreSQLTest() {
             ClusterAdminHelpers.checkNodeIds(mapOf(NodeId("node-01") to dataSource))
         }
 
-        assertEquals(listOf(NodeId("node-01")), exception.nodesWithoutId)
+        assertEquals(listOf(NodeId("node-01")), exception.nodesWithEmptyTable)
     }
 
     @Test

@@ -1,6 +1,5 @@
 package kolbasa.cluster.admin.check
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.admin.ClusterOperationException
 import kolbasa.cluster.admin.MoveHelpers
@@ -170,8 +169,8 @@ internal class ShardBalance(
     }
 
     companion object {
-        fun check(dataSources: List<DataSource>, drainedNodes: Set<NodeId> = emptySet()): ShardBalanceResult {
-            val nodes = ClusterHelper.readNodes(dataSources)
+        fun check(dataSources: Map<NodeId, DataSource>, drainedNodes: Set<NodeId> = emptySet()): ShardBalanceResult {
+            val nodes = MoveHelpers.readNodes(dataSources)
             val shards = MoveHelpers.readShards(nodes).mergedShards
             val knownNodes = nodes.keys.map { it.id }.toSet()
 

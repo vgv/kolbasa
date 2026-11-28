@@ -1,6 +1,5 @@
 package kolbasa.cluster.admin
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.producer.ShardId
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
@@ -16,16 +15,16 @@ import javax.sql.DataSource
  * so duplicate rows are silently skipped on retry.
  */
 internal fun move(
-    dataSources: List<DataSource>,
+    dataSources: Map<NodeId, DataSource>,
     includeTables: Set<String>?,
     excludeTables: Set<String>?,
     progressCallback: ProgressCallback
 ) {
-    val nodes = ClusterHelper.readNodes(dataSources)
+    val nodes = MoveHelpers.readNodes(dataSources)
 
     // tablename => schema
     val schemas = findAndCompareAllSchemas(
-        dataSources,
+        dataSources.values.toList(),
         includeTables = includeTables,
         excludeTables = excludeTables
     )

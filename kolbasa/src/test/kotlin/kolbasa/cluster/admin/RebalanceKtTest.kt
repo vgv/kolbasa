@@ -37,7 +37,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         seedShardTable(listOf(nodeOf(dataSource)))
         val progress = RecordingProgress()
 
-        rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 400, progressCallback = progress)
+        rebalance(nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 400, progressCallback = progress)
 
         // 1024 shards over 3 nodes is 342/341/341, so 682 of them had to leave the node that held them all
         assertEquals(682, progress.shardsMoved)
@@ -50,10 +50,12 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
     fun testRebalanceStopsOnceTheClusterIsBalanced() {
         val dataSources = clusterDataSources()
         seedShardTable(listOf(nodeOf(dataSource)))
-        rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 1024, progressCallback = ProgressCallback.Ignore)
+        rebalance(
+            nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 1024, progressCallback = ProgressCallback.Ignore
+        )
 
         val progress = RecordingProgress()
-        rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 1024, progressCallback = progress)
+        rebalance(nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 1024, progressCallback = progress)
 
         // A balanced cluster is not a reason to move anything, so the second run does not open a round
         assertEquals(0, progress.finishedRounds)
@@ -67,7 +69,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         seedShardTable(listOf(nodeOf(dataSource)))
         val progress = RecordingProgress()
 
-        rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 100, progressCallback = progress)
+        rebalance(nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 100, progressCallback = progress)
 
         // 682 shards in rounds of 100: seven rounds, the last one short
         assertEquals(7, progress.finishedRounds)
@@ -98,11 +100,13 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
             assertEquals(0, producer.send(QUEUE, request).failedMessages)
         }
 
-        rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 400, progressCallback = ProgressCallback.Ignore)
+        rebalance(
+            nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 400, progressCallback = ProgressCallback.Ignore
+        )
 
         // Every row sits on the node that owns its shard now, and nowhere else
         val owners = ShardSchema.readShards(dataSources.first())
-        val dataSourcesByNode = ClusterHelper.readNodes(dataSources).entries.associate { it.key.id to it.value }
+        val dataSourcesByNode = nodesById(dataSources)
         SHARDS_WITH_DATA.forEach { shard ->
             val owner = owners.getValue(ShardId.of(shard)).consumerNode
             dataSourcesByNode.forEach { (node, nodeDataSource) ->
@@ -120,7 +124,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         val drainedNode = nodes.first().id
         val progress = RecordingProgress()
 
-        rebalance(dataSources, drainedNodes = setOf(drainedNode), shardsPerRound = 100, progressCallback = progress)
+        rebalance(nodesById(dataSources), drainedNodes = setOf(drainedNode), shardsPerRound = 100, progressCallback = progress)
 
         val shards = ShardSchema.readShards(dataSources.first()).values
         assertEquals(0, shards.count { it.producerNode == drainedNode })
@@ -137,10 +141,12 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         seedShardTable(listOf(nodeOf(dataSource)))
         // Somebody else's migration, prepared and not finished
         val otherNode = nodeOf(dataSourceFirstSchema).id
-        prepare(dataSources, otherNode, listOf(ShardId.of(7)), ProgressCallback.Ignore)
+        prepare(nodesById(dataSources), otherNode, listOf(ShardId.of(7)), ProgressCallback.Ignore)
 
         val exception = assertThrows<ClusterOperationException.MigrationAlreadyInFlightException> {
-            rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 10, progressCallback = ProgressCallback.Ignore)
+            rebalance(
+                nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 10, progressCallback = ProgressCallback.Ignore
+            )
         }
 
         assertEquals(mapOf(otherNode to listOf(ShardId.of(7))), exception.migratingShardsByTarget)
@@ -154,7 +160,9 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         val dataSources = clusterDataSources()
 
         assertThrows<IllegalArgumentException> {
-            rebalance(dataSources, drainedNodes = emptySet(), shardsPerRound = 0, progressCallback = ProgressCallback.Ignore)
+            rebalance(
+                nodesById(dataSources), drainedNodes = emptySet(), shardsPerRound = 0, progressCallback = ProgressCallback.Ignore
+            )
         }
     }
 
@@ -180,7 +188,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
         ShardSchema.createOrUpdateShardTable(dataSource)
         ShardSchema.fillShardTable(dataSource, nodes)
         // Every node of a cluster has a copy
-        createOrRepairShardMap(clusterDataSources())
+        createOrRepairShardMap(nodesById(clusterDataSources()))
     }
 
     private fun assertShardsPerNode(expected: List<Int>) {

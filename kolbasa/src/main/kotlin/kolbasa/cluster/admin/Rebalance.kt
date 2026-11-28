@@ -1,6 +1,5 @@
 package kolbasa.cluster.admin
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.admin.check.MigrationState
 import kolbasa.cluster.admin.check.ShardBalance
 import kolbasa.producer.ShardId
@@ -20,7 +19,7 @@ import javax.sql.DataSource
  * [finalize] of the same round would then hand the shard over without them.
  */
 internal fun rebalance(
-    dataSources: List<DataSource>,
+    dataSources: Map<NodeId, DataSource>,
     drainedNodes: Set<NodeId>,
     shardsPerRound: Int,
     progressCallback: ProgressCallback
@@ -30,10 +29,10 @@ internal fun rebalance(
     }
 
     // One clear error instead of a connection failure in the middle of a round
-    MoveHelpers.checkClusterNodes(dataSources)
+    MoveHelpers.checkClusterNodes(dataSources.values.toList())
 
     // Even with nothing to move: an empty plan of an incomplete map says nothing about the cluster
-    MoveHelpers.readCompleteShards(ClusterHelper.readNodes(dataSources))
+    MoveHelpers.readCompleteShards(MoveHelpers.readNodes(dataSources))
 
     // move() and finalize() act on every migrating shard, not only on the ones prepared here. A migration
     // somebody else left in flight cannot be avoided, so it is refused instead

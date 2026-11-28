@@ -1,7 +1,7 @@
 package kolbasa.cluster.admin.check
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.admin.ColumnChange
+import kolbasa.cluster.admin.MoveHelpers
 import kolbasa.cluster.admin.NodeDelta
 import kolbasa.cluster.admin.SchemaConsistencyResult
 import kolbasa.cluster.admin.TableDivergence
@@ -111,8 +111,8 @@ internal class SchemaConsistency(
     private fun Table.fingerprint() = TableFingerprint(columns, indexes, identity != null)
 
     companion object {
-        fun check(dataSources: List<DataSource>): SchemaConsistencyResult {
-            val nodes = ClusterHelper.readNodes(dataSources)
+        fun check(dataSources: Map<NodeId, DataSource>): SchemaConsistencyResult {
+            val nodes = MoveHelpers.readNodes(dataSources)
 
             val schemasByNode = ConcurrentHashMap<NodeId, Map<String, Table>>()
             nodes.entries.parallelStream().forEach { (node, dataSource: DataSource) ->

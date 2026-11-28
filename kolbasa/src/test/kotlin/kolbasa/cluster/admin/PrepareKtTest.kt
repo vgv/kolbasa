@@ -25,7 +25,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(dataSources)
+        createOrRepairShardMap(nodesById(dataSources))
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -39,7 +39,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .sorted()
 
         // RUN
-        prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
+        prepare(nodesById(dataSources), targetNode.id, shardsToMove, ProgressCallback.Ignore)
 
         // CHECK
         // first, check the table content
@@ -79,7 +79,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(dataSources)
+        createOrRepairShardMap(nodesById(dataSources))
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
 
@@ -88,7 +88,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ClusterOperationException.MoveToNonExistingNodeException> {
-            prepare(dataSources, targetNode, shardsToMove, ProgressCallback.Ignore)
+            prepare(nodesById(dataSources), targetNode, shardsToMove, ProgressCallback.Ignore)
         }
 
         // CHECK
@@ -102,7 +102,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        createOrRepairShardMap(dataSources)
+        createOrRepairShardMap(nodesById(dataSources))
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -117,7 +117,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // RUN
         val exception = assertThrows<ClusterOperationException.MoveToTheSameShardException> {
-            prepare(dataSources, targetNode.id, shardsToMove, ProgressCallback.Ignore)
+            prepare(nodesById(dataSources), targetNode.id, shardsToMove, ProgressCallback.Ignore)
         }
 
         // CHECK
@@ -132,7 +132,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         val targetNode = nodes.keys.last().id
-        createOrRepairShardMap(dataSources)
+        createOrRepairShardMap(nodesById(dataSources))
 
         // The copies differ: an edit with a revision far ahead of every clock that only the first node has, a shard that the
         // second node lacks, and a row of the third node with the same revision and other nodes
@@ -150,7 +150,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
             .take(10)
 
         // PREPARE, one of the shards twice
-        prepare(dataSources, targetNode, shardsToMove + shardsToMove.first(), ProgressCallback.Ignore)
+        prepare(nodesById(dataSources), targetNode, shardsToMove + shardsToMove.first(), ProgressCallback.Ignore)
         dataSources.forEach { dataSource ->
             val prepared = ShardSchema.readShards(dataSource)
             shardsToMove.forEach { shard ->
@@ -161,7 +161,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         }
 
         // FINALIZE
-        finalize(dataSources, ProgressCallback.Ignore)
+        finalize(nodesById(dataSources), ProgressCallback.Ignore)
         dataSources.forEach { dataSource ->
             val finalized = ShardSchema.readShards(dataSource)
             shardsToMove.forEach { shard ->
@@ -186,7 +186,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         // The first node doesn't have the edit, but butcher knows that the shard is on the target already
         val exception = assertThrows<ClusterOperationException.MoveToTheSameShardException> {
-            prepare(dataSources, targetNode, listOf(shard), ProgressCallback.Ignore)
+            prepare(nodesById(dataSources), targetNode, listOf(shard), ProgressCallback.Ignore)
         }
         assertEquals(shard, exception.shard)
     }
@@ -205,7 +205,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
 
         val shard = requireNotNull(ShardSchema.readShards(first).values.find { it.consumerNode != targetNode }).shard
         val exception = assertThrows<ClusterOperationException.ExecutionException> {
-            prepare(dataSources, targetNode, listOf(shard), ProgressCallback.Ignore)
+            prepare(nodesById(dataSources), targetNode, listOf(shard), ProgressCallback.Ignore)
         }
         assertTrue("on node ${middleNode.id.id}" in exception.message, exception.message)
         assertTrue("The node takes no rows" in exception.message, exception.message)
@@ -223,13 +223,13 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val targetNode = nodes.keys.last().id
-        createOrRepairShardMap(dataSources)
+        createOrRepairShardMap(nodesById(dataSources))
         val map = ShardSchema.readShards(dataSource)
         dataSources.forEach { rejectRows(it) }
 
         val shard = requireNotNull(map.values.find { it.consumerNode != targetNode }).shard
         val exception = assertThrows<ClusterOperationException.ExecutionException> {
-            prepare(dataSources, targetNode, listOf(shard), ProgressCallback.Ignore)
+            prepare(nodesById(dataSources), targetNode, listOf(shard), ProgressCallback.Ignore)
         }
 
         // Every failed node is named

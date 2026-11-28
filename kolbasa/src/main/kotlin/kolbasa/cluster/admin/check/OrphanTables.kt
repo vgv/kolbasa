@@ -1,6 +1,6 @@
 package kolbasa.cluster.admin.check
 
-import kolbasa.cluster.ClusterHelper
+import kolbasa.cluster.admin.MoveHelpers
 import kolbasa.cluster.admin.OrphanTable
 import kolbasa.cluster.admin.OrphanTablesResult
 import kolbasa.schema.Const
@@ -61,8 +61,8 @@ internal class OrphanTables(
     }
 
     companion object {
-        fun check(dataSources: List<DataSource>): OrphanTablesResult {
-            val nodes = ClusterHelper.readNodes(dataSources)
+        fun check(dataSources: Map<NodeId, DataSource>): OrphanTablesResult {
+            val nodes = MoveHelpers.readNodes(dataSources)
 
             val tablesByNode: ConcurrentMap<NodeId, Set<String>> = ConcurrentHashMap()
             // Collect all tables from all nodes

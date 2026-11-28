@@ -6,6 +6,7 @@ import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
+import kolbasa.schema.IdSchema
 import kolbasa.schema.NodeId
 import kolbasa.utils.JdbcHelpers.readInt
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -25,7 +26,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testEmptyNodeListIsRejected() {
         assertThrows<IllegalArgumentException> {
-            ClusterAdmin(emptyList())
+            ClusterAdmin(emptyMap())
         }
     }
 
@@ -33,7 +34,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     fun testCreatingAdminChangesNothingInTheDatabase() {
         val tablesBefore = publicTables()
 
-        ClusterAdmin(listOf(dataSource))
+        ClusterAdmin(mapOf(NodeId("node-01") to dataSource))
 
         // An operator reaches for ClusterAdmin when the cluster is already broken, so it must not create or
         // seed anything on its way in - unlike Cluster, which initializes what it needs when it starts
@@ -49,7 +50,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         }
 
         // Constructing is fine, an unreachable node only becomes a problem when the cluster is asked
-        assertDoesNotThrow { ClusterAdmin(listOf(unreachable)) }
+        assertDoesNotThrow { ClusterAdmin(mapOf(NodeId("node-01") to unreachable)) }
     }
 
     @Test
@@ -59,7 +60,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
 
         // A write would fail: the transactions of these nodes are read only
-        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+        val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
         runEveryCheck(admin, nodes.keys.first().id)
 
         dataSources.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
@@ -81,8 +82,55 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
             statement.execute("comment on function ${ShardSchema.SET_REVISION_FUNCTION_NAME}() is 'kolbasa-shard-revision:other'")
         }
 
-        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+        val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
         runEveryCheck(admin, nodes.keys.first().id)
+    }
+
+    @Test
+    fun testNodeWithoutIdIsRefused() {
+        // Two nodes have their ids, the third one has never been set up
+        val nodes = nodesById(listOf(dataSource, dataSourceFirstSchema)) + (NEW_NODE to dataSourceSecondSchema)
+
+        // A write would fail: the transactions of these nodes are read only
+        val admin = ClusterAdmin(nodes.mapValues { (_, node) -> ReadOnlyDataSource(node) })
+        everyMethod(admin, nodes.keys.first()).forEach { method ->
+            val exception = assertThrows<ClusterOperationException.NodesNotInitializedException> { method() }
+            assertEquals(listOf(NEW_NODE), exception.nodes)
+        }
+
+        // The node is not given an id, and no shard map is created anywhere
+        assertFalse(IdSchema.nodeTableExists(dataSourceSecondSchema))
+        nodes.values.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
+    }
+
+    @Test
+    fun testNodeWithAnotherIdIsRefused() {
+        val setUpNodes = nodesById(listOf(dataSource, dataSourceFirstSchema))
+        val (renamedNode, renamed) = setUpNodes.entries.first()
+        // One node is listed under a wrong id, and the third one has never been set up
+        val nodes = setUpNodes - renamedNode + (WRONG_ID to renamed) + (NEW_NODE to dataSourceSecondSchema)
+
+        // The wrong id wins: with a wrong node list it doesn't matter which nodes have no id yet
+        val admin = ClusterAdmin(nodes.mapValues { (_, node) -> ReadOnlyDataSource(node) })
+        everyMethod(admin, nodes.keys.first()).forEach { method ->
+            val exception = assertThrows<ClusterOperationException.NodeIdMismatchException> { method() }
+            assertEquals(mapOf(WRONG_ID to renamedNode), exception.mismatches)
+            assertEquals(emptyList<NodeId>(), exception.nodesWithEmptyTable)
+        }
+    }
+
+    @Test
+    fun testNodeTableWithoutRowIsRefused() {
+        val nodes = nodesById(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
+        val (emptyNode, emptyTable) = nodes.entries.last()
+        emptyTable.useStatement { it.execute("delete from ${IdSchema.NODE_TABLE_NAME}") }
+
+        val admin = ClusterAdmin(nodes.mapValues { (_, node) -> ReadOnlyDataSource(node) })
+        everyMethod(admin, nodes.keys.first()).forEach { method ->
+            val exception = assertThrows<ClusterOperationException.NodeIdMismatchException> { method() }
+            assertEquals(emptyMap<NodeId, NodeId>(), exception.mismatches)
+            assertEquals(listOf(emptyNode), exception.nodesWithEmptyTable)
+        }
     }
 
     @Test
@@ -91,7 +139,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val (firstNode, secondNode, thirdNode) = nodes.keys.map { it.id }
         val (first, second, _) = nodes.values.toList()
-        val admin = ClusterAdmin(dataSources)
+        val admin = ClusterAdmin(nodesById(dataSources))
 
         // No map yet
         assertTrue(admin.checkShardMap().isMissing)
@@ -135,7 +183,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     fun testCreateOrRepairShardMap_NewCluster() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
-        val admin = ClusterAdmin(dataSources)
+        val admin = ClusterAdmin(nodesById(dataSources))
 
         assertEquals(nodes.associateWith { ShardId.SHARD_COUNT }, admin.createOrRepairShardMap())
 
@@ -151,7 +199,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
-        val admin = ClusterAdmin(dataSources)
+        val admin = ClusterAdmin(nodesById(dataSources))
         Cluster(dataSources, emptyList()).updateTopology()
 
         // The first node has an edit by hand. The second copy has an older row, a row with the same revision and other nodes,
@@ -188,7 +236,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val (_, middle, last) = nodes.values.toList()
         val middleNode = nodes.keys.toList()[1].id
-        val admin = ClusterAdmin(dataSources)
+        val admin = ClusterAdmin(nodesById(dataSources))
         Cluster(dataSources, emptyList()).updateTopology()
 
         listOf(middle, last).forEach { node ->
@@ -247,7 +295,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     @Test
     fun testPlanNodesDrainProposesEverythingTheNodeHolds() {
         val dataSources = seededCluster()
-        val admin = ClusterAdmin(dataSources)
+        val admin = ClusterAdmin(nodesById(dataSources))
         val drainedNode = ClusterHelper.readNodes(dataSources).keys.first().id
 
         val plan = admin.planNodesDrain(setOf(drainedNode))
@@ -267,7 +315,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val knownNode = ClusterHelper.readNodes(dataSources).keys.first().id
 
         val exception = assertThrows<ClusterOperationException.DrainUnknownNodeException> {
-            ClusterAdmin(dataSources).planNodesDrain(setOf(NodeId("there-is-no-such-node")))
+            ClusterAdmin(nodesById(dataSources)).planNodesDrain(setOf(NodeId("there-is-no-such-node")))
         }
 
         // The message names the ids that would have worked: an internal node id is easy to mistype
@@ -283,13 +331,13 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         // Emptying it would leave its shards nowhere to go
         assertThrows<ClusterOperationException.DrainLastNodeException> {
-            ClusterAdmin(dataSources).planNodesDrain(setOf(theOnlyNode))
+            ClusterAdmin(nodesById(dataSources)).planNodesDrain(setOf(theOnlyNode))
         }
     }
 
     @Test
     fun testDrainingNoNodesIsRejected() {
-        val admin = ClusterAdmin(seededCluster())
+        val admin = ClusterAdmin(nodesById(seededCluster()))
 
         // An empty set would make the plan a plain rebalance of the whole cluster
         assertThrows<IllegalArgumentException> {
@@ -305,7 +353,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         // A new map hands every shard to a random node, so the cluster starts out uneven
         val dataSources = seededCluster()
 
-        ClusterAdmin(dataSources).rebalance(shardsPerRound = 400)
+        ClusterAdmin(nodesById(dataSources)).rebalance(shardsPerRound = 400)
 
         // 1024 shards over three nodes
         assertEquals(listOf(342, 341, 341), shardsPerNode().values.sortedDescending())
@@ -316,7 +364,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val dataSources = seededCluster()
         val drainedNode = ClusterHelper.readNodes(dataSources).keys.first().id
 
-        ClusterAdmin(dataSources).drainNodes(setOf(drainedNode), shardsPerRound = 200)
+        ClusterAdmin(nodesById(dataSources)).drainNodes(setOf(drainedNode), shardsPerRound = 200)
 
         // The shards it held are spread over the two nodes that stay
         val shardsPerNode = shardsPerNode()
@@ -330,7 +378,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val (stayingNode, drainedNodes) = ClusterHelper.readNodes(dataSources).keys.map { it.id }
             .let { it.first() to it.drop(1).toSet() }
 
-        ClusterAdmin(dataSources).drainNodes(drainedNodes, shardsPerRound = 200)
+        ClusterAdmin(nodesById(dataSources)).drainNodes(drainedNodes, shardsPerRound = 200)
 
         // Two of the three nodes drained, so the one that stays holds everything
         assertEquals(mapOf(stayingNode to 1024), shardsPerNode())
@@ -352,7 +400,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     private fun seedShardTable(dataSources: List<DataSource>) {
-        ClusterAdmin(dataSources).createOrRepairShardMap()
+        ClusterAdmin(nodesById(dataSources)).createOrRepairShardMap()
     }
 
     private fun assertEveryOperationRefuses(
@@ -362,7 +410,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     ) {
         val node = ClusterHelper.readNodes(dataSources).keys.first().id
         // The transactions of these nodes are read only, so an operation that writes before it refuses fails otherwise
-        val admin = ClusterAdmin(dataSources.map { ReadOnlyDataSource(it) })
+        val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
 
         listOf<() -> Unit>(
             { admin.prepareMigration(node, listOf(ShardId.of(1))) },
@@ -376,6 +424,24 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
             assertEquals(shardsWithoutRow, exception.shardsWithoutRow)
         }
     }
+
+    /**
+     * Every public method of [admin], with [node] wherever one needs a node
+     */
+    private fun everyMethod(admin: ClusterAdmin, node: NodeId): List<() -> Unit> = listOf(
+        { admin.checkShardBalance() },
+        { admin.planNodesDrain(setOf(node)) },
+        { admin.checkSchemaConsistency() },
+        { admin.checkOrphanTables() },
+        { admin.checkMigrationState() },
+        { admin.checkShardMap() },
+        { admin.createOrRepairShardMap() },
+        { admin.prepareMigration(node, listOf(ShardId.of(1))) },
+        { admin.moveData() },
+        { admin.rebalance(shardsPerRound = 100) },
+        { admin.drainNodes(setOf(node), shardsPerRound = 100) },
+        { admin.finalizeMigration() },
+    )
 
     private fun runEveryCheck(admin: ClusterAdmin, node: NodeId) {
         admin.checkShardBalance()
@@ -395,6 +461,11 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
     private fun publicTables(): Int {
         return dataSource.readInt("select count(*) from information_schema.tables where table_schema='public'")
+    }
+
+    private companion object {
+        val NEW_NODE = NodeId("node-new")
+        val WRONG_ID = NodeId("node-wrong")
     }
 
 }

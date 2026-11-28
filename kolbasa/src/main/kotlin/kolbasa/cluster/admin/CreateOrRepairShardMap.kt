@@ -1,14 +1,13 @@
 package kolbasa.cluster.admin
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 /**
  * Returns how many rows of the shard table have changed on every node
  */
-internal fun createOrRepairShardMap(dataSources: List<DataSource>): Map<NodeId, Int> {
-    val nodes = ClusterHelper.readNodes(dataSources)
+internal fun createOrRepairShardMap(dataSources: Map<NodeId, DataSource>): Map<NodeId, Int> {
+    val nodes = MoveHelpers.readNodes(dataSources)
     val copiesBefore = MoveHelpers.readShards(nodes).copies
 
     val shardMap = MoveHelpers.readOrCreateShards(nodes)

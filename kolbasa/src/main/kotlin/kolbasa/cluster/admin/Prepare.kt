@@ -1,6 +1,5 @@
 package kolbasa.cluster.admin
 
-import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
@@ -8,12 +7,12 @@ import kolbasa.schema.NodeId
 import javax.sql.DataSource
 
 internal fun prepare(
-    dataSources: List<DataSource>,
+    dataSources: Map<NodeId, DataSource>,
     target: NodeId,
     shards: List<ShardId>,
     progressCallback: ProgressCallback
 ) {
-    val nodes = ClusterHelper.readNodes(dataSources)
+    val nodes = MoveHelpers.readNodes(dataSources)
     val initialShards = MoveHelpers.readCompleteShards(nodes)
 
     // Check that target node exists
