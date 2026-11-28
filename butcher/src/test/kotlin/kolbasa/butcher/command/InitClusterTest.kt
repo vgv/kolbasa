@@ -83,7 +83,7 @@ class InitClusterTest : AbstractPostgreSQLTest() {
         val text = result.output.replace(Regex("\\s+"), " ")
 
         assertTrue(text.contains("node-02 has messages, and the cluster has no shard map yet"), result.output)
-        assertTrue(text.contains("Its message ids can collide with another node's as well"), result.output)
+        assertFalse(text.contains("message ids"), result.output)
         assertTrue(text.contains("Initialize the cluster with this node alone first, then add the other nodes"), result.output)
         // A warning, not a refusal: the question is still asked
         assertTrue(text.contains("3 node(s) will get an id, 1024 shard(s) will get a node. Continue?"), result.output)

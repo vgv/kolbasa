@@ -67,7 +67,8 @@ class InitClusterPlanRenderTest {
         assertTrue(lines[0].startsWith("node-01 has messages, and the cluster has no shard map yet."), text)
         assertTrue(!lines[0].contains("message ids"), text)
         assertTrue(lines[1].startsWith("node-02 has messages, and the cluster has no shard map yet."), text)
-        assertTrue(lines[1].contains("Its message ids can collide with another node's as well."), text)
+        // A new node never gets a bucket that messages have ids from, so the ids are no risk
+        assertTrue(!lines[1].contains("message ids"), text)
         assertTrue(lines[1].endsWith("Initialize the cluster with this node alone first, then add the other nodes."), text)
     }
 

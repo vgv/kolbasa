@@ -7,7 +7,7 @@ import kolbasa.schema.NodeId
  *
  * @property id the id it gets: the one it is listed under
  * @property bucket the bucket it gets. The bucket is the top bits of every message id the node creates, so no two nodes
- * share one
+ * share one, and a new node doesn't get a bucket that messages of the cluster have ids from
  * @property hasMessages whether a queue table of this node has a row, a dead letter queue or an archive among them. Such
  * a node was used without a cluster
  */
@@ -23,8 +23,7 @@ data class NewNode(
  * @property newNodes the nodes that have no id yet, in the order of their ids
  * @property initializedNodes the nodes that have their ids already. They stay as they are
  * @property unsafeNodes the new nodes that hold messages, in a cluster of more than one node. Alone, such a node becomes
- * a cluster of one node safely. With other nodes, its message ids can collide with theirs, and its messages of shards
- * that go to other nodes stay unread
+ * a cluster of one node safely. With other nodes, its messages of shards that go to other nodes stay unread
  */
 data class InitNodesPlan(
     val newNodes: List<NewNode>,

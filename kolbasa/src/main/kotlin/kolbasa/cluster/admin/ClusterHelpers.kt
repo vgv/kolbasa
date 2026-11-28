@@ -4,6 +4,8 @@ import kolbasa.cluster.Shard
 import kolbasa.cluster.schema.ShardCopies
 import kolbasa.cluster.schema.ShardMap
 import kolbasa.producer.ShardId
+import kolbasa.schema.Const
+import kolbasa.schema.IdRange
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
@@ -44,6 +46,11 @@ internal object ClusterHelpers {
      * A cause chain is usually two or three deep; a longer one is noise in an error message
      */
     private const val MAX_REPORTED_CAUSES = 3
+
+    /**
+     * How many tables one statement of [hasIdsOf] looks into
+     */
+    private const val TABLES_PER_STATEMENT = 100
 
     /**
      * Reads every node of [dataSources] the way a [Cluster][kolbasa.cluster.Cluster] does: a node without `q__node` gets
@@ -230,9 +237,33 @@ internal object ClusterHelpers {
      * Whether a queue table of this node has a row: a main queue, a dead letter queue or an archive
      */
     fun hasMessages(dataSource: DataSource): Boolean {
-        val queueTables = SchemaExtractor.extractRawSchema(dataSource).values.filter { it.isQueueTable() }
+        return queueTables(dataSource).any { table -> dataSource.readBoolean("select exists(select 1 from $table)") }
+    }
 
-        return queueTables.any { table -> dataSource.readBoolean("select exists(select 1 from ${table.name})") }
+    /**
+     * The queue tables of this node: main queues, dead letter queues and archives
+     */
+    fun queueTables(dataSource: DataSource): List<String> {
+        return SchemaExtractor.extractRawSchema(dataSource).values.filter { it.isQueueTable() }.map { it.name }
+    }
+
+    /**
+     * Whether a table of [tables] on this node holds a row with an id from [bucket]: one look into the primary key of
+     * every table, [TABLES_PER_STATEMENT] tables in one statement
+     */
+    fun hasIdsOf(bucket: Int, dataSource: DataSource, tables: List<String>): Boolean {
+        val range = IdRange.generateRange(bucket)
+
+        for (chunk in tables.chunked(TABLES_PER_STATEMENT)) {
+            val lookups = chunk.map { table ->
+                "exists(select 1 from $table where ${Const.ID_COLUMN_NAME} between ${range.min} and ${range.max})"
+            }
+            if (dataSource.readBoolean("select " + lookups.joinToString(" or "))) {
+                return true
+            }
+        }
+
+        return false
     }
 
     // A write to every node: one that fails doesn't stop the others, and the change is in effect once one node has it

@@ -96,6 +96,10 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
         message: String
     ) : ClusterOperationException(message)
 
+    class NoFreeBucketException : ClusterOperationException(
+        "There is no bucket left for a new node: every one is used by a node, or by messages with ids from it"
+    )
+
     class NodesNotInitializedException(
         val nodes: List<NodeId>
     ) : ClusterOperationException(

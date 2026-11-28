@@ -509,10 +509,9 @@ then add the other nodes.
 
 That is how a database used without a cluster grows into one. `init-cluster` with a config of its line alone
 gives it every shard. Then `init-cluster` with the full config gives the other nodes their ids and a copy of the
-map, and `rebalance-cluster` moves shards to them together with their messages. If the node has no id yet, the
-warning adds that its message ids can collide with another node's. A node with messages and no id that joins a
-cluster with a map gets a warning of its own: its messages stay unread, as its shards belong to other nodes. The
-whole procedure is in
+map, and `rebalance-cluster` moves shards to them together with their messages. A node with messages and no id
+that joins a cluster with a map gets a warning of its own: its messages stay unread, as its shards belong to other
+nodes. The whole procedure is in
 [Cluster architecture.md](Cluster%20architecture.md#from-a-standalone-database-to-a-cluster).
 
 If a step fails, the steps after it don't run. Fix the cause and run the command again: it does only what is
@@ -528,8 +527,11 @@ Gives every node that has no id yet the id from its line, see [Node ids](#node-i
 before the application's `Cluster` sees it. A node that has its id already is left alone, so the command is safe
 to run again.
 
-A new node also gets its bucket: the lowest one no other node uses. The bucket is the top bits of every message
-id the node creates, so that no two nodes create the same id, see [Message IDs.md](Message%20IDs.md).
+A new node also gets its bucket: the lowest one that no other node uses and that no message in the cluster has an
+id from. The bucket is the top bits of every message id the node creates, so that no two nodes create the same id,
+see [Message IDs.md](Message%20IDs.md). The messages of a removed node live on in the other nodes with their ids,
+so its bucket stays taken while any of them is left. If every bucket is taken, the command refuses before it
+changes anything.
 
 Before the question it prints what will happen:
 
@@ -547,15 +549,14 @@ If every node has its id already, it says so and asks nothing.
 A node that holds messages but has no id gets a warning before the question:
 
 ```
-node-03 has messages but no id yet. Initializing it together with other nodes is unsafe: its message ids can
-collide with another node's, and its messages of shards that go to other nodes stay unread. To grow a standalone
-node into a cluster, init it alone first, see Butcher.md.
+node-03 has messages but no id yet. Initializing it together with other nodes is unsafe: its messages of shards
+that go to other nodes stay unread. To grow a standalone node into a cluster, init it alone first, see Butcher.md.
 ```
 
-Such a node was used without a cluster, or has lost its `q__node`. Its message ids come from a bucket the other
-nodes know nothing about. Its messages of shards that other nodes own are never read: consumers read a shard on
-the node that owns it. Alone, with a config of one line, the node becomes a cluster of one node, and that is
-safe, see
+Such a node was used without a cluster, or has lost its `q__node`. Its messages of shards that other nodes own are
+never read: consumers read a shard on the node that owns it. Its message ids are no risk: the node doesn't get the
+bucket they come from, and neither does any other. Alone, with a config of one line, the node becomes a cluster of
+one node, and that is safe, see
 [Cluster architecture.md](Cluster%20architecture.md#from-a-standalone-database-to-a-cluster). The warning is not
 a refusal: answer no to stop.
 

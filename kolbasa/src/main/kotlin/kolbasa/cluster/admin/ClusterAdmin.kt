@@ -60,6 +60,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      *
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
+     * @throws ClusterOperationException.NoFreeBucketException if every bucket is taken by a node, or by messages with
+     * ids from it
      */
     fun planInitCluster(): InitClusterPlan {
         ClusterHelpers.checkReachable(nodes)
@@ -77,6 +79,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      *
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row. Then nothing is written
+     * @throws ClusterOperationException.NoFreeBucketException if every bucket is taken by a node, or by messages with
+     * ids from it
      */
     fun initCluster(): InitClusterResult {
         ClusterHelpers.checkReachable(nodes)
@@ -94,6 +98,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      *
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
+     * @throws ClusterOperationException.NoFreeBucketException if every bucket is taken by a node, or by messages with
+     * ids from it
      */
     fun planInitNodes(): InitNodesPlan {
         ClusterHelpers.checkReachable(nodes)
@@ -103,9 +109,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
     /**
      * Gives every node without an id the one it is listed under in [nodes], and a bucket of its own
      *
-     * A new node gets the lowest bucket no other node uses, the nodes in the order of their ids. If a node has another
-     * id, or a `q__node` table without its row, no node gets an id: a wrong id means the node list is wrong, and a wrong
-     * list must not set up anything.
+     * A new node gets the lowest bucket that no other node uses and that no message of the cluster has an id from, the
+     * nodes in the order of their ids: a removed node's messages keep its bucket taken. If a node has another id, or a
+     * `q__node` table without its row, no node gets an id: a wrong id means the node list is wrong, and a wrong list
+     * must not set up anything.
      *
      * This doesn't look at [planInitNodes], and gives an unsafe node its id as well: read the plan first. Call this
      * before a [Cluster][kolbasa.cluster.Cluster] sees the new nodes. A Cluster gives a node without an id a random one.
@@ -113,6 +120,8 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @return the nodes this call gave an id to. A node that another process set up at the same moment is not among them
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
+     * @throws ClusterOperationException.NoFreeBucketException if every bucket is taken by a node, or by messages with
+     * ids from it
      */
     fun initNodes(): List<NodeId> {
         ClusterHelpers.checkReachable(nodes)

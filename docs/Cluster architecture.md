@@ -713,8 +713,10 @@ the first node of a cluster, and new nodes join it the usual way. The order of t
      line of the butcher config. Or rename it first, with `update q__node set id = 'node-01'`: nothing refers to the id while the
      database has never been part of a cluster.
    - If there is no table, the database has no id yet. Put any id on its line, and `init-cluster` gives it that id.
-2. **Make it a cluster of one node.** Run `butcher init-cluster` with a config of that one line. The node keeps bucket `0`, the
-   range its messages already use, and gets every shard. Every message it holds is now in a shard it owns.
+2. **Make it a cluster of one node.** Run `butcher init-cluster` with a config of that one line. The node gets every shard, so
+   every message it holds is now in a shard it owns. A database that had an id keeps its bucket, `0`. One without an id gets the
+   lowest bucket its messages don't use, `1`: the ids of its messages stay as they are, and no other node gets bucket `0` while
+   any of them is left.
 3. **Switch every application to `Cluster`**, with this one node. Do it before the first shard moves: a standalone producer
    writes every shard to this database, and once a shard has moved, consumers read it on the other node only.
 4. **Add the new databases.** Add their lines to the config and run `butcher init-cluster` again. They get their ids, the next
@@ -725,13 +727,11 @@ the first node of a cluster, and new nodes join it the usual way. The order of t
 What doesn't work:
 
 - **Setting the database up together with the new nodes in one go.** The shards are spread over all the nodes at once, and its
-  messages of the shards that go to other nodes are never read. If it has no id yet, it can get a bucket other than `0`, and
-  then its old ids can collide with another node's. butcher warns about both before it asks, see
+  messages of the shards that go to other nodes are never read. butcher warns about this before it asks, see
   [Butcher.md](Butcher.md#init-cluster).
 - **Merging two standalone databases.** Both hold messages in bucket `0`, so their ids collide, see
   [Message IDs.md](Message%20IDs.md).
-- **Adding a database with messages to a running cluster.** Its shards belong to other nodes, so its messages are never read,
-  and its ids can collide with another node's.
+- **Adding a database with messages to a running cluster.** Its shards belong to other nodes, so its messages are never read.
 
 A standalone database without messages is the same as a new one: set it up together with the others.
 

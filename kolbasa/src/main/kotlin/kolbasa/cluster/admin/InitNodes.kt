@@ -14,7 +14,7 @@ internal fun planInitNodes(dataSources: Map<NodeId, DataSource>): InitNodesPlan 
     ClusterHelpers.throwIfIdsMismatched(tables)
 
     val newNodes = mutableListOf<NewNode>()
-    for ((nodeId, bucket) in bucketsOfNewNodes(tables)) {
+    for ((nodeId, bucket) in bucketsOfNewNodes(dataSources, tables)) {
         newNodes += NewNode(nodeId, bucket, ClusterHelpers.hasMessages(dataSources.getValue(nodeId)))
     }
 
@@ -36,7 +36,7 @@ internal fun initNodes(dataSources: Map<NodeId, DataSource>): List<NodeId> {
     // A wrong id means the node list is wrong, and a wrong list must not set up anything
     ClusterHelpers.throwIfIdsMismatched(tables)
 
-    val buckets = bucketsOfNewNodes(tables)
+    val buckets = bucketsOfNewNodes(dataSources, tables)
     val initialized = mutableListOf<NodeId>()
     for ((nodeId, bucket) in buckets) {
         if (IdSchema.createAndInitIdTable(dataSources.getValue(nodeId), nodeId, bucket)) {
@@ -53,17 +53,49 @@ internal fun initNodes(dataSources: Map<NodeId, DataSource>): List<NodeId> {
 }
 
 /**
- * The bucket of every node without an id: the lowest one no other node uses. The nodes go in the order of their ids,
- * so the same node list always gets the same buckets
+ * The bucket of every node without an id: the lowest one that no node uses and that no queue table of any node holds an
+ * id from. The nodes go in the order of their ids, so the same node list and the same data always get the same buckets
+ *
+ * A removed node's messages live on in the other nodes, with their ids. A new node with its bucket would make the same
+ * ids again, and a later move of such a message would lose it: the target keeps its own row, and the source deletes
+ * the moved one.
+ *
+ * @throws ClusterOperationException.NoFreeBucketException if every bucket is taken
  */
-private fun bucketsOfNewNodes(tables: NodeTables): SortedMap<NodeId, Int> {
-    val usedBuckets = tables.found.values.map { node -> node.identifiersBucket }.toMutableSet()
-
+private fun bucketsOfNewNodes(dataSources: Map<NodeId, DataSource>, tables: NodeTables): SortedMap<NodeId, Int> {
     val result = sortedMapOf<NodeId, Int>()
+    if (tables.withoutTable.isEmpty()) {
+        return result
+    }
+
+    val usedBuckets = tables.found.values.map { node -> node.identifiersBucket }.toMutableSet()
+    // Read once: every bucket is looked up in the same tables
+    val queueTables = dataSources.mapValues { (_, dataSource) -> ClusterHelpers.queueTables(dataSource) }
+
+    var bucket = Node.MIN_BUCKET
     for (nodeId in tables.withoutTable.sorted()) {
-        val bucket = (Node.MIN_BUCKET..Node.MAX_BUCKET).first { bucket -> bucket !in usedBuckets }
+        while (bucket in usedBuckets || hasIdsOf(bucket, dataSources, queueTables)) {
+            bucket++
+            if (bucket > Node.MAX_BUCKET) {
+                throw ClusterOperationException.NoFreeBucketException()
+            }
+        }
         usedBuckets += bucket
         result[nodeId] = bucket
     }
     return result
+}
+
+// Whether a queue table of any node holds an id from [bucket]
+private fun hasIdsOf(
+    bucket: Int,
+    dataSources: Map<NodeId, DataSource>,
+    queueTables: Map<NodeId, List<String>>
+): Boolean {
+    for ((nodeId, dataSource) in dataSources) {
+        if (ClusterHelpers.hasIdsOf(bucket, dataSource, queueTables.getValue(nodeId))) {
+            return true
+        }
+    }
+    return false
 }

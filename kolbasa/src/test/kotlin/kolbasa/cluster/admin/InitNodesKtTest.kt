@@ -5,9 +5,11 @@ import kolbasa.queue.DlqOptions
 import kolbasa.queue.PredefinedDataTypes
 import kolbasa.queue.Queue
 import kolbasa.queue.QueueOptions
+import kolbasa.schema.Const
 import kolbasa.schema.IdSchema
 import kolbasa.schema.Node
 import kolbasa.schema.NodeId
+import kolbasa.schema.SchemaExtractor
 import kolbasa.schema.SchemaHelpers
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.utils.JdbcHelpers.useStatement
@@ -80,6 +82,62 @@ class InitNodesKtTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testInitNodes_Bucket_Of_A_Removed_Node_Is_Skipped() {
+        ClusterAdmin(mapOf(NODE_01 to dataSource, NODE_02 to dataSourceFirstSchema, NODE_03 to dataSourceSecondSchema))
+            .initNodes()
+        // node-03 makes a message, so its id is from bucket 2
+        SchemaHelpers.createOrUpdateQueues(dataSourceSecondSchema, QUEUE)
+        DatabaseProducer(dataSourceSecondSchema).send(QUEUE, "old").throwExceptionIfAny()
+        // node-03 is drained: the message moves to node-01 with its id. Then node-03 leaves the cluster, and its database
+        // comes back empty as node-04
+        SchemaHelpers.createOrUpdateQueues(dataSource, QUEUE)
+        dataSource.useStatement { statement ->
+            statement.execute("insert into ${QUEUE.dbTableName} select * from $SECOND_SCHEMA_NAME.${QUEUE.dbTableName}")
+        }
+        dataSourceSecondSchema.useStatement { statement ->
+            val deadLetterQueue = requireNotNull(QUEUE.deadLetterQueue)
+            statement.execute("drop table ${IdSchema.NODE_TABLE_NAME}, ${QUEUE.dbTableName}, ${deadLetterQueue.dbTableName}")
+        }
+        val admin = ClusterAdmin(
+            mapOf(NODE_01 to dataSource, NODE_02 to dataSourceFirstSchema, NODE_04 to dataSourceSecondSchema)
+        )
+
+        // Bucket 2 is still in use by the old message, so the new node gets the next one
+        assertEquals(listOf(NewNode(NODE_04, Node.MIN_BUCKET + 3, hasMessages = false)), admin.planInitNodes().newNodes)
+
+        // Once the old message is gone, the bucket is free again
+        dataSource.useStatement { statement -> statement.execute("delete from ${QUEUE.dbTableName}") }
+        assertEquals(listOf(NODE_04), admin.initNodes())
+        assertNodeInfo(dataSourceSecondSchema, NODE_04, Node.MIN_BUCKET + 2)
+    }
+
+    @Test
+    fun testInitNodes_No_Free_Bucket() {
+        ClusterAdmin(mapOf(NODE_01 to dataSource)).initNodes()
+        SchemaHelpers.createOrUpdateQueues(dataSource, QUEUE)
+        DatabaseProducer(dataSource).send(QUEUE, "message").throwExceptionIfAny()
+        // A message with an id from every other bucket
+        val columns = SchemaExtractor.extractRawSchema(dataSource).getValue(QUEUE.dbTableName).columns
+            .map { column -> column.name }
+            .filter { name -> name != Const.ID_COLUMN_NAME }
+            .joinToString(",")
+        dataSource.useStatement { statement ->
+            statement.execute(
+                "insert into ${QUEUE.dbTableName} (${Const.ID_COLUMN_NAME}, $columns) " +
+                    "select (bucket::bigint << ${Node.BITS_TO_HOLD_ID_VALUE}) + 7, $columns " +
+                    "from ${QUEUE.dbTableName}, generate_series(${Node.MIN_BUCKET + 1}, ${Node.MAX_BUCKET}) bucket"
+            )
+        }
+
+        val exception = assertThrows<ClusterOperationException.NoFreeBucketException> {
+            ClusterAdmin(mapOf(NODE_01 to dataSource, NODE_02 to dataSourceFirstSchema)).initNodes()
+        }
+
+        assertTrue("There is no bucket left for a new node" in exception.message, exception.message)
+        assertFalse(IdSchema.nodeTableExists(dataSourceFirstSchema))
+    }
+
+    @Test
     fun testInitNodes_Two_Ids_Same_Database() {
         val exception = assertThrows<ClusterOperationException.NodeIdMismatchException> {
             ClusterAdmin(mapOf(NODE_01 to dataSource, NODE_02 to dataSource)).initNodes()
@@ -121,9 +179,9 @@ class InitNodesKtTest : AbstractPostgreSQLTest() {
         DatabaseProducer(dataSourceFirstSchema).send(requireNotNull(QUEUE.deadLetterQueue), "dead").throwExceptionIfAny()
         dropNodeTable(dataSourceFirstSchema)
 
-        // Alone, it becomes a cluster of one node, and that is safe
+        // Alone, it becomes a cluster of one node, and that is safe. Its messages keep bucket 0 taken, so it gets the next one
         val alone = ClusterAdmin(mapOf(NODE_02 to dataSourceFirstSchema)).planInitNodes()
-        assertEquals(listOf(NewNode(NODE_02, Node.MIN_BUCKET, hasMessages = true)), alone.newNodes)
+        assertEquals(listOf(NewNode(NODE_02, Node.MIN_BUCKET + 1, hasMessages = true)), alone.newNodes)
         assertEquals(emptyList<NodeId>(), alone.unsafeNodes)
 
         // Together with another node it is not
@@ -175,6 +233,7 @@ class InitNodesKtTest : AbstractPostgreSQLTest() {
         val NODE_01 = NodeId("node-01")
         val NODE_02 = NodeId("node-02")
         val NODE_03 = NodeId("node-03")
+        val NODE_04 = NodeId("node-04")
         val WRONG_ID = NodeId("node-99")
 
         val QUEUE = Queue(

@@ -33,13 +33,12 @@ internal fun InitClusterPlan.render(): Widget = verticalLayout {
     unsafeNodes.forEach { node ->
         // A node is unsafe for the shard map only while there is none, and then the way out is to start with it alone
         val warning = if (node in shards.unsafeNodes) {
-            val ids = if (node in nodes.unsafeNodes) " Its message ids can collide with another node's as well." else ""
             "${node.id} has messages, and the cluster has no shard map yet. Initializing it together with other nodes " +
-                "is unsafe: the messages of the shards that go to other nodes stay unread.$ids Initialize the cluster " +
+                "is unsafe: the messages of the shards that go to other nodes stay unread. Initialize the cluster " +
                 "with this node alone first, then add the other nodes."
         } else {
-            "${node.id} has messages but no id yet. Adding it to this cluster is unsafe: its message ids can collide " +
-                "with another node's, and its messages stay unread, as its shards belong to other nodes."
+            "${node.id} has messages but no id yet. Adding it to this cluster is unsafe: its messages stay unread, as " +
+                "its shards belong to other nodes."
         }
         cell(TextColors.yellow(warning))
     }
