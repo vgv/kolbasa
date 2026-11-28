@@ -283,8 +283,8 @@ Inspection of the cluster. Safe to run at any time, it changes nothing. It is th
 `--yes` to forget. If `--checks` is omitted, every check runs; name several to run just those.
 
 Like every command, it starts by confirming it can connect to **every** node in the config: one `select 1`
-per node, before anything else happens. If any node is unreachable it stops and tells you which ones, and
-what the driver said about each.
+per node, before anything else happens. If any node is unreachable it stops and names each one by its id, with
+the reason: the connection pool's own words first, and what the driver said under them.
 
 Then, again like every command, it checks that every node has the id on its line (see [Node ids](#node-ids)).
 
@@ -1166,14 +1166,11 @@ bucket can give two nodes the same ids.
 
 Every check, every migration step, both high-level commands, the setup of nodes and shards and the shard map
 sync are methods on `kolbasa.cluster.admin.ClusterAdmin`, so a rebalance can be driven by a program instead of by hand.
-The CLI is a frontend over this class and `ClusterAdminHelpers`, and uses nothing they do not offer — `butcher`
-is the name of the tool, not of the API.
+The CLI is a frontend over this class, and uses nothing it does not offer — `butcher` is the name of the tool,
+not of the API.
 
 ```kotlin
 val nodes = mapOf(NodeId("node-01") to node01, NodeId("node-02") to node02, NodeId("node-03") to node03)
-
-// What butcher does before every command
-ClusterAdminHelpers.checkNodesAvailable(nodes.values.toList())
 
 val admin = ClusterAdmin(nodes)   // the same DataSources a Cluster is given, by node id
 
@@ -1214,10 +1211,10 @@ when a cluster is already in a bad state, and a tool that repaired the schema or
 its way in would destroy the evidence it was asked to look at. (`Cluster` does initialize what it needs when
 it starts, which is why it is the wrong thing to diagnose a cluster with.)
 
-The check butcher runs first is not part of `ClusterAdmin`. It lives in `ClusterAdminHelpers`, and you call it
-before creating one: `checkNodesAvailable` fails with one clear error if a node can't be reached. The
-[node id check](#node-ids) is part of `ClusterAdmin`, and every call makes it first. A node with another id
-fails with `NodeIdMismatchException`. A node without an id fails with `NodesNotInitializedException`, in every
+Every call starts with two checks. First, every node must be reachable: if one isn't, the call fails with
+`NodesUnreachableException`, which names every such node. A long `rebalanceCluster` or `drainNodes` checks this
+again before every round. Then comes the [node id check](#node-ids). A node with another id fails with
+`NodeIdMismatchException`. A node without an id fails with `NodesNotInitializedException`, in every
 call but `planInitCluster()`, `initCluster()`, `planInitNodes()` and `initNodes()`. The two setups give such a
 node the id you listed it under, and the two plans tell first which nodes get one, and which of them hold
 messages.

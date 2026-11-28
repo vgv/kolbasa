@@ -275,21 +275,42 @@ internal object MoveHelpers {
     }
 
     /**
-     * Validate connectivity to all nodes.
+     * Checks that every node of [nodes] can be reached: one `select 1` on each, all at once. Changes nothing
+     *
+     * @throws ClusterOperationException.NodesUnreachableException naming every node that can't be reached, with what
+     * the connection said
      */
-    fun checkConnection(dataSources: List<DataSource>): Map<DataSource, Exception> {
-        val errors = ConcurrentHashMap<DataSource, Exception>()
+    fun checkReachable(nodes: Map<NodeId, DataSource>) {
+        val errors = ConcurrentHashMap<NodeId, Exception>()
 
-        dataSources.parallelStream().forEach { dataSource ->
+        nodes.entries.parallelStream().forEach { (nodeId, dataSource) ->
             try {
-                // Any fast query will do — we only need to confirm we can open a connection
+                // Any fast query will do: the point is to open a connection
                 dataSource.readString("select 1")
             } catch (e: Exception) {
-                errors[dataSource] = e
+                errors[nodeId] = e
             }
         }
 
-        return errors
+        if (errors.isEmpty()) {
+            return
+        }
+
+        val unreachable = errors.keys.sorted()
+        val message = buildString {
+            appendLine("Can't connect to ${unreachable.size} of ${nodes.size} cluster nodes:")
+            for (nodeId in unreachable) {
+                val error = errors.getValue(nodeId)
+                appendLine("  ${nodeId.id}: ${error.message ?: error}")
+                // A pool reports a timeout of its own and keeps the real reason as the cause, so without this an
+                // operator reads "request timed out" instead of "connection refused"
+                error.causeMessages().forEach { cause ->
+                    appendLine("    Caused by: $cause")
+                }
+            }
+        }
+
+        throw ClusterOperationException.NodesUnreachableException(unreachable, message.trimEnd())
     }
 
     /**
@@ -305,29 +326,5 @@ internal object MoveHelpers {
         }
 
         return messages.toList() - listOfNotNull(message)
-    }
-
-    fun checkClusterNodes(dataSources: List<DataSource>) {
-        val errors = checkConnection(dataSources)
-        if (errors.isEmpty()) {
-            return
-        }
-
-        val errorMessage = buildString {
-            appendLine("Can't connect to ${errors.size} of ${dataSources.size} kolbasa cluster nodes:")
-
-            errors.forEach { (dataSource, error) ->
-                appendLine("  Node: $dataSource")
-                appendLine("  Error: ${error.message}")
-                // A pooled DataSource reports a timeout of its own and keeps the real reason as the cause,
-                // so without this an operator reads "request timed out" instead of "connection refused"
-                error.causeMessages().forEach { cause ->
-                    appendLine("  Caused by: $cause")
-                }
-                appendLine()
-            }
-        }
-
-        throw ClusterOperationException.ExecutionException(errorMessage)
     }
 }

@@ -63,10 +63,9 @@ published — plus `gradle/build-logic`, an included build holding the shared bu
   `process()` call and fits any loop or scheduler; `worker/pipe` holds `QueuePipe`, which moves messages to another
   queue, usually on another server), `queue`
   (queue/options/meta-fields), `schema` (DDL generation),
-  `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the checks to run before
-  creating one in `ClusterAdminHelpers`, the plans and check results, the progress callback, and the internal
-  operations behind them: the setup of nodes and shards, the sync of the shard map, `prepare`/`move`/`finalize`
-  and the `rebalance` loop over them), `telemetry`
+  `cluster` (multi-node, incl. `cluster/admin` — the operator API: `ClusterAdmin`, the plans and check results,
+  the progress callback, and the internal operations behind them: the setup of nodes and shards, the sync of the
+  shard map, `prepare`/`move`/`finalize` and the `rebalance` loop over them), `telemetry`
   (metrics through Micrometer, SQL dumps, and the `Tracing` hook that a tracing system plugs into).
 - `kolbasa-opentelemetry/src/main/kotlin/kolbasa/opentelemetry/` — OpenTelemetry tracing, published as
   `io.github.vgv:kolbasa-opentelemetry`. One public class, `OpenTelemetryTracing`, which implements the `Tracing`

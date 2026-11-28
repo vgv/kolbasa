@@ -54,6 +54,25 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testUnreachableNodeIsNamed() {
+        val unreachable = PGSimpleDataSource().apply {
+            serverNames = arrayOf("127.0.0.1")
+            portNumbers = intArrayOf(9)
+            databaseName = "there-is-no-such-database"
+        }
+        val admin = ClusterAdmin(nodesById(listOf(dataSource, dataSourceFirstSchema)) + (DEAD_NODE to unreachable))
+
+        // Before anything else, the node ids included: an init method fails the same way as a check
+        listOf<() -> Unit>({ admin.checkCluster() }, { admin.planInitCluster() }).forEach { method ->
+            val exception = assertThrows<ClusterOperationException.NodesUnreachableException> { method() }
+
+            assertEquals(listOf(DEAD_NODE), exception.nodes)
+            assertTrue("Can't connect to 1 of 3 cluster nodes" in exception.message, exception.message)
+            assertTrue("${DEAD_NODE.id}: " in exception.message, exception.message)
+        }
+    }
+
+    @Test
     fun testChecksWriteNothing_NewCluster() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         // Only the node ids exist, as after the first check-cluster
@@ -463,6 +482,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     private companion object {
         val NEW_NODE = NodeId("node-new")
         val WRONG_ID = NodeId("node-wrong")
+        val DEAD_NODE = NodeId("node-dead")
     }
 
 }

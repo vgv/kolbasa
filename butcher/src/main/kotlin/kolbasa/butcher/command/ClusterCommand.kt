@@ -10,9 +10,7 @@ import com.github.ajalt.mordant.rendering.Widget
 import kolbasa.butcher.HelpSection
 import kolbasa.butcher.PROGRAM_NAME
 import kolbasa.butcher.config.ClusterConfig
-import kolbasa.butcher.config.PgEndpoint
 import kolbasa.cluster.admin.ClusterAdmin
-import kolbasa.cluster.admin.ClusterAdminHelpers
 import kolbasa.cluster.admin.ClusterOperationException
 
 /**
@@ -70,17 +68,11 @@ internal abstract class ClusterCommand(name: String) : CliktCommand(name = name)
      * Opening the data sources happens here and not in the constructor, so that `--help` never touches a
      * database.
      *
-     * Every node must also have the id on its config line. [ClusterAdmin] checks that on every call. Only
-     * [InitNodes] works on a node that has no id yet.
+     * [ClusterAdmin] checks on every call that every node can be reached, and that it has the id on its config
+     * line. Only the init commands work on a node that has no id yet.
      */
     protected fun butcher(): ClusterAdmin {
-        val endpoints = cluster.endpoints
-
-        // Every node is asked whether it is there before anything else happens, and asked on a plain
-        // driver connection: a pool would wait out its timeout and then blame itself
-        ClusterAdminHelpers.checkNodesAvailable(endpoints.map(PgEndpoint::driverDataSource))
-
-        return ClusterAdmin(endpoints.associate { endpoint -> endpoint.id to endpoint.pooledDataSource() })
+        return ClusterAdmin(cluster.endpoints.associate { endpoint -> endpoint.id to endpoint.pooledDataSource() })
     }
 }
 

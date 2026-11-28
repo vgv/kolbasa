@@ -28,9 +28,6 @@ internal fun rebalance(
         "Shards per round must be positive, but was $shardsPerRound"
     }
 
-    // One clear error instead of a connection failure in the middle of a round
-    MoveHelpers.checkClusterNodes(dataSources.values.toList())
-
     // Even with nothing to move: an empty plan of an incomplete map says nothing about the cluster
     MoveHelpers.readCompleteShards(MoveHelpers.readNodes(dataSources))
 
@@ -46,6 +43,9 @@ internal fun rebalance(
     var shardsLeftToMove = Int.MAX_VALUE
 
     while (true) {
+        // A run can take hours, and a node that went down since the last round gets one clear error
+        MoveHelpers.checkReachable(dataSources)
+
         val plan = ShardBalance.check(dataSources, drainedNodes)
         if (plan.isBalanced) {
             break

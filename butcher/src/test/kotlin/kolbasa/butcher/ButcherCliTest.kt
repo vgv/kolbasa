@@ -208,9 +208,8 @@ class ButcherCliTest {
     }
 
     @Test
-    fun testUnreachableNodeIsReportedByTheDriver() {
-        // Reachability is checked on a plain driver connection, before any pool is built. A pool would
-        // wait out its connection timeout and then report that timeout instead of this
+    fun testUnreachableNodeIsNamedWithTheReason() {
+        // The pool reports a timeout of its own, and the driver's reason comes under it
         val deadNode = File(tempDir, "dead.conf").apply {
             writeText("line-1  host=127.0.0.1 port=9 dbname=orders\n")
         }
@@ -218,9 +217,10 @@ class ButcherCliTest {
         val result = cli().test("-c ${deadNode.absolutePath} check-cluster")
 
         assertEquals(1, result.statusCode, result.output)
-        assertTrue(result.output.contains("Can't connect to 1 of 1"), result.output)
+        assertTrue(result.output.contains("Can't connect to 1 of 1 cluster nodes"), result.output)
+        assertTrue(result.output.contains("line-1: "), result.output)
+        assertTrue(result.output.contains("Caused by: "), result.output)
         assertTrue(result.output.contains("refused"), result.output)
-        assertTrue(!result.output.contains("request timed out"), result.output)
     }
 
     @Test

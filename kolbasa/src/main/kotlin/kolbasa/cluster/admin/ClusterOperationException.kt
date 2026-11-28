@@ -91,6 +91,11 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
                 }).joinToString(separator = "\n")
     )
 
+    class NodesUnreachableException(
+        val nodes: List<NodeId>,
+        message: String
+    ) : ClusterOperationException(message)
+
     class NodesNotInitializedException(
         val nodes: List<NodeId>
     ) : ClusterOperationException(

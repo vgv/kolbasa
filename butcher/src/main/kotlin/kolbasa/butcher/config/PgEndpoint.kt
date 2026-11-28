@@ -36,16 +36,6 @@ internal data class PgEndpoint(
     override fun toString(): String = "${id.id} ($host:${port ?: 5432}/$dbName)"
 
     /**
-     * A plain driver data source: a new connection for every request, and a driver error when there is
-     * none to be had
-     *
-     * This is what reachability is checked on. A pool answers the same question slowly and in its own
-     * words – it waits out its whole connection timeout and then reports that timeout, not what the
-     * driver said.
-     */
-    internal fun driverDataSource(): DataSource = HumanReadableDataSource(pgDataSource(), this)
-
-    /**
      * The same node, behind a pool: what the work itself runs on
      *
      * `move-data` takes a connection from both sides for every batch of 1000 rows, so a migration of ten
@@ -62,12 +52,12 @@ internal data class PgEndpoint(
             maximumPoolSize = 2
             minimumIdle = 0
 
-            // Nothing is opened before the work asks for it. Reachability has been checked by then, on
-            // the driver data source above
+            // Nothing is opened before the work asks for it. The first thing it asks for is the reachability
+            // check of ClusterAdmin
             initializationFailTimeout = -1
 
-            // Hikari's own default is 30 seconds, which is a long time to wait for a node that died
-            // after it answered the reachability check
+            // How long the reachability check waits for a node that is down. Hikari's own default is 30
+            // seconds, a long time to wait for an answer that is already known
             connectionTimeout = 3_000
         }
 

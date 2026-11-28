@@ -26,6 +26,9 @@ import javax.sql.DataSource
  * [Cluster][kolbasa.cluster.Cluster], which does initialize what it needs when it starts, and is therefore
  * the wrong thing to diagnose a cluster with.
  *
+ * Every method first checks that every node can be reached, and fails with
+ * [ClusterOperationException.NodesUnreachableException] naming the ones that can't.
+ *
  * Nor does it give a node an id, except in [initNodes] and [initCluster]. Every node must already have the id it is
  * listed under in [nodes], and every other method checks that before anything else. A node without an id fails with
  * [ClusterOperationException.NodesNotInitializedException], a node with another id with
@@ -58,7 +61,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
      */
-    fun planInitCluster(): InitClusterPlan = planInitCluster(nodes)
+    fun planInitCluster(): InitClusterPlan {
+        MoveHelpers.checkReachable(nodes)
+        return planInitCluster(nodes)
+    }
 
     /**
      * Sets the cluster up, or brings it up to date: [initNodes], then [initShards], then [syncShards]
@@ -72,7 +78,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row. Then nothing is written
      */
-    fun initCluster(): InitClusterResult = initCluster(nodes)
+    fun initCluster(): InitClusterResult {
+        MoveHelpers.checkReachable(nodes)
+        return initCluster(nodes)
+    }
 
     /**
      * Reports which nodes [initNodes] would give an id, and with which bucket. Changes nothing
@@ -86,7 +95,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
      */
-    fun planInitNodes(): InitNodesPlan = planInitNodes(nodes)
+    fun planInitNodes(): InitNodesPlan {
+        MoveHelpers.checkReachable(nodes)
+        return planInitNodes(nodes)
+    }
 
     /**
      * Gives every node without an id the one it is listed under in [nodes], and a bucket of its own
@@ -102,7 +114,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.NodeIdMismatchException if a node has another id, or a `q__node` table without
      * its row
      */
-    fun initNodes(): List<NodeId> = initNodes(nodes)
+    fun initNodes(): List<NodeId> {
+        MoveHelpers.checkReachable(nodes)
+        return initNodes(nodes)
+    }
 
     /**
      * Runs [checks], all of them by default, and returns what they found. Changes nothing
@@ -114,13 +129,18 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * [initCluster]
      */
     @JvmOverloads
-    fun checkCluster(checks: Set<ClusterCheck> = ClusterCheck.entries.toSet()): CheckResult =
-        checkCluster(nodes, checks)
+    fun checkCluster(checks: Set<ClusterCheck> = ClusterCheck.entries.toSet()): CheckResult {
+        MoveHelpers.checkReachable(nodes)
+        return checkCluster(nodes, checks)
+    }
 
     /**
      * Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven
      */
-    fun checkShardBalance(): ShardBalanceResult = ShardBalance.check(nodes)
+    fun checkShardBalance(): ShardBalanceResult {
+        MoveHelpers.checkReachable(nodes)
+        return ShardBalance.check(nodes)
+    }
 
     /**
      * Reports what the cluster would look like with [drainedNodes] holding nothing, and the moves that get
@@ -142,30 +162,43 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      */
     fun planDrainNodes(drainedNodes: Set<NodeId>): ShardBalanceResult {
         requireNodesToDrain(drainedNodes)
+        MoveHelpers.checkReachable(nodes)
         return ShardBalance.check(nodes, drainedNodes)
     }
 
     /**
      * Reports queue tables whose structure differs between nodes, or that are missing on some of them
      */
-    fun checkSchemaConsistency(): SchemaConsistencyResult = SchemaConsistency.check(nodes)
+    fun checkSchemaConsistency(): SchemaConsistencyResult {
+        MoveHelpers.checkReachable(nodes)
+        return SchemaConsistency.check(nodes)
+    }
 
     /**
      * Reports DLQ and archive tables left behind on a node whose main queue table is gone
      */
-    fun checkOrphanTables(): OrphanTablesResult = OrphanTables.check(nodes)
+    fun checkOrphanTables(): OrphanTablesResult {
+        MoveHelpers.checkReachable(nodes)
+        return OrphanTables.check(nodes)
+    }
 
     /**
      * Reports shards that are still mid-migration, which is what an interrupted move leaves behind
      */
-    fun checkMigrationState(): MigrationStateResult = MigrationState.check(nodes)
+    fun checkMigrationState(): MigrationStateResult {
+        MoveHelpers.checkReachable(nodes)
+        return MigrationState.check(nodes)
+    }
 
     /**
      * Reports how the copies of the shard map on the nodes differ, and the rows that can't be right
      *
      * Changes nothing, and works on a cluster that has no shard map yet.
      */
-    fun checkShardMap(): ShardMapResult = ShardMapState.check(nodes)
+    fun checkShardMap(): ShardMapResult {
+        MoveHelpers.checkReachable(nodes)
+        return ShardMapState.check(nodes)
+    }
 
     /**
      * Reports which node [initShards] would give every shard that has no row on any node. Changes nothing
@@ -173,7 +206,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * A node that holds messages is not refused. It is in [InitShardsPlan.unsafeNodes] when the cluster gets its first
      * shard map and has other nodes as well.
      */
-    fun planInitShards(): InitShardsPlan = planInitShards(nodes, target = null, shards = null)
+    fun planInitShards(): InitShardsPlan {
+        MoveHelpers.checkReachable(nodes)
+        return planInitShards(nodes, target = null, shards = null)
+    }
 
     /**
      * Reports which shards [initShards] would give [target]: every shard that has no row on any node, or only [shards].
@@ -187,8 +223,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.ShardsAlreadyInitializedException if a shard of [shards] has a row on some node
      */
     @JvmOverloads
-    fun planInitShards(target: NodeId, shards: List<ShardId>? = null): InitShardsPlan =
-        planInitShards(nodes, target, shards)
+    fun planInitShards(target: NodeId, shards: List<ShardId>? = null): InitShardsPlan {
+        MoveHelpers.checkReachable(nodes)
+        return planInitShards(nodes, target, shards)
+    }
 
     /**
      * Gives a node to every shard that has no row on any node: the node with the fewest shards at that moment, the
@@ -207,7 +245,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @return the node of every shard this call gave one to, read back after the write. Empty when every shard has a
      * row already
      */
-    fun initShards(): Map<ShardId, NodeId> = initShards(nodes, target = null, shards = null)
+    fun initShards(): Map<ShardId, NodeId> {
+        MoveHelpers.checkReachable(nodes)
+        return initShards(nodes, target = null, shards = null)
+    }
 
     /**
      * Gives [target] every shard that has no row on any node, or only [shards]
@@ -225,8 +266,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.ShardsAlreadyInitializedException if a shard of [shards] has a row on some node
      */
     @JvmOverloads
-    fun initShards(target: NodeId, shards: List<ShardId>? = null): Map<ShardId, NodeId> =
-        initShards(nodes, target, shards)
+    fun initShards(target: NodeId, shards: List<ShardId>? = null): Map<ShardId, NodeId> {
+        MoveHelpers.checkReachable(nodes)
+        return initShards(nodes, target, shards)
+    }
 
     /**
      * Brings the copies of the shard map on the nodes up to date, the way an application does on every topology update
@@ -244,7 +287,10 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @return how many rows have changed on every node, zero for a copy that was up to date already
      * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node
      */
-    fun syncShards(): Map<NodeId, Int> = syncShards(nodes)
+    fun syncShards(): Map<NodeId, Int> {
+        MoveHelpers.checkReachable(nodes)
+        return syncShards(nodes)
+    }
 
     /**
      * Marks [shards] as migrating to [target], the first of the three migration steps
@@ -263,6 +309,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
         shards: List<ShardId>,
         progress: ProgressCallback = ProgressCallback.Ignore
     ) {
+        MoveHelpers.checkReachable(nodes)
         prepare(nodes, target, shards, progress)
     }
 
@@ -282,6 +329,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
         excludeTables: Set<String>? = null,
         progress: ProgressCallback = ProgressCallback.Ignore
     ) {
+        MoveHelpers.checkReachable(nodes)
         move(nodes, includeTables, excludeTables, progress)
     }
 
@@ -311,6 +359,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      */
     @JvmOverloads
     fun rebalanceCluster(shardsPerRound: Int, progress: ProgressCallback = ProgressCallback.Ignore) {
+        MoveHelpers.checkReachable(nodes)
         rebalance(nodes, drainedNodes = emptySet(), shardsPerRound = shardsPerRound, progressCallback = progress)
     }
 
@@ -342,6 +391,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
         progress: ProgressCallback = ProgressCallback.Ignore
     ) {
         requireNodesToDrain(drainedNodes)
+        MoveHelpers.checkReachable(nodes)
         rebalance(nodes, drainedNodes, shardsPerRound = shardsPerRound, progressCallback = progress)
     }
 
@@ -358,6 +408,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      */
     @JvmOverloads
     fun finalizeMigration(progress: ProgressCallback = ProgressCallback.Ignore) {
+        MoveHelpers.checkReachable(nodes)
         finalize(nodes, progress)
     }
 
