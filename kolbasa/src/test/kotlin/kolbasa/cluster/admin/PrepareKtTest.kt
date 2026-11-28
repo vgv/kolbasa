@@ -25,7 +25,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        initShards(nodesById(dataSources))
+        ClusterAdmin(nodesById(dataSources)).initShards()
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -79,7 +79,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        initShards(nodesById(dataSources))
+        ClusterAdmin(nodesById(dataSources)).initShards()
 
         val targetNode = NodeId("this-node-identifier-does-not-exist-${System.nanoTime()}")
 
@@ -102,7 +102,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         // PREPARE everything
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
-        initShards(nodesById(dataSources))
+        ClusterAdmin(nodesById(dataSources)).initShards()
         val shards = ShardSchema.readShards(dataSource)
 
         val sourceNode = nodes.keys.random()
@@ -132,7 +132,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val (first, second, third) = nodes.values.toList()
         val targetNode = nodes.keys.last().id
-        initShards(nodesById(dataSources))
+        ClusterAdmin(nodesById(dataSources)).initShards()
 
         // The copies differ: an edit with a revision far ahead of every clock that only the first node has, a shard that the
         // second node lacks, and a row of the third node with the same revision and other nodes
@@ -223,7 +223,7 @@ class PrepareKtTest : AbstractPostgreSQLTest() {
         val dataSources = listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema)
         val nodes = ClusterHelper.readNodes(dataSources)
         val targetNode = nodes.keys.last().id
-        initShards(nodesById(dataSources))
+        ClusterAdmin(nodesById(dataSources)).initShards()
         val map = ShardSchema.readShards(dataSource)
         dataSources.forEach { rejectRows(it) }
 

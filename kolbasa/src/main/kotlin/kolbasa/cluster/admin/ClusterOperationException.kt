@@ -100,4 +100,11 @@ sealed class ClusterOperationException(override val message: String) : RuntimeEx
     class ShardsNotInitializedException : ClusterOperationException(
         "There is no shard map on any node, so there is nothing to sync. Initialize the shards first"
     )
+
+    class ShardsAlreadyInitializedException(
+        val shards: List<ShardId>
+    ) : ClusterOperationException(
+        "Shard(s) ${shards.sorted().joinToString(separator = ", ") { it.id.toString() }} have a node already. " +
+            "Initializing gives a node only to a shard that has none: to change the node of a shard, migrate it"
+    )
 }

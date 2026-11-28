@@ -130,7 +130,22 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * A node that holds messages is not refused. It is in [InitShardsPlan.unsafeNodes] when the cluster gets its first
      * shard map and has other nodes as well.
      */
-    fun planInitShards(): InitShardsPlan = planInitShards(nodes)
+    fun planInitShards(): InitShardsPlan = planInitShards(nodes, target = null, shards = null)
+
+    /**
+     * Reports which shards [initShards] would give [target]: every shard that has no row on any node, or only [shards].
+     * Changes nothing
+     *
+     * It refuses the same way as [initShards] with a target does. A node that holds messages is in
+     * [InitShardsPlan.unsafeNodes] when the cluster gets its first shard map, has other nodes as well, and the node is
+     * not [target].
+     *
+     * @throws ClusterOperationException.MoveToNonExistingNodeException if [target] is not a node of this cluster
+     * @throws ClusterOperationException.ShardsAlreadyInitializedException if a shard of [shards] has a row on some node
+     */
+    @JvmOverloads
+    fun planInitShards(target: NodeId, shards: List<ShardId>? = null): InitShardsPlan =
+        planInitShards(nodes, target, shards)
 
     /**
      * Gives a node to every shard that has no row on any node: the node with the fewest shards at that moment, the
@@ -146,9 +161,29 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      *
      * This doesn't look at [planInitShards], and gives the shards out on an unsafe plan as well: read the plan first.
      *
-     * @return the node this call gave every shard. Empty when every shard has a row already
+     * @return the node of every shard this call gave one to, read back after the write. Empty when every shard has a
+     * row already
      */
-    fun initShards(): Map<ShardId, NodeId> = initShards(nodes)
+    fun initShards(): Map<ShardId, NodeId> = initShards(nodes, target = null, shards = null)
+
+    /**
+     * Gives [target] every shard that has no row on any node, or only [shards]
+     *
+     * The rest is the same as in [initShards] without a target: every node gets the new rows, with the initial revision.
+     * A shard that has a row on some node has a node already, and changing it is a migration, see [prepareMigration].
+     * So if one of [shards] has a row, no shard gets a node.
+     *
+     * Running applications give the shards without a row a node on their next topology update, spread evenly over the
+     * nodes. So this is for a cluster with no application running.
+     *
+     * @return the node of every shard this call gave one to, read back after the write. An application may have given a
+     * shard a node at the same moment and won: then that shard has another node than [target]
+     * @throws ClusterOperationException.MoveToNonExistingNodeException if [target] is not a node of this cluster
+     * @throws ClusterOperationException.ShardsAlreadyInitializedException if a shard of [shards] has a row on some node
+     */
+    @JvmOverloads
+    fun initShards(target: NodeId, shards: List<ShardId>? = null): Map<ShardId, NodeId> =
+        initShards(nodes, target, shards)
 
     /**
      * Brings the copies of the shard map on the nodes up to date, the way an application does on every topology update

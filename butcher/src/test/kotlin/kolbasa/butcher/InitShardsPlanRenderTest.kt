@@ -41,7 +41,7 @@ class InitShardsPlanRenderTest {
         val text = plan.render().renderToText(width = 400)
         assertTrue(text.contains("node-02 has messages, and the cluster has no shard map yet."), text)
         assertTrue(text.contains("Creating it together with other nodes is unsafe"), text)
-        assertTrue(text.contains("init it alone first, see Butcher.md."), text)
+        assertTrue(text.contains("give it every shard with --target=node-02, then rebalance the cluster."), text)
         assertTrue(!text.contains("node-01 has messages"), text)
     }
 }

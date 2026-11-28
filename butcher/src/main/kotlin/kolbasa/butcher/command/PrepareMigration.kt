@@ -27,12 +27,14 @@ internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migrati
         .split(",")
         .required()
         .help("Comma-separated shard numbers to move")
-        // Validated here and not by ShardId.of(), which folds anything into the range: a shard the operator
-        // typed by hand is user input, and 9999 is a mistake rather than shard 783
-        .check({ out -> "shard(s) out of range [${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]: " +
-            out.filterNot { it in ShardId.SHARDS_RANGE }.joinToString(", ") }) { shards ->
-            shards.all { it in ShardId.SHARDS_RANGE }
-        }
+        .check(
+            lazyMessage = { out ->
+                "shard(s) out of range [${ShardId.MIN_SHARD}..${ShardId.MAX_SHARD}]: " +
+                    out.filterNot { it in ShardId.SHARDS_RANGE }.joinToString(", ")
+            },
+            validator = { shards ->
+                shards.all { it in ShardId.SHARDS_RANGE }
+            })
 
     override val helpSection = HelpSection.MOVING_SHARDS_STEP_BY_STEP
 
@@ -41,10 +43,12 @@ internal class PrepareMigration : MutatingClusterCommand(name = "prepare-migrati
             "so run 'move-data' soon"
 
     override fun execute(): Widget? {
-        confirm("Shards ${shards.joinToString(",")} will start migrating to node ${target.id}. " +
-            "New messages for them will go there right away. " +
-            "Consumers will not read these shards until finalize-migration. " +
-            "Run move-data soon after this.")
+        confirm(
+            "Shards ${shards.joinToString(",")} will start migrating to node ${target.id}. " +
+                "New messages for them will go there right away. " +
+                "Consumers will not read these shards until finalize-migration. " +
+                "Run move-data soon after this."
+        )
 
         butcher().prepareMigration(target, shards.map(ShardId::of), ConsoleProgressCallback(terminal))
         return null

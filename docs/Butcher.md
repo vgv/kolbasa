@@ -512,12 +512,12 @@ If a node has another id than its line, or a `q__node` table without its row, no
 ### `init-shards`
 
 ```
-butcher -c <file> init-shards [--yes]
+butcher -c <file> init-shards [--target=<node-id> [--shards=<0,1,2,...>]] [--yes]
 ```
 
-Gives a node to every shard that has no row on any node. A shard goes to the node with the fewest shards at
-that moment, the one with the smallest id on a tie. On a new cluster that is every shard: the nodes take turns,
-so the map starts out even. This is how a new shard map is made.
+Gives a node to every shard that has no row on any node. Without options, a shard goes to the node with the
+fewest shards at that moment, the one with the smallest id on a tie. On a new cluster that is every shard: the
+nodes take turns, so the map starts out even. This is how a new shard map is made.
 
 Every node gets a `q__shard` if it has none, and the new rows. The rows have the oldest revision there is, so any
 real row wins over them, see [Cluster architecture.md](Cluster%20architecture.md#cluster-topology). A shard that
@@ -542,19 +542,40 @@ Shard map: all 3 copies are the same
 If every shard has a row already, it prints `Every shard has a node already` and the report of
 `check-cluster --checks=shard-map`, and asks nothing.
 
+With `--target` the node is the one you name: it gets every shard that has no row on any node. With `--shards`
+as well, it gets only those shards, and the other shards stay as they are. `--shards` needs `--target`. Every
+listed shard must have no row on any node. A shard that has one has a node already, and changing it is a
+migration, see [`prepare-migration`](#prepare-migration). If one of them has a row, the command refuses before
+the question, and no shard gets a node:
+
+```
+Error: Shard(s) 700 have a node already. Initializing gives a node only to a shard that has none: to change the
+node of a shard, migrate it
+```
+
+Use the options on a cluster with no application running. An application gives the shards without a row a node
+on its next topology update, spread evenly. If it does that at the same moment as the command, its row can win.
+The command reads the rows back and names such shards:
+
+```
+Shard(s) 5 went to node-01: an application gave them a node at the same moment
+```
+
 A node that holds messages gets a warning before the question, when the cluster has no shard map yet and has
 other nodes as well:
 
 ```
 node-03 has messages, and the cluster has no shard map yet. Creating it together with other nodes is unsafe: the
-messages of the shards that go to other nodes stay unread. To grow a standalone node into a cluster, init it alone
-first, see Butcher.md.
+messages of the shards that go to other nodes stay unread. To grow a standalone node into a cluster, give it
+every shard with --target=node-03, then rebalance the cluster.
 ```
 
 Such a node was used without a cluster. Its messages are spread over all 1024 shards, and most of the shards go
-to the other nodes. Consumers read a shard on the node that owns it, so those messages are never read. Alone,
-with a config of one line, the node gets every shard, and that is safe. The warning is not a refusal: answer no
-to stop. On a cluster that has a map already, messages on the nodes are normal, and there is no warning.
+to the other nodes. Consumers read a shard on the node that owns it, so those messages are never read. With
+`--target=node-03` the node gets every shard, and its messages stay readable. `rebalance-cluster` then moves
+shards to the other nodes together with their messages. The node that gets every shard is never warned about,
+and neither is a node alone in its config. The warning is not a refusal: answer no to stop. On a cluster that
+has a map already, messages on the nodes are normal, and there is no warning.
 
 A node that takes no rows doesn't stop the others. The command then fails with the name of that node. The new
 rows are in effect once one node has them: once the node is back, run `sync-shards`.

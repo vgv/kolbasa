@@ -127,9 +127,11 @@ class InitShardsKtTest : AbstractPostgreSQLTest() {
         // Alone, it gets every shard, and that is safe
         assertEquals(emptyList<NodeId>(), ClusterAdmin(mapOf(NODE_02 to dataSourceFirstSchema)).planInitShards().unsafeNodes)
 
-        // Together with other nodes it is not
+        // Together with other nodes it is not, unless it gets every shard
         val admin = initializedCluster()
         assertEquals(listOf(NODE_02), admin.planInitShards().unsafeNodes)
+        assertEquals(listOf(NODE_02), admin.planInitShards(NODE_01).unsafeNodes)
+        assertEquals(emptyList<NodeId>(), admin.planInitShards(NODE_02).unsafeNodes)
 
         // Once the cluster has a map, messages on its nodes are normal: a shard that has lost its row everywhere is no risk
         admin.initShards()
@@ -137,6 +139,106 @@ class InitShardsKtTest : AbstractPostgreSQLTest() {
         val plan = admin.planInitShards()
         assertEquals(setOf(ShardId.of(5)), plan.owners.keys)
         assertEquals(emptyList<NodeId>(), plan.unsafeNodes)
+    }
+
+    @Test
+    fun testInitShards_Target_GetsEveryShardWithoutRow() {
+        val admin = initializedCluster()
+
+        val owners = admin.initShards(NODE_02)
+
+        assertEquals(ShardId.SHARDS_RANGE.associate { ShardId.of(it) to NODE_02 }, owners)
+        dataSources().forEach { node ->
+            val shards = ShardSchema.readShards(node).values
+            assertEquals(owners, shards.associate { it.shard to it.producerNode })
+            assertTrue(shards.all { it.consumerNode == NODE_02 && it.revision == Instant.EPOCH })
+        }
+
+        // Every shard has a node now
+        assertTrue(admin.planInitShards(NODE_03).isEmpty)
+        assertEquals(emptyMap<ShardId, NodeId>(), admin.initShards(NODE_03))
+    }
+
+    @Test
+    fun testInitShards_TargetAndShards() {
+        val admin = initializedCluster()
+        admin.initShards()
+        dataSources().forEach { node -> deleteShards(node, "5, 6, 7") }
+
+        // A shard listed twice is one shard
+        val owners = admin.initShards(NODE_03, listOf(ShardId.of(5), ShardId.of(6), ShardId.of(5)))
+
+        assertEquals(mapOf(ShardId.of(5) to NODE_03, ShardId.of(6) to NODE_03), owners)
+        dataSources().forEach { node ->
+            val shards = ShardSchema.readShards(node)
+            assertEquals(NODE_03, shards[ShardId.of(5)]?.producerNode)
+            assertEquals(NODE_03, shards[ShardId.of(6)]?.producerNode)
+            // The shards that weren't listed stay without a row
+            assertFalse(ShardId.of(7) in shards)
+        }
+    }
+
+    @Test
+    fun testInitShards_ShardWithRowIsRefused() {
+        val admin = initializedCluster()
+        admin.initShards()
+        dataSources().forEach { node -> deleteShards(node, "5") }
+        // Shard 700 has its row on one node only, and that is a node already
+        deleteShards(dataSourceFirstSchema, "700")
+        deleteShards(dataSourceSecondSchema, "700")
+        val shards = listOf(ShardId.of(5), ShardId.of(700))
+
+        val planned = assertThrows<ClusterOperationException.ShardsAlreadyInitializedException> {
+            admin.planInitShards(NODE_03, shards)
+        }
+        val exception = assertThrows<ClusterOperationException.ShardsAlreadyInitializedException> {
+            admin.initShards(NODE_03, shards)
+        }
+
+        assertEquals(listOf(ShardId.of(700)), planned.shards)
+        assertEquals(listOf(ShardId.of(700)), exception.shards)
+        assertTrue("Shard(s) 700 have a node already" in exception.message, exception.message)
+        // No shard got a node: shard 5 has no row still
+        dataSources().forEach { node -> assertFalse(ShardId.of(5) in ShardSchema.readShards(node)) }
+    }
+
+    @Test
+    fun testInitShards_UnknownTargetIsRefused() {
+        val admin = initializedCluster()
+        val unknown = NodeId("node-99")
+
+        assertThrows<ClusterOperationException.MoveToNonExistingNodeException> { admin.planInitShards(unknown) }
+        val exception = assertThrows<ClusterOperationException.MoveToNonExistingNodeException> {
+            admin.initShards(unknown)
+        }
+
+        assertEquals(unknown, exception.targetNode)
+        dataSources().forEach { assertFalse(ShardSchema.shardTableExists(it)) }
+    }
+
+    @Test
+    fun testInitShards_ReturnsWhatWasReadBack() {
+        val admin = initializedCluster()
+        // An application gives shard 5 to node-01 at the same moment: its row is on the node with the smallest id first.
+        // Every new row of shard 5 on that node turns into that one
+        ShardSchema.createOrUpdateShardTable(dataSource)
+        dataSource.useStatement { statement ->
+            statement.execute(
+                "create function application_row() returns trigger language plpgsql as " +
+                    "'begin if new.${ShardSchema.SHARD_COLUMN_NAME} = 5 then " +
+                    "new.${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = ''node-01''; " +
+                    "new.${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = ''node-01''; end if; return new; end'"
+            )
+            statement.execute(
+                "create trigger application_row before insert on ${ShardSchema.SHARD_TABLE_NAME} " +
+                    "for each row execute procedure application_row()"
+            )
+        }
+
+        val owners = admin.initShards(NODE_03, listOf(ShardId.of(5), ShardId.of(6)))
+
+        // Both rows have the initial revision, so the row of the node with the smallest id wins
+        assertEquals(mapOf(ShardId.of(5) to NODE_01, ShardId.of(6) to NODE_03), owners)
     }
 
     // ---------- helpers ----------

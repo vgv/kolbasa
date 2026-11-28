@@ -26,7 +26,7 @@ internal fun InitShardsPlan.render(): Widget = verticalLayout {
             TextColors.yellow(
                 "${node.id} has messages, and the cluster has no shard map yet. Creating it together with other nodes " +
                     "is unsafe: the messages of the shards that go to other nodes stay unread. To grow a standalone " +
-                    "node into a cluster, init it alone first, see Butcher.md."
+                    "node into a cluster, give it every shard with --target=${node.id}, then rebalance the cluster."
             )
         )
     }

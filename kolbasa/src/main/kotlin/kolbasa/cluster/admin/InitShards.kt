@@ -9,32 +9,41 @@ import java.util.*
 import javax.sql.DataSource
 
 /**
- * See [ClusterAdmin.planInitShards]
+ * See [ClusterAdmin.planInitShards]. [shards] needs a [target]
  */
-internal fun planInitShards(dataSources: Map<NodeId, DataSource>): InitShardsPlan {
+internal fun planInitShards(
+    dataSources: Map<NodeId, DataSource>,
+    target: NodeId?,
+    shards: List<ShardId>?
+): InitShardsPlan {
     val nodes = MoveHelpers.readNodes(dataSources)
     val shardMap = MoveHelpers.readShards(nodes)
+    val owners = newOwners(nodes, shardMap, target, shards)
 
     // Only a new map decides where the messages already on the nodes belong. In a working cluster that has lost some
-    // rows every node holds messages, and that is normal
+    // rows every node holds messages, and that is normal. The target gets the shards of its messages, so it is safe
     val unsafeNodes = mutableListOf<NodeId>()
     if (nodes.size > 1 && shardMap.mergedShards.isEmpty()) {
         for ((node, dataSource) in nodes) {
-            if (MoveHelpers.hasMessages(dataSource)) {
+            if (node.id != target && MoveHelpers.hasMessages(dataSource)) {
                 unsafeNodes += node.id
             }
         }
     }
 
-    return InitShardsPlan(ownersOfShardsWithoutRow(nodes, shardMap), unsafeNodes)
+    return InitShardsPlan(owners, unsafeNodes)
 }
 
 /**
- * See [ClusterAdmin.initShards]
+ * See [ClusterAdmin.initShards]. [shards] needs a [target]
  */
-internal fun initShards(dataSources: Map<NodeId, DataSource>): Map<ShardId, NodeId> {
+internal fun initShards(
+    dataSources: Map<NodeId, DataSource>,
+    target: NodeId?,
+    shards: List<ShardId>?
+): Map<ShardId, NodeId> {
     val nodes = MoveHelpers.readNodes(dataSources)
-    val owners = ownersOfShardsWithoutRow(nodes, MoveHelpers.readShards(nodes))
+    val owners = newOwners(nodes, MoveHelpers.readShards(nodes), target, shards)
     if (owners.isEmpty()) {
         return owners
     }
@@ -44,12 +53,48 @@ internal fun initShards(dataSources: Map<NodeId, DataSource>): Map<ShardId, Node
     MoveHelpers.createShardTables(nodes)
     MoveHelpers.fillShards(nodes, owners)
 
-    return owners
+    // Read back: an application may have given some of the shards a node at the same moment, and its row may have won
+    val mergedShards = MoveHelpers.readShards(nodes).mergedShards
+    val result = sortedMapOf<ShardId, NodeId>()
+    for (shard in owners.keys) {
+        result[shard] = mergedShards.getValue(shard).producerNode
+    }
+    return result
 }
 
 /**
- * The node of every shard that has no row on any node, see [ShardSchema.spreadEvenly]
+ * The new node of every shard that has no row on any node: spread evenly over the nodes, see [ShardSchema.spreadEvenly],
+ * or all of them to [target]. With [shards], only those shards go to [target], and each of them must have no row
  */
-private fun ownersOfShardsWithoutRow(nodes: SortedMap<Node, DataSource>, shardMap: ShardMap): SortedMap<ShardId, NodeId> {
-    return ShardSchema.spreadEvenly(nodes.keys.map { it.id }, shardMap.mergedShards.values, shardMap.shardsWithoutRow())
+private fun newOwners(
+    nodes: SortedMap<Node, DataSource>,
+    shardMap: ShardMap,
+    target: NodeId?,
+    shards: List<ShardId>?
+): SortedMap<ShardId, NodeId> {
+    if (target == null) {
+        return ShardSchema.spreadEvenly(nodes.keys.map { it.id }, shardMap.mergedShards.values, shardMap.shardsWithoutRow())
+    }
+
+    if (nodes.keys.none { node -> node.id == target }) {
+        throw ClusterOperationException.MoveToNonExistingNodeException(nodes.keys.map { it.id }, target)
+    }
+
+    val shardsToFill = if (shards == null) {
+        shardMap.shardsWithoutRow()
+    } else {
+        // A shard with a row has a node, and changing it is a migration. A new row could even win over the old one: on
+        // a copy that lacks the old row, with the same initial revision
+        val initialized = shards.distinct().filter { shard -> shard in shardMap.mergedShards }
+        if (initialized.isNotEmpty()) {
+            throw ClusterOperationException.ShardsAlreadyInitializedException(initialized)
+        }
+        shards.distinct()
+    }
+
+    val result = sortedMapOf<ShardId, NodeId>()
+    for (shard in shardsToFill) {
+        result[shard] = target
+    }
+    return result
 }

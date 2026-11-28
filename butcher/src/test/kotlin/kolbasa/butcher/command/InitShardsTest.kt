@@ -96,6 +96,105 @@ class InitShardsTest : AbstractPostgreSQLTest() {
         // A warning, not a refusal: the question is still asked
         assertTrue(result.output.contains("1024 shard(s) will get a node. Continue?"), result.output)
         assertFalse(result.output.contains("node-01 has messages"), result.output)
+
+        // The node that gets every shard keeps its messages readable
+        val target = run("--target=node-02", answer = "n")
+        assertTrue(target.output.contains("node-02: gets 1024 shard(s)"), target.output)
+        assertFalse(target.output.contains("has messages"), target.output)
+    }
+
+    @Test
+    fun testTarget() {
+        val result = run("--target=node-02 --yes")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("node-02: gets 1024 shard(s)"), result.output)
+        assertTrue(result.output.contains("node-02: got 1024 shard(s)"), result.output)
+        assertTrue(result.output.contains("Shard map: all 3 copies are the same"), result.output)
+    }
+
+    @Test
+    fun testTargetAndShards() {
+        run("--yes")
+        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
+            execute(node, "delete from q__shard where shard in (5, 6, 7)")
+        }
+
+        val result = run("--target=node-03 --shards=5,6 --yes")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("node-03: gets 2 shard(s)"), result.output)
+        assertTrue(result.output.contains("node-03: got 2 shard(s)"), result.output)
+        // Shard 7 wasn't listed
+        assertTrue(result.output.contains("No row on any node: 7"), result.output)
+    }
+
+    @Test
+    fun testShardsNeedTarget() {
+        val result = run("--shards=5 --yes")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("--shards needs --target"), result.output)
+        // The usage of this command, not of butcher
+        assertTrue(result.output.contains("init-shards [<options>]"), result.output)
+        listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema).forEach { node ->
+            assertFalse(hasTable(node, "q__shard"))
+        }
+    }
+
+    @Test
+    fun testShardOutOfRange() {
+        val result = run("--target=node-03 --shards=5,5000 --yes")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("shard(s) out of range [0..1023]: 5000"), result.output)
+    }
+
+    @Test
+    fun testShardWithRowIsRefusedBeforeTheQuestion() {
+        run("--yes")
+        execute(dataSource, "delete from q__shard where shard = 5")
+
+        // No --yes and no terminal: a refusal after the question would say "no terminal" instead
+        val result = run("--target=node-03 --shards=5")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Shard(s) 5 have a node already"), result.output)
+        assertTrue(result.output.contains("to change the node of a shard, migrate it"), result.output)
+    }
+
+    @Test
+    fun testUnknownTarget() {
+        val result = run("--target=node-99")
+
+        assertEquals(1, result.statusCode, result.output)
+        assertTrue(result.output.contains("Target node node-99 is not a member of this cluster"), result.output)
+    }
+
+    @Test
+    fun testAnotherNodeWonTheRace() {
+        // The nodes get their tables, with shard 0
+        run("--target=node-02 --shards=0 --yes")
+        // An application gives shard 5 to node-01 at the same moment: its row is on the node with the smallest id first.
+        // Every new row of shard 5 on that node turns into that one
+        execute(
+            dataSource,
+            "create function application_row() returns trigger language plpgsql as " +
+                "'begin if new.shard = 5 then new.producer_node = ''node-01''; new.consumer_node = ''node-01''; end if; " +
+                "return new; end'"
+        )
+        execute(
+            dataSource,
+            "create trigger application_row before insert on q__shard for each row execute procedure application_row()"
+        )
+
+        val result = run("--target=node-03 --shards=5,6 --yes")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertTrue(result.output.contains("node-01: got 1 shard(s)"), result.output)
+        assertTrue(result.output.contains("node-03: got 1 shard(s)"), result.output)
+        val text = result.output.replace(Regex("\\s+"), " ")
+        assertTrue(text.contains("Shard(s) 5 went to node-01: an application gave them a node at the same moment"), text)
     }
 
     @Test
