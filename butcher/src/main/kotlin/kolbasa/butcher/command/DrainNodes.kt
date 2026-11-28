@@ -29,7 +29,7 @@ internal class DrainNodes : HighLevelCommand(name = "drain-nodes") {
         refuseIfIncomplete(butcher)
         refuseIfMigrating(butcher)
 
-        val plan = butcher.planNodesDrain(drainedNodes)
+        val plan = butcher.planDrainNodes(drainedNodes)
         if (plan.isBalanced) {
             // Already empty, which is all the command is after
             return plan.renderNodesDrain(drainedNodes)
@@ -47,6 +47,6 @@ internal class DrainNodes : HighLevelCommand(name = "drain-nodes") {
         butcher.drainNodes(drainedNodes, shardsPerRound, RebalanceProgressCallback(terminal))
 
         // Where the nodes ended up, read back rather than predicted
-        return butcher.planNodesDrain(drainedNodes).renderNodesDrain(drainedNodes)
+        return butcher.planDrainNodes(drainedNodes).renderNodesDrain(drainedNodes)
     }
 }

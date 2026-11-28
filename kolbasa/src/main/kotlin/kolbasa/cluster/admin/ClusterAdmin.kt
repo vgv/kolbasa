@@ -17,8 +17,8 @@ import javax.sql.DataSource
  * [prepareMigration], [moveData] and [finalizeMigration]. The `butcher` CLI is a frontend over this class
  * and uses nothing it does not offer.
  *
- * [rebalance] and [drainNodes] are those same three steps in a loop, a batch of shards at a time. Which
- * shards move where comes from [checkShardBalance] and [planNodesDrain], which anyone can read first.
+ * [rebalanceCluster] and [drainNodes] are those same three steps in a loop, a batch of shards at a time. Which
+ * shards move where comes from [checkShardBalance] and [planDrainNodes], which anyone can read first.
  *
  * Creating a ClusterAdmin touches no database: it only remembers the nodes. That matters because an operator
  * reaches for it exactly when a cluster is in a bad state, and a tool that repaired the schema or seeded the
@@ -105,6 +105,19 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
     fun initNodes(): List<NodeId> = initNodes(nodes)
 
     /**
+     * Runs [checks], all of them by default, and returns what they found. Changes nothing
+     *
+     * Every check is a method of its own as well, see [ClusterCheck]. Unlike them, this refuses a cluster that has no
+     * shard map on any node: such a cluster is not set up yet, and there is nothing to check.
+     *
+     * @throws ClusterOperationException.ShardsNotInitializedException if there is no shard map on any node, see
+     * [initCluster]
+     */
+    @JvmOverloads
+    fun checkCluster(checks: Set<ClusterCheck> = ClusterCheck.entries.toSet()): CheckResult =
+        checkCluster(nodes, checks)
+
+    /**
      * Reports how the shards are spread across the nodes, and a minimum-movement rebalance if they are uneven
      */
     fun checkShardBalance(): ShardBalanceResult = ShardBalance.check(nodes)
@@ -127,7 +140,7 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.DrainLastNodeException if [drainedNodes] are all the nodes of this
      * cluster
      */
-    fun planNodesDrain(drainedNodes: Set<NodeId>): ShardBalanceResult {
+    fun planDrainNodes(drainedNodes: Set<NodeId>): ShardBalanceResult {
         requireNodesToDrain(drainedNodes)
         return ShardBalance.check(nodes, drainedNodes)
     }
@@ -297,18 +310,18 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
      * @throws ClusterOperationException.MigrationAlreadyInFlightException if a shard is already migrating
      */
     @JvmOverloads
-    fun rebalance(shardsPerRound: Int, progress: ProgressCallback = ProgressCallback.Ignore) {
+    fun rebalanceCluster(shardsPerRound: Int, progress: ProgressCallback = ProgressCallback.Ignore) {
         rebalance(nodes, drainedNodes = emptySet(), shardsPerRound = shardsPerRound, progressCallback = progress)
     }
 
     /**
      * Moves everything [drainedNodes] own onto the other nodes, [shardsPerRound] shards at a time
      *
-     * What [planNodesDrain] proposes, carried out the way [rebalance] carries out a balance plan. Pause,
+     * What [planDrainNodes] proposes, carried out the way [rebalanceCluster] carries out a balance plan. Pause,
      * interruption and a migration already in flight all work the same way there.
      *
      * It ends when [drainedNodes] own nothing: nothing is produced to them and nothing is consumed from
-     * them. Only their shards are moved, so the cluster can be left uneven. [rebalance] is what evens it out.
+     * them. Only their shards are moved, so the cluster can be left uneven. [rebalanceCluster] is what evens it out.
      *
      * [drainedNodes] must not be empty.
      *

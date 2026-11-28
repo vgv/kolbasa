@@ -99,7 +99,7 @@ published — plus `gradle/build-logic`, an included build holding the shared bu
   `--help` groups them (see `HelpSection`): `check-cluster` reports, `prepare-migration`/`move-data`/
   `finalize-migration` are one migration step each (**low-level**), and `rebalance-cluster`/`drain-nodes` are
   **high-level** — the same three steps in a loop over a plan, with the loop itself in the library
-  (`ClusterAdmin.rebalance`, `drainNodes`) and not here. Like the examples and the benchmarks it depends on
+  (`ClusterAdmin.rebalanceCluster`, `drainNodes`) and not here. Like the examples and the benchmarks it depends on
   `:kolbasa` the way a user would, so it can only use the **public** API — which makes the CLI the proof
   that `kolbasa.cluster.admin` is complete: a missing handle fails to compile here. The name `butcher` lives
   only here — it is what the tool is called, not what the API is called. Not published to Maven; it

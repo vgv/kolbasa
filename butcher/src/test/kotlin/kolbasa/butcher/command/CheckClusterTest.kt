@@ -37,6 +37,18 @@ class CheckClusterTest : AbstractPostgreSQLTest() {
     }
 
     @Test
+    fun testCheckNamedTwiceRunsOnce() {
+        val initialized = ButcherCli().subcommands(InitCluster()).test("-c ${config().absolutePath} init-cluster --yes")
+        assertEquals(0, initialized.statusCode, initialized.output)
+
+        val result = ButcherCli().subcommands(CheckCluster())
+            .test("-c ${config().absolutePath} check-cluster --checks=shard-map,shard-map")
+
+        assertEquals(0, result.statusCode, result.output)
+        assertEquals(1, Regex("Shard map:").findAll(result.output).count(), result.output)
+    }
+
+    @Test
     fun testNewCluster_AfterInitNodes() {
         val initialized = ButcherCli().subcommands(InitNodes()).test("-c ${config().absolutePath} init-nodes --yes")
         assertEquals(0, initialized.statusCode, initialized.output)

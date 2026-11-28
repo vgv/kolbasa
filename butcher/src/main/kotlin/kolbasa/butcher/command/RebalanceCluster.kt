@@ -31,7 +31,7 @@ internal class RebalanceCluster : HighLevelCommand(name = "rebalance-cluster") {
                 "of a round are consumed by no node while their rows are copied."
         )
 
-        butcher.rebalance(shardsPerRound, RebalanceProgressCallback(terminal))
+        butcher.rebalanceCluster(shardsPerRound, RebalanceProgressCallback(terminal))
 
         // Where the cluster ended up, read back rather than predicted
         return butcher.checkShardBalance().render()

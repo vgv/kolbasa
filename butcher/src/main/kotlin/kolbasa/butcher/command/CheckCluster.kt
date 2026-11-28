@@ -7,26 +7,21 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.options.unique
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.Widget
 import kolbasa.butcher.HelpSection
-import kolbasa.butcher.config.AvailableCheck
 import kolbasa.butcher.render
-import kolbasa.cluster.admin.CheckResult
-import kolbasa.cluster.admin.ClusterOperationException
-import kolbasa.cluster.admin.MigrationStateResult
-import kolbasa.cluster.admin.OrphanTablesResult
-import kolbasa.cluster.admin.SchemaConsistencyResult
-import kolbasa.cluster.admin.ShardBalanceResult
-import kolbasa.cluster.admin.ShardMapResult
+import kolbasa.cluster.admin.ClusterCheck
 
 internal class CheckCluster : ClusterCommand(name = "check-cluster") {
 
-    private val checks: List<AvailableCheck> by option("--checks", metavar = "<check,check,...>")
-        .enum<AvailableCheck> { it.checkName }
+    private val checks: Set<ClusterCheck> by option("--checks", metavar = "<check,check,...>")
+        .enum<ClusterCheck> { check -> check.cliName() }
         .split(",")
-        .default(AvailableCheck.entries)
+        .default(ClusterCheck.entries)
+        .unique()
         .help("Which checks to run, comma-separated. All of them by default")
 
     override val helpSection = HelpSection.DIAGNOSTICS
@@ -47,38 +42,7 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
      * The exit code is set by an exception, so the output can't wait for [run]: it is printed here.
      */
     override fun execute(): Widget? {
-        val butcher = butcher()
-        // A cluster without a shard map is not set up yet, whichever checks were asked for. The checks could not run,
-        // so this is exit code 1, as for a node without an id
-        if (butcher.checkShardMap().isMissing) {
-            throw ClusterOperationException.ShardsNotInitializedException()
-        }
-
-        var shardBalance: ShardBalanceResult? = null
-        var schemaConsistency: SchemaConsistencyResult? = null
-        var orphanTables: OrphanTablesResult? = null
-        var migrationState: MigrationStateResult? = null
-        var shardMap: ShardMapResult? = null
-
-        // Which checks exist and how they are named on the command line is a property of the CLI, so the
-        // mapping lives here and not in the library: every check is callable on its own
-        checks.forEach { check ->
-            when (check) {
-                AvailableCheck.CHECK_SHARD_BALANCE -> shardBalance = butcher.checkShardBalance()
-                AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> schemaConsistency = butcher.checkSchemaConsistency()
-                AvailableCheck.CHECK_ORPHAN_TABLES -> orphanTables = butcher.checkOrphanTables()
-                AvailableCheck.CHECK_MIGRATION_STATE -> migrationState = butcher.checkMigrationState()
-                AvailableCheck.CHECK_SHARD_MAP -> shardMap = butcher.checkShardMap()
-            }
-        }
-
-        val result = CheckResult(
-            shardBalance = shardBalance,
-            schemaConsistency = schemaConsistency,
-            orphanTables = orphanTables,
-            migrationState = migrationState,
-            shardMap = shardMap
-        )
+        val result = butcher().checkCluster(checks)
         terminal.println(result.render())
 
         if (result.isClean) {
@@ -86,27 +50,22 @@ internal class CheckCluster : ClusterCommand(name = "check-cluster") {
             return null
         }
 
-        // The checks that found something, by the names they were asked for with
-        val askedChecks = checks.distinct()
-        val checksWithFindings = askedChecks.filterNot { check -> isClean(result, check) }
-        val names = checksWithFindings.joinToString(", ") { check -> check.checkName }
-        echo(TextColors.yellow("${checksWithFindings.size} of ${askedChecks.size} check(s) found something: $names."))
+        val names = result.findings.joinToString(", ") { check -> check.cliName() }
+        echo(TextColors.yellow("${result.findings.size} of ${result.checks.size} check(s) found something: $names."))
 
         throw ProgramResult(EXIT_FOUND_SOMETHING)
     }
+}
 
-    private fun isClean(result: CheckResult, check: AvailableCheck): Boolean {
-        val clean = when (check) {
-            AvailableCheck.CHECK_SHARD_BALANCE -> result.shardBalance?.isClean
-            AvailableCheck.CHECK_SCHEMA_CONSISTENCY -> result.schemaConsistency?.isClean
-            AvailableCheck.CHECK_ORPHAN_TABLES -> result.orphanTables?.isClean
-            AvailableCheck.CHECK_MIGRATION_STATE -> result.migrationState?.isClean
-            AvailableCheck.CHECK_SHARD_MAP -> result.shardMap?.isClean
-        }
-
-        // A check that was asked for always has a result
-        return clean != false
-    }
+/**
+ * How a check is named on the command line, in `--checks`
+ */
+internal fun ClusterCheck.cliName(): String = when (this) {
+    ClusterCheck.SHARD_BALANCE -> "shard-balance"
+    ClusterCheck.SCHEMA_CONSISTENCY -> "schema-consistency"
+    ClusterCheck.ORPHAN_TABLES -> "orphan-tables"
+    ClusterCheck.MIGRATION_STATE -> "migration-state"
+    ClusterCheck.SHARD_MAP -> "shard-map"
 }
 
 /**

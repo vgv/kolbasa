@@ -62,6 +62,8 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         // A write would fail: the transactions of these nodes are read only
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
         runEveryCheck(admin, nodes.keys.first().id)
+        // All the checks at once refuse a cluster that is not set up yet, and write nothing either
+        assertThrows<ClusterOperationException.ShardsNotInitializedException> { admin.checkCluster() }
 
         dataSources.forEach { assertFalse(ShardSchema.shardTableExists(it)) }
     }
@@ -84,6 +86,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         val admin = ClusterAdmin(nodesById(dataSources).mapValues { (_, node) -> ReadOnlyDataSource(node) })
         runEveryCheck(admin, nodes.keys.first().id)
+        admin.checkCluster()
     }
 
     @Test
@@ -135,6 +138,27 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
             assertEquals(emptyMap<NodeId, NodeId>(), exception.mismatches)
             assertEquals(listOf(emptyNode), exception.nodesWithEmptyTable)
         }
+    }
+
+    @Test
+    fun testCheckCluster() {
+        val dataSources = seededCluster()
+        val admin = ClusterAdmin(nodesById(dataSources))
+
+        // All the checks by default, and the shard map was just made, so nothing is found
+        val all = admin.checkCluster()
+        assertEquals(ClusterCheck.entries, all.checks)
+        assertEquals(emptyList<ClusterCheck>(), all.findings)
+        assertTrue(all.isClean, "$all")
+
+        // Only the checks asked for, in the order of ClusterCheck. A copy that lags behind is a finding
+        dataSourceFirstSchema.useStatement { statement ->
+            statement.execute("delete from ${ShardSchema.SHARD_TABLE_NAME} where ${ShardSchema.SHARD_COLUMN_NAME} = 3")
+        }
+        val some = admin.checkCluster(setOf(ClusterCheck.SHARD_MAP, ClusterCheck.SHARD_BALANCE))
+        assertEquals(listOf(ClusterCheck.SHARD_BALANCE, ClusterCheck.SHARD_MAP), some.checks)
+        assertEquals(listOf(ClusterCheck.SHARD_MAP), some.findings)
+        assertEquals(null, some.schemaConsistency)
     }
 
     @Test
@@ -219,12 +243,12 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testPlanNodesDrainProposesEverythingTheNodeHolds() {
+    fun testPlanDrainNodesProposesEverythingTheNodeHolds() {
         val dataSources = seededCluster()
         val admin = ClusterAdmin(nodesById(dataSources))
         val drainedNode = ClusterHelper.readNodes(dataSources).keys.first().id
 
-        val plan = admin.planNodesDrain(setOf(drainedNode))
+        val plan = admin.planDrainNodes(setOf(drainedNode))
 
         // Everything the node holds is proposed for moving, and nothing else is
         val held = plan.currentDistribution.getValue(drainedNode)
@@ -236,12 +260,12 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testPlanNodesDrainRefusesANodeThatIsNotInTheCluster() {
+    fun testPlanDrainNodesRefusesANodeThatIsNotInTheCluster() {
         val dataSources = seededCluster()
         val knownNode = ClusterHelper.readNodes(dataSources).keys.first().id
 
         val exception = assertThrows<ClusterOperationException.DrainUnknownNodeException> {
-            ClusterAdmin(nodesById(dataSources)).planNodesDrain(setOf(NodeId("there-is-no-such-node")))
+            ClusterAdmin(nodesById(dataSources)).planDrainNodes(setOf(NodeId("there-is-no-such-node")))
         }
 
         // The message names the ids that would have worked: an internal node id is easy to mistype
@@ -250,14 +274,14 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testPlanNodesDrainRefusesTheOnlyNodeOfACluster() {
+    fun testPlanDrainNodesRefusesTheOnlyNodeOfACluster() {
         val dataSources = listOf(dataSource)
         val theOnlyNode = ClusterHelper.readNodes(dataSources).keys.first().id
         seedShardTable(dataSources)
 
         // Emptying it would leave its shards nowhere to go
         assertThrows<ClusterOperationException.DrainLastNodeException> {
-            ClusterAdmin(nodesById(dataSources)).planNodesDrain(setOf(theOnlyNode))
+            ClusterAdmin(nodesById(dataSources)).planDrainNodes(setOf(theOnlyNode))
         }
     }
 
@@ -267,7 +291,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         // An empty set would make the plan a plain rebalance of the whole cluster
         assertThrows<IllegalArgumentException> {
-            admin.planNodesDrain(emptySet())
+            admin.planDrainNodes(emptySet())
         }
         assertThrows<IllegalArgumentException> {
             admin.drainNodes(emptySet(), shardsPerRound = 200)
@@ -292,7 +316,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         val dataSources = seededCluster()
         giveEveryShardTo(ClusterHelper.readNodes(dataSources).keys.first().id, dataSources)
 
-        ClusterAdmin(nodesById(dataSources)).rebalance(shardsPerRound = 400)
+        ClusterAdmin(nodesById(dataSources)).rebalanceCluster(shardsPerRound = 400)
 
         // 1024 shards over three nodes
         assertEquals(listOf(342, 341, 341), shardsPerNode().values.sortedDescending())
@@ -380,7 +404,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         { admin.prepareMigration(node, listOf(ShardId.of(1))) },
         { admin.moveData() },
         { admin.finalizeMigration() },
-        { admin.rebalance(shardsPerRound = 100) },
+        { admin.rebalanceCluster(shardsPerRound = 100) },
         { admin.drainNodes(setOf(node), shardsPerRound = 100) },
     )
 
@@ -388,8 +412,9 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
      * Every public method of [admin] that needs every node to have its id, with [node] wherever one needs a node
      */
     private fun everyMethod(admin: ClusterAdmin, node: NodeId): List<() -> Unit> = listOf(
+        { admin.checkCluster() },
         { admin.checkShardBalance() },
-        { admin.planNodesDrain(setOf(node)) },
+        { admin.planDrainNodes(setOf(node)) },
         { admin.checkSchemaConsistency() },
         { admin.checkOrphanTables() },
         { admin.checkMigrationState() },
@@ -399,7 +424,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         { admin.syncShards() },
         { admin.prepareMigration(node, listOf(ShardId.of(1))) },
         { admin.moveData() },
-        { admin.rebalance(shardsPerRound = 100) },
+        { admin.rebalanceCluster(shardsPerRound = 100) },
         { admin.drainNodes(setOf(node), shardsPerRound = 100) },
         { admin.finalizeMigration() },
     )
@@ -420,7 +445,7 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         admin.checkOrphanTables()
         admin.checkMigrationState()
         admin.checkShardMap()
-        admin.planNodesDrain(setOf(node))
+        admin.planDrainNodes(setOf(node))
         admin.planInitShards()
     }
 

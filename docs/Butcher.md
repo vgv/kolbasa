@@ -1178,15 +1178,21 @@ if (admin.planInitCluster().unsafeNodes.isEmpty()) {
     admin.initCluster()
 }
 
+// What check-cluster is: all the checks, or only some of them, with checkCluster(setOf(ClusterCheck.SHARD_MAP))
+val result = admin.checkCluster()
+if (!result.isClean) {
+    println("Found something: ${result.findings}")
+}
+
 // What the two high-level commands are, as one call each
-admin.rebalance(shardsPerRound = 50)
+admin.rebalanceCluster(shardsPerRound = 50)
 admin.drainNodes(setOf(NodeId("node-03")), shardsPerRound = 50)
 ```
 
-Each has a read-only report in front of it: `checkShardBalance()` for the first, `planNodesDrain(nodes)` for
-the second. That report is what they work from, and the CLI shows you the same thing before it asks for a
-yes. Both are a loop over the three low-level steps, which stay there to be driven directly when the loop
-is not what you want:
+Each high-level command has a read-only report in front of it: `checkShardBalance()` for the first,
+`planDrainNodes(nodes)` for the second. That report is what they work from, and the CLI shows you the same
+thing before it asks for a yes. Both are a loop over the three low-level steps, which stay there to be driven
+directly when the loop is not what you want:
 
 ```kotlin
 val balance = admin.checkShardBalance()
@@ -1212,10 +1218,10 @@ call but `planInitCluster()`, `initCluster()`, `planInitNodes()` and `initNodes(
 node the id you listed it under, and the two plans tell first which nodes get one, and which of them hold
 messages.
 
-The check results are plain data — `balance.proposedMoves`, `balance.netChangeByNode`,
+The check results are plain data — `result.findings`, `balance.proposedMoves`, `balance.netChangeByNode`,
 `migrationState.isClean`, `schemaConsistency.divergencesByTable`, `shardMap.isComplete` — so a program
 decides on the numbers rather than on parsed text. Progress during a long `moveData` is reported through
-`ProgressCallback`; pass `ProgressCallback.Ignore` when nobody is watching. A `rebalance` or a `drainNodes`
+`ProgressCallback`; pass `ProgressCallback.Ignore` when nobody is watching. A `rebalanceCluster` or a `drainNodes`
 reports every round through the same callback (`rebalanceRoundStart`, `rebalanceFinished`), and the three
 steps of each round report themselves as usual.
 
