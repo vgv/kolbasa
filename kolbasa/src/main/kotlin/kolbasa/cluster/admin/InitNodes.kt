@@ -74,7 +74,7 @@ private fun bucketsOfNewNodes(dataSources: Map<NodeId, DataSource>, tables: Node
 
     var bucket = Node.MIN_BUCKET
     for (nodeId in tables.withoutTable.sorted()) {
-        while (bucket in usedBuckets || hasIdsOf(bucket, dataSources, queueTables)) {
+        while (bucket in usedBuckets || ClusterHelpers.hasIdsOf(bucket, dataSources, queueTables)) {
             bucket++
             if (bucket > Node.MAX_BUCKET) {
                 throw ClusterOperationException.NoFreeBucketException()
@@ -84,18 +84,4 @@ private fun bucketsOfNewNodes(dataSources: Map<NodeId, DataSource>, tables: Node
         result[nodeId] = bucket
     }
     return result
-}
-
-// Whether a queue table of any node holds an id from [bucket]
-private fun hasIdsOf(
-    bucket: Int,
-    dataSources: Map<NodeId, DataSource>,
-    queueTables: Map<NodeId, List<String>>
-): Boolean {
-    for ((nodeId, dataSource) in dataSources) {
-        if (ClusterHelpers.hasIdsOf(bucket, dataSource, queueTables.getValue(nodeId))) {
-            return true
-        }
-    }
-    return false
 }

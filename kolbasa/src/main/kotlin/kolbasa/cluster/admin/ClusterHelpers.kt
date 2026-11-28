@@ -43,16 +43,6 @@ internal class NodeTables(
 internal object ClusterHelpers {
 
     /**
-     * A cause chain is usually two or three deep; a longer one is noise in an error message
-     */
-    private const val MAX_REPORTED_CAUSES = 3
-
-    /**
-     * How many tables one statement of [hasIdsOf] looks into
-     */
-    private const val TABLES_PER_STATEMENT = 100
-
-    /**
      * Reads every node of [dataSources] the way a [Cluster][kolbasa.cluster.Cluster] does: a node without `q__node` gets
      * one, with a random id and the bucket of its place in the list. Throws if two nodes have the same id
      */
@@ -237,7 +227,7 @@ internal object ClusterHelpers {
      * Whether a queue table of this node has a row: a main queue, a dead letter queue or an archive
      */
     fun hasMessages(dataSource: DataSource): Boolean {
-        return queueTables(dataSource).any { table -> dataSource.readBoolean("select exists(select 1 from $table)") }
+        return anyRow(dataSource, queueTables(dataSource), condition = null)
     }
 
     /**
@@ -248,16 +238,28 @@ internal object ClusterHelpers {
     }
 
     /**
-     * Whether a table of [tables] on this node holds a row with an id from [bucket]: one look into the primary key of
-     * every table, [TABLES_PER_STATEMENT] tables in one statement
+     * Whether a queue table of any node holds a row with an id from [bucket]: one look into the primary key of every
+     * table, [TABLES_PER_STATEMENT] tables in one statement. [queueTables] are the tables of every node of [nodes]
      */
-    fun hasIdsOf(bucket: Int, dataSource: DataSource, tables: List<String>): Boolean {
+    fun hasIdsOf(bucket: Int, nodes: Map<NodeId, DataSource>, queueTables: Map<NodeId, List<String>>): Boolean {
         val range = IdRange.generateRange(bucket)
+        val condition = "${Const.ID_COLUMN_NAME} between ${range.min} and ${range.max}"
+
+        for ((nodeId, dataSource) in nodes) {
+            if (anyRow(dataSource, queueTables.getValue(nodeId), condition)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    // Whether a table of [tables] has a row, or a row that matches [condition]. TABLES_PER_STATEMENT tables go in one
+    // statement, so a node with a thousand queues takes two round trips and not a thousand
+    private fun anyRow(dataSource: DataSource, tables: List<String>, condition: String?): Boolean {
+        val where = if (condition == null) "" else " where $condition"
 
         for (chunk in tables.chunked(TABLES_PER_STATEMENT)) {
-            val lookups = chunk.map { table ->
-                "exists(select 1 from $table where ${Const.ID_COLUMN_NAME} between ${range.min} and ${range.max})"
-            }
+            val lookups = chunk.map { table -> "exists(select 1 from $table$where)" }
             if (dataSource.readBoolean("select " + lookups.joinToString(" or "))) {
                 return true
             }
@@ -387,4 +389,14 @@ internal object ClusterHelpers {
 
         return messages.toList() - listOfNotNull(message)
     }
+
+    /**
+     * A cause chain is usually two or three deep; a longer one is noise in an error message
+     */
+    private const val MAX_REPORTED_CAUSES = 3
+
+    /**
+     * How many tables one statement of [anyRow] looks into
+     */
+    private const val TABLES_PER_STATEMENT = 500
 }
