@@ -116,8 +116,9 @@ class Cluster(
      *
      * One call asks every node for its identity, reads the shard ownership map, and – if the cluster has queues –
      * creates or updates them on every node. Every node keeps a copy of the map, and for every shard the newest row of
-     * all the copies wins. A shard that no node has gets a random node, on the node with the smallest id: that is how
-     * a fresh cluster is initialized. At the end, every node gets the rows its copy lacks.
+     * all the copies wins. The shards that no node has get owners spread evenly over the nodes, and their rows go to the
+     * node with the smallest id: that is how a fresh cluster is initialized. At the end, every node gets the rows its
+     * copy lacks.
      *
      * Most applications never call this directly: [ClusterTopologyUpdater] calls it on a schedule. Call it yourself
      * when you have your own scheduler, or when you want the new topology at a known moment instead of waiting for the

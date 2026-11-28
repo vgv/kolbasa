@@ -3,6 +3,7 @@ package kolbasa.cluster.admin
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
+import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.NodeId
@@ -26,7 +27,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
 
         // The same map on two nodes, the third one has no table yet
         ShardSchema.createOrUpdateShardTable(first)
-        ShardSchema.fillShardTable(first, nodes.keys.toList())
+        fillShardTableEvenly(first, nodes.keys.toList())
         ShardSchema.createOrUpdateShardTable(second)
         ShardSchema.writeShards(second, ShardSchema.readShards(first).values)
 
@@ -68,7 +69,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(dataSources)
         val second = nodes.values.toList()[1]
         ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList(), shardsToFill = 0..999)
+        fillShardTableEvenly(second, nodes.keys.toList(), shardsToFill = 0..999)
 
         assertEquals(1000, MoveHelpers.readShards(nodes).mergedShards.size)
         assertEquals(1000, ShardSchema.readShards(second).size)
@@ -79,7 +80,7 @@ class MoveHelpersTest : AbstractPostgreSQLTest() {
         val nodes = ClusterHelper.readNodes(listOf(dataSource, dataSourceFirstSchema, dataSourceSecondSchema))
         val (node, nodeDataSource) = nodes.entries.first { it.value == dataSourceFirstSchema }
         ShardSchema.createOrUpdateShardTable(nodeDataSource)
-        ShardSchema.fillShardTable(nodeDataSource, nodes.keys.toList())
+        fillShardTableEvenly(nodeDataSource, nodes.keys.toList())
         nodeDataSource.useStatement { statement: Statement ->
             statement.execute(
                 "alter table ${ShardSchema.SHARD_TABLE_NAME} rename column ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} to broken"

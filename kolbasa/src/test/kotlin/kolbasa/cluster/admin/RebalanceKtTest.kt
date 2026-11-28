@@ -3,6 +3,7 @@ package kolbasa.cluster.admin
 import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
+import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.SendMessage
 import kolbasa.producer.SendOptions
@@ -186,7 +187,7 @@ internal class RebalanceKtTest : AbstractPostgreSQLTest() {
      */
     private fun seedShardTable(nodes: List<Node>) {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
         // Every node of a cluster has a copy
         createOrRepairShardMap(nodesById(clusterDataSources()))
     }

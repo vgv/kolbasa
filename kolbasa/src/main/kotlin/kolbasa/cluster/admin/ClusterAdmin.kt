@@ -127,8 +127,9 @@ class ClusterAdmin(private val nodes: Map<NodeId, DataSource>) {
     /**
      * Creates the shard map, or brings its copies up to date – what an application does on every topology update
      *
-     * A node without a shard table gets one. Every copy gets the newest row of every shard, and a shard that no node has
-     * gets a random node. On a cluster without a shard map that is every shard, so this is how a new map is created.
+     * A node without a shard table gets one. Every copy gets the newest row of every shard, and the shards that no node
+     * has go to the nodes with the fewest shards. On a cluster without a shard map that is every shard, spread evenly
+     * over the nodes, so this is how a new map is created.
      *
      * A node that takes no rows doesn't stop the others. Then this throws, with the name of that node. Call it again once
      * the node is back: it does only what is still missing.

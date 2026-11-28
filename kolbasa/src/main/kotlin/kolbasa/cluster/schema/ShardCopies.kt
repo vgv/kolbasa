@@ -37,8 +37,9 @@ internal object ShardCopies {
     /**
      * Reads the copies on all [nodes] and merges them, see [ShardSchema.mergeShards].
      *
-     * A node without a shard table gets one. A shard that no node has gets a random node on the node with the smallest
-     * id, with the initial revision, see [ShardSchema.INITIAL_REVISION]. An error names the node it came from.
+     * A node without a shard table gets one. The shards that no node has are spread evenly over the nodes, see
+     * [ShardSchema.spreadEvenly], and written to the node with the smallest id, with the initial revision, see
+     * [ShardSchema.INITIAL_REVISION]. An error names the node it came from.
      *
      * [knownShards] is a map the caller already has, and [knownFingerprint] its md5: a node with the same md5 is not
      * read. Pass an empty map and `null` if the caller has none.
@@ -65,16 +66,18 @@ internal object ShardCopies {
         // For every shard the newest row of all copies. The database is the only source: our map only saves the reads
         val shardMap = ShardMap(ShardSchema.mergeShards(copies), copies)
 
-        // Shards that no node has: a new cluster, or rows lost everywhere. They get a random node on the node with the
-        // smallest id, and the initial revision, so a real row that turns up later wins over them
-        val shardsToFill = shardMap.shardsWithoutRow().map { it.id }
+        // Shards that no node has: a new cluster, or rows lost everywhere. They get owners spread evenly over the nodes,
+        // and their rows go to the node with the smallest id, with the initial revision, so a real row that turns up
+        // later wins over them
+        val shardsToFill = shardMap.shardsWithoutRow()
         if (shardsToFill.isEmpty()) {
             return shardMap
         }
 
+        val owners = ShardSchema.spreadEvenly(nodes.keys.map { it.id }, shardMap.mergedShards.values, shardsToFill)
         val (smallestNode, smallestDataSource) = nodes.entries.first()
         copies[smallestNode] = onShardTable(smallestNode) {
-            ShardSchema.fillShardTable(smallestDataSource, nodes.keys.toList(), shardsToFill)
+            ShardSchema.fillShardTable(smallestDataSource, owners)
             // Another client may have filled them at the same moment: its rows are the ones in the table now
             ShardSchema.readShards(smallestDataSource)
         }

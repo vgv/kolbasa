@@ -204,7 +204,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // An incomplete map on the second node, no map anywhere else
         ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        fillShardTableEvenly(second, nodes.keys.toList())
         val before = ShardSchema.readShards(second)
         val deleted = deleteRandomShards(second)
 
@@ -293,7 +293,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // The map on one node only, as kolbasa kept it before every node had a copy
         ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        fillShardTableEvenly(second, nodes.keys.toList())
         val map = ShardSchema.readShards(second)
 
         val cluster = Cluster(dataSources, emptyList())
@@ -416,7 +416,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
 
         // The map lives on the second node
         ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList())
+        fillShardTableEvenly(second, nodes.keys.toList())
 
         val cluster = Cluster(dataSources, emptyList())
         cluster.updateTopology()
@@ -536,7 +536,7 @@ class ClusterTest : AbstractPostgreSQLTest() {
     // A shard table of its own, every shard given to a random node, with the initial revision
     private fun seedRandomMap(dataSource: DataSource, nodes: List<Node>): Map<ShardId, Shard> {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableAtRandom(dataSource, nodes)
         return ShardSchema.readShards(dataSource)
     }
 

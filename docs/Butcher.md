@@ -523,8 +523,8 @@ on every topology update, so while they run this command is rarely needed. It is
 It does what an application does on a topology update:
 
 - a node with no `q__shard` gets one;
-- a shard that has no row on any node gets a random node. On a new cluster that is every shard, and that is how a
-  new shard map is made;
+- a shard that has no row on any node goes to the node with the fewest shards. On a new cluster that is every
+  shard, spread evenly over the nodes, and that is how a new shard map is made;
 - every copy gets the newest row of every shard. If copies hold different rows with the same revision, the row
   of the node with the smallest id wins, with a new revision.
 
@@ -532,12 +532,13 @@ Before the question it prints the same report as `check-cluster --checks=shard-m
 is about to happen:
 
 ```
-There is no shard map on any node. A new one will be created on 3 node(s), and every shard will get a random node.
+There is no shard map on any node. A new one will be created on 3 node(s), with the shards spread evenly over them.
 If applications already work with this cluster, check that the config points at the right databases. Continue?
 ```
 
 ```
-12 shard(s) have no row on any node, each will get a random node. 1 of 3 copies will be brought up to date. Continue?
+12 shard(s) have no row on any node. They will go to the nodes with the fewest shards. 1 of 3 copies will be brought up
+to date. Continue?
 ```
 
 If the copies are all the same already, it says so and asks nothing. Afterwards it prints how many rows changed
@@ -637,8 +638,9 @@ Goal: three empty databases become a cluster, and its shard map exists before an
    Shard map: all 3 copies are the same
    ```
 
-Every shard got a random node. Skipping step 3 is fine as well: the first application that starts does the
-same.
+The nodes took turns: `node-01` got shards 0, 3, 6 and so on, 342 of them, the other two 341 each. That is as even
+as 1024 shards over three nodes can be, so `check-cluster --checks=shard-balance` has nothing to propose. Skipping
+step 3 is fine as well: the first application that starts does the same.
 
 ### What trouble looks like
 

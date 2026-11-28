@@ -47,14 +47,15 @@ internal class CreateOrRepairShardMap : MutatingClusterCommand(name = "create-or
         val nodes = shardMap.copies.size + shardMap.nodesWithoutTable.size
 
         if (shardMap.isMissing) {
-            return "There is no shard map on any node. A new one will be created on $nodes node(s), and every shard will get " +
-                "a random node. If applications already work with this cluster, check that the config points at the right " +
+            return "There is no shard map on any node. A new one will be created on $nodes node(s), with the shards spread " +
+                "evenly over them. If applications already work with this cluster, check that the config points at the right " +
                 "databases."
         }
 
         val sentences = mutableListOf<String>()
         if (shardMap.shardsWithoutRow.isNotEmpty()) {
-            sentences += "${shardMap.shardsWithoutRow.size} shard(s) have no row on any node, each will get a random node."
+            sentences += "${shardMap.shardsWithoutRow.size} shard(s) have no row on any node. They will go to the nodes " +
+                "with the fewest shards."
         }
         if (shardMap.differentCopies > 0) {
             sentences += "${shardMap.differentCopies} of $nodes copies will be brought up to date."

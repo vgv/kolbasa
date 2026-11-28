@@ -36,7 +36,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
         assertTrue(empty.isEmpty())
 
         // Fill shard table (empty -> full)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
         val full = ShardSchema.readShards(dataSource)
         checkFullShardsTable(full, nodes)
     }
@@ -44,7 +44,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
     @Test
     fun testCreateShardTableAndFill_TestShardsOutOfBounds() {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
 
         // insert additional shards with invalid shard numbers
         val shardsBeforeInsert = dataSource.readInt("select count(*) from $SHARD_TABLE_NAME")
@@ -72,7 +72,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
     @Test
     fun testCreateShardTableAndFill_FromNotSoEmptyToFull() {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
 
         // Check that shards table is full
         val full = ShardSchema.readShards(dataSource)
@@ -105,7 +105,7 @@ class ShardSchemaTest : AbstractPostgreSQLTest() {
         )
 
         // Fill deleted shards and check that shards table is full again
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
         val fullAfterDelete = ShardSchema.readShards(dataSource)
         checkFullShardsTable(fullAfterDelete, nodes)
     }

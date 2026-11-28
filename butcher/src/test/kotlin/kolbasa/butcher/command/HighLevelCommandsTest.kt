@@ -252,8 +252,8 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     /**
      * A node that does not own [shard], so preparing [shard] for it is a real migration
      *
-     * A freshly seeded cluster spreads its shards at random, so who holds a given one is not known in
-     * advance. Preparing a shard for the node that already owns it is refused, and rightly so.
+     * Who holds a given shard depends on the order of the node ids, and they are random, so it is not known
+     * in advance. Preparing a shard for the node that already owns it is refused, and rightly so.
      */
     private fun nodeWithout(shard: Int): NodeId {
         val distribution = admin().checkShardBalance().currentDistribution
@@ -268,8 +268,8 @@ class HighLevelCommandsTest : AbstractPostgreSQLTest() {
     /**
      * Hands every shard to one node, with a plain `update` against the shard table
      *
-     * Seeding spreads the shards at random, which is only slightly uneven. A test that counts rounds needs
-     * to know exactly how much there was to move. Writing `q__shard` by hand is ordinary operator work,
+     * Seeding spreads the shards evenly, so a rebalance would have nothing to move. A test that counts rounds
+     * needs to know exactly how much there was to move. Writing `q__shard` by hand is ordinary operator work,
      * see docs/Architecture.md. Every node keeps a copy of the shard map, so the update goes to all of them.
      */
     private fun giveEveryShardTo(node: NodeId) {

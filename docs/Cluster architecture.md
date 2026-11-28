@@ -318,8 +318,9 @@ managed:
   another version of. A node without the table gets one. So a node that was down, restored from an old backup, or added a minute
   ago catches up by itself. If two copies have different rows with the same revision, the winning row gets a new revision, and
   every copy takes it.
-- **A new cluster gets its map the same way.** A shard that no node has gets a **random** node, in a stable state, on the node
-  with the smallest id. On a new cluster that is all 1024 shards, and the next step copies them to the other nodes.
+- **A new cluster gets its map the same way.** A shard that no node has goes to the node with the fewest shards, in a stable
+  state. Its row is written to the node with the smallest id. On a new cluster that is all 1024 shards: the nodes take turns in
+  the order of their ids, so the map starts out even. The next step copies the rows to the other nodes.
 - **A refresh is cheap when nothing has changed.** It takes an md5 of every copy, computed by the node, and reads the rows only
   of a node whose md5 differs from the map it already has. If a node's `q__shard` can't be read, the refresh fails: a failed
   read is never taken for a missing table.
@@ -344,7 +345,7 @@ The trigger gives the row a new revision, so the clients take it on their next r
 nothing else to run. Two things to keep in mind:
 
 - **Change rows with `update` only.** A row deleted on one node comes back from the other copies, and a row deleted on all of
-  them gets a random node. A row of a shard outside 0..1023 is never read.
+  them goes to the node with the fewest shards. A row of a shard outside 0..1023 is never read.
 - **An edit changes routing, not data.** The messages of shard 17 stay where they are. To move a shard that has messages, use the
   migration protocol, see [Shard migration](#shard-migration).
 

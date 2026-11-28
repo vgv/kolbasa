@@ -38,8 +38,8 @@ internal object ShardSchema {
     const val REVISION_COLUMN_NAME = "revision"
 
     /**
-     * The revision of the rows kolbasa adds itself, with a random node: in a new cluster, or for a shard that no node
-     * has. It is less than any real revision, so such a row loses to any row that was ever changed
+     * The revision of the rows kolbasa adds itself, with a node it picks itself: in a new cluster, or for a shard that
+     * no node has. It is less than any real revision, so such a row loses to any row that was ever changed
      */
     const val INITIAL_REVISION = "1970-01-01 00:00:00+00"
 
@@ -246,18 +246,53 @@ internal object ShardSchema {
     }
 
     /**
-     * Gives each of [shardsToFill] that has no row yet a random node of [nodes].
+     * Gives each of [shardsToFill] a node of [nodes], so that the nodes end up with as even a number of shards as they can
      *
-     * The new rows get [INITIAL_REVISION]: a random node is a guess, and a guess must lose to any real row, wherever
-     * that row turns up later.
+     * [existingShards] are the shards that have a node already. They are counted by `producerNode`, the way the shard
+     * balance check counts them, and a node that is not in [nodes] counts for nothing. The shards go in the order of
+     * their numbers, each to the node that has the fewest shards at that moment, the smallest id of them on a tie. So
+     * the same input always gives the same nodes, and on a new cluster the nodes take turns: three nodes get 342, 341
+     * and 341 shards.
      */
-    fun fillShardTable(dataSource: DataSource, nodes: List<Node>, shardsToFill: Iterable<Int> = ShardId.SHARDS_RANGE) {
+    fun spreadEvenly(
+        nodes: Collection<NodeId>,
+        existingShards: Collection<Shard>,
+        shardsToFill: Iterable<ShardId>
+    ): SortedMap<ShardId, NodeId> {
+        require(nodes.isNotEmpty()) {
+            "There must be a node to give the shards to"
+        }
+
+        // Sorted by id, so the first of the nodes with the fewest shards is the one with the smallest id
+        val shardsPerNode = sortedMapOf<NodeId, Int>()
+        for (node in nodes) {
+            shardsPerNode[node] = 0
+        }
+        for (shard in existingShards) {
+            val shards = shardsPerNode[shard.producerNode] ?: continue
+            shardsPerNode[shard.producerNode] = shards + 1
+        }
+
+        val result = sortedMapOf<ShardId, NodeId>()
+        for (shard in shardsToFill.sorted()) {
+            val node = shardsPerNode.minBy { (_, shards) -> shards }.key
+            shardsPerNode[node] = shardsPerNode.getValue(node) + 1
+            result[shard] = node
+        }
+        return result
+    }
+
+    /**
+     * Writes a row for each shard of [owners] that has no row yet: the shard, produced and consumed by its node.
+     *
+     * The new rows get [INITIAL_REVISION]: kolbasa picked their nodes itself, and such a pick must lose to any real row,
+     * wherever that row turns up later.
+     */
+    fun fillShardTable(dataSource: DataSource, owners: Map<ShardId, NodeId>) {
         val shardsPerStatement = 100
-        val statements = shardsToFill.chunked(shardsPerStatement).map { chunk ->
-            val values = chunk.map { shard ->
-                val randomNode = nodes.random()
-                val randomNodeStringId: String = randomNode.id.id
-                "($shard, '$randomNodeStringId', '$randomNodeStringId', '$INITIAL_REVISION')"
+        val statements = owners.entries.chunked(shardsPerStatement).map { chunk ->
+            val values = chunk.map { (shard, node) ->
+                "(${shard.id}, '${node.id}', '${node.id}', '$INITIAL_REVISION')"
             }
 
             """

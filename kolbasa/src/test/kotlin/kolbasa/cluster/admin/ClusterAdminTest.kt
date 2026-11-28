@@ -4,6 +4,8 @@ import kolbasa.test.AbstractPostgreSQLTest
 import kolbasa.cluster.Cluster
 import kolbasa.cluster.ClusterHelper
 import kolbasa.cluster.Shard
+import kolbasa.cluster.fillShardTableAtRandom
+import kolbasa.cluster.fillShardTableEvenly
 import kolbasa.cluster.schema.ShardSchema
 import kolbasa.producer.ShardId
 import kolbasa.schema.IdSchema
@@ -75,9 +77,9 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
         // The first copy has not all the shards, the second one has other rows, and the third node has no table. The trigger
         // function of the first node is of another kolbasa version
         ShardSchema.createOrUpdateShardTable(first)
-        ShardSchema.fillShardTable(first, nodes.keys.toList(), shardsToFill = 0..999)
+        fillShardTableEvenly(first, nodes.keys.toList(), shardsToFill = 0..999)
         ShardSchema.createOrUpdateShardTable(second)
-        ShardSchema.fillShardTable(second, nodes.keys.toList(), shardsToFill = 0..499)
+        fillShardTableAtRandom(second, nodes.keys.toList(), shardsToFill = 0..499)
         first.useStatement { statement ->
             statement.execute("comment on function ${ShardSchema.SET_REVISION_FUNCTION_NAME}() is 'kolbasa-shard-revision:other'")
         }
@@ -352,9 +354,22 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
     }
 
     @Test
-    fun testRebalanceEvensTheClusterOut() {
-        // A new map hands every shard to a random node, so the cluster starts out uneven
+    fun testNewShardMapIsEven() {
         val dataSources = seededCluster()
+        val nodes = ClusterHelper.readNodes(dataSources).keys.map { it.id }
+
+        // The nodes take turns in the order of their ids: the first one gets shard 0, and the one shard left over
+        assertEquals(mapOf(nodes[0] to 342, nodes[1] to 341, nodes[2] to 341), shardsPerNode())
+        assertEquals(nodes[0], ShardSchema.readShards(dataSource).getValue(ShardId.of(0)).producerNode)
+        // So a new cluster has nothing to rebalance
+        assertTrue(ClusterAdmin(nodesById(dataSources)).checkShardBalance().isBalanced)
+    }
+
+    @Test
+    fun testRebalanceEvensTheClusterOut() {
+        // Every shard on one node
+        val dataSources = seededCluster()
+        giveEveryShardTo(ClusterHelper.readNodes(dataSources).keys.first().id, dataSources)
 
         ClusterAdmin(nodesById(dataSources)).rebalance(shardsPerRound = 400)
 
@@ -385,6 +400,21 @@ class ClusterAdminTest : AbstractPostgreSQLTest() {
 
         // Two of the three nodes drained, so the one that stays holds everything
         assertEquals(mapOf(stayingNode to 1024), shardsPerNode())
+    }
+
+    /**
+     * Hands every shard to [node], on every copy of the shard map
+     */
+    private fun giveEveryShardTo(node: NodeId, dataSources: List<DataSource>) {
+        dataSources.forEach { dataSource ->
+            dataSource.useStatement { statement ->
+                statement.execute(
+                    "update ${ShardSchema.SHARD_TABLE_NAME} set ${ShardSchema.PRODUCER_NODE_COLUMN_NAME} = '${node.id}', " +
+                        "${ShardSchema.CONSUMER_NODE_COLUMN_NAME} = '${node.id}', " +
+                        "${ShardSchema.NEXT_CONSUMER_NODE_COLUMN_NAME} = null"
+                )
+            }
+        }
     }
 
     /**

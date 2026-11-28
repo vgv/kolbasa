@@ -175,7 +175,7 @@ class ShardRevisionTest : AbstractPostgreSQLTest() {
 
     private fun seedShardTable(dataSource: DataSource, nodes: List<kolbasa.schema.Node>) {
         ShardSchema.createOrUpdateShardTable(dataSource)
-        ShardSchema.fillShardTable(dataSource, nodes)
+        fillShardTableEvenly(dataSource, nodes)
     }
 
     // Gives the shard to another node by hand, with a revision of its own if one is given
